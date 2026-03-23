@@ -42,6 +42,7 @@ class ProfileController extends Controller
 
     /**
      * Delete the user's account.
+     * Only the user record is removed; the tenant and its database are left intact.
      */
     public function destroy(Request $request): RedirectResponse
     {

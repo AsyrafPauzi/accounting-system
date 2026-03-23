@@ -2,336 +2,230 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
 
 const Icons = {
-    Users: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>,
-    UserCheck: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+    Currency: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+    ArrowTrendingUp: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 011.414-1.414l2.25-2.25M3 75h13.5A2.25 2.25 0 0019 72.75V60m-12-12V60m12 0V72.75" /></svg>,
+    ArrowTrendingDown: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7-7-7M12 3v18" /></svg>,
     Exclamation: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
     Document: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
-    Check: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-    Currency: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-    ArrowUp: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7 7 7M12 3v18" /></svg>,
-    ArrowDown: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7-7-7M12 3v18" /></svg>,
+    BuildingOffice: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>,
+    ShoppingCart: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>,
+    ReceiptRefund: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>,
     ChevronRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
+    ChartBar: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" /></svg>,
 };
 
-function StageCard({ label, value, subtitle, tone = 'slate' }) {
-    const tones = {
-        slate: 'border-slate-100 bg-slate-50/70 text-slate-700',
-        amber: 'border-amber-100 bg-amber-50/70 text-amber-700',
-        blue: 'border-blue-100 bg-blue-50/70 text-blue-700',
-        emerald: 'border-emerald-100 bg-emerald-50/70 text-emerald-700',
-    };
-    const cls = tones[tone] || tones.slate;
-    return (
-        <div className={`rounded-xl border p-4 ${cls}`}>
-            <p className="text-[10px] font-semibold uppercase tracking-wider opacity-80 mb-1">{label}</p>
-            <p className="text-xl font-bold tabular-nums">{value}</p>
-            <p className="text-xs opacity-80 mt-1">{subtitle}</p>
-        </div>
-    );
-}
-
-function MetricRow({ label, value, description, accent }) {
-    const accentCls = accent === 'emerald' ? 'text-emerald-600' : accent === 'rose' ? 'text-rose-600' : 'text-slate-900';
-    return (
-        <div className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-            <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{description}</p>
-            </div>
-            <p className={`text-sm font-bold tabular-nums ${accentCls}`}>{value}</p>
-        </div>
-    );
+function fmt(n, opts = {}) {
+    const { currency = false } = opts;
+    const num = Number(n) || 0;
+    if (currency) return 'RM ' + num.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return num.toLocaleString('en-MY', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 export default function Dashboard({ auth, stats = {} }) {
     const customers = stats.customers || { total: 0, active: 0, outstanding: 0 };
-    const invoices = stats.invoices || {
-        total: 0,
-        draft: 0,
-        unpaid: 0,
-        partially_paid: 0,
-        paid: 0,
-        void: 0,
-        total_invoiced: 0,
-        total_collected: 0,
-        total_outstanding: 0,
-    };
+    const invoices = stats.invoices || { total_outstanding: 0, total_invoiced: 0, total_collected: 0, overdue_count: 0, unpaid: 0, partially_paid: 0, paid: 0, draft: 0 };
     const creditNotes = stats.credit_notes || { count: 0, value: 0 };
+    const suppliers = stats.suppliers || { total: 0, active: 0 };
+    const bills = stats.bills || { total_ap: 0, unpaid_count: 0, overdue_count: 0, total_billed: 0 };
+    const period = stats.period || { sales_this_month: 0, expenses_this_month: 0, net_this_month: 0 };
 
-    const collectionRate =
-        invoices.total_invoiced > 0
-            ? (invoices.total_collected / invoices.total_invoiced) * 100
-            : 0;
-
-    const riskCustomers =
-        customers.total > 0
-            ? Math.round(((customers.total - customers.active) / customers.total) * 100)
-            : 0;
+    const collectionRate = invoices.total_invoiced > 0
+        ? Math.round((invoices.total_collected / invoices.total_invoiced) * 100)
+        : 0;
+    const netMonth = period.net_this_month ?? 0;
 
     return (
         <AuthenticatedLayout
             user={auth.user}
             header={
-                <div className="flex flex-col gap-2">
-                    <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-                        Welcome back, <span className="text-blue-600">{auth.user?.name}</span>
-                    </h2>
-                    <p className="text-slate-500 text-sm font-medium">
-                        A real-time overview of your receivables, customer health, and credit notes.
+                <div className="flex flex-col gap-1">
+                    <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                        Welcome back, <span className="text-blue-600">{auth.user?.name?.split(' ')[0] || 'there'}</span>
+                    </h1>
+                    <p className="text-slate-500 text-sm">
+                        Here’s your business at a glance.
                     </p>
                 </div>
             }
         >
             <Head title="Dashboard" />
 
-            <div className="space-y-8">
-                {/* Top KPI row */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl p-6 shadow-lg">
-                        <div className="flex items-center justify-between mb-4">
-                            <span className="text-[10px] font-semibold uppercase tracking-widest opacity-80">
-                                Total Invoiced
-                            </span>
-                            <span className="p-2 rounded-xl bg-white/10">
-                                <Icons.Currency />
-                            </span>
-                        </div>
-                        <p className="text-2xl font-bold font-mono tabular-nums">
-                            RM {parseFloat(invoices.total_invoiced).toLocaleString('en-MY', { minimumFractionDigits: 2 })}
+            <div className="space-y-6 sm:space-y-8 pb-8 min-w-0 w-full">
+                {/* Top 4 KPIs — 2x2 on mobile, 4 col on desktop */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 min-w-0">
+                    <Link
+                        href={route('aged-receivables.index')}
+                        className="rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-4 sm:p-5 shadow-lg shadow-blue-500/20 flex flex-col min-h-[100px] sm:min-h-[112px] min-w-0 active:opacity-90"
+                    >
+                        <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider opacity-90">Receivables</span>
+                        <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-bold font-mono tabular-nums truncate min-w-0" title={fmt(invoices.total_outstanding, { currency: true })}>
+                            {fmt(invoices.total_outstanding, { currency: true })}
                         </p>
-                        <p className="mt-2 text-xs text-blue-100">
-                            Collected:&nbsp;
-                            <span className="font-semibold">
-                                RM {parseFloat(invoices.total_collected).toLocaleString('en-MY', { minimumFractionDigits: 2 })}
+                        <p className="mt-auto text-[10px] sm:text-xs opacity-90">
+                            {invoices.overdue_count > 0 ? (
+                                <span className="text-amber-200">{invoices.overdue_count} overdue</span>
+                            ) : (
+                                'To collect'
+                            )}
+                        </p>
+                    </Link>
+
+                    <Link
+                        href={route('accounts-payable.index')}
+                        className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-sm flex flex-col min-h-[100px] sm:min-h-[112px] hover:border-slate-300 hover:shadow-md transition-all min-w-0 active:opacity-90"
+                    >
+                        <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Payables</span>
+                        <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-bold text-rose-600 font-mono tabular-nums truncate min-w-0">
+                            {fmt(bills.total_ap, { currency: true })}
+                        </p>
+                        <p className="mt-auto text-[10px] sm:text-xs text-slate-500">
+                            {bills.overdue_count > 0 ? (
+                                <span className="text-rose-600">{bills.overdue_count} overdue</span>
+                            ) : (
+                                'To pay'
+                            )}
+                        </p>
+                    </Link>
+
+                    <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-sm flex flex-col min-h-[100px] sm:min-h-[112px]">
+                        <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">This month</span>
+                        <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-bold font-mono tabular-nums">
+                            <span className={netMonth >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                                {fmt(netMonth, { currency: true })}
                             </span>
+                        </p>
+                        <p className="mt-auto text-[10px] sm:text-xs text-slate-500">
+                            Sales − expenses
                         </p>
                     </div>
 
-                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between">
-                        <div className="flex items-center justify-between mb-3">
-                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                                AR Outstanding
-                            </span>
-                            <span className="p-2 rounded-xl bg-rose-50 text-rose-600">
-                                <Icons.Exclamation />
-                            </span>
-                        </div>
-                        <p className="text-xl font-bold text-rose-600 font-mono tabular-nums">
-                            RM {parseFloat(invoices.total_outstanding).toLocaleString('en-MY', { minimumFractionDigits: 2 })}
+                    <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-sm flex flex-col min-h-[100px] sm:min-h-[112px]">
+                        <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Collection rate</span>
+                        <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-bold text-emerald-600 tabular-nums">
+                            {collectionRate}%
                         </p>
-                        <p className="mt-2 text-xs text-slate-500">
-                            {invoices.unpaid + invoices.partially_paid} invoices unpaid or partially paid
-                        </p>
-                    </div>
-
-                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between">
-                        <div className="flex items-center justify-between mb-3">
-                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                                Collection Rate
-                            </span>
-                            <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
-                                <Icons.Check />
-                            </span>
-                        </div>
-                        <div className="flex items-end justify-between">
-                            <p className="text-2xl font-bold text-emerald-600">
-                                {collectionRate.toFixed(0)}
-                                <span className="text-sm font-semibold">%</span>
-                            </p>
-                            <span className="inline-flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-                                <Icons.ArrowUp /> Healthy
-                            </span>
-                        </div>
-                        <p className="mt-2 text-xs text-slate-500">Of all issued invoices collected so far</p>
-                    </div>
-
-                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between">
-                        <div className="flex items-center justify-between mb-3">
-                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                                Customers
-                            </span>
-                            <span className="p-2 rounded-xl bg-slate-100 text-slate-600">
-                                <Icons.Users />
-                            </span>
-                        </div>
-                        <p className="text-xl font-bold text-slate-900">
-                            {customers.total}
-                            <span className="ml-2 text-xs text-slate-500 font-normal">
-                                ({customers.active} active)
-                            </span>
-                        </p>
-                        <p className="mt-2 text-xs text-slate-500">
-                            {riskCustomers}% inactive or on hold
+                        <p className="mt-auto text-[10px] sm:text-xs text-slate-500">
+                            Invoiced → collected
                         </p>
                     </div>
                 </div>
 
-                {/* Middle grid: Receivables + Customer analytics */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Receivables funnel */}
-                    <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <div>
-                                <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">
-                                    Receivables pipeline
-                                </h3>
-                                <p className="text-xs text-slate-500 mt-1">
-                                    From draft to cash – where your invoices sit today.
-                                </p>
-                            </div>
-                            <Link
-                                href={route('invoices.index')}
-                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
-                            >
-                                View invoices <Icons.ChevronRight />
+                {/* Revenue & Payables — two cards side by side on lg */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                        <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Revenue</h2>
+                            <Link href={route('invoices.index')} className="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
+                                Invoices <Icons.ChevronRight />
                             </Link>
                         </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-                            <StageCard
-                                label="Draft"
-                                value={invoices.draft}
-                                subtitle="Not yet sent"
-                                tone="slate"
-                            />
-                            <StageCard
-                                label="Unpaid"
-                                value={invoices.unpaid}
-                                subtitle="Awaiting payment"
-                                tone="amber"
-                            />
-                            <StageCard
-                                label="Partially paid"
-                                value={invoices.partially_paid}
-                                subtitle="Some cash collected"
-                                tone="blue"
-                            />
-                            <StageCard
-                                label="Paid"
-                                value={invoices.paid}
-                                subtitle="Fully settled"
-                                tone="emerald"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Customer analytics side card */}
-                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <div>
-                                <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">
-                                    Customer analytics
-                                </h3>
-                                <p className="text-xs text-slate-500 mt-1">
-                                    High-level view of your customer base.
-                                </p>
+                        <div className="p-4 sm:p-6">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                                <div>
+                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Invoiced</p>
+                                    <p className="text-base sm:text-lg font-bold text-slate-900 font-mono mt-0.5">{fmt(invoices.total_invoiced, { currency: true })}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Collected</p>
+                                    <p className="text-base sm:text-lg font-bold text-emerald-600 font-mono mt-0.5">{fmt(invoices.total_collected, { currency: true })}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Outstanding</p>
+                                    <p className="text-base sm:text-lg font-bold text-rose-600 font-mono mt-0.5">{fmt(invoices.total_outstanding, { currency: true })}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Overdue</p>
+                                    <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{invoices.overdue_count}</p>
+                                </div>
                             </div>
                             <Link
-                                href={route('customers.index')}
-                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                                href={route('aged-receivables.index')}
+                                className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
                             >
-                                View customers <Icons.ChevronRight />
+                                Aged receivables <Icons.ChevronRight />
                             </Link>
                         </div>
+                    </section>
 
-                        <div className="space-y-3">
-                            <MetricRow
-                                label="Total customers"
-                                value={customers.total}
-                                description="Accounts created in this tenant"
-                            />
-                            <MetricRow
-                                label="Active customers"
-                                value={customers.active}
-                                description="Eligible for new invoices"
-                                accent="emerald"
-                            />
-                            <MetricRow
-                                label="AR outstanding"
-                                value={
-                                    'RM ' +
-                                    parseFloat(customers.outstanding).toLocaleString('en-MY', {
-                                        minimumFractionDigits: 2,
-                                    })
-                                }
-                                description="Still to be collected"
-                                accent="rose"
-                            />
+                    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                        <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Payables</h2>
+                            <Link href={route('bills.index')} className="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
+                                Bills <Icons.ChevronRight />
+                            </Link>
                         </div>
-                    </div>
+                        <div className="p-4 sm:p-6">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                                <div>
+                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Suppliers</p>
+                                    <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{suppliers.total} <span className="text-xs font-normal text-slate-500">({suppliers.active} active)</span></p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Outstanding</p>
+                                    <p className="text-base sm:text-lg font-bold text-rose-600 font-mono mt-0.5">{fmt(bills.total_ap, { currency: true })}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Unpaid bills</p>
+                                    <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{bills.unpaid_count}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Overdue</p>
+                                    <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{bills.overdue_count}</p>
+                                </div>
+                            </div>
+                            <Link
+                                href={route('accounts-payable.index')}
+                                className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                            >
+                                Accounts payable <Icons.ChevronRight />
+                            </Link>
+                        </div>
+                    </section>
                 </div>
 
-                {/* Bottom grid: Credit notes + activity placeholder */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Credit notes */}
-                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 lg:col-span-1">
-                        <div className="flex items-center justify-between mb-4">
-                            <div>
-                                <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">
-                                    Credit notes
-                                </h3>
-                                <p className="text-xs text-slate-500 mt-1">
-                                    Adjustments and reversals issued to customers.
-                                </p>
-                            </div>
-                            <Link
-                                href={route('credit-notes.index')}
-                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
-                            >
-                                View credit notes <Icons.ChevronRight />
-                            </Link>
+                {/* This month + Reports + Credit notes — single row on desktop */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+                    <Link
+                        href={route('cashflow-summary.index')}
+                        className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm hover:border-slate-300 hover:shadow-md transition-all flex items-center gap-4"
+                    >
+                        <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                            <Icons.ChartBar />
                         </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-slate-800">Cashflow</p>
+                            <p className="text-xs text-slate-500 mt-0.5">Sales vs expenses · view graph</p>
+                        </div>
+                        <Icons.ChevronRight className="flex-shrink-0 text-slate-300 w-5 h-5" />
+                    </Link>
 
-                        <div className="grid grid-cols-2 gap-4 mt-2">
-                            <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
-                                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                                    Issued
-                                </p>
-                                <p className="text-xl font-bold text-slate-900">{creditNotes.count}</p>
-                                <p className="mt-1 text-xs text-slate-500">Total credit notes</p>
-                            </div>
-                            <div className="rounded-xl border border-rose-100 bg-rose-50/70 p-4">
-                                <p className="text-[10px] font-semibold text-rose-500 uppercase tracking-wider mb-1">
-                                    Total credited
-                                </p>
-                                <p className="text-xl font-bold text-rose-600 font-mono tabular-nums">
-                                    RM{' '}
-                                    {parseFloat(creditNotes.value).toLocaleString('en-MY', {
-                                        minimumFractionDigits: 2,
-                                    })}
-                                </p>
-                                <p className="mt-1 text-xs text-slate-500">Revenue reversed</p>
-                            </div>
+                    <Link
+                        href={route('reports.index')}
+                        className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm hover:border-slate-300 hover:shadow-md transition-all flex items-center gap-4"
+                    >
+                        <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                            <Icons.Document />
                         </div>
-                    </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-slate-800">Reports</p>
+                            <p className="text-xs text-slate-500 mt-0.5">P&L, Balance Sheet & more</p>
+                        </div>
+                        <Icons.ChevronRight className="flex-shrink-0 text-slate-300 w-5 h-5" />
+                    </Link>
 
-                    {/* Activity / roadmap placeholder */}
-                    <div className="bg-white rounded-2xl border border-dashed border-slate-200 shadow-sm p-6 lg:col-span-2 flex flex-col justify-between">
-                        <div className="flex items-center justify-between mb-4">
-                            <div>
-                                <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">
-                                    Coming soon
-                                </h3>
-                                <p className="text-xs text-slate-500 mt-1">
-                                    Purchases, AP aging, and richer financial reports will land here.
-                                </p>
-                            </div>
+                    <Link
+                        href={route('credit-notes.index')}
+                        className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm hover:border-slate-300 hover:shadow-md transition-all flex items-center gap-4"
+                    >
+                        <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
+                            <Icons.ReceiptRefund />
                         </div>
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
-                                <Icons.Document />
-                            </div>
-                            <div>
-                                <p className="text-slate-700 font-medium">
-                                    You’re on the enterprise-ready path.
-                                </p>
-                                <p className="text-slate-400 text-xs mt-1">
-                                    As you onboard more customers and invoices, this dashboard will evolve with
-                                    more deep-dive analytics.
-                                </p>
-                            </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-slate-800">Credit notes</p>
+                            <p className="text-xs text-slate-500 mt-0.5">{creditNotes.count} issued · {fmt(creditNotes.value, { currency: true })}</p>
                         </div>
-                    </div>
+                        <Icons.ChevronRight className="flex-shrink-0 text-slate-300 w-5 h-5" />
+                    </Link>
                 </div>
             </div>
         </AuthenticatedLayout>

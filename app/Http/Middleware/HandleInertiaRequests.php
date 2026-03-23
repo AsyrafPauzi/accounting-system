@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Tenant;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -34,6 +35,29 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
                 'impersonator_id' => $request->session()->get('impersonator_id'),
+                'hasActiveSubscription' => function () use ($request) {
+                    $user = $request->user();
+                    if (! $user || ! $user->tenant_id) {
+                        return false;
+                    }
+
+                    /** @var Tenant|null $tenant */
+                    $tenant = Tenant::find($user->tenant_id);
+
+                    return $tenant ? $tenant->hasActiveSubscription() : false;
+                },
+                'subscription_ends_at' => function () use ($request) {
+                    $user = $request->user();
+                    if (! $user || ! $user->tenant_id) {
+                        return null;
+                    }
+
+                    /** @var Tenant|null $tenant */
+                    $tenant = Tenant::find($user->tenant_id);
+                    $subscription = $tenant?->activeSubscription();
+
+                    return $subscription?->current_period_ends_at;
+                },
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

@@ -27,22 +27,65 @@ class InvoiceController extends Controller
     }
 
     /**
-     * Display a listing of invoices.
+     * Display a listing of invoices with pagination and filters.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $invoices = DB::table('invoices')
+        $perPage = (int) $request->input('per_page', 10);
+        if (! in_array($perPage, [10, 25, 50, 100], true)) {
+            $perPage = 10;
+        }
+        $search = $request->input('search', '');
+        $statusFilter = $request->input('status', '');
+
+        $baseQuery = DB::table('invoices')
             ->join('customers', 'invoices.customer_id', '=', 'customers.id')
             ->select(
                 'invoices.*',
                 'customers.name as customer_name',
                 'customers.email as customer_email'
             )
-            ->orderBy('invoices.created_at', 'desc')
-            ->get();
+            ->orderBy('invoices.created_at', 'desc');
+
+        if ($search !== '') {
+            $baseQuery->where(function ($q) use ($search) {
+                $q->where('invoices.invoice_number', 'like', '%' . $search . '%')
+                    ->orWhere('customers.name', 'like', '%' . $search . '%');
+            });
+        }
+        if ($statusFilter !== '') {
+            $baseQuery->where('invoices.status', $statusFilter);
+        }
+
+        // KPIs from filtered set (same filters, no pagination)
+        $totalCount = (clone $baseQuery)->count();
+        $totalOutstanding = (clone $baseQuery)
+            ->whereNotIn('invoices.status', ['draft', 'void'])
+            ->selectRaw('COALESCE(SUM(invoices.total_amount - invoices.amount_paid), 0) as total')
+            ->value('total') ?? 0;
+        $totalCollected = (clone $baseQuery)->selectRaw('COALESCE(SUM(invoices.amount_paid), 0) as total')->value('total') ?? 0;
+
+        $paginator = $baseQuery->paginate($perPage)->withQueryString();
+        $invoices = $paginator->items();
 
         return Inertia::render('Invoices/Index', [
             'invoices' => $invoices,
+            'totalOutstanding' => (float) $totalOutstanding,
+            'totalCollected' => (float) $totalCollected,
+            'totalCount' => $totalCount,
+            'paginator' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'from' => $paginator->firstItem(),
+                'to' => $paginator->lastItem(),
+            ],
+            'filters' => [
+                'search' => $search,
+                'status' => $statusFilter,
+                'per_page' => $perPage,
+            ],
         ]);
     }
 

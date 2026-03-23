@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import { Link, usePage } from '@inertiajs/react';
 
@@ -13,6 +14,9 @@ const Icons = {
     ChartPie: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /></svg>,
     Scale: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>,
     DocumentCheck: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+    Sparkles: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5zM19 11l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z" /></svg>,
+    Menu: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>,
+    X: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>,
 };
 
 const navConfig = [
@@ -23,26 +27,46 @@ const navConfig = [
         { name: 'Customers', route: 'customers.index', Icon: Icons.Users },
     ]},
     { group: 'Purchases (Expenses)', links: [
-        { name: 'Bills / Purchases', route: 'dashboard', Icon: Icons.ShoppingCart },
-        { name: 'Suppliers', route: 'dashboard', Icon: Icons.BuildingOffice },
+        { name: 'Suppliers', route: 'suppliers.index', Icon: Icons.BuildingOffice, requirePaid: true },
+        { name: 'Bills / Purchases', route: 'bills.index', Icon: Icons.ShoppingCart, requirePaid: true },
+        { name: 'Accounts Payable', route: 'accounts-payable.index', Icon: Icons.Document, requirePaid: true, subtitle: 'Outstanding and aging' },
     ]},
     { group: 'Accounting', links: [
-        { name: 'Chart of Accounts', route: 'dashboard', Icon: Icons.Folder },
-        { name: 'General Ledger', route: 'dashboard', Icon: Icons.BookOpen },
+        { name: 'Chart of Accounts', route: 'chart-of-accounts.index', Icon: Icons.Folder, requirePaid: true, subtitle: 'Accounts used in postings and reports' },
+        { name: 'General Ledger', route: 'general-ledger.index', Icon: Icons.BookOpen, requirePaid: true, subtitle: 'By journal entry' },
     ]},
-    { group: 'Financial Reports', links: [
-        { name: 'Profit & Loss', route: 'dashboard', Icon: Icons.ChartPie },
-        { name: 'Balance Sheet', route: 'dashboard', Icon: Icons.Scale },
+    { group: 'Reports', links: [
+        { name: 'Reports', route: 'reports.index', Icon: Icons.ChartPie, requirePaid: true, subtitle: 'P&L, Balance Sheet, Cashflow, Aged AR & more', activeRoutes: ['reports.index', 'general-ledger.report', 'profit-and-loss.index', 'balance-sheet.index', 'cashflow-summary.index', 'aged-receivables.index'] },
     ]},
     { group: 'Compliance', links: [
-        { name: 'LHDN MyInvois', route: 'dashboard', Icon: Icons.DocumentCheck },
+        { name: 'LHDN MyInvois', route: 'dashboard', Icon: Icons.DocumentCheck, requirePaid: true },
     ]},
 ];
 
-export default function Authenticated({ user, header, children }) {
-    const { flash, auth } = usePage().props;
+export default function Authenticated({ user: propUser, header, children }) {
+    const page = usePage();
+    const { flash, auth } = page.props;
+    const url = page.url;
+    const user = propUser || auth?.user || {};
+    const hasActiveSubscription = auth?.hasActiveSubscription ?? false;
     const isAdmin = user?.role === 'admin';
     const isImpersonating = Boolean(auth?.impersonator_id);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    // Close mobile sidebar on route change (e.g. after clicking a link)
+    useEffect(() => {
+        setSidebarOpen(false);
+    }, [url]);
+
+    // Prevent body scroll when mobile sidebar is open
+    useEffect(() => {
+        if (sidebarOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [sidebarOpen]);
 
     // Helper to check if route exists and is active
     const isRouteActive = (routeName) => {
@@ -64,21 +88,51 @@ export default function Authenticated({ user, header, children }) {
 
     return (
         <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
-            {/* LEFT COLUMN: PREMIUM SIDEBAR */}
-            <aside className="w-72 flex flex-col flex-shrink-0 border-r border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 custom-scrollbar">
-                {/* Brand */}
-                <div className="p-6 flex items-center gap-3 border-b border-slate-100">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/25 ring-2 ring-white">
-                        <ApplicationLogo className="block h-6 w-auto fill-current text-white" />
+            {/* Mobile overlay when sidebar is open */}
+            <div
+                aria-hidden="true"
+                className={`fixed inset-0 z-30 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-200 lg:hidden ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                onClick={() => setSidebarOpen(false)}
+            />
+
+            {/* LEFT COLUMN: SIDEBAR — drawer on mobile, static on lg */}
+            <aside
+                className={`fixed inset-y-0 left-0 z-40 w-72 flex flex-col border-r border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 custom-scrollbar transform transition-transform duration-200 ease-out lg:relative lg:z-auto lg:translate-x-0 lg:flex-shrink-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+            >
+                {/* Brand + mobile close */}
+                <div className="p-4 sm:p-6 flex items-center justify-between gap-3 border-b border-slate-100">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/25 ring-2 ring-white">
+                            <ApplicationLogo className="block h-6 w-auto fill-current text-white" />
+                        </div>
+                        <div className="min-w-0">
+                            <span className="font-bold text-slate-900 tracking-tight text-base block truncate">Accounter</span>
+                            <span className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Malaysia Edition</span>
+                        </div>
                     </div>
-                    <div>
-                        <span className="font-bold text-slate-900 tracking-tight text-base">Accounter</span>
-                        <span className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Malaysia Edition</span>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setSidebarOpen(false)}
+                        className="lg:hidden p-2 -m-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                        aria-label="Close menu"
+                    >
+                        <Icons.X />
+                    </button>
                 </div>
 
                 {/* Navigation */}
                 <nav className="flex-1 py-5 overflow-y-auto px-3">
+                    {!hasActiveSubscription && (
+                        <div className="mb-4 mx-1 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100 text-amber-800 text-[11px] font-medium flex items-center justify-between">
+                            <span>You&apos;re on Free tier.</span>
+                            <Link
+                                href={getSafeRoute('subscription.index')}
+                                className="ml-2 text-[10px] font-bold uppercase tracking-widest text-amber-700 underline-offset-2 hover:underline"
+                            >
+                                Upgrade
+                            </Link>
+                        </div>
+                    )}
                     {navConfig.map((section, idx) => (
                         <div key={idx} className="mb-5">
                             <h3 className="px-3 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -87,23 +141,36 @@ export default function Authenticated({ user, header, children }) {
                             <div className="space-y-0.5">
                                 {section.links.map((link) => {
                                     const Icon = link.Icon;
-                                    const active = isRouteActive(link.route);
+                                    const active = link.activeRoutes
+                                        ? link.activeRoutes.some((r) => isRouteActive(r))
+                                        : isRouteActive(link.route);
+                                    const isPaidOnly = link.requirePaid;
+                                    const disabled = isPaidOnly && !hasActiveSubscription;
                                     return (
                                         <Link
                                             key={link.name}
-                                            href={getSafeRoute(link.route)}
+                                            href={disabled ? route('subscription.index') : getSafeRoute(link.route)}
                                             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
                                                 active
                                                     ? 'bg-blue-50 text-blue-700 shadow-sm'
-                                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                                    : disabled
+                                                        ? 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                                                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                                             }`}
                                         >
                                             <span className={active ? 'text-blue-600' : 'text-slate-400'}>
                                                 <Icon />
                                             </span>
-                                            <span className="flex-1">{link.name}</span>
+                                            <span className="flex-1 min-w-0">
+                                                <span className="block truncate">{link.name}</span>
+                                                {link.subtitle && (
+                                                    <span className={`block text-[10px] font-normal mt-0.5 truncate ${active ? 'text-blue-600/80' : 'text-slate-500'}`}>
+                                                        {link.subtitle}
+                                                    </span>
+                                                )}
+                                            </span>
                                             {active && (
-                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
                                             )}
                                         </Link>
                                     );
@@ -129,16 +196,48 @@ export default function Authenticated({ user, header, children }) {
                             </Link>
                         </div>
                     )}
+                    <div className="mb-5">
+                        <h3 className="px-3 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            Account
+                        </h3>
+                        <Link
+                            href={getSafeRoute('settings.company')}
+                            className={`mb-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                                isRouteActive('settings.company')
+                                    ? 'bg-blue-50 text-blue-700 shadow-sm'
+                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                            }`}
+                        >
+                            <span className="text-slate-400">
+                                <Icons.BuildingOffice />
+                            </span>
+                            <span className="flex-1">Company settings</span>
+                        </Link>
+                        <Link
+                            href={getSafeRoute('subscription.index')}
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                                isRouteActive('subscription.index')
+                                    ? 'bg-blue-50 text-blue-700 shadow-sm'
+                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                            }`}
+                        >
+                            <span className="text-slate-400">
+                                <Icons.Sparkles />
+                            </span>
+                            <span className="flex-1">Subscription</span>
+                            {}
+                        </Link>
+                    </div>
                 </nav>
 
                 {/* User block */}
                 <div className="p-4 border-t border-slate-100 bg-slate-50/80">
                     <div className="flex items-center gap-3 mb-3">
                         <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-md ring-2 ring-white">
-                            {user.name.charAt(0)}
+                            {(user.name || 'U').charAt(0)}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-slate-800 truncate">{user.name}</p>
+                            <p className="text-sm font-bold text-slate-800 truncate">{user.name || 'User'}</p>
                             <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate">
                                 {isImpersonating ? 'Impersonating' : (isAdmin ? 'Administrator' : 'User')}
                             </p>
@@ -164,16 +263,29 @@ export default function Authenticated({ user, header, children }) {
             </aside>
 
             {/* RIGHT COLUMN: MAIN CONTENT */}
-            <div className="flex-1 flex flex-col overflow-hidden relative bg-slate-50">
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-slate-50">
+                {/* Mobile: top bar with hamburger */}
+                <div className="lg:hidden flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-white border-b border-slate-200 z-10">
+                    <button
+                        type="button"
+                        onClick={() => setSidebarOpen(true)}
+                        className="p-2 -ml-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                        aria-label="Open menu"
+                    >
+                        <Icons.Menu />
+                    </button>
+                    <span className="font-semibold text-slate-800 truncate">Accounter</span>
+                </div>
+
                 {header && (
-                    <header className="flex-shrink-0 bg-white border-b border-slate-200/80 shadow-sm z-20">
-                        <div className="max-w-full mx-auto py-6 px-8 lg:px-10">
+                    <header className="flex-shrink-0 bg-white border-b border-slate-200/80 shadow-sm z-10">
+                        <div className="max-w-full mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-10">
                             {header}
                         </div>
                     </header>
                 )}
 
-                <main className="flex-1 overflow-y-auto p-6 lg:p-8 relative">
+                <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 relative">
                     {/* Flash messages */}
                     {isImpersonating && (
                         <div className="max-w-7xl mx-auto mb-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium flex items-center justify-between">
@@ -201,7 +313,7 @@ export default function Authenticated({ user, header, children }) {
                             {flash.error}
                         </div>
                     )}
-                    <div className="max-w-7xl mx-auto">
+                    <div className="max-w-7xl mx-auto min-w-0">
                         {children}
                     </div>
                 </main>

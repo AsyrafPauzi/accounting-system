@@ -16,4 +16,21 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     {
         return ['id'];
     }
+
+    public function subscription()
+    {
+        return $this->hasOne(Subscription::class, 'tenant_id');
+    }
+
+    public function activeSubscription()
+    {
+        return $this->subscription()->active()->first();
+    }
+
+    public function hasActiveSubscription(): bool
+    {
+        $subscription = $this->activeSubscription();
+
+        return $subscription ? $subscription->isActive() : false;
+    }
 }
