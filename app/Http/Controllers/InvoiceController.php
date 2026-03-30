@@ -57,13 +57,19 @@ class InvoiceController extends Controller
             $baseQuery->where('invoices.status', $statusFilter);
         }
 
-        // KPIs from filtered set (same filters, no pagination)
+        // KPIs from filtered set (same filters, no pagination).
+        // Use select(DB::raw(...)): selectRaw() addSelect() would keep invoices.* from
+        // $baseQuery and break ONLY_FULL_GROUP_BY. reorder() drops orderBy on the clone.
         $totalCount = (clone $baseQuery)->count();
         $totalOutstanding = (clone $baseQuery)
+            ->reorder()
             ->whereNotIn('invoices.status', ['draft', 'void'])
-            ->selectRaw('COALESCE(SUM(invoices.total_amount - invoices.amount_paid), 0) as total')
+            ->select(DB::raw('COALESCE(SUM(invoices.total_amount - invoices.amount_paid), 0) as total'))
             ->value('total') ?? 0;
-        $totalCollected = (clone $baseQuery)->selectRaw('COALESCE(SUM(invoices.amount_paid), 0) as total')->value('total') ?? 0;
+        $totalCollected = (clone $baseQuery)
+            ->reorder()
+            ->select(DB::raw('COALESCE(SUM(invoices.amount_paid), 0) as total'))
+            ->value('total') ?? 0;
 
         $paginator = $baseQuery->paginate($perPage)->withQueryString();
         $invoices = $paginator->items();
