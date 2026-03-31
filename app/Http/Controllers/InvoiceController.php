@@ -234,12 +234,13 @@ class InvoiceController extends Controller
                 'updated_at' => now(),
             ]);
 
-            // CREDIT: Sales Revenue (4000) - Net of discount, excluding tax
+            // CREDIT: Sales Revenue (4000) - Net of discount, excluding tax, including 5-sen rounding on invoice total
+            $revenueNet = (float) ($invoice->amount_before_tax - $invoice->discount_total) + (float) $invoice->shipping_amount + (float) $invoice->rounding_adjustment;
             DB::table('journal_items')->insert([
                 'journal_entry_id' => $journalId,
                 'account_code' => '4000',
                 'debit' => 0,
-                'credit' => ($invoice->amount_before_tax - $invoice->discount_total) + $invoice->shipping_amount,
+                'credit' => $revenueNet,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -283,10 +284,11 @@ class InvoiceController extends Controller
                 'updated_at' => now(),
             ]);
 
+            $revenueNet = (float) ($invoice->amount_before_tax - $invoice->discount_total) + (float) $invoice->shipping_amount + (float) $invoice->rounding_adjustment;
             // Reverse the original entries
             DB::table('journal_items')->insert([
                 ['journal_entry_id' => $journalId, 'account_code' => '1100', 'debit' => 0, 'credit' => $invoice->total_amount, 'created_at' => now(), 'updated_at' => now()],
-                ['journal_entry_id' => $journalId, 'account_code' => '4000', 'debit' => ($invoice->amount_before_tax - $invoice->discount_total) + $invoice->shipping_amount, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
+                ['journal_entry_id' => $journalId, 'account_code' => '4000', 'debit' => $revenueNet, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
             ]);
 
             if ($invoice->tax_amount > 0) {
@@ -376,9 +378,10 @@ class InvoiceController extends Controller
                 $journal = DB::table('journal_entries')->where('reference_type', 'Invoice')->where('reference_id', $id)->latest()->first();
                 if ($journal) {
                     DB::table('journal_items')->where('journal_entry_id', $journal->id)->delete();
+                    $revenueNet = (float) ($subtotal - $discountTotal) + (float) $shipping + (float) $roundingAdjustment;
                     DB::table('journal_items')->insert([
                         ['journal_entry_id' => $journal->id, 'account_code' => '1100', 'debit' => $invoice->total_amount, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
-                        ['journal_entry_id' => $journal->id, 'account_code' => '4000', 'debit' => 0, 'credit' => ($subtotal - $discountTotal) + $shipping, 'created_at' => now(), 'updated_at' => now()],
+                        ['journal_entry_id' => $journal->id, 'account_code' => '4000', 'debit' => 0, 'credit' => $revenueNet, 'created_at' => now(), 'updated_at' => now()],
                     ]);
                     if ($taxTotal > 0) {
                         DB::table('journal_items')->insert(['journal_entry_id' => $journal->id, 'account_code' => '2100', 'debit' => 0, 'credit' => $taxTotal, 'created_at' => now(), 'updated_at' => now()]);

@@ -87,33 +87,33 @@ export default function Authenticated({ user: propUser, header, children }) {
     };
 
     return (
-        <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
+        <div className="flex h-screen bg-gradient-to-br from-slate-100 via-indigo-50/70 to-violet-100/80 overflow-hidden font-sans">
             {/* Mobile overlay when sidebar is open */}
             <div
                 aria-hidden="true"
-                className={`fixed inset-0 z-30 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-200 lg:hidden ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                className={`fixed inset-0 z-30 bg-indigo-950/40 backdrop-blur-sm transition-opacity duration-200 lg:hidden ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 onClick={() => setSidebarOpen(false)}
             />
 
             {/* LEFT COLUMN: SIDEBAR — drawer on mobile, static on lg */}
             <aside
-                className={`fixed inset-y-0 left-0 z-40 w-72 flex flex-col border-r border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 custom-scrollbar transform transition-transform duration-200 ease-out lg:relative lg:z-auto lg:translate-x-0 lg:flex-shrink-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+                className={`fixed inset-y-0 left-0 z-40 w-72 flex flex-col border-r border-indigo-200/70 bg-gradient-to-b from-white via-indigo-50/40 to-violet-50/60 shadow-xl shadow-indigo-200/30 custom-scrollbar transform transition-transform duration-200 ease-out lg:relative lg:z-auto lg:translate-x-0 lg:flex-shrink-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
             >
                 {/* Brand + mobile close */}
-                <div className="p-4 sm:p-6 flex items-center justify-between gap-3 border-b border-slate-100">
+                <div className="p-4 sm:p-6 flex items-center justify-between gap-3 border-b border-indigo-100/80 bg-white/50 backdrop-blur-sm">
                     <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/25 ring-2 ring-white">
+                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 via-violet-600 to-indigo-700 shadow-lg shadow-indigo-500/35 ring-2 ring-white/80">
                             <ApplicationLogo className="block h-6 w-auto fill-current text-white" />
                         </div>
                         <div className="min-w-0">
-                            <span className="font-bold text-slate-900 tracking-tight text-base block truncate">Accounter</span>
-                            <span className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Malaysia Edition</span>
+                            <span className="font-bold text-indigo-950 tracking-tight text-base block truncate">Accounter</span>
+                            <span className="block text-[10px] font-semibold text-indigo-600/80 uppercase tracking-wider">Malaysia Edition</span>
                         </div>
                     </div>
                     <button
                         type="button"
                         onClick={() => setSidebarOpen(false)}
-                        className="lg:hidden p-2 -m-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                        className="lg:hidden p-2 -m-2 rounded-xl text-indigo-600 hover:text-indigo-900 hover:bg-indigo-100/80 transition-colors"
                         aria-label="Close menu"
                     >
                         <Icons.X />
@@ -123,11 +123,11 @@ export default function Authenticated({ user: propUser, header, children }) {
                 {/* Navigation */}
                 <nav className="flex-1 py-5 overflow-y-auto px-3">
                     {!hasActiveSubscription && (
-                        <div className="mb-4 mx-1 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100 text-amber-800 text-[11px] font-medium flex items-center justify-between">
+                        <div className="mb-4 mx-1 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 text-amber-900 text-[11px] font-medium flex items-center justify-between shadow-sm shadow-amber-100/50">
                             <span>You&apos;re on Free tier.</span>
                             <Link
                                 href={getSafeRoute('subscription.index')}
-                                className="ml-2 text-[10px] font-bold uppercase tracking-widest text-amber-700 underline-offset-2 hover:underline"
+                                className="ml-2 text-[10px] font-bold uppercase tracking-widest text-amber-800 underline-offset-2 hover:underline"
                             >
                                 Upgrade
                             </Link>
@@ -135,7 +135,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                     )}
                     {navConfig.map((section, idx) => (
                         <div key={idx} className="mb-5">
-                            <h3 className="px-3 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            <h3 className="px-3 mb-2 text-[10px] font-bold text-indigo-600/90 uppercase tracking-widest">
                                 {section.group}
                             </h3>
                             <div className="space-y-0.5">
@@ -152,25 +152,25 @@ export default function Authenticated({ user: propUser, header, children }) {
                                             href={disabled ? route('subscription.index') : getSafeRoute(link.route)}
                                             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
                                                 active
-                                                    ? 'bg-blue-50 text-blue-700 shadow-sm'
+                                                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
                                                     : disabled
-                                                        ? 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
-                                                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                                        ? 'text-slate-400 hover:text-slate-600 hover:bg-white/60'
+                                                        : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
                                             }`}
                                         >
-                                            <span className={active ? 'text-blue-600' : 'text-slate-400'}>
+                                            <span className={active ? 'text-white' : 'text-indigo-500/80'}>
                                                 <Icon />
                                             </span>
                                             <span className="flex-1 min-w-0">
                                                 <span className="block truncate">{link.name}</span>
                                                 {link.subtitle && (
-                                                    <span className={`block text-[10px] font-normal mt-0.5 truncate ${active ? 'text-blue-600/80' : 'text-slate-500'}`}>
+                                                    <span className={`block text-[10px] font-normal mt-0.5 truncate ${active ? 'text-indigo-100' : 'text-slate-500'}`}>
                                                         {link.subtitle}
                                                     </span>
                                                 )}
                                             </span>
                                             {active && (
-                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+                                                <span className="w-1.5 h-1.5 rounded-full bg-white/90 flex-shrink-0 shadow-sm" />
                                             )}
                                         </Link>
                                     );
@@ -181,34 +181,34 @@ export default function Authenticated({ user: propUser, header, children }) {
 
                     {isAdmin && (
                         <div className="mb-5">
-                            <h3 className="px-3 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Admin</h3>
+                            <h3 className="px-3 mb-2 text-[10px] font-bold text-indigo-600/90 uppercase tracking-widest">Admin</h3>
                             <Link
                                 href={getSafeRoute('admin.tenants.index')}
                                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
                                     isRouteActive('admin.tenants.index')
-                                        ? 'bg-blue-50 text-blue-700 shadow-sm'
-                                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                        ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
+                                        : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
                                 }`}
                             >
-                                <span className="text-slate-400"><Icons.BuildingOffice /></span>
+                                <span className={isRouteActive('admin.tenants.index') ? 'text-white' : 'text-indigo-500/80'}><Icons.BuildingOffice /></span>
                                 <span className="flex-1">Tenant Admin</span>
-                                {isRouteActive('admin.tenants.index') && <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                                {isRouteActive('admin.tenants.index') && <span className="w-1.5 h-1.5 rounded-full bg-white/90" />}
                             </Link>
                         </div>
                     )}
                     <div className="mb-5">
-                        <h3 className="px-3 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        <h3 className="px-3 mb-2 text-[10px] font-bold text-indigo-600/90 uppercase tracking-widest">
                             Account
                         </h3>
                         <Link
                             href={getSafeRoute('settings.company')}
                             className={`mb-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
                                 isRouteActive('settings.company')
-                                    ? 'bg-blue-50 text-blue-700 shadow-sm'
-                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
+                                    : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
                             }`}
                         >
-                            <span className="text-slate-400">
+                            <span className={isRouteActive('settings.company') ? 'text-white' : 'text-indigo-500/80'}>
                                 <Icons.BuildingOffice />
                             </span>
                             <span className="flex-1">Company settings</span>
@@ -217,11 +217,11 @@ export default function Authenticated({ user: propUser, header, children }) {
                             href={getSafeRoute('subscription.index')}
                             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
                                 isRouteActive('subscription.index')
-                                    ? 'bg-blue-50 text-blue-700 shadow-sm'
-                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
+                                    : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
                             }`}
                         >
-                            <span className="text-slate-400">
+                            <span className={isRouteActive('subscription.index') ? 'text-white' : 'text-indigo-500/80'}>
                                 <Icons.Sparkles />
                             </span>
                             <span className="flex-1">Subscription</span>
@@ -231,14 +231,14 @@ export default function Authenticated({ user: propUser, header, children }) {
                 </nav>
 
                 {/* User block */}
-                <div className="p-4 border-t border-slate-100 bg-slate-50/80">
+                <div className="p-4 border-t border-indigo-100/90 bg-gradient-to-t from-violet-100/50 to-indigo-50/70">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-md ring-2 ring-white">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-indigo-400/40 ring-2 ring-white/90">
                             {(user.name || 'U').charAt(0)}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-slate-800 truncate">{user.name || 'User'}</p>
-                            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate">
+                            <p className="text-sm font-bold text-indigo-950 truncate">{user.name || 'User'}</p>
+                            <p className="text-[10px] font-semibold text-indigo-600/75 uppercase tracking-wider truncate">
                                 {isImpersonating ? 'Impersonating' : (isAdmin ? 'Administrator' : 'User')}
                             </p>
                         </div>
@@ -246,7 +246,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                     <div className="grid grid-cols-2 gap-2">
                         <Link
                             href={route('profile.edit')}
-                            className="py-2 rounded-lg text-center text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                            className="py-2 rounded-lg text-center text-xs font-bold text-indigo-900 bg-white border border-indigo-200/80 hover:bg-indigo-50 hover:border-indigo-300 transition-colors shadow-sm"
                         >
                             Settings
                         </Link>
@@ -254,7 +254,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                             href={route('logout')}
                             method="post"
                             as="button"
-                            className="py-2 rounded-lg text-center text-xs font-bold text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100 transition-colors"
+                            className="py-2 rounded-lg text-center text-xs font-bold text-rose-700 bg-gradient-to-br from-rose-50 to-orange-50 border border-rose-200/90 hover:from-rose-100 hover:to-orange-50 transition-colors"
                         >
                             Logout
                         </Link>
@@ -263,22 +263,22 @@ export default function Authenticated({ user: propUser, header, children }) {
             </aside>
 
             {/* RIGHT COLUMN: MAIN CONTENT */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-slate-50">
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-transparent">
                 {/* Mobile: top bar with hamburger */}
-                <div className="lg:hidden flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-white border-b border-slate-200 z-10">
+                <div className="lg:hidden flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md border-b border-indigo-200/60 shadow-sm shadow-indigo-100/40 z-10">
                     <button
                         type="button"
                         onClick={() => setSidebarOpen(true)}
-                        className="p-2 -ml-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                        className="p-2 -ml-2 rounded-xl text-indigo-700 hover:text-indigo-950 hover:bg-indigo-100 transition-colors"
                         aria-label="Open menu"
                     >
                         <Icons.Menu />
                     </button>
-                    <span className="font-semibold text-slate-800 truncate">Accounter</span>
+                    <span className="font-semibold text-indigo-950 truncate">Accounter</span>
                 </div>
 
                 {header && (
-                    <header className="flex-shrink-0 bg-white border-b border-slate-200/80 shadow-sm z-10">
+                    <header className="flex-shrink-0 bg-white/80 backdrop-blur-md border-b border-indigo-100/90 shadow-sm shadow-indigo-100/30 z-10">
                         <div className="max-w-full mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-10">
                             {header}
                         </div>
@@ -321,9 +321,9 @@ export default function Authenticated({ user: propUser, header, children }) {
 
             <style dangerouslySetInnerHTML={{ __html: `
                 .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: rgba(224, 231, 255, 0.5); border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: #a5b4fc; border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #818cf8; }
             `}} />
         </div>
     );
