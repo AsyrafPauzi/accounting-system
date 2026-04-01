@@ -178,17 +178,45 @@ If you pull code that adds files under `database/migrations/tenant/`, run for **
 php artisan tenants:migrate
 ```
 
+Migrate **one** tenant only (use the tenant id from `php artisan tenants:list`, e.g. `asyraf-pauzi_546`):
+
+```bash
+php artisan tenants:migrate --tenants=asyraf-pauzi_546
+```
+
+### “Nothing to migrate” — which command did you run?
+
+| Command | Database | Meaning |
+|---------|----------|---------|
+| **`php artisan migrate`** | **Central only** (users, tenants, plans, sessions) | If this says *Nothing to migrate*, the central DB is already up to date. It does **not** touch company databases. |
+| **`php artisan tenants:migrate`** | **Each tenant** (invoices, customers, GL, …) | This applies everything under `database/migrations/tenant/`. Run this after pulling code that adds/changes **tenant** migrations. |
+
+So: errors like *Unknown column `customers.deleted_at`* are almost always fixed by **`php artisan tenants:migrate`**, not by `php artisan migrate`.
+
+If **`tenants:migrate`** also reports nothing but the column is still missing, the `migrations` table may be out of sync with the real schema. Run the repair command (adds `deleted_at` only where it is missing):
+
+```bash
+php artisan tenants:repair-soft-deletes
+# or one tenant:
+php artisan tenants:repair-soft-deletes --tenants=your-tenant-id
+```
+
+You can still verify in MySQL: `SHOW COLUMNS FROM customers LIKE 'deleted_at';` on the tenant database (often named `tenant{tenant_id}`).
+
 ---
 
 ## Troubleshooting
 
 | Issue | What to check |
 |-------|----------------|
+| **“Nothing to migrate” but tenant app errors (missing columns)** | You probably only ran **`php artisan migrate`**. Run **`php artisan tenants:migrate`**. Use **`php artisan tenants:list`** to confirm tenants exist. |
 | Registration fails on database | MySQL user can **CREATE DATABASE**; connection credentials; server running. |
 | `SQLSTATE[42000] ... only_full_group_by` | Use a recent codebase; some aggregate queries require MySQL-compatible SQL. Prefer MySQL 8 defaults or avoid disabling `ONLY_FULL_GROUP_BY` without verifying queries. |
 | Blank / no styles | Run **`npm run dev`** (or **`npm run build`**) so Vite builds assets. |
 | “Please upgrade your plan” on some pages | Complete **mock subscription** on `/subscription`, or stay on free-tier routes (invoices, customers, credit notes, dashboard, etc.). |
 | Tenant DB missing tables | Ensure registration completed without errors; run `php artisan tenants:migrate` if you added tenant migrations after sign-up. |
+| `Table 'tenant{…}.cache' doesn't exist` (Spatie permission cache, etc.) | Infrastructure tables (`cache`, `sessions`, `jobs`) are on the **central** DB. Config defaults `DB_CACHE_CONNECTION`, `SESSION_CONNECTION`, and `DB_QUEUE_CONNECTION` to `DB_CONNECTION` so they do not follow the tenant default. Run `php artisan config:clear` after pulling. Optionally set those env vars explicitly to your central connection name (e.g. `mysql`). |
+| **403** on routes with `permission:…` even when you have the **admin** role | The **admin** role may exist but have **no permissions linked** (role was created before seeding), or **permission rows** are missing. Run **`php artisan app:sync-roles-permissions`** (central DB), then **`php artisan optimize:clear`**, then **log out and log in** again. Still blocked? In Tinker: `\App\Models\Permission::where('name','invoices.view')->first()` must not be null; `$user->getAllPermissions()->pluck('name')` should list `invoices.view`. |
 
 ---
 
@@ -201,8 +229,10 @@ php artisan tenants:migrate
 | `composer dev` | Serve + queue + logs + Vite |
 | `npm run dev` | Vite dev server |
 | `npm run build` | Production asset build |
-| `php artisan migrate` | Central migrations |
-| `php artisan tenants:migrate` | All tenant databases |
+| `php artisan migrate` | Central migrations only |
+| `php artisan tenants:migrate` | All tenant DBs (`database/migrations/tenant`) |
+| `php artisan tenants:list` | Show tenant ids (for `--tenants=...`) |
+| `php artisan app:sync-roles-permissions` | Re-seed Spatie roles/permissions (central) + clear permission cache |
 | `php artisan queue:work` | Process queued jobs |
 | `php artisan test` | PHPUnit tests |
 

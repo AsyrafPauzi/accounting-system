@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreSupplierRequest;
+use App\Http\Requests\UpdateSupplierRequest;
 use App\Models\Bill;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
@@ -35,30 +36,9 @@ class SupplierController extends Controller
         return Inertia::render('Suppliers/Create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreSupplierRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => 'required|string|max:50|unique:suppliers,code',
-            'contact_person' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:50',
-            'email' => 'nullable|email',
-            'tin' => 'nullable|string|max:50',
-            'brn' => 'nullable|string|max:50',
-            'payment_terms' => 'required|integer|min:0|max:365',
-            'currency' => 'nullable|string|size:3',
-            'billing_street' => 'nullable|string|max:255',
-            'billing_city' => 'nullable|string|max:100',
-            'billing_state' => 'nullable|string|max:100',
-            'billing_zip' => 'nullable|string|max:20',
-            'billing_country' => 'nullable|string|max:100',
-            'website' => 'nullable|string|max:255',
-            'region' => 'nullable|string|max:50',
-            'segment' => 'nullable|string|max:50',
-            'is_active' => 'boolean',
-            'internal_notes' => 'nullable|string',
-        ]);
-
+        $validated = $request->validated();
         $validated['currency'] = $validated['currency'] ?? 'MYR';
         $validated['is_active'] = $request->boolean('is_active', true);
 
@@ -89,32 +69,11 @@ class SupplierController extends Controller
         return Inertia::render('Suppliers/Edit', ['supplier' => $supplier]);
     }
 
-    public function update(Request $request, int $id): RedirectResponse
+    public function update(UpdateSupplierRequest $request, int $id): RedirectResponse
     {
         $supplier = Supplier::findOrFail($id);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => ['required', 'string', 'max:50', Rule::unique('suppliers')->ignore($id)],
-            'contact_person' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:50',
-            'email' => 'nullable|email',
-            'tin' => 'nullable|string|max:50',
-            'brn' => 'nullable|string|max:50',
-            'payment_terms' => 'required|integer|min:0|max:365',
-            'currency' => 'nullable|string|size:3',
-            'billing_street' => 'nullable|string|max:255',
-            'billing_city' => 'nullable|string|max:100',
-            'billing_state' => 'nullable|string|max:100',
-            'billing_zip' => 'nullable|string|max:20',
-            'billing_country' => 'nullable|string|max:100',
-            'website' => 'nullable|string|max:255',
-            'region' => 'nullable|string|max:50',
-            'segment' => 'nullable|string|max:50',
-            'is_active' => 'boolean',
-            'internal_notes' => 'nullable|string',
-        ]);
-
+        $validated = $request->validated();
         $validated['currency'] = $validated['currency'] ?? 'MYR';
         $validated['is_active'] = $request->boolean('is_active', true);
 

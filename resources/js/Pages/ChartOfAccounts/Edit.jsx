@@ -167,3 +167,4 @@ export default function Edit({ auth, account, accounts = [] }) {
             </form>
         </AuthenticatedLayout>
     );
+}

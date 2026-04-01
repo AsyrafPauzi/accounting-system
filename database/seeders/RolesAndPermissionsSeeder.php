@@ -1,0 +1,96 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Permission;
+use App\Models\Role;
+use Illuminate\Database\Seeder;
+
+class RolesAndPermissionsSeeder extends Seeder
+{
+    public function run(): void
+    {
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        $permissions = [
+            // Invoices
+            'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.delete',
+            'invoices.post', 'invoices.void', 'invoices.record-payment', 'invoices.email',
+
+            // Bills
+            'bills.view', 'bills.create', 'bills.edit', 'bills.delete',
+            'bills.post', 'bills.void', 'bills.record-payment',
+
+            // Customers
+            'customers.view', 'customers.create', 'customers.edit', 'customers.delete',
+            'customers.edit-credit-risk',
+
+            // Suppliers
+            'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
+
+            // Credit Notes
+            'credit-notes.view', 'credit-notes.create',
+
+            // Chart of Accounts
+            'accounts.view', 'accounts.create', 'accounts.edit', 'accounts.delete',
+
+            // Journals & Ledger
+            'journal.view', 'general-ledger.view',
+
+            // Reports
+            'reports.view', 'reports.export',
+
+            // Settings & Admin
+            'settings.view', 'settings.edit',
+            'admin.tenants',
+            'users.view', 'users.create', 'users.edit', 'users.delete',
+        ];
+
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+        }
+
+        // Super Admin — every permission
+        $superAdmin = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
+        $superAdmin->syncPermissions(Permission::all());
+
+        // Admin — all except super-admin tenant tools
+        $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $admin->syncPermissions(
+            Permission::whereNotIn('name', ['admin.tenants'])->get()
+        );
+
+        // Accountant — full financial access, no admin
+        $accountant = Role::firstOrCreate(['name' => 'accountant', 'guard_name' => 'web']);
+        $accountant->syncPermissions([
+            'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.post',
+            'invoices.void', 'invoices.record-payment', 'invoices.email',
+            'bills.view', 'bills.create', 'bills.edit', 'bills.post', 'bills.void', 'bills.record-payment',
+            'customers.view', 'customers.create', 'customers.edit',
+            'customers.edit-credit-risk',
+            'suppliers.view', 'suppliers.create', 'suppliers.edit',
+            'credit-notes.view', 'credit-notes.create',
+            'accounts.view', 'accounts.create', 'accounts.edit',
+            'journal.view', 'general-ledger.view',
+            'reports.view', 'reports.export',
+            'settings.view',
+        ]);
+
+        // Sales — invoices and customers only, read-only on everything else
+        $sales = Role::firstOrCreate(['name' => 'sales', 'guard_name' => 'web']);
+        $sales->syncPermissions([
+            'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.email',
+            'customers.view', 'customers.create', 'customers.edit',
+            'credit-notes.view', 'credit-notes.create',
+            'reports.view',
+        ]);
+
+        // Viewer — read-only everywhere
+        $viewer = Role::firstOrCreate(['name' => 'viewer', 'guard_name' => 'web']);
+        $viewer->syncPermissions([
+            'invoices.view', 'bills.view', 'customers.view', 'suppliers.view',
+            'credit-notes.view', 'accounts.view', 'journal.view',
+            'general-ledger.view', 'reports.view',
+        ]);
+    }
+}

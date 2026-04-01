@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class JournalEntry extends Model
 {
+    use SoftDeletes, HasUuid;
     protected $fillable = ['date', 'description', 'reference_type', 'reference_id'];
 
     protected function casts(): array

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Str; // <--- Add this line
 use Illuminate\Auth\Events\Registered;
@@ -50,6 +51,11 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
             'tenant_id' => $companyId, // <--- Link established
         ]);
+
+        // Tenant owner: full app access (Spatie roles live on central DB)
+        if (Role::query()->where('name', 'admin')->where('guard_name', 'web')->exists()) {
+            $user->assignRole('admin');
+        }
 
         event(new Registered($user));
 

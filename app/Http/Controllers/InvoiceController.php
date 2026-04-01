@@ -2,17 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\DB;
+use App\Http\Requests\StoreInvoiceRequest;
+use App\Http\Requests\UpdateInvoiceRequest;
+use App\Services\InvoiceService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Invoice;
 use App\Models\Customer;
-use App\Models\InvoiceItem;
 use App\Jobs\SendInvoiceEmail;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class InvoiceController extends Controller
 {
+    public function __construct(protected InvoiceService $invoiceService) {}
     /**
      * Official LHDN Classification Codes for Malaysia
      */
@@ -118,71 +121,12 @@ class InvoiceController extends Controller
     /**
      * Store a newly created invoice in storage (Draft Mode).
      */
-    public function store(Request $request)
+    public function store(StoreInvoiceRequest $request)
     {
-        $request->validate([
-            'customer_id' => 'required|exists:customers,id',
-            'invoice_number' => 'required|string|unique:invoices',
-            'msic_code' => 'required|string',
-            'issue_date' => 'required|date',
-            'due_date' => 'nullable|date|after_or_equal:issue_date',
-            'items' => 'required|array|min:1',
-            'items.*.description' => 'required|string',
-            'items.*.quantity' => 'required|numeric|min:0.01',
-            'items.*.unit_price' => 'required|numeric',
-            'items.*.tax_rate' => 'required|numeric',
-            'items.*.item_classification' => 'required|string',
-            'items.*.discount_amount' => 'nullable|numeric',
-            'shipping_amount' => 'nullable|numeric',
-            'customer_notes' => 'nullable|string',
-        ]);
-
-        DB::transaction(function () use ($request) {
-            $subtotal = collect($request->items)->sum(fn($i) => $i['quantity'] * $i['unit_price']);
-            $discountTotal = collect($request->items)->sum(fn($i) => $i['discount_amount'] ?? 0);
-            
-            $taxTotal = collect($request->items)->sum(function($i) {
-                $itemAmount = ($i['quantity'] * $i['unit_price']) - ($i['discount_amount'] ?? 0);
-                return ($itemAmount * $i['tax_rate']) / 100;
-            });
-
-            $shipping = $request->shipping_amount ?? 0;
-            $rawTotal = ($subtotal - $discountTotal) + $taxTotal + $shipping;
-
-            // Enterprise Feature: Malaysia 5-Sen Rounding
-            $roundedTotal = round($rawTotal / 0.05) * 0.05;
-            $roundingAdjustment = $roundedTotal - $rawTotal;
-
-            $invoice = Invoice::create([
-                'invoice_number' => $request->invoice_number,
-                'msic_code' => $request->msic_code,
-                'customer_id' => $request->customer_id,
-                'issue_date' => $request->issue_date,
-                'due_date' => $request->due_date,
-                'amount_before_tax' => $subtotal,
-                'discount_total' => $discountTotal,
-                'tax_amount' => $taxTotal,
-                'shipping_amount' => $shipping,
-                'rounding_adjustment' => $roundingAdjustment,
-                'total_amount' => $roundedTotal,
-                'customer_notes' => $request->customer_notes,
-                'status' => 'draft',
-                'lhdn_status' => 'pending',
-                'created_by' => auth()->id(),
-            ]);
-
-            foreach ($request->items as $item) {
-                $invoice->items()->create([
-                    'description' => $item['description'],
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'],
-                    'tax_rate' => $item['tax_rate'],
-                    'item_classification' => $item['item_classification'],
-                    'discount_amount' => $item['discount_amount'] ?? 0,
-                    'amount' => ($item['quantity'] * $item['unit_price']) - ($item['discount_amount'] ?? 0),
-                ]);
-            }
-        });
+        $this->invoiceService->create(
+            array_merge($request->except('items'), ['created_by' => auth()->id()]),
+            $request->input('items')
+        );
 
         return redirect()->route('invoices.index');
     }
@@ -192,78 +136,13 @@ class InvoiceController extends Controller
      */
     public function postInvoice($id)
     {
-        return DB::transaction(function () use ($id) {
-            $invoice = Invoice::with('customer')->findOrFail($id);
-
-            if ($invoice->status !== 'draft') {
-                return redirect()->back()->with('error', 'Invoice is already posted.');
-            }
-
-            $customer = $invoice->customer;
-            if ($customer) {
-                if ($customer->credit_hold) {
-                    return redirect()->back()->with('error', 'Customer is on credit hold. Cannot post invoice.');
-                }
-                $creditLimit = (float) ($customer->credit_limit ?? 0);
-                if ($creditLimit > 0) {
-                    $balance = (float) $customer->balance;
-                    $projected = $balance + (float) $invoice->total_amount;
-                    if ($projected > $creditLimit) {
-                        return redirect()->back()->with('error', 'Posting would exceed customer credit limit (RM ' . number_format($creditLimit, 2) . '). Current exposure: RM ' . number_format($balance, 2) . '.');
-                    }
-                }
-            }
-
-            // Create Journal Entry Header
-            $journalId = DB::table('journal_entries')->insertGetId([
-                'date' => now(),
-                'description' => "Posted Sales Invoice: " . $invoice->invoice_number,
-                'reference_type' => 'Invoice',
-                'reference_id' => $invoice->id,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            // DEBIT: Accounts Receivable (1100)
-            DB::table('journal_items')->insert([
-                'journal_entry_id' => $journalId,
-                'account_code' => '1100', 
-                'debit' => $invoice->total_amount,
-                'credit' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            // CREDIT: Sales Revenue (4000) - Net of discount, excluding tax, including 5-sen rounding on invoice total
-            $revenueNet = (float) ($invoice->amount_before_tax - $invoice->discount_total) + (float) $invoice->shipping_amount + (float) $invoice->rounding_adjustment;
-            DB::table('journal_items')->insert([
-                'journal_entry_id' => $journalId,
-                'account_code' => '4000',
-                'debit' => 0,
-                'credit' => $revenueNet,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            // CREDIT: SST Payable (2100)
-            if ($invoice->tax_amount > 0) {
-                DB::table('journal_items')->insert([
-                    'journal_entry_id' => $journalId,
-                    'account_code' => '2100',
-                    'debit' => 0,
-                    'credit' => $invoice->tax_amount,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-
-            // NOTE: Rounding adjustments are typically handled in a 'Rounding' account 
-            // if significant, but for 5-sen, it is often bundled into the revenue line.
-
-            $invoice->update(['status' => 'unpaid']);
-
+        $invoice = Invoice::with('customer')->findOrFail($id);
+        try {
+            $this->invoiceService->post($invoice);
             return redirect()->back()->with('success', 'Invoice posted to ledger.');
-        });
+        } catch (\LogicException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
     }
 
     /**
@@ -271,34 +150,12 @@ class InvoiceController extends Controller
      */
     public function voidInvoice($id)
     {
-        DB::transaction(function () use ($id) {
-            $invoice = Invoice::findOrFail($id);
-            if ($invoice->status === 'void' || $invoice->status === 'draft') return;
-
-            $journalId = DB::table('journal_entries')->insertGetId([
-                'date' => now(),
-                'description' => "VOID REVERSAL: " . $invoice->invoice_number,
-                'reference_type' => 'Invoice',
-                'reference_id' => $invoice->id,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            $revenueNet = (float) ($invoice->amount_before_tax - $invoice->discount_total) + (float) $invoice->shipping_amount + (float) $invoice->rounding_adjustment;
-            // Reverse the original entries
-            DB::table('journal_items')->insert([
-                ['journal_entry_id' => $journalId, 'account_code' => '1100', 'debit' => 0, 'credit' => $invoice->total_amount, 'created_at' => now(), 'updated_at' => now()],
-                ['journal_entry_id' => $journalId, 'account_code' => '4000', 'debit' => $revenueNet, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
-            ]);
-
-            if ($invoice->tax_amount > 0) {
-                DB::table('journal_items')->insert([
-                    ['journal_entry_id' => $journalId, 'account_code' => '2100', 'debit' => $invoice->tax_amount, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()]
-                ]);
-            }
-
-            $invoice->update(['status' => 'void', 'amount_paid' => 0]);
-        });
+        $invoice = Invoice::findOrFail($id);
+        try {
+            $this->invoiceService->void($invoice);
+        } catch (\LogicException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
         return redirect()->back();
     }
 
@@ -309,102 +166,33 @@ class InvoiceController extends Controller
     {
         $invoice = Invoice::with('items')->findOrFail($id);
         return Inertia::render('Invoices/Edit', [
-            'invoice' => $invoice,
-            'customers' => Customer::all(),
-            'lhdn_codes' => $this->getLhdnCodes()
+            'invoice'    => $invoice,
+            'customers'  => Customer::all(),
+            'lhdn_codes' => $this->getLhdnCodes(),
         ]);
     }
 
     /**
      * Update an existing invoice.
      */
-    public function update(Request $request, $id)
+    public function update(UpdateInvoiceRequest $request, $id)
     {
-        $request->validate([
-            'customer_id' => 'required|exists:customers,id',
-            'msic_code' => 'required|string',
-            'issue_date' => 'required|date',
-            'due_date' => 'nullable|date|after_or_equal:issue_date',
-            'items' => 'required|array|min:1',
-            'items.*.description' => 'required|string',
-            'items.*.item_classification' => 'required',
-        ]);
+        $invoice = Invoice::findOrFail($id);
+        if (! in_array($invoice->status, ['paid', 'void'], true)) {
+            $this->invoiceService->update($invoice, $request->except('items'), $request->input('items'));
+        }
 
-        DB::transaction(function () use ($id, $request) {
-            $invoice = Invoice::findOrFail($id);
-            if ($invoice->status === 'paid' || $invoice->status === 'void') return;
-
-            $subtotal = collect($request->items)->sum(fn($i) => $i['quantity'] * $i['unit_price']);
-            $discountTotal = collect($request->items)->sum(fn($i) => $i['discount_amount'] ?? 0);
-            $taxTotal = collect($request->items)->sum(function($i) {
-                $itemAmount = ($i['quantity'] * $i['unit_price']) - ($i['discount_amount'] ?? 0);
-                return ($itemAmount * $i['tax_rate']) / 100;
-            });
-
-            $shipping = $request->shipping_amount ?? 0;
-            $rawTotal = ($subtotal - $discountTotal) + $taxTotal + $shipping;
-            $roundedTotal = round($rawTotal / 0.05) * 0.05;
-            $roundingAdjustment = $roundedTotal - $rawTotal;
-
-            $invoice->update([
-                'customer_id' => $request->customer_id,
-                'msic_code' => $request->msic_code,
-                'issue_date' => $request->issue_date,
-                'due_date' => $request->due_date,
-                'amount_before_tax' => $subtotal,
-                'discount_total' => $discountTotal,
-                'tax_amount' => $taxTotal,
-                'shipping_amount' => $shipping,
-                'rounding_adjustment' => $roundingAdjustment,
-                'total_amount' => $roundedTotal,
-                'customer_notes' => $request->customer_notes,
-            ]);
-
-            $invoice->items()->delete();
-            foreach ($request->items as $item) {
-                $invoice->items()->create([
-                    'description' => $item['description'],
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'],
-                    'tax_rate' => $item['tax_rate'],
-                    'item_classification' => $item['item_classification'],
-                    'discount_amount' => $item['discount_amount'] ?? 0,
-                    'amount' => ($item['quantity'] * $item['unit_price']) - ($item['discount_amount'] ?? 0),
-                ]);
-            }
-
-            // Sync Ledger if already posted
-            if ($invoice->status !== 'draft') {
-                $journal = DB::table('journal_entries')->where('reference_type', 'Invoice')->where('reference_id', $id)->latest()->first();
-                if ($journal) {
-                    DB::table('journal_items')->where('journal_entry_id', $journal->id)->delete();
-                    $revenueNet = (float) ($subtotal - $discountTotal) + (float) $shipping + (float) $roundingAdjustment;
-                    DB::table('journal_items')->insert([
-                        ['journal_entry_id' => $journal->id, 'account_code' => '1100', 'debit' => $invoice->total_amount, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
-                        ['journal_entry_id' => $journal->id, 'account_code' => '4000', 'debit' => 0, 'credit' => $revenueNet, 'created_at' => now(), 'updated_at' => now()],
-                    ]);
-                    if ($taxTotal > 0) {
-                        DB::table('journal_items')->insert(['journal_entry_id' => $journal->id, 'account_code' => '2100', 'debit' => 0, 'credit' => $taxTotal, 'created_at' => now(), 'updated_at' => now()]);
-                    }
-                }
-            }
-        });
         return redirect()->route('invoices.index');
     }
 
     /**
-     * Delete an invoice and its ledger history.
+     * Delete a draft invoice (soft delete).
      */
     public function destroy($id)
     {
-        DB::transaction(function () use ($id) {
-            $journals = DB::table('journal_entries')->where('reference_type', 'Invoice')->where('reference_id', $id)->get();
-            foreach ($journals as $j) {
-                DB::table('journal_items')->where('journal_entry_id', $j->id)->delete();
-                DB::table('journal_entries')->where('id', $j->id)->delete();
-            }
-            Invoice::findOrFail($id)->delete();
-        });
+        $invoice = Invoice::findOrFail($id);
+        $invoice->items()->delete();
+        $invoice->delete();
         return redirect()->route('invoices.index');
     }
 
@@ -417,9 +205,9 @@ class InvoiceController extends Controller
         $company = config('invoice.company');
 
         $pdf = Pdf::loadView('pdf.invoice', [
-            'invoice' => $invoice,
+            'invoice'  => $invoice,
             'customer' => $invoice->customer,
-            'company' => $company,
+            'company'  => $company,
         ])->setPaper('a4', 'portrait');
 
         return $pdf->download("Invoice-{$invoice->invoice_number}.pdf");
@@ -455,9 +243,9 @@ class InvoiceController extends Controller
 
         $invoice->forceFill([
             'last_emailed_status' => 'pending',
-            'last_emailed_at' => now(),
-            'last_emailed_error' => null,
-            'last_emailed_to' => implode(',', $recipients),
+            'last_emailed_at'     => now(),
+            'last_emailed_error'  => null,
+            'last_emailed_to'     => implode(',', $recipients),
         ])->save();
 
         SendInvoiceEmail::dispatch($invoice->id, $recipients);
@@ -471,41 +259,23 @@ class InvoiceController extends Controller
     public function recordPayment(Request $request, $id)
     {
         $request->validate([
-            'amount' => 'required|numeric|min:0.01', 
-            'payment_date' => 'required|date', 
-            'bank_account_code' => 'required|string'
+            'amount'            => 'required|numeric|min:0.01',
+            'payment_date'      => 'required|date',
+            'bank_account_code' => 'required|string',
         ]);
 
-        DB::transaction(function () use ($id, $request) {
-            $invoice = Invoice::findOrFail($id);
-            if ($invoice->status === 'draft' || $invoice->status === 'void') return;
+        $invoice = Invoice::findOrFail($id);
+        try {
+            $this->invoiceService->recordPayment(
+                $invoice,
+                (float) $request->amount,
+                $request->payment_date,
+                $request->bank_account_code
+            );
+        } catch (\LogicException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
 
-            $paymentAmount = (float) $request->amount;
-            $newAmountPaid = (float) $invoice->amount_paid + $paymentAmount;
-            
-            // Determine new status
-            $status = ($newAmountPaid >= (float) $invoice->total_amount) ? 'paid' : 'partially paid';
-
-            $invoice->update([
-                'amount_paid' => min($newAmountPaid, $invoice->total_amount), 
-                'status' => $status
-            ]);
-
-            // Ledger: Debit Bank, Credit AR
-            $journalId = DB::table('journal_entries')->insertGetId([
-                'date' => $request->payment_date, 
-                'description' => "Payment for " . $invoice->invoice_number, 
-                'reference_type' => 'Invoice Payment', 
-                'reference_id' => $invoice->id, 
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
-
-            DB::table('journal_items')->insert([
-                ['journal_entry_id' => $journalId, 'account_code' => $request->bank_account_code, 'debit' => $paymentAmount, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
-                ['journal_entry_id' => $journalId, 'account_code' => '1100', 'debit' => 0, 'credit' => $paymentAmount, 'created_at' => now(), 'updated_at' => now()],
-            ]);
-        });
         return redirect()->route('invoices.index');
     }
 }

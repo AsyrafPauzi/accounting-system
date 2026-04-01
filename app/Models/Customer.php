@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 
 class Customer extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes, HasUuid, Auditable;
 
     protected $fillable = [
         'name', 'code', 'industry', 'website', 'contact_person', 'phone', 'email',

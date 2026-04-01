@@ -1,6 +1,12 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, Link } from '@inertiajs/react';
+import {
+    INDUSTRY_OPTIONS,
+    PAYMENT_TERM_PRESETS,
+    PAYMENT_TERM_CUSTOM,
+    mergeCustomerFormPayload,
+} from '@/constants/customerFormOptions';
 
 const Icons = {
     ChevronLeft: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>,
@@ -19,11 +25,12 @@ const labelClass = "block text-[10px] font-semibold text-slate-400 uppercase tra
 
 export default function Create({ auth, users = [] }) {
     // 1. All fields required for Enterprise-Level Customer Management
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         // Identity
         name: '',
         code: 'CUST-' + Math.floor(1000 + Math.random() * 9000),
-        industry: '',
+        industry_key: '',
+        industry_other: '',
         website: '', // Added Website
         
         // Compliance
@@ -38,7 +45,8 @@ export default function Create({ auth, users = [] }) {
         // Financials
         credit_limit: 5000,
         credit_hold: false,
-        payment_terms: 30,
+        payment_terms_select: '30',
+        payment_terms_custom: '30',
         currency: 'MYR',
         risk_rating: '',
         segment: '',
@@ -65,6 +73,8 @@ export default function Create({ auth, users = [] }) {
         send_statement: false,
         contacts: [],
     });
+
+    transform((formData) => mergeCustomerFormPayload(formData));
 
     const malaysianStates = [
         'Johor', 'Kedah', 'Kelantan', 'Kuala Lumpur', 'Labuan', 'Melaka', 
@@ -158,7 +168,25 @@ export default function Create({ auth, users = [] }) {
                         </div>
                         <div>
                             <label className={labelClass}>Industry</label>
-                            <input type="text" value={data.industry} onChange={e => setData('industry', e.target.value)} className={inputClass} placeholder="e.g. Technology" />
+                            <select
+                                value={data.industry_key}
+                                onChange={e => setData('industry_key', e.target.value)}
+                                className={inputClass}
+                            >
+                                <option value="">Select industry</option>
+                                {INDUSTRY_OPTIONS.map((opt) => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                            </select>
+                            {data.industry_key === 'Others' && (
+                                <input
+                                    type="text"
+                                    value={data.industry_other}
+                                    onChange={e => setData('industry_other', e.target.value)}
+                                    className={`${inputClass} mt-2`}
+                                    placeholder="Specify industry"
+                                />
+                            )}
                         </div>
                         <div className="md:col-span-2">
                             <label className={labelClass}>Website</label>
@@ -191,16 +219,44 @@ export default function Create({ auth, users = [] }) {
                             </div>
                             <div>
                                 <label className={labelClass}>Payment Terms</label>
-                                <select value={String(data.payment_terms)} onChange={e => setData('payment_terms', e.target.value)} className={inputClass}>
-                                    <option value="0">Cash on Delivery</option>
-                                    <option value="7">Net 7 Days</option>
-                                    <option value="30">Net 30 Days</option>
-                                    <option value="60">Net 60 Days</option>
+                                <select
+                                    value={String(data.payment_terms_select)}
+                                    onChange={e => setData('payment_terms_select', e.target.value)}
+                                    className={inputClass}
+                                >
+                                    {PAYMENT_TERM_PRESETS.map((p) => (
+                                        <option key={p.value} value={String(p.value)}>{p.label}</option>
+                                    ))}
+                                    <option value={PAYMENT_TERM_CUSTOM}>Custom (days)</option>
                                 </select>
+                                {data.payment_terms_select === PAYMENT_TERM_CUSTOM && (
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={365}
+                                        value={data.payment_terms_custom}
+                                        onChange={e => setData('payment_terms_custom', e.target.value)}
+                                        className={`${inputClass} mt-2`}
+                                        placeholder="0–365"
+                                    />
+                                )}
                             </div>
                             <div className="col-span-2">
                                 <label className={labelClass}>Currency</label>
                                 <input type="text" value={data.currency} className={inputReadonlyClass} readOnly />
+                            </div>
+                            <div className="col-span-2">
+                                <label className={labelClass}>Account Manager</label>
+                                <select
+                                    value={data.account_manager_id || ''}
+                                    onChange={e => setData('account_manager_id', e.target.value || '')}
+                                    className={inputClass}
+                                >
+                                    <option value="">— None —</option>
+                                    {users.map((u) => (
+                                        <option key={u.id} value={u.id}>{u.name}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -240,7 +296,7 @@ export default function Create({ auth, users = [] }) {
                     </div>
                     <div className="space-y-3">
                         {(data.contacts || []).map((contact, index) => (
-                            <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 border border-slate-100 rounded-xl bg-slate-50/50">
+                            <div key={index} className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-3 p-3 border border-slate-100 rounded-xl bg-slate-50/50">
                                 <div className="md:col-span-2">
                                     <label className={labelClass}>Name</label>
                                     <input type="text" value={contact.name} onChange={e => updateContact(index, 'name', e.target.value)} className={inputClass} placeholder="Name" />
@@ -261,13 +317,13 @@ export default function Create({ auth, users = [] }) {
                                         <option value="operations">Operations</option>
                                     </select>
                                 </div>
-                                <div className="md:col-span-2 flex items-end gap-2">
+                                <div className="md:col-span-2 flex items-center gap-2 min-h-[42px]">
                                     <label className="flex items-center gap-2 cursor-pointer">
                                         <input type="checkbox" checked={!!contact.is_primary} onChange={e => updateContact(index, 'is_primary', e.target.checked)} className="rounded border-slate-300" />
                                         <span className="text-xs font-medium text-slate-600">Primary</span>
                                     </label>
                                 </div>
-                                <div className="md:col-span-2 flex items-end">
+                                <div className="md:col-span-2 flex items-center min-h-[42px]">
                                     <button type="button" onClick={() => removeContact(index)} className="text-slate-400 hover:text-rose-600 text-xs font-medium">Remove</button>
                                 </div>
                             </div>

@@ -14,6 +14,22 @@ use Illuminate\Validation\Rule;
 
 class CustomerController extends Controller
 {
+    /**
+     * Account manager must belong to the same tenant as the authenticated user.
+     */
+    private function accountManagerIdRule()
+    {
+        return Rule::exists('users', 'id')->where('tenant_id', auth()->user()->tenant_id);
+    }
+
+    private function tenantUsersForSelect()
+    {
+        return User::query()
+            ->where('tenant_id', auth()->user()->tenant_id)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+    }
+
     public function index()
     {
         $customers = Customer::all()->map(function ($customer) {
@@ -34,7 +50,7 @@ class CustomerController extends Controller
     public function create()
     {
         return Inertia::render('Customers/Create', [
-            'users' => User::orderBy('name')->get(['id', 'name']),
+            'users' => $this->tenantUsersForSelect(),
         ]);
     }
 
@@ -51,9 +67,9 @@ class CustomerController extends Controller
             'billing_state' => 'required|string',
             'billing_zip' => 'required|string',
             'credit_limit' => 'required|numeric',
-            'payment_terms' => 'required|integer',
+            'payment_terms' => 'required|integer|min:0|max:365',
             // Optional fields
-            'industry' => 'nullable|string',
+            'industry' => 'nullable|string|max:255',
             'website' => 'nullable|string',
             'contact_person' => 'nullable|string',
             'phone' => 'nullable|string',
@@ -66,7 +82,7 @@ class CustomerController extends Controller
             'risk_rating' => 'nullable|string|in:low,medium,high',
             'segment' => 'nullable|string|max:50',
             'region' => 'nullable|string|max:50',
-            'account_manager_id' => 'nullable|exists:users,id',
+            'account_manager_id' => ['nullable', $this->accountManagerIdRule()],
             'invoice_delivery_method' => 'nullable|string|in:email,none',
             'send_statement' => 'nullable|boolean',
             'contacts' => 'nullable|array',
@@ -196,7 +212,7 @@ class CustomerController extends Controller
     {
         return Inertia::render('Customers/Edit', [
             'customer' => Customer::with(['accountManager', 'contacts'])->findOrFail($id),
-            'users' => User::orderBy('name')->get(['id', 'name']),
+            'users' => $this->tenantUsersForSelect(),
         ]);
     }
 
@@ -217,8 +233,8 @@ class CustomerController extends Controller
             'billing_country' => 'nullable|string|max:255',
             'is_active' => 'required|boolean',
             'credit_limit' => 'required|numeric',
-            'payment_terms' => 'required|integer',
-            'industry' => 'nullable|string',
+            'payment_terms' => 'required|integer|min:0|max:365',
+            'industry' => 'nullable|string|max:255',
             'website' => 'nullable|string',
             'contact_person' => 'nullable|string',
             'phone' => 'nullable|string',
@@ -232,7 +248,7 @@ class CustomerController extends Controller
             'risk_rating' => 'nullable|string|in:low,medium,high',
             'segment' => 'nullable|string|max:50',
             'region' => 'nullable|string|max:50',
-            'account_manager_id' => 'nullable|exists:users,id',
+            'account_manager_id' => ['nullable', $this->accountManagerIdRule()],
             'invoice_delivery_method' => 'nullable|string|in:email,none',
             'send_statement' => 'nullable|boolean',
             'contacts' => 'nullable|array',

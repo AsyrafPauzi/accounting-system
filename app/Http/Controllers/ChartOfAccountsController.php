@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreAccountRequest;
+use App\Http\Requests\UpdateAccountRequest;
 use App\Models\Account;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
@@ -53,24 +54,11 @@ class ChartOfAccountsController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreAccountRequest $request): RedirectResponse
     {
-        $request->merge([
-            'parent_id' => $request->input('parent_id') ?: null,
-            'display_order' => $request->has('display_order') && $request->input('display_order') !== '' && $request->input('display_order') !== null
-                ? (int) $request->input('display_order') : null,
-        ]);
-
-        $validated = $request->validate([
-            'code' => ['required', 'string', 'max:50', 'unique:accounts,code'],
-            'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', 'string', Rule::in(['asset', 'liability', 'equity', 'income', 'expense'])],
-            'parent_id' => ['nullable', 'exists:accounts,id'],
-            'description' => ['nullable', 'string'],
-            'is_active' => ['boolean'],
-            'display_order' => ['nullable', 'integer', 'min:0'],
-        ]);
-
+        $validated = $request->validated();
+        $validated['parent_id'] = $validated['parent_id'] ?? null;
+        $validated['display_order'] = isset($validated['display_order']) && $validated['display_order'] !== '' ? (int) $validated['display_order'] : null;
         $validated['is_active'] = $request->boolean('is_active', true);
 
         Account::create($validated);
@@ -86,40 +74,25 @@ class ChartOfAccountsController extends Controller
 
         return Inertia::render('ChartOfAccounts/Edit', [
             'account' => [
-                'id' => $account->id,
-                'code' => $account->code,
-                'name' => $account->name,
-                'type' => $account->type,
-                'parent_id' => $account->parent_id,
-                'description' => $account->description,
-                'is_active' => $account->is_active,
+                'id'            => $account->id,
+                'code'          => $account->code,
+                'name'          => $account->name,
+                'type'          => $account->type,
+                'parent_id'     => $account->parent_id,
+                'description'   => $account->description,
+                'is_active'     => $account->is_active,
                 'display_order' => $account->display_order,
             ],
             'accounts' => $accounts,
         ]);
     }
 
-    public function update(Request $request, int $id): RedirectResponse
+    public function update(UpdateAccountRequest $request, int $id): RedirectResponse
     {
         $account = Account::findOrFail($id);
-
-        $request->merge([
-            'parent_id' => $request->input('parent_id') ?: null,
-            'display_order' => $request->has('display_order') && $request->input('display_order') !== '' && $request->input('display_order') !== null
-                ? (int) $request->input('display_order') : null,
-        ]);
-
-        $validated = $request->validate([
-            'code' => ['required', 'string', 'max:50', Rule::unique('accounts', 'code')->ignore($account->id)],
-            'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', 'string', Rule::in(['asset', 'liability', 'equity', 'income', 'expense'])],
-            'parent_id' => ['nullable', 'exists:accounts,id'],
-            'description' => ['nullable', 'string'],
-            'is_active' => ['boolean'],
-            'display_order' => ['nullable', 'integer', 'min:0'],
-        ]);
-
+        $validated = $request->validated();
         $validated['parent_id'] = $validated['parent_id'] ?? null;
+        $validated['display_order'] = isset($validated['display_order']) && $validated['display_order'] !== '' ? (int) $validated['display_order'] : null;
         $validated['is_active'] = $request->boolean('is_active', true);
 
         $account->update($validated);

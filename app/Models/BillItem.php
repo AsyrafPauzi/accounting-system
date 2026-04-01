@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class BillItem extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes, HasUuid;
 
     protected $fillable = [
         'bill_id', 'account_code', 'description', 'quantity', 'unit_amount', 'amount', 'sort_order',

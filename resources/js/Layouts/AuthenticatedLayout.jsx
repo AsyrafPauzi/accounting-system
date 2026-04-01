@@ -49,6 +49,7 @@ export default function Authenticated({ user: propUser, header, children }) {
     const url = page.url;
     const user = propUser || auth?.user || {};
     const hasActiveSubscription = auth?.hasActiveSubscription ?? false;
+    const teamPermissions = auth?.teamPermissions ?? { view: false, create: false, edit: false, delete: false };
     const isAdmin = user?.role === 'admin';
     const isImpersonating = Boolean(auth?.impersonator_id);
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -198,7 +199,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                     )}
                     <div className="mb-5">
                         <h3 className="px-3 mb-2 text-[10px] font-bold text-indigo-600/90 uppercase tracking-widest">
-                            Account
+                            Company
                         </h3>
                         <Link
                             href={getSafeRoute('settings.company')}
@@ -213,6 +214,21 @@ export default function Authenticated({ user: propUser, header, children }) {
                             </span>
                             <span className="flex-1">Company settings</span>
                         </Link>
+                        {teamPermissions.view && (
+                            <Link
+                                href={getSafeRoute('settings.team.index')}
+                                className={`mb-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                                    isRouteActive('settings.team.index')
+                                        ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
+                                        : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
+                                }`}
+                            >
+                                <span className={isRouteActive('settings.team.index') ? 'text-white' : 'text-indigo-500/80'}>
+                                    <Icons.Users />
+                                </span>
+                                <span className="flex-1">Team & roles</span>
+                            </Link>
+                        )}
                         <Link
                             href={getSafeRoute('subscription.index')}
                             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${

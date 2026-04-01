@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class JournalItem extends Model
 {
+    use SoftDeletes, HasUuid;
     protected $fillable = ['journal_entry_id', 'account_code', 'debit', 'credit'];
 
     protected function casts(): array

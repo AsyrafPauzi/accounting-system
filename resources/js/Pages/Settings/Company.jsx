@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 
 const inputClass =
     'mt-1.5 block w-full rounded-xl border-slate-200 text-sm font-medium text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:ring-blue-500';
@@ -7,6 +7,7 @@ const labelClass =
     'block text-[10px] font-semibold text-slate-400 uppercase tracking-wider';
 
 export default function Company({ auth, company }) {
+    const canViewTeam = auth?.teamPermissions?.view;
     const { data, setData, patch, processing, errors } = useForm({
         legal_name: company.legal_name || '',
         display_name: company.display_name || '',
@@ -32,13 +33,23 @@ export default function Company({ auth, company }) {
         <AuthenticatedLayout
             user={auth.user}
             header={
-                <div>
-                    <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">
-                        Company settings
-                    </h2>
-                    <p className="text-slate-500 text-sm font-medium mt-1">
-                        Maintain legal, contact and accounting information for this tenant.
-                    </p>
+                <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                    <div>
+                        <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">
+                            Company settings
+                        </h2>
+                        <p className="text-slate-500 text-sm font-medium mt-1">
+                            Maintain legal, contact and accounting information for this tenant.
+                        </p>
+                    </div>
+                    {canViewTeam && (
+                        <Link
+                            href={route('settings.team.index')}
+                            className="text-sm font-semibold text-blue-600 hover:text-blue-700 whitespace-nowrap"
+                        >
+                            Team & roles →
+                        </Link>
+                    )}
                 </div>
             }
         >

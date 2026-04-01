@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Bill extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes, HasUuid, Auditable;
 
     protected $fillable = [
         'bill_number', 'supplier_id', 'bill_date', 'due_date', 'status',
