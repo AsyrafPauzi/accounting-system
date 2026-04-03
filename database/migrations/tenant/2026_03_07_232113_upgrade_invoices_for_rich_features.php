@@ -13,7 +13,7 @@ return new class extends Migration
 {
     Schema::table('invoices', function (Blueprint $table) {
         // Status should allow: draft, sent, paid, void
-        $table->string('status')->default('draft')->change(); 
+        $table->string('status')->default('draft')->change();
         $table->decimal('discount_total', 15, 2)->default(0)->after('amount_before_tax');
         $table->string('msic_code')->nullable()->after('invoice_number'); // Malaysia Compliance
     });
