@@ -22,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::prefetch(concurrency: 3);
 
-        \Illuminate\Database\Eloquent\Model::shouldBeStrict();
+        \Illuminate\Database\Eloquent\Model::shouldBeStrict(!$this->app->environment('production'));
 
         \Illuminate\Validation\Rules\Password::defaults(function () {
             $rule = \Illuminate\Validation\Rules\Password::min(8)

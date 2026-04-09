@@ -20,9 +20,10 @@ class SanitizeInput
             
             array_walk_recursive($input, function (&$val) {
                 if (is_string($val)) {
-                    // Strip HTML tags to prevent XSS. 
-                    // This is particularly critical for data that might be exported to PDFs using DomPDF
-                    $val = strip_tags($val);
+                    // Safe cleanup only (e.g. trimming)
+                    // We no longer strip_tags here to prevent data corruption.
+                    // XSS protection is handled at the output layer (Inertia/Vue/Blade).
+                    $val = trim($val);
                 }
             });
 

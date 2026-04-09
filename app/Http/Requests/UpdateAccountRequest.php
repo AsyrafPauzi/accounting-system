@@ -7,7 +7,10 @@ use Illuminate\Validation\Rule;
 
 class UpdateAccountRequest extends FormRequest
 {
-    public function authorize(): bool { return true; }
+    public function authorize(): bool
+    {
+        return $this->user()->can('accounts.edit');
+    }
 
     public function rules(): array
     {

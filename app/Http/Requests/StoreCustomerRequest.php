@@ -7,7 +7,10 @@ use Illuminate\Validation\Rule;
 
 class StoreCustomerRequest extends FormRequest
 {
-    public function authorize(): bool { return true; }
+    public function authorize(): bool
+    {
+        return $this->user()->can('customers.create');
+    }
 
     public function rules(): array
     {

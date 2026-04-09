@@ -8,8 +8,15 @@ class RecordPaymentRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // Permission checked in controller/routes
-        return true;
+        if ($this->routeIs('invoices.*')) {
+            return $this->user()->can('invoices.record-payment');
+        }
+
+        if ($this->routeIs('bills.*')) {
+            return $this->user()->can('bills.record-payment');
+        }
+
+        return false;
     }
 
     public function rules(): array
