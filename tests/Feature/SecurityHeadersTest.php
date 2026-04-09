@@ -52,6 +52,8 @@ class SecurityHeadersTest extends TestCase
         $this->assertNotNull($csp, 'Content-Security-Policy header is missing.');
         $this->assertStringContainsString("script-src 'self' 'unsafe-inline'", $csp);
         $this->assertStringNotContainsString("'unsafe-eval'", $csp);
+        $this->assertStringContainsString("connect-src 'self';", $csp);
+        $this->assertStringNotContainsString("ws:", $csp);
     }
 
     /**
