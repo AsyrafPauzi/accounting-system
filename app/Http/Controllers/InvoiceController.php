@@ -256,21 +256,17 @@ class InvoiceController extends Controller
     /**
      * Record a payment receipt.
      */
-    public function recordPayment(Request $request, $id)
+    public function recordPayment(\App\Http\Requests\RecordPaymentRequest $request, $id)
     {
-        $request->validate([
-            'amount'            => 'required|numeric|min:0.01',
-            'payment_date'      => 'required|date',
-            'bank_account_code' => 'required|string',
-        ]);
+        $validated = $request->validated();
 
         $invoice = Invoice::findOrFail($id);
         try {
             $this->invoiceService->recordPayment(
                 $invoice,
-                (float) $request->amount,
-                $request->payment_date,
-                $request->bank_account_code
+                (float) $validated['amount'],
+                $validated['payment_date'],
+                $validated['bank_account_code']
             );
         } catch (\LogicException $e) {
             return redirect()->back()->with('error', $e->getMessage());

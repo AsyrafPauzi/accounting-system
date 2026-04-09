@@ -41,17 +41,12 @@ class TenantUserController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(\App\Http\Requests\StoreTenantUserRequest $request): RedirectResponse
     {
         $tenantId = $request->user()->tenant_id;
         abort_if(! $tenantId, 404);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
-            'password' => ['required', 'confirmed', Password::defaults()],
-            'role' => 'required|string|in:'.implode(',', self::ASSIGNABLE_ROLES),
-        ]);
+        $validated = $request->validated();
 
         $user = User::create([
             'name' => $validated['name'],
@@ -64,13 +59,11 @@ class TenantUserController extends Controller
         return redirect()->route('settings.team.index')->with('success', 'Team member added. Share the password with them securely or ask them to reset it from the login page.');
     }
 
-    public function update(Request $request, User $user): RedirectResponse
+    public function update(\App\Http\Requests\UpdateTenantUserRequest $request, User $user): RedirectResponse
     {
         $this->assertSameTenant($request->user(), $user);
 
-        $validated = $request->validate([
-            'role' => 'required|string|in:'.implode(',', self::ASSIGNABLE_ROLES),
-        ]);
+        $validated = $request->validated();
 
         if ($user->hasRole('admin') && $validated['role'] !== 'admin') {
             $adminCount = User::query()

@@ -140,21 +140,17 @@ class BillController extends Controller
         return redirect()->back()->with('success', 'Bill voided.');
     }
 
-    public function recordPayment(Request $request, int $id): RedirectResponse
+    public function recordPayment(\App\Http\Requests\RecordPaymentRequest $request, int $id): RedirectResponse
     {
-        $request->validate([
-            'amount'            => 'required|numeric|min:0.01',
-            'payment_date'      => 'required|date',
-            'bank_account_code' => 'required|string|exists:accounts,code',
-        ]);
+        $validated = $request->validated();
 
         $bill = Bill::findOrFail($id);
         try {
             $this->billService->recordPayment(
                 $bill,
-                (float) $request->amount,
-                $request->payment_date,
-                $request->bank_account_code
+                (float) $validated['amount'],
+                $validated['payment_date'],
+                $validated['bank_account_code']
             );
         } catch (\LogicException $e) {
             return redirect()->back()->with('error', $e->getMessage());

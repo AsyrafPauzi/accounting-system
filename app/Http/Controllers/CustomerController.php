@@ -84,19 +84,9 @@ class CustomerController extends Controller
      * Quick-create a customer from the invoice create page (JSON response).
      * Minimal fields; defaults applied for the rest.
      */
-    public function quickStore(Request $request)
+    public function quickStore(\App\Http\Requests\QuickStoreCustomerRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email',
-            'tin' => 'required|string|max:50',
-            'brn' => 'required|string|max:50',
-            'code' => 'nullable|string|unique:customers,code',
-            'billing_street' => 'nullable|string|max:500',
-            'billing_city' => 'nullable|string|max:100',
-            'billing_state' => 'nullable|string|max:100',
-            'billing_zip' => 'nullable|string|max:20',
-        ]);
+        $validated = $request->validated();
 
         $code = $validated['code'] ?? ('CUST-' . str_pad((string) (Customer::max('id') + 1), 4, '0', STR_PAD_LEFT));
         $customer = Customer::create(array_merge([
@@ -182,49 +172,11 @@ class CustomerController extends Controller
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(\App\Http\Requests\UpdateCustomerRequest $request, $id)
     {
         $customer = Customer::findOrFail($id);
         
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => ['required', Rule::unique('customers')->ignore($id)],
-            'email' => 'required|email',
-            'tin' => 'required|string',
-            'brn' => 'required|string',
-            'billing_street' => 'required|string',
-            'billing_city' => 'required|string',
-            'billing_state' => 'required|string',
-            'billing_zip' => 'required|string',
-            'billing_country' => 'nullable|string|max:255',
-            'is_active' => 'required|boolean',
-            'credit_limit' => 'required|numeric',
-            'payment_terms' => 'required|integer|min:0|max:365',
-            'industry' => 'nullable|string|max:255',
-            'website' => 'nullable|string',
-            'contact_person' => 'nullable|string',
-            'phone' => 'nullable|string',
-            'shipping_street' => 'nullable|string',
-            'shipping_city' => 'nullable|string',
-            'shipping_state' => 'nullable|string',
-            'shipping_zip' => 'nullable|string',
-            'shipping_country' => 'nullable|string|max:255',
-            'internal_notes' => 'nullable|string',
-            'credit_hold' => 'nullable|boolean',
-            'risk_rating' => 'nullable|string|in:low,medium,high',
-            'segment' => 'nullable|string|max:50',
-            'region' => 'nullable|string|max:50',
-            'account_manager_id' => ['nullable', $this->accountManagerIdRule()],
-            'invoice_delivery_method' => 'nullable|string|in:email,none',
-            'send_statement' => 'nullable|boolean',
-            'contacts' => 'nullable|array',
-            'contacts.*.id' => 'nullable|exists:customer_contacts,id',
-            'contacts.*.name' => 'nullable|string|max:255',
-            'contacts.*.email' => 'nullable|email',
-            'contacts.*.phone' => 'nullable|string|max:50',
-            'contacts.*.type' => 'nullable|string|in:billing,finance,operations',
-            'contacts.*.is_primary' => 'nullable|boolean',
-        ]);
+        $validated = $request->validated();
 
         $toUpdate = collect($validated)->except('contacts')->all();
 
