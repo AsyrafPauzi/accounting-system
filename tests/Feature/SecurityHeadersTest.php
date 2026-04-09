@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class SecurityHeadersTest extends TestCase
@@ -43,6 +42,7 @@ class SecurityHeadersTest extends TestCase
      */
     public function test_csp_header_is_strict_in_production(): void
     {
+        $this->app->detectEnvironment(fn () => 'production');
         config(['app.env' => 'production']);
 
         $response = $this->get('/');

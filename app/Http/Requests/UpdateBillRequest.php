@@ -14,7 +14,7 @@ class UpdateBillRequest extends FormRequest
 
     public function rules(): array
     {
-        $id = $this->route('bill');
+        $id = $this->route('id');
 
         return [
             'bill_number'          => ['required', 'string', 'max:50', Rule::unique('bills', 'bill_number')->ignore($id)],

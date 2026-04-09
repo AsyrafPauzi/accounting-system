@@ -39,16 +39,13 @@ class SecurityHeaders
                    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net; " .
                    "font-src 'self' https://fonts.gstatic.com https://fonts.bunny.net data:; " .
                    "img-src 'self' data: blob: https:; " .
-                   "connect-src 'self' ws: wss:;";
+                   "connect-src 'self';";
         }
 
         $response->headers->set('Content-Security-Policy', $csp);
 
         // Remove information disclosure headers
         $response->headers->remove('X-Powered-By');
-        if (function_exists('header_remove')) {
-            header_remove('X-Powered-By');
-        }
 
         return $response;
     }
