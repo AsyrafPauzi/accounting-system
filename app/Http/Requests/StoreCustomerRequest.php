@@ -46,7 +46,8 @@ class StoreCustomerRequest extends FormRequest
             'contacts.*.name'        => 'nullable|string|max:255',
             'contacts.*.email'       => 'nullable|email',
             'contacts.*.phone'       => 'nullable|string|max:50',
-            'contacts.*.type'        => 'nullable|string|in:billing,general',
+            'contacts.*.type'        => 'nullable|string|in:billing,finance,operations',
+            'contacts.*.is_primary'  => 'nullable|boolean',
         ];
     }
 }
