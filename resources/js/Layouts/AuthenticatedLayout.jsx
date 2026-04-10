@@ -99,7 +99,7 @@ export default function Authenticated({ user: propUser, header, children }) {
 
             {/* LEFT COLUMN: SIDEBAR — drawer on mobile, static on lg */}
             <aside
-                className={`fixed inset-y-0 left-0 z-40 w-72 flex flex-col border-r border-indigo-200/70 bg-gradient-to-b from-white via-indigo-50/40 to-violet-50/60 shadow-xl shadow-indigo-200/30 custom-scrollbar transform transition-transform duration-200 ease-out lg:relative lg:z-auto lg:translate-x-0 lg:flex-shrink-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+                className={`fixed inset-y-0 left-0 z-50 w-72 flex flex-col border-r border-indigo-200/70 bg-gradient-to-b from-white via-indigo-50/40 to-violet-50/60 shadow-xl shadow-indigo-200/30 custom-scrollbar transform transition-transform duration-200 ease-out lg:relative lg:z-auto lg:translate-x-0 lg:flex-shrink-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
             >
                 {/* Brand + mobile close */}
                 <div className="p-4 sm:p-6 flex items-center justify-between gap-3 border-b border-indigo-100/80 bg-white/50 backdrop-blur-sm">
@@ -248,7 +248,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                 </nav>
 
                 {/* User block */}
-                <div className="p-4 border-t border-indigo-100/90 bg-gradient-to-t from-violet-100/50 to-indigo-50/70">
+                <div className="p-4 pb-15 lg:pb-4 border-t border-indigo-100/90 bg-gradient-to-t from-violet-100/50 to-indigo-50/70">
                     <div className="flex items-center gap-3 mb-3">
                         <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-indigo-400/40 ring-2 ring-white/90">
                             {(user.name || 'U').charAt(0)}
@@ -344,7 +344,7 @@ export default function Authenticated({ user: propUser, header, children }) {
             `}} />
 
             {/* MOBILE BOTTOM NAVIGATION */}
-            <div className="lg:hidden fixed bottom-6 left-4 right-4 z-40">
+            <div className={`lg:hidden fixed bottom-6 left-4 right-4 z-40 transition-transform duration-200 ${sidebarOpen ? 'translate-y-32' : 'translate-y-0'}`}>
                 <nav className="glass rounded-[2rem] shadow-2xl shadow-indigo-500/15 p-2 flex items-center justify-between gap-1 border border-white/50 ring-1 ring-indigo-950/5">
                     <Link
                         href={route('dashboard')}
