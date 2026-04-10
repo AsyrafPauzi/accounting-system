@@ -30,14 +30,11 @@ class BillController extends Controller
             $query->where('supplier_id', $supplierId);
         }
 
-        $bills = $query->get()->map(function (Bill $bill) {
-            $bill->supplier_name = $bill->supplier?->name ?? '—';
-            $bill->balance_due = $bill->balance_due;
-            return $bill;
-        });
+        $bills = $query->get();
 
-        $totalOutstanding = $bills->whereIn('status', ['unpaid', 'partially paid'])->sum(fn (Bill $b) => (float) $b->total_amount - (float) $b->amount_paid);
+        $totalOutstanding = $bills->whereIn('status', ['unpaid', 'partially paid'])->sum('balance_due');
         $totalPaidPeriod = $bills->where('status', 'paid')->sum('amount_paid');
+
         $assetAccounts = Account::where('type', 'asset')->active()->orderBy('code')->get(['code', 'name'])->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->code} — {$a->name}"])->values()->all();
 
         return Inertia::render('Bills/Index', [
