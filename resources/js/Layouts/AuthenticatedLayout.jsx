@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import { Link, usePage } from '@inertiajs/react';
+import MobileQuickAction from '@/Components/MobileQuickAction';
 
 const Icons = {
     ChartBar: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
@@ -279,18 +280,18 @@ export default function Authenticated({ user: propUser, header, children }) {
             </aside>
 
             {/* RIGHT COLUMN: MAIN CONTENT */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-transparent">
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-transparent pb-20 lg:pb-0">
                 {/* Mobile: top bar with hamburger */}
-                <div className="lg:hidden flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-white/90 backdrop-blur-md border-b border-indigo-200/60 shadow-sm shadow-indigo-100/40 z-10">
-                    <button
-                        type="button"
-                        onClick={() => setSidebarOpen(true)}
-                        className="p-2 -ml-2 rounded-xl text-indigo-700 hover:text-indigo-950 hover:bg-indigo-100 transition-colors"
-                        aria-label="Open menu"
-                    >
-                        <Icons.Menu />
-                    </button>
-                    <span className="font-semibold text-indigo-950 truncate">Accounter</span>
+                <div className="lg:hidden flex-shrink-0 flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur-lg border-b border-indigo-100/80 z-20 sticky top-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 shadow-sm shadow-indigo-500/20">
+                            <ApplicationLogo className="block h-4 w-auto fill-current text-white" />
+                        </div>
+                        <span className="font-bold text-indigo-950 tracking-tight truncate">Accounter</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-indigo-600/60 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded-md">MY</span>
+                    </div>
                 </div>
 
                 {header && (
@@ -341,6 +342,47 @@ export default function Authenticated({ user: propUser, header, children }) {
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: #a5b4fc; border-radius: 10px; }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #818cf8; }
             `}} />
+
+            {/* MOBILE BOTTOM NAVIGATION */}
+            <div className="lg:hidden fixed bottom-6 left-4 right-4 z-40">
+                <nav className="glass rounded-[2rem] shadow-2xl shadow-indigo-500/15 p-2 flex items-center justify-between gap-1 border border-white/50 ring-1 ring-indigo-950/5">
+                    <Link
+                        href={route('dashboard')}
+                        className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-2xl transition-all duration-200 ${isRouteActive('dashboard') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 active:bg-slate-50'}`}
+                    >
+                        <Icons.ChartBar />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Home</span>
+                    </Link>
+
+                    <Link
+                        href={route('invoices.index')}
+                        className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-2xl transition-all duration-200 ${isRouteActive('invoices.index') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 active:bg-slate-50'}`}
+                    >
+                        <Icons.Document />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Sales</span>
+                    </Link>
+
+                    <div className="flex-shrink-0 -mt-8 px-1">
+                        <MobileQuickAction permissions={teamPermissions} />
+                    </div>
+
+                    <Link
+                        href={route('bills.index')}
+                        className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-2xl transition-all duration-200 ${isRouteActive('bills.index') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 active:bg-slate-50'}`}
+                    >
+                        <Icons.ShoppingCart />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Bills</span>
+                    </Link>
+
+                    <button
+                        onClick={() => setSidebarOpen(true)}
+                        className="flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-2xl text-slate-500 active:bg-slate-50 transition-all duration-200"
+                    >
+                        <Icons.Menu />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Menu</span>
+                    </button>
+                </nav>
+            </div>
         </div>
     );
 }
