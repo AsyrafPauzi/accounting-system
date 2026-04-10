@@ -36,13 +36,6 @@ export default function ProfitAndLoss({ auth, revenue_accounts = [], expense_acc
         >
             <Head title="Profit & Loss" />
 
-            {(flash?.success || flash?.error) && (
-                <div
-                    className={`mb-4 rounded-xl border px-4 py-3 text-sm font-medium ${flash.error ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}
-                >
-                    {flash.success || flash.error}
-                </div>
-            )}
 
             <div className="space-y-6">
                 <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
