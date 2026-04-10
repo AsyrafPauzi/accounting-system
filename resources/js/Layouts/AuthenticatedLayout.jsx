@@ -99,10 +99,10 @@ export default function Authenticated({ user: propUser, header, children }) {
 
             {/* LEFT COLUMN: SIDEBAR — drawer on mobile, static on lg */}
             <aside
-                className={`fixed inset-y-0 left-0 z-50 w-72 flex flex-col border-r border-indigo-200/70 bg-gradient-to-b from-white via-indigo-50/40 to-violet-50/60 shadow-xl shadow-indigo-200/30 custom-scrollbar transform transition-transform duration-200 ease-out lg:relative lg:z-auto lg:translate-x-0 lg:flex-shrink-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+                className={`fixed inset-y-0 left-0 z-50 w-72 flex flex-col border-r border-indigo-200 bg-white shadow-xl shadow-indigo-200/30 custom-scrollbar transform transition-transform duration-200 ease-out lg:relative lg:z-auto lg:translate-x-0 lg:flex-shrink-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
             >
                 {/* Brand + mobile close */}
-                <div className="p-4 sm:p-6 flex items-center justify-between gap-3 border-b border-indigo-100/80 bg-white/50 backdrop-blur-sm">
+                <div className="p-4 sm:p-6 flex items-center justify-between gap-3 border-b border-indigo-100/80 bg-white">
                     <div className="flex items-center gap-3 min-w-0">
                         <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 via-violet-600 to-indigo-700 shadow-lg shadow-indigo-500/35 ring-2 ring-white/80">
                             <ApplicationLogo className="block h-6 w-auto fill-current text-white" />
@@ -123,7 +123,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 py-5 overflow-y-auto px-3">
+                <nav className="flex-1 py-5 overflow-y-auto px-3 bg-white">
                     {!hasActiveSubscription && (
                         <div className="mb-4 mx-1 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 text-amber-900 text-[11px] font-medium flex items-center justify-between shadow-sm shadow-amber-100/50">
                             <span>You&apos;re on Free tier.</span>
@@ -248,7 +248,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                 </nav>
 
                 {/* User block */}
-                <div className="p-4 pb-15 lg:pb-4 border-t border-indigo-100/90 bg-gradient-to-t from-violet-100/50 to-indigo-50/70">
+                <div className="p-4 pb-15 lg:pb-4 border-t border-indigo-100/90 bg-white">
                     <div className="flex items-center gap-3 mb-3">
                         <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-indigo-400/40 ring-2 ring-white/90">
                             {(user.name || 'U').charAt(0)}
