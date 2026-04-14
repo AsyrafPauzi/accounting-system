@@ -19,7 +19,7 @@ use App\Http\Controllers\BalanceSheetController;
 use App\Http\Controllers\CashflowSummaryController;
 use App\Http\Controllers\AgedReceivablesController;
 use App\Http\Controllers\ReportsHubController;
-use App\Http\Controllers\EInvoisController;
+use App\Http\Controllers\EInvoiceController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -76,14 +76,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/admin/tenants/stop-impersonating', [TenantAdminController::class, 'stopImpersonating'])->name('admin.tenants.stop-impersonating');
     });
 
-    // --- E-Invois (LHDN MyInvois) ---
+    // --- E-Invoice (LHDN MyInvoice) ---
     Route::middleware('permission:invoices.view')->group(function () {
-        Route::get('/e-invois', [EInvoisController::class, 'index'])->name('e-invois.index');
+        Route::get('/e-invoice', [EInvoiceController::class, 'index'])->name('e-invoice.index');
     });
     Route::middleware('permission:invoices.edit')->group(function () {
-        Route::post('/e-invois/{id}/submit', [EInvoisController::class, 'submit'])->name('e-invois.submit');
-        Route::post('/e-invois/{id}/refresh', [EInvoisController::class, 'refresh'])->name('e-invois.refresh');
-        Route::post('/e-invois/{id}/cancel', [EInvoisController::class, 'cancel'])->name('e-invois.cancel');
+        Route::post('/e-invoice/{id}/submit', [EInvoiceController::class, 'submit'])->name('e-invoice.submit');
+        Route::post('/e-invoice/{id}/refresh', [EInvoiceController::class, 'refresh'])->name('e-invoice.refresh');
+        Route::post('/e-invoice/{id}/cancel', [EInvoiceController::class, 'cancel'])->name('e-invoice.cancel');
     });
 
     // --- Invoices ---

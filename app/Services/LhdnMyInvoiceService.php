@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
-class LhdnMyInvoisService
+class LhdnMyInvoiceService
 {
     private string $env;
     private string $baseUrl;
@@ -59,7 +59,7 @@ class LhdnMyInvoisService
     }
 
     /**
-     * Submit an invoice document to LHDN MyInvois.
+     * Submit an invoice document to LHDN MyInvoice.
      * Updates the invoice's lhdn_* fields based on the API response.
      */
     public function submitDocument(Invoice $invoice): array
@@ -128,7 +128,7 @@ class LhdnMyInvoisService
 
             return [
                 'success'        => true,
-                'message'        => 'Invoice successfully submitted to LHDN MyInvois.',
+                'message'        => 'Invoice successfully submitted to LHDN MyInvoice.',
                 'uuid'           => $uuid,
                 'long_id'        => $longId,
                 'submission_uid' => $submissionUid,

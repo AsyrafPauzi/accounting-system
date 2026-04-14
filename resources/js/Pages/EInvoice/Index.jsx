@@ -125,7 +125,7 @@ function ActionsCell({ invoice, onSubmit, onRefresh, onCancel }) {
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
-export default function EInvoisIndex({
+export default function EInvoiceIndex({
     auth, invoices = [], kpis = {}, paginator = {}, filters = {}, isConfigured = false, lhdnEnv = 'sandbox',
 }) {
     const { current_page = 1, last_page = 1, per_page = 15, total = 0, from = 0, to = 0 } = paginator;
@@ -134,7 +134,7 @@ export default function EInvoisIndex({
     const [searchInput, setSearchInput] = useState(search);
 
     const applyFilters = (overrides = {}) => {
-        router.get(route('e-invois.index'), {
+        router.get(route('e-invoice.index'), {
             search:      overrides.search      ?? searchInput,
             lhdn_status: overrides.lhdn_status ?? lhdnFilter,
             per_page:    overrides.per_page    ?? perPageFilter,
@@ -149,7 +149,7 @@ export default function EInvoisIndex({
             confirmText: 'Submit',
             icon:        'question',
         });
-        if (ok) router.post(route('e-invois.submit', invoice.id));
+        if (ok) router.post(route('e-invoice.submit', invoice.id));
     };
 
     const handleRefresh = async (invoice) => {
@@ -159,7 +159,7 @@ export default function EInvoisIndex({
             confirmText: 'Refresh',
             icon:        'info',
         });
-        if (ok) router.post(route('e-invois.refresh', invoice.id));
+        if (ok) router.post(route('e-invoice.refresh', invoice.id));
     };
 
     const handleCancel = async (invoice) => {
@@ -170,7 +170,7 @@ export default function EInvoisIndex({
             confirmColor: '#dc2626',
             icon:        'warning',
         });
-        if (ok) router.post(route('e-invois.cancel', invoice.id), { reason: 'Cancelled by user' });
+        if (ok) router.post(route('e-invoice.cancel', invoice.id), { reason: 'Cancelled by user' });
     };
 
     const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
@@ -190,7 +190,7 @@ export default function EInvoisIndex({
                             : <span className="text-[11px] text-amber-600 font-semibold">⚠ Credentials not set</span>
                         }
                     </div>
-                    <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">E-Invois (LHDN MyInvois)</h2>
+                    <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">E-Invoice (LHDN MyInvoice)</h2>
                     <p className="text-slate-500 text-sm font-medium mt-1">Submit, track and manage e-invoices with Pejabat LHDN Malaysia</p>
                 </div>
                 <a href="https://myinvois.hasil.gov.my" target="_blank" rel="noopener noreferrer"
@@ -199,7 +199,7 @@ export default function EInvoisIndex({
                 </a>
             </div>
         }>
-            <Head title="E-Invois — LHDN MyInvois" />
+            <Head title="E-Invoice — LHDN MyInvoice" />
 
             <div className="space-y-6">
 
@@ -411,13 +411,13 @@ LHDN_CLIENT_SECRET=your-client-secret`}</pre>
                         <div className="px-4 sm:px-6 py-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50/30">
                             <p className="text-sm text-slate-600">Page {current_page} of {last_page}</p>
                             <div className="flex items-center gap-2">
-                                <Link href={route('e-invois.index', {
+                                <Link href={route('e-invoice.index', {
                                     search: searchInput || undefined, lhdn_status: lhdnFilter || undefined,
                                     per_page: perPageFilter, page: Math.max(1, current_page - 1),
                                 })} className={`inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold border ${current_page <= 1 ? 'pointer-events-none text-slate-300 border-slate-200' : 'text-slate-700 border-slate-200 hover:bg-slate-50'}`}>
                                     <Icons.ChevLeft /> Previous
                                 </Link>
-                                <Link href={route('e-invois.index', {
+                                <Link href={route('e-invoice.index', {
                                     search: searchInput || undefined, lhdn_status: lhdnFilter || undefined,
                                     per_page: perPageFilter, page: Math.min(last_page, current_page + 1),
                                 })} className={`inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold border ${current_page >= last_page ? 'pointer-events-none text-slate-300 border-slate-200' : 'text-slate-700 border-slate-200 hover:bg-slate-50'}`}>

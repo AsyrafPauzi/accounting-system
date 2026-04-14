@@ -3,14 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Invoice;
-use App\Services\LhdnMyInvoisService;
+use App\Services\LhdnMyInvoiceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class EInvoiceController extends Controller
 {
-    public function __construct(protected LhdnMyInvoisService $lhdn) {}
+    public function __construct(protected LhdnMyInvoiceService $lhdn) {}
 
     /**
      * Display the E-Invoice dashboard with LHDN submission statuses.

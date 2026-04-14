@@ -39,7 +39,7 @@ const navConfig = [
         { name: 'Reports', route: 'reports.index', Icon: Icons.ChartPie, requirePaid: true, subtitle: 'P&L, Balance Sheet, Cashflow, Aged AR & more', activeRoutes: ['reports.index', 'general-ledger.report', 'profit-and-loss.index', 'balance-sheet.index', 'cashflow-summary.index', 'aged-receivables.index'] },
     ]},
     { group: 'Compliance', links: [
-        { name: 'LHDN MyInvois', route: 'e-invois.index', Icon: Icons.DocumentCheck, requirePaid: true, subtitle: 'Submit & track LHDN e-invoices', activeRoutes: ['e-invois.index'] },
+        { name: 'LHDN MyInvoice', route: 'e-invoice.index', Icon: Icons.DocumentCheck, requirePaid: true, subtitle: 'Submit & track LHDN e-invoices', activeRoutes: ['e-invoice.index'] },
     ]},
 ];
 
