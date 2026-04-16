@@ -10,6 +10,8 @@ const Icons = {
     ChevronRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
     Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
     Scale: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>,
+    TrendingUp: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>,
+    TrendingDown: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6" /></svg>,
 };
 
 const REFERENCE_OPTIONS = [
@@ -77,17 +79,10 @@ export default function Index({ auth, entries = [], filters = {}, stats = {}, pa
         >
             <Head title="General Ledger" />
 
-            {(flash?.success || flash?.error) && (
-                <div
-                    className={`mb-4 rounded-xl border px-4 py-3 text-sm font-medium ${flash.error ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}
-                >
-                    {flash.success || flash.error}
-                </div>
-            )}
 
             <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl p-6 shadow-lg">
+                    <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl p-6 shadow-lg transition-all hover:shadow-xl hover:-translate-y-0.5">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Journal entries</span>
                             <span className="p-2 rounded-xl bg-white/10"><Icons.BookOpen /></span>
@@ -95,26 +90,28 @@ export default function Index({ auth, entries = [], filters = {}, stats = {}, pa
                         <p className="text-2xl font-bold tabular-nums">{entries_count}</p>
                         <p className="text-xs text-blue-100 mt-1">Filtered period</p>
                     </div>
-                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm transition-all hover:shadow-md">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total debits</span>
+                            <span className="p-2 rounded-xl bg-blue-50 text-blue-600"><Icons.TrendingUp /></span>
                         </div>
                         <p className="text-xl font-bold text-slate-800 font-mono tabular-nums">RM {formatMoney(total_debits)}</p>
                         <p className="text-xs text-slate-500 mt-1">Filtered period</p>
                     </div>
-                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm transition-all hover:shadow-md">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total credits</span>
+                            <span className="p-2 rounded-xl bg-indigo-50 text-indigo-600"><Icons.TrendingDown /></span>
                         </div>
                         <p className="text-xl font-bold text-slate-800 font-mono tabular-nums">RM {formatMoney(total_credits)}</p>
                         <p className="text-xs text-slate-500 mt-1">Filtered period</p>
                     </div>
-                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm transition-all hover:shadow-md">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Balanced</span>
                             <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600"><Icons.Scale /></span>
                         </div>
-                        <p className="text-xl font-bold text-emerald-700 tabular-nums">{balanced_count}</p>
+                        <p className="text-xl font-bold text-emerald-700 font-mono tabular-nums">{balanced_count}</p>
                         <p className="text-xs text-slate-500 mt-1">Entries with debit = credit</p>
                     </div>
                 </div>
@@ -182,7 +179,7 @@ export default function Index({ auth, entries = [], filters = {}, stats = {}, pa
                                     <th className="px-6 py-4">Source</th>
                                     <th className="px-6 py-4 text-right">Debit</th>
                                     <th className="px-6 py-4 text-right">Credit</th>
-                                    <th className="px-6 py-4">Balanced</th>
+                                    <th className="px-6 py-4 text-right">Balanced</th>
                                     <th className="px-6 py-4 text-right w-24">Actions</th>
                                 </tr>
                             </thead>
@@ -211,9 +208,9 @@ export default function Index({ auth, entries = [], filters = {}, stats = {}, pa
                                             </td>
                                             <td className="px-6 py-4 text-right font-mono text-slate-800 tabular-nums">RM {formatMoney(entry.total_debit)}</td>
                                             <td className="px-6 py-4 text-right font-mono text-slate-800 tabular-nums">RM {formatMoney(entry.total_credit)}</td>
-                                            <td className="px-6 py-4">
+                                            <td className="px-6 py-4 text-right">
                                                 {entry.balanced ? (
-                                                    <span className="inline-flex items-center gap-1 text-emerald-600 text-xs font-semibold"><Icons.Check /> Yes</span>
+                                                    <span className="inline-flex items-center gap-1 text-emerald-600 text-xs font-semibold justify-end w-full"><Icons.Check /> Yes</span>
                                                 ) : (
                                                     <span className="text-slate-400 text-xs">—</span>
                                                 )}

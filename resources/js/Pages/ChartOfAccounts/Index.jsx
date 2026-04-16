@@ -95,13 +95,6 @@ export default function Index({ auth, accounts = [], groupedByType = {} }) {
         >
             <Head title="Chart of Accounts" />
 
-            {(flash?.success || flash?.error) && (
-                <div
-                    className={`mb-4 rounded-xl border px-4 py-3 text-sm font-medium ${flash.error ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}
-                >
-                    {flash.success || flash.error}
-                </div>
-            )}
 
             <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
