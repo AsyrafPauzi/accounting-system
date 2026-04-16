@@ -56,9 +56,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('permission:users.view')->group(function () {
         Route::get('/settings/team', [TenantUserController::class, 'index'])->name('settings.team.index');
     });
-    Route::middleware('permission:users.create')->group(function () {
-        Route::post('/settings/team', [TenantUserController::class, 'store'])->name('settings.team.store');
-    });
+    Route::post('/settings/team', [TenantUserController::class, 'store'])
+        ->middleware(['permission:users.create', 'throttle:creation'])
+        ->name('settings.team.store');
     Route::middleware('permission:users.edit')->group(function () {
         Route::patch('/settings/team/{user}', [TenantUserController::class, 'update'])->name('settings.team.update');
     });
@@ -69,10 +69,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // --- Admin (permission-gated) ---
     Route::middleware('permission:admin.tenants')->group(function () {
         Route::get('/admin/tenants', [TenantAdminController::class, 'index'])->name('admin.tenants.index');
-        Route::get('/admin/tenants/{tenant}/backup', [TenantAdminController::class, 'backup'])->name('admin.tenants.backup');
-        Route::delete('/admin/tenants/{tenant}', [TenantAdminController::class, 'destroy'])->name('admin.tenants.destroy');
-        Route::post('/admin/tenants/impersonate/{user}', [TenantAdminController::class, 'impersonate'])->name('admin.tenants.impersonate');
-        Route::post('/admin/tenants/stop-impersonating', [TenantAdminController::class, 'stopImpersonating'])->name('admin.tenants.stop-impersonating');
+        
+        Route::middleware('throttle:sensitive')->group(function () {
+            Route::get('/admin/tenants/{tenant}/backup', [TenantAdminController::class, 'backup'])->name('admin.tenants.backup');
+            Route::delete('/admin/tenants/{tenant}', [TenantAdminController::class, 'destroy'])->name('admin.tenants.destroy');
+            Route::post('/admin/tenants/impersonate/{user}', [TenantAdminController::class, 'impersonate'])->name('admin.tenants.impersonate');
+            Route::post('/admin/tenants/stop-impersonating', [TenantAdminController::class, 'stopImpersonating'])->name('admin.tenants.stop-impersonating');
+        });
     });
 
     // --- Invoices ---
@@ -83,7 +86,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
     Route::middleware('permission:invoices.create')->group(function () {
         Route::get('/invoices/create', [InvoiceController::class, 'create'])->name('invoices.create');
-        Route::post('/invoices', [InvoiceController::class, 'store'])->name('invoices.store');
+        Route::post('/invoices', [InvoiceController::class, 'store'])
+            ->middleware('throttle:creation')
+            ->name('invoices.store');
     });
     Route::middleware('permission:invoices.edit')->group(function () {
         Route::put('/invoices/{id}', [InvoiceController::class, 'update'])->name('invoices.update');
@@ -119,7 +124,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
     Route::middleware('permission:suppliers.create')->group(function () {
         Route::get('/suppliers/create', [SupplierController::class, 'create'])->name('suppliers.create');
-        Route::post('/suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
+        Route::post('/suppliers', [SupplierController::class, 'store'])
+            ->middleware('throttle:creation')
+            ->name('suppliers.store');
     });
     Route::middleware('permission:suppliers.view')->group(function () {
         Route::get('/suppliers/{id}', [SupplierController::class, 'show'])->name('suppliers.show');
@@ -139,7 +146,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
     Route::middleware('permission:bills.create')->group(function () {
         Route::get('/bills/create', [BillController::class, 'create'])->name('bills.create');
-        Route::post('/bills', [BillController::class, 'store'])->name('bills.store');
+        Route::post('/bills', [BillController::class, 'store'])
+            ->middleware('throttle:creation')
+            ->name('bills.store');
     });
     Route::middleware('permission:bills.edit')->group(function () {
         Route::put('/bills/{id}', [BillController::class, 'update'])->name('bills.update');
@@ -170,8 +179,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
     Route::middleware('permission:accounts.create')->group(function () {
         Route::get('/chart-of-accounts/create', [ChartOfAccountsController::class, 'create'])->name('chart-of-accounts.create');
-        Route::post('/chart-of-accounts', [ChartOfAccountsController::class, 'store'])->name('chart-of-accounts.store');
-        Route::post('/chart-of-accounts/seed-default', [ChartOfAccountsController::class, 'seedDefault'])->name('chart-of-accounts.seed-default');
+        Route::post('/chart-of-accounts', [ChartOfAccountsController::class, 'store'])
+            ->middleware('throttle:creation')
+            ->name('chart-of-accounts.store');
+        Route::post('/chart-of-accounts/seed-default', [ChartOfAccountsController::class, 'seedDefault'])
+            ->middleware('throttle:creation')
+            ->name('chart-of-accounts.seed-default');
     });
     Route::middleware('permission:accounts.edit')->group(function () {
         Route::get('/chart-of-accounts/{id}/edit', [ChartOfAccountsController::class, 'edit'])->name('chart-of-accounts.edit');
@@ -214,8 +227,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
     Route::middleware('permission:customers.create')->group(function () {
         Route::get('/customers/create', [CustomerController::class, 'create'])->name('customers.create');
-        Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store');
-        Route::post('/customers/quick-store', [CustomerController::class, 'quickStore'])->name('customers.quick-store');
+        
+        Route::middleware('throttle:creation')->group(function () {
+            Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store');
+            Route::post('/customers/quick-store', [CustomerController::class, 'quickStore'])->name('customers.quick-store');
+        });
     });
     Route::middleware('permission:customers.view')->group(function () {
         Route::get('/customers/{id}', [CustomerController::class, 'show'])->name('customers.show');

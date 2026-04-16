@@ -7,7 +7,10 @@ use Illuminate\Validation\Rule;
 
 class StoreSupplierRequest extends FormRequest
 {
-    public function authorize(): bool { return true; }
+    public function authorize(): bool
+    {
+        return $this->user()->can('suppliers.create');
+    }
 
     public function rules(): array
     {

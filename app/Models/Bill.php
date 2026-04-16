@@ -11,6 +11,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Bill extends Model
 {
     use HasFactory, SoftDeletes, HasUuid, Auditable;
+    
+    protected $appends = ['balance_due', 'supplier_name'];
+
 
     protected $fillable = [
         'bill_number', 'supplier_id', 'bill_date', 'due_date', 'status',
@@ -46,4 +49,10 @@ class Bill extends Model
         }
         return max(0, (float) $this->total_amount - (float) $this->amount_paid);
     }
+
+    public function getSupplierNameAttribute(): string
+    {
+        return $this->supplier?->name ?? '—';
+    }
 }
+

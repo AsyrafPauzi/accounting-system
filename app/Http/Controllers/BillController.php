@@ -30,14 +30,11 @@ class BillController extends Controller
             $query->where('supplier_id', $supplierId);
         }
 
-        $bills = $query->get()->map(function (Bill $bill) {
-            $bill->supplier_name = $bill->supplier?->name ?? '—';
-            $bill->balance_due = $bill->balance_due;
-            return $bill;
-        });
+        $bills = $query->get();
 
-        $totalOutstanding = $bills->whereIn('status', ['unpaid', 'partially paid'])->sum(fn (Bill $b) => (float) $b->total_amount - (float) $b->amount_paid);
+        $totalOutstanding = $bills->whereIn('status', ['unpaid', 'partially paid'])->sum('balance_due');
         $totalPaidPeriod = $bills->where('status', 'paid')->sum('amount_paid');
+
         $assetAccounts = Account::where('type', 'asset')->active()->orderBy('code')->get(['code', 'name'])->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->code} — {$a->name}"])->values()->all();
 
         return Inertia::render('Bills/Index', [
@@ -140,21 +137,17 @@ class BillController extends Controller
         return redirect()->back()->with('success', 'Bill voided.');
     }
 
-    public function recordPayment(Request $request, int $id): RedirectResponse
+    public function recordPayment(\App\Http\Requests\RecordPaymentRequest $request, int $id): RedirectResponse
     {
-        $request->validate([
-            'amount'            => 'required|numeric|min:0.01',
-            'payment_date'      => 'required|date',
-            'bank_account_code' => 'required|string|exists:accounts,code',
-        ]);
+        $validated = $request->validated();
 
         $bill = Bill::findOrFail($id);
         try {
             $this->billService->recordPayment(
                 $bill,
-                (float) $request->amount,
-                $request->payment_date,
-                $request->bank_account_code
+                (float) $validated['amount'],
+                $validated['payment_date'],
+                $validated['bank_account_code']
             );
         } catch (\LogicException $e) {
             return redirect()->back()->with('error', $e->getMessage());
