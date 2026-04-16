@@ -39,9 +39,9 @@ const navConfig = [
     { group: 'Reports', links: [
         { name: 'Reports', route: 'reports.index', Icon: Icons.ChartPie, requirePaid: true, subtitle: 'P&L, Balance Sheet, Cashflow, Aged AR & more', activeRoutes: ['reports.index', 'general-ledger.report', 'profit-and-loss.index', 'balance-sheet.index', 'cashflow-summary.index', 'aged-receivables.index'] },
     ]},
-    { group: 'Compliance', links: [
-        { name: 'LHDN MyInvois', route: 'dashboard', Icon: Icons.DocumentCheck, requirePaid: true },
-    ]},
+    // { group: 'Compliance', links: [
+    //     { name: 'LHDN MyInvois', route: 'dashboard', Icon: Icons.DocumentCheck, requirePaid: true },
+    // ]},
 ];
 
 export default function Authenticated({ user: propUser, header, children }) {
@@ -51,7 +51,7 @@ export default function Authenticated({ user: propUser, header, children }) {
     const user = propUser || auth?.user || {};
     const hasActiveSubscription = auth?.hasActiveSubscription ?? false;
     const teamPermissions = auth?.teamPermissions ?? { view: false, create: false, edit: false, delete: false };
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role_name === 'super-admin';
     const isImpersonating = Boolean(auth?.impersonator_id);
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -227,7 +227,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                                 <span className={isRouteActive('settings.team.index') ? 'text-white' : 'text-indigo-500/80'}>
                                     <Icons.Users />
                                 </span>
-                                <span className="flex-1">Team & roles</span>
+                                <span className="flex-1">Team & Roles</span>
                             </Link>
                         )}
                         <Link
@@ -256,7 +256,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-bold text-indigo-950 truncate">{user.name || 'User'}</p>
                             <p className="text-[10px] font-semibold text-indigo-600/75 uppercase tracking-wider truncate">
-                                {isImpersonating ? 'Impersonating' : (isAdmin ? 'Administrator' : 'User')}
+                                {isImpersonating ? 'Impersonating' : (user.role_name?.replace('-', ' ') || 'User')}
                             </p>
                         </div>
                     </div>
@@ -323,6 +323,11 @@ export default function Authenticated({ user: propUser, header, children }) {
                     {flash?.success && (
                         <div className="max-w-7xl mx-auto mb-4 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium">
                             {flash.success}
+                        </div>
+                    )}
+                    {flash?.info && (
+                        <div className="max-w-7xl mx-auto mb-4 px-4 py-3 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-800 text-sm font-medium">
+                            {flash.info}
                         </div>
                     )}
                     {flash?.error && (

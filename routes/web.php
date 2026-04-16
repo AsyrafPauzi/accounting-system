@@ -74,9 +74,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/admin/tenants/{tenant}/backup', [TenantAdminController::class, 'backup'])->name('admin.tenants.backup');
             Route::delete('/admin/tenants/{tenant}', [TenantAdminController::class, 'destroy'])->name('admin.tenants.destroy');
             Route::post('/admin/tenants/impersonate/{user}', [TenantAdminController::class, 'impersonate'])->name('admin.tenants.impersonate');
-            Route::post('/admin/tenants/stop-impersonating', [TenantAdminController::class, 'stopImpersonating'])->name('admin.tenants.stop-impersonating');
         });
     });
+
+    // Stop impersonating can be called by an impersonated user who lacks "admin.tenants"
+    Route::post('/admin/tenants/stop-impersonating', [TenantAdminController::class, 'stopImpersonating'])
+        ->middleware('throttle:sensitive')
+        ->name('admin.tenants.stop-impersonating');
 
     // --- Invoices ---
     Route::middleware('permission:invoices.view')->group(function () {

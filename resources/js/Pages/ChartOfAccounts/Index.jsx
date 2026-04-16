@@ -37,10 +37,10 @@ export default function Index({ auth, accounts = [], groupedByType = {} }) {
 
     const activeCount = accounts.filter((a) => a.is_active).length;
 
-    const handleDelete = async (id, code) => {
+    const handleDelete = async (id, name) => {
         const ok = await confirm({
             title: 'Delete account?',
-            text: `Account ${code} will be removed. This cannot be undone if the account is not in use.`,
+            text: `Account "${name}" will be removed. This cannot be undone if the account is not in use.`,
             confirmText: 'Delete',
             confirmColor: '#dc2626',
             icon: 'warning',
@@ -221,7 +221,7 @@ export default function Index({ auth, accounts = [], groupedByType = {} }) {
                                                     </Link>
                                                     <button
                                                         type="button"
-                                                        onClick={() => handleDelete(acc.id, acc.code)}
+                                                        onClick={() => handleDelete(acc.id, acc.name)}
                                                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
                                                     >
                                                         <Icons.Trash /> Delete

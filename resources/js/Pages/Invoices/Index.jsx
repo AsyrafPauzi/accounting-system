@@ -284,7 +284,11 @@ function ActionsCell({ invoice, setSelectedInvoice, setData, handlePostToLedger,
             <MenuButton className="inline-flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors">
                 <Icons.EllipsisVertical />
             </MenuButton>
-            <MenuItems className="absolute right-0 z-50 mt-2 w-52 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black/5 focus:outline-none py-1">
+            <MenuItems
+                anchor="bottom end"
+                transition
+                className="z-[100] mt-2 w-52 origin-top-right rounded-xl bg-white shadow-xl ring-1 ring-black/5 focus:outline-none py-1 transition duration-100 ease-out data-[closed]:scale-95 data-[closed]:opacity-0"
+            >
                 <MenuItem>
                     <Link href={route('invoices.edit', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
                         <Icons.ChevronRight className="w-4 h-4" /> View

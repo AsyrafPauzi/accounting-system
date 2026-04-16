@@ -106,10 +106,10 @@ export default function SubscriptionIndex({ auth, plans = [], currentSubscriptio
                             <div className="pt-2">
                                 <button
                                     type="submit"
-                                    disabled={processing || !data.plan_id}
+                                    disabled={processing || !data.plan_id || currentSubscription}
                                     className="w-full inline-flex items-center justify-center py-3 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-500/25 border-0 text-sm"
                                 >
-                                    {processing ? 'Activating...' : 'Activate subscription'}
+                                    {processing ? 'Activating...' : (currentSubscription ? 'Subscription Active' : 'Activate subscription')}
                                 </button>
                             </div>
                         </form>

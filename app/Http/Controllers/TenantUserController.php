@@ -47,14 +47,18 @@ class TenantUserController extends Controller
         abort_if(! $tenantId, 404);
 
         $validated = $request->validated();
+        $targetRole = \App\Models\Role::where('name', $validated['role'])->where('guard_name', 'web')->first();
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'tenant_id' => $tenantId,
+            'role_id' => $targetRole?->id,
         ]);
-        $user->assignRole($validated['role']);
+        if ($targetRole) {
+            $user->assignRole($validated['role']);
+        }
 
         return redirect()->route('settings.team.index')->with('success', 'Team member added. Share the password with them securely or ask them to reset it from the login page.');
     }
@@ -75,7 +79,11 @@ class TenantUserController extends Controller
             }
         }
 
-        $user->syncRoles([$validated['role']]);
+        $targetRole = \App\Models\Role::where('name', $validated['role'])->where('guard_name', 'web')->first();
+        if ($targetRole) {
+            $user->update(['role_id' => $targetRole->id]);
+            $user->syncRoles([$validated['role']]);
+        }
 
         return redirect()->route('settings.team.index')->with('success', 'Role updated.');
     }

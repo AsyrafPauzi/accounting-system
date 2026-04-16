@@ -31,7 +31,26 @@ class EnsureSubscribed
             return $next($request);
         }
 
-        $routeName = $request->route()?->getName();
+        $routeName = (string) $request->route()?->getName();
+
+        if ($user->hasRole('super-admin')) {
+            // Super admins are restricted to central platform management.
+            // They must impersonate a tenant to access business modules (invoices, customers, etc).
+            $allowedRoutes = ['admin.', 'profile.', 'logout', 'login'];
+            $isAllowed = false;
+            foreach ($allowedRoutes as $prefix) {
+                if (str_starts_with($routeName, $prefix)) {
+                    $isAllowed = true;
+                    break;
+                }
+            }
+
+            if (!$isAllowed) {
+                return redirect()->route('admin.tenants.index')->with('info', 'As a Platform Administrator, please impersonate a tenant to view or manage their specific data.');
+            }
+
+            return $next($request);
+        }
 
         if ($routeName && $this->isAlwaysAllowed($routeName)) {
             return $next($request);
