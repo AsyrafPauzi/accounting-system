@@ -33,12 +33,16 @@ Route::get('/', function () {
     ]);
 });
 
+// --- Toyyibpay Webhook (Server-to-Server) ---
+Route::post('/subscription/webhook', [SubscriptionController::class, 'webhook'])->name('subscription.webhook');
+
 // --- Dashboard, Profile & App (Auth Required) ---
 Route::middleware(['auth', 'verified'])->group(function () {
     // Subscription pages (always allowed, EnsureSubscribed skips these)
     Route::get('/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
     Route::post('/subscription/checkout', [SubscriptionController::class, 'checkout'])->name('subscription.checkout');
     Route::get('/subscription/success', [SubscriptionController::class, 'success'])->name('subscription.success');
+    Route::get('/subscription/callback', [SubscriptionController::class, 'callback'])->name('subscription.callback');
 
     // Dashboard (paid-only via EnsureSubscribed)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
