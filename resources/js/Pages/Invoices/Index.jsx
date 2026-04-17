@@ -151,7 +151,7 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
                             <span className="absolute inset-y-0 left-3 flex items-center text-slate-400"><Icons.MagnifyingGlass /></span>
                             <input type="text" placeholder="Search by invoice # or customer..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onBlur={() => applyFilters({ page: 1 })} className="pl-9 w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500" />
                         </div>
-                        <select value={statusFilter} onChange={(e) => applyFilters({ status: e.target.value, page: 1 })} className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500">
+                        <select value={statusFilter} onChange={(e) => applyFilters({ status: e.target.value, page: 1 })} className="border border-slate-200 rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 min-w-[140px]">
                             <option value="">All statuses</option>
                             <option value="draft">Draft</option>
                             <option value="unpaid">Unpaid</option>
@@ -159,7 +159,7 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
                             <option value="paid">Paid</option>
                             <option value="void">Void</option>
                         </select>
-                        <select value={perPageFilter} onChange={(e) => applyFilters({ per_page: Number(e.target.value), page: 1 })} className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500">
+                        <select value={perPageFilter} onChange={(e) => applyFilters({ per_page: Number(e.target.value), page: 1 })} className="border border-slate-200 rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 min-w-[140px]">
                             <option value={10}>10 per page</option>
                             <option value={25}>25 per page</option>
                             <option value={50}>50 per page</option>

@@ -148,7 +148,7 @@ export default function Index({ auth, accounts = [], groupedByType = {} }) {
                         <select
                             value={typeFilter}
                             onChange={(e) => setTypeFilter(e.target.value)}
-                            className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
+                            className="border border-slate-200 rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
                         >
                             {TYPE_OPTIONS.map((opt) => (
                                 <option key={opt.value || 'all'} value={opt.value}>
