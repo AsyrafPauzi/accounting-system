@@ -43,17 +43,19 @@ class RegisteredUserController extends Controller
         $tenant = \App\Models\Tenant::create(['id' => $companyId]);
 
         
-    
+        $adminRole = Role::where('name', 'admin')->where('guard_name', 'web')->first();
+
         // 2. Create the User and link them to that Tenant
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'tenant_id' => $companyId, // <--- Link established
+            'role_id' => $adminRole?->id,
         ]);
 
         // Tenant owner: full app access (Spatie roles live on central DB)
-        if (Role::query()->where('name', 'admin')->where('guard_name', 'web')->exists()) {
+        if ($adminRole) {
             $user->assignRole('admin');
         }
 

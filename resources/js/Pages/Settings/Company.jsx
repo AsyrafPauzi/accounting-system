@@ -47,7 +47,7 @@ export default function Company({ auth, company }) {
                             href={route('settings.team.index')}
                             className="text-sm font-semibold text-blue-600 hover:text-blue-700 whitespace-nowrap"
                         >
-                            Team & roles →
+                            Team & Roles →
                         </Link>
                     )}
                 </div>

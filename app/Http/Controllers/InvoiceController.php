@@ -128,7 +128,7 @@ class InvoiceController extends Controller
             $request->input('items')
         );
 
-        return redirect()->route('invoices.index');
+        return redirect()->route('invoices.index')->with('success', 'Invoice draft created successfully.');
     }
 
     /**
@@ -182,7 +182,7 @@ class InvoiceController extends Controller
             $this->invoiceService->update($invoice, $request->except('items'), $request->input('items'));
         }
 
-        return redirect()->route('invoices.index');
+        return redirect()->route('invoices.index')->with('success', 'Invoice updated successfully.');
     }
 
     /**
@@ -193,7 +193,7 @@ class InvoiceController extends Controller
         $invoice = Invoice::findOrFail($id);
         $invoice->items()->delete();
         $invoice->delete();
-        return redirect()->route('invoices.index');
+        return redirect()->route('invoices.index')->with('success', 'Invoice deleted.');
     }
 
     /**
@@ -272,6 +272,6 @@ class InvoiceController extends Controller
             return redirect()->back()->with('error', $e->getMessage());
         }
 
-        return redirect()->route('invoices.index');
+        return redirect()->route('invoices.index')->with('success', 'Payment recorded.');
     }
 }

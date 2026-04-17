@@ -104,6 +104,6 @@ class CreditNoteController extends Controller
             ]);
         });
 
-        return redirect()->route('credit-notes.index');
+        return redirect()->route('credit-notes.index')->with('success', 'Credit Note issued and ledger updated successfully.');
     }
 }

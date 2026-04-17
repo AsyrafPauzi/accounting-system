@@ -222,7 +222,7 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                                     <th className="p-6 text-center w-24">Qty</th>
                                     <th className="p-6 w-32">Price (RM)</th>
                                     <th className="p-6 w-32">Disc (RM)</th>
-                                    <th className="p-6 text-center w-24">Tax</th>
+                                    <th className="p-6 text-center w-32">Tax</th>
                                     <th className="p-6 text-right w-40">Total</th>
                                     <th className="p-6 w-16"></th>
                                 </tr>
@@ -261,7 +261,7 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                                             <input type="number" value={item.discount_amount} onChange={e => updateItem(index, 'discount_amount', e.target.value)} className="w-full border-slate-100 rounded-xl text-sm py-2 focus:ring-rose-500 font-mono text-rose-500 font-bold" />
                                         </td>
                                         <td className="p-4">
-                                            <select value={item.tax_rate} onChange={e => updateItem(index, 'tax_rate', e.target.value)} className="w-full border-slate-100 rounded-xl text-xs font-bold text-slate-600 focus:ring-blue-500 py-2">
+                                            <select value={item.tax_rate} onChange={e => updateItem(index, 'tax_rate', e.target.value)} className="w-full border-slate-100 rounded-xl text-sm font-bold text-slate-700 focus:ring-blue-500 py-2.5">
                                                 <option value="0">0%</option>
                                                 <option value="6">6%</option>
                                                 <option value="8">8%</option>

@@ -20,7 +20,7 @@ class TenantAdminController extends Controller
      */
     public function index(Request $request): Response
     {
-        abort_unless($request->user() && $request->user()->role === 'admin', 403);
+        abort_unless($request->user() && $request->user()->hasRole('super-admin'), 403);
 
         $tenants = Tenant::all()->map(function (Tenant $tenant) {
             $dbName = method_exists($tenant, 'database') ? $tenant->database()->getName() : null;
@@ -48,7 +48,7 @@ class TenantAdminController extends Controller
      */
     public function impersonate(Request $request, int $userId): RedirectResponse
     {
-        abort_unless($request->user() && $request->user()->role === 'admin', 403);
+        abort_unless($request->user() && $request->user()->hasRole('super-admin'), 403);
 
         $user = User::findOrFail($userId);
 
@@ -75,7 +75,7 @@ class TenantAdminController extends Controller
         Auth::loginUsingId($impersonatorId);
         $request->session()->regenerate();
 
-        return redirect()->route('dashboard');
+        return redirect()->route('admin.tenants.index');
     }
 
     /**
@@ -83,7 +83,7 @@ class TenantAdminController extends Controller
      */
     public function backup(Request $request, Tenant $tenant)
     {
-        abort_unless($request->user() && $request->user()->role === 'admin', 403);
+        abort_unless($request->user() && $request->user()->hasRole('super-admin'), 403);
 
         $dbName = $tenant->database()->getName();
         $connection = Config::get('tenancy.database.central_connection', Config::get('database.default'));
@@ -137,7 +137,7 @@ class TenantAdminController extends Controller
      */
     public function destroy(Request $request, Tenant $tenant): RedirectResponse
     {
-        abort_unless($request->user() && $request->user()->role === 'admin', 403);
+        abort_unless($request->user() && $request->user()->hasRole('super-admin'), 403);
 
         $tenantId = $tenant->getKey();
         User::where('tenant_id', $tenantId)->delete();

@@ -48,6 +48,12 @@ class SubscriptionController extends Controller
 
         $plan = Plan::where('is_active', true)->findOrFail($validated['plan_id']);
 
+        // Check if tenant already has an active subscription
+        $existing = Subscription::where('tenant_id', $tenantId)->active()->exists();
+        if ($existing) {
+            return redirect()->back()->with('error', 'You already have an active subscription. It must expire before you can subscribe again.');
+        }
+
         $periodStart = now()->toDateString();
         $periodEnd = $validated['interval'] === 'yearly'
             ? now()->addYear()->toDateString()

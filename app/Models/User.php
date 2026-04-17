@@ -19,11 +19,18 @@ class User extends Authenticatable
      * Settings → Team & roles; the first user per tenant still usually comes from registration.
      */
 
+    protected $appends = ['role_name'];
+
+    public function getRoleNameAttribute()
+    {
+        return $this->roles->first()?->name ?? 'User';
+    }
+
     protected $fillable = [
         'name',
         'email',
         'password',
-        'role',
+        'role_id',
         'company_id',
         'tenant_id',
         'two_factor_secret',

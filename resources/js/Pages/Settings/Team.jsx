@@ -49,7 +49,7 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
                 <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                     <div>
                         <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">
-                            Team & roles
+                            Team & Roles
                         </h2>
                         <p className="text-slate-500 text-sm font-medium mt-1">
                             Each person signs in with their own account. Roles control what they can do in
@@ -65,7 +65,7 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
                 </div>
             }
         >
-            <Head title="Team & roles" />
+            <Head title="Team & Roles" />
 
             <div className="max-w-5xl space-y-8">
                 {teamPermissions.create && (
