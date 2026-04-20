@@ -87,18 +87,18 @@ export default function Index({ auth, customers = [] }) {
                                 className="pl-10 w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                             />
                         </div>
-                        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500">
+                        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="border border-slate-200 rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 min-w-[140px]">
                             <option value="">All statuses</option>
                             <option value="active">Active</option>
                             <option value="suspended">Suspended</option>
                         </select>
-                        <select value={segmentFilter} onChange={e => setSegmentFilter(e.target.value)} className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500">
+                        <select value={segmentFilter} onChange={e => setSegmentFilter(e.target.value)} className="border border-slate-200 rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 min-w-[140px]">
                             <option value="">All segments</option>
                             <option value="SME">SME</option>
                             <option value="Enterprise">Enterprise</option>
                             <option value="Govt">Govt</option>
                         </select>
-                        <select value={creditHoldFilter} onChange={e => setCreditHoldFilter(e.target.value)} className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500">
+                        <select value={creditHoldFilter} onChange={e => setCreditHoldFilter(e.target.value)} className="border border-slate-200 rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 min-w-[160px]">
                             <option value="">Credit hold: All</option>
                             <option value="yes">On hold</option>
                             <option value="no">Not on hold</option>

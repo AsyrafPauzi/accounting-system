@@ -56,7 +56,7 @@ class InvoiceController extends Controller
                     ->orWhere('customers.name', 'like', '%' . $search . '%');
             });
         }
-        if ($statusFilter !== '') {
+        if ($statusFilter) {
             $baseQuery->where('invoices.status', $statusFilter);
         }
 

@@ -188,9 +188,10 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
                                             <td className="px-6 py-3">
                                                 {teamPermissions.edit && assignableRoles.length ? (
                                                     <select
-                                                        className="rounded-lg border border-slate-200 py-1.5 px-2 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
+                                                        className="rounded-lg border border-slate-200 py-1.5 pl-2 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-slate-50 min-w-[140px]"
                                                         value={current}
                                                         onChange={(e) => updateRole(u.id, e.target.value)}
+                                                        disabled={u.is_self}
                                                     >
                                                         {assignableRoles.map((r) => (
                                                             <option key={r} value={r}>

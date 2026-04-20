@@ -35,6 +35,16 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, $request) {
+            $message = 'Your session has expired or the page was idle for too long. Please refresh and try again.';
+            
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 419);
+            }
+            
+            return back()->with('error', $message);
+        });
+
         $exceptions->render(function (\Spatie\Permission\Exceptions\UnauthorizedException $e, $request) {
             if ($request->expectsJson()) {
                 return response()->json(['message' => 'Forbidden.'], 403);

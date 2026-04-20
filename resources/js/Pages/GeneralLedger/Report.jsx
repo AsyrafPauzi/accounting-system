@@ -10,6 +10,8 @@ const Icons = {
     DocumentArrowDown: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h2.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
     TrendingUp: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>,
     TrendingDown: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6" /></svg>,
+    ArrowTopRightOnSquare: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>,
+    Eye: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>,
 };
 
 const REFERENCE_OPTIONS = [
@@ -32,10 +34,10 @@ export default function Report({ auth, transactions = [], accountsMap = {}, filt
     const { current_page = 1, last_page = 1, prev_url, next_url, total } = paginator;
 
     const getSourceLabel = (refType) => {
-        if (refType === 'Invoice' || refType === 'Invoice Payment') return 'View Invoice';
-        if (refType === 'Credit Note') return 'View Credit Note';
-        if (refType === 'Bill' || refType === 'Bill Payment') return 'View Bill';
-        return null;
+        if (refType === 'Invoice' || refType === 'Invoice Payment') return 'Invoice';
+        if (refType === 'Credit Note') return 'Credit Note';
+        if (refType === 'Bill' || refType === 'Bill Payment') return 'Bill';
+        return refType;
     };
 
     return (
@@ -214,16 +216,19 @@ export default function Report({ auth, transactions = [], accountsMap = {}, filt
                                                 {tx.credit > 0 ? `RM ${formatMoney(tx.credit)}` : '—'}
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <div className="flex flex-col items-end gap-1">
+                                                <div className="flex flex-col items-end gap-1.5">
                                                     <Link
                                                         href={route('general-ledger.show', tx.entry_id)}
-                                                        className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                                                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors whitespace-nowrap uppercase tracking-wider shadow-sm"
                                                     >
-                                                        View entry <Icons.ChevronRight />
+                                                        <Icons.Eye /> View entry
                                                     </Link>
                                                     {tx.source_route && (
-                                                        <a href={tx.source_route} className="text-xs font-semibold text-slate-500 hover:text-slate-700">
-                                                            {getSourceLabel(tx.reference_type)}
+                                                        <a 
+                                                            href={tx.source_route} 
+                                                            className="inline-flex items-center gap-1 text-[9px] font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-tight"
+                                                        >
+                                                            {getSourceLabel(tx.reference_type)} <Icons.ArrowTopRightOnSquare />
                                                         </a>
                                                     )}
                                                 </div>

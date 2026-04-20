@@ -67,6 +67,11 @@ class TenantUserController extends Controller
     {
         $this->assertSameTenant($request->user(), $user);
 
+        // Prevent users from changing their own role to avoid accidental lockout.
+        if ($user->id === $request->user()->id) {
+            return back()->withErrors(['role' => 'You cannot change your own role. Please ask another administrator to do this for you.']);
+        }
+
         $validated = $request->validated();
 
         if ($user->hasRole('admin') && $validated['role'] !== 'admin') {
