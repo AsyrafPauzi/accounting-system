@@ -36,7 +36,7 @@ class ToyyibpayService
                 'categoryCode'             => $this->categoryCode,
                 'billName'                 => $data['billName'],
                 'billDescription'          => $data['billDescription'],
-                'billPriceSetting'         => 0, // Fixed price
+                'billPriceSetting'         => 1,
                 'billPayorInfo'            => 1, // Show payor info
                 'billAmount'               => (int) ($data['billAmount'] * 100), // Convert to cents
                 'billReturnUrl'            => $data['billReturnUrl'],
