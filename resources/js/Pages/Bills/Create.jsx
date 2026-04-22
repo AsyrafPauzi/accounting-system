@@ -144,7 +144,7 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
                                 <tr className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 bg-slate-50/80">
                                     <th className="px-6 py-3">Account</th>
                                     <th className="px-6 py-3">Description</th>
-                                    <th className="px-6 py-3 w-24">Qty</th>
+                                    <th className="px-6 py-3 w-32">Qty</th>
                                     <th className="px-6 py-3 w-32">Unit amount</th>
                                     <th className="px-6 py-3 w-32 text-right">Amount</th>
                                     <th className="px-6 py-3 w-12" />

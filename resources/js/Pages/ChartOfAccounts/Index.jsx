@@ -37,10 +37,10 @@ export default function Index({ auth, accounts = [], groupedByType = {} }) {
 
     const activeCount = accounts.filter((a) => a.is_active).length;
 
-    const handleDelete = async (id, code) => {
+    const handleDelete = async (id, name) => {
         const ok = await confirm({
             title: 'Delete account?',
-            text: `Account ${code} will be removed. This cannot be undone if the account is not in use.`,
+            text: `Account "${name}" will be removed. This cannot be undone if the account is not in use.`,
             confirmText: 'Delete',
             confirmColor: '#dc2626',
             icon: 'warning',
@@ -95,13 +95,6 @@ export default function Index({ auth, accounts = [], groupedByType = {} }) {
         >
             <Head title="Chart of Accounts" />
 
-            {(flash?.success || flash?.error) && (
-                <div
-                    className={`mb-4 rounded-xl border px-4 py-3 text-sm font-medium ${flash.error ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}
-                >
-                    {flash.success || flash.error}
-                </div>
-            )}
 
             <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -155,7 +148,7 @@ export default function Index({ auth, accounts = [], groupedByType = {} }) {
                         <select
                             value={typeFilter}
                             onChange={(e) => setTypeFilter(e.target.value)}
-                            className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
+                            className="border border-slate-200 rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
                         >
                             {TYPE_OPTIONS.map((opt) => (
                                 <option key={opt.value || 'all'} value={opt.value}>
@@ -228,7 +221,7 @@ export default function Index({ auth, accounts = [], groupedByType = {} }) {
                                                     </Link>
                                                     <button
                                                         type="button"
-                                                        onClick={() => handleDelete(acc.id, acc.code)}
+                                                        onClick={() => handleDelete(acc.id, acc.name)}
                                                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
                                                     >
                                                         <Icons.Trash /> Delete

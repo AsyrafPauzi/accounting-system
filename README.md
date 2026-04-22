@@ -57,6 +57,7 @@ Central DB holds users, tenants, plans, subscriptions, sessions, jobs, etc.
 
 ```bash
 php artisan migrate
+php artisan app:sync-roles-permissions
 ```
 
 The plans migration seeds an initial **Pro** plan if none exists. Subscriptions use **mock checkout** in local/dev (no Stripe required).

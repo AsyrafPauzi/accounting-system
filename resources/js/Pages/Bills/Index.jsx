@@ -121,13 +121,6 @@ export default function Index({ auth, bills = [], suppliers = [], assetAccounts 
         >
             <Head title="Bills" />
 
-            {(usePage().props?.flash?.success || usePage().props?.flash?.error) && (
-                <div
-                    className={`mb-4 rounded-xl border px-4 py-3 text-sm font-medium ${usePage().props.flash.error ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}
-                >
-                    {usePage().props.flash.success || usePage().props.flash.error}
-                </div>
-            )}
 
             <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -174,7 +167,7 @@ export default function Index({ auth, bills = [], suppliers = [], assetAccounts 
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
-                            className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="border border-slate-200 rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[140px]"
                         >
                             <option value="">All statuses</option>
                             <option value="draft">Draft</option>
@@ -186,7 +179,7 @@ export default function Index({ auth, bills = [], suppliers = [], assetAccounts 
                         <select
                             value={supplierFilter}
                             onChange={(e) => setSupplierFilter(e.target.value)}
-                            className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="border border-slate-200 rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[160px]"
                         >
                             <option value="">All suppliers</option>
                             {(suppliers || []).map((s) => (

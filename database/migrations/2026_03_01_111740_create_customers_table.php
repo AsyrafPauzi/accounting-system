@@ -23,6 +23,7 @@ return new class extends Migration
         $table->string('brn')->nullable(); // Business Registration Number (SSM)
         
         $table->timestamps();
+        $table->softDeletes();
     });
 }
 

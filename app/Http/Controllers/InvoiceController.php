@@ -56,7 +56,7 @@ class InvoiceController extends Controller
                     ->orWhere('customers.name', 'like', '%' . $search . '%');
             });
         }
-        if ($statusFilter !== '') {
+        if ($statusFilter) {
             $baseQuery->where('invoices.status', $statusFilter);
         }
 
@@ -128,7 +128,7 @@ class InvoiceController extends Controller
             $request->input('items')
         );
 
-        return redirect()->route('invoices.index');
+        return redirect()->route('invoices.index')->with('success', 'Invoice draft created successfully.');
     }
 
     /**
@@ -182,7 +182,7 @@ class InvoiceController extends Controller
             $this->invoiceService->update($invoice, $request->except('items'), $request->input('items'));
         }
 
-        return redirect()->route('invoices.index');
+        return redirect()->route('invoices.index')->with('success', 'Invoice updated successfully.');
     }
 
     /**
@@ -193,7 +193,7 @@ class InvoiceController extends Controller
         $invoice = Invoice::findOrFail($id);
         $invoice->items()->delete();
         $invoice->delete();
-        return redirect()->route('invoices.index');
+        return redirect()->route('invoices.index')->with('success', 'Invoice deleted.');
     }
 
     /**
@@ -256,26 +256,22 @@ class InvoiceController extends Controller
     /**
      * Record a payment receipt.
      */
-    public function recordPayment(Request $request, $id)
+    public function recordPayment(\App\Http\Requests\RecordPaymentRequest $request, $id)
     {
-        $request->validate([
-            'amount'            => 'required|numeric|min:0.01',
-            'payment_date'      => 'required|date',
-            'bank_account_code' => 'required|string',
-        ]);
+        $validated = $request->validated();
 
         $invoice = Invoice::findOrFail($id);
         try {
             $this->invoiceService->recordPayment(
                 $invoice,
-                (float) $request->amount,
-                $request->payment_date,
-                $request->bank_account_code
+                (float) $validated['amount'],
+                $validated['payment_date'],
+                $validated['bank_account_code']
             );
         } catch (\LogicException $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }
 
-        return redirect()->route('invoices.index');
+        return redirect()->route('invoices.index')->with('success', 'Payment recorded.');
     }
 }

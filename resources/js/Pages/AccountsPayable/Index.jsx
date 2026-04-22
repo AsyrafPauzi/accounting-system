@@ -72,11 +72,6 @@ export default function Index({ auth, bills = [], summary = {}, assetAccounts = 
         >
             <Head title="Accounts Payable" />
 
-            {(usePage().props?.flash?.success || usePage().props?.flash?.error) && (
-                <div className={`mb-4 rounded-xl border px-4 py-3 text-sm font-medium ${usePage().props.flash.error ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
-                    {usePage().props.flash.success || usePage().props.flash.error}
-                </div>
-            )}
 
             <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

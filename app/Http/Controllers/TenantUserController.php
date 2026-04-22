@@ -41,36 +41,38 @@ class TenantUserController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(\App\Http\Requests\StoreTenantUserRequest $request): RedirectResponse
     {
         $tenantId = $request->user()->tenant_id;
         abort_if(! $tenantId, 404);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
-            'password' => ['required', 'confirmed', Password::defaults()],
-            'role' => 'required|string|in:'.implode(',', self::ASSIGNABLE_ROLES),
-        ]);
+        $validated = $request->validated();
+        $targetRole = \App\Models\Role::where('name', $validated['role'])->where('guard_name', 'web')->first();
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'tenant_id' => $tenantId,
+            'role_id' => $targetRole?->id,
         ]);
-        $user->assignRole($validated['role']);
+        if ($targetRole) {
+            $user->assignRole($validated['role']);
+        }
 
         return redirect()->route('settings.team.index')->with('success', 'Team member added. Share the password with them securely or ask them to reset it from the login page.');
     }
 
-    public function update(Request $request, User $user): RedirectResponse
+    public function update(\App\Http\Requests\UpdateTenantUserRequest $request, User $user): RedirectResponse
     {
         $this->assertSameTenant($request->user(), $user);
 
-        $validated = $request->validate([
-            'role' => 'required|string|in:'.implode(',', self::ASSIGNABLE_ROLES),
-        ]);
+        // Prevent users from changing their own role to avoid accidental lockout.
+        if ($user->id === $request->user()->id) {
+            return back()->withErrors(['role' => 'You cannot change your own role. Please ask another administrator to do this for you.']);
+        }
+
+        $validated = $request->validated();
 
         if ($user->hasRole('admin') && $validated['role'] !== 'admin') {
             $adminCount = User::query()
@@ -82,7 +84,11 @@ class TenantUserController extends Controller
             }
         }
 
-        $user->syncRoles([$validated['role']]);
+        $targetRole = \App\Models\Role::where('name', $validated['role'])->where('guard_name', 'web')->first();
+        if ($targetRole) {
+            $user->update(['role_id' => $targetRole->id]);
+            $user->syncRoles([$validated['role']]);
+        }
 
         return redirect()->route('settings.team.index')->with('success', 'Role updated.');
     }

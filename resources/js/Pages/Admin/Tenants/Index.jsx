@@ -64,11 +64,6 @@ export default function TenantAdminIndex({ auth, tenants = [], flash = {} }) {
         >
             <Head title="Tenant Admin" />
 
-            {(flash?.success || flash?.error) && (
-                <div className={`mb-4 rounded-xl border px-4 py-3 text-sm font-medium ${flash.error ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
-                    {flash.success || flash.error}
-                </div>
-            )}
 
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/80">

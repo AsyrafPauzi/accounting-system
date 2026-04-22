@@ -17,13 +17,17 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             RolesAndPermissionsSeeder::class,
-            ChartOfAccountsSeeder::class,
         ]);
+
+        $superRole = \App\Models\Role::where('name', 'super-admin')->first();
 
         $user = User::factory()->create([
             'name' => 'Test Admin',
             'email' => 'test@example.com',
+            'role_id' => $superRole?->id,
         ]);
-        $user->assignRole('super-admin');
+        if ($superRole) {
+            $user->assignRole('super-admin');
+        }
     }
 }

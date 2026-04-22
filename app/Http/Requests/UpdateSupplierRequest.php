@@ -7,11 +7,14 @@ use Illuminate\Validation\Rule;
 
 class UpdateSupplierRequest extends FormRequest
 {
-    public function authorize(): bool { return true; }
+    public function authorize(): bool
+    {
+        return $this->user()->can('suppliers.edit');
+    }
 
     public function rules(): array
     {
-        $id = $this->route('supplier');
+        $id = $this->route('id');
 
         return [
             'name'            => 'required|string|max:255',

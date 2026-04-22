@@ -73,8 +73,8 @@ return [
     |
     */
 
-    // Central DB only — default connection is "tenant" under Stancl when a user is in-app.
-    'connection' => env('SESSION_CONNECTION', env('DB_CONNECTION', 'mysql')),
+    // Use the dedicated "central" connection for sessions to prevent data mismatch during tenancy initialization.
+    'connection' => env('SESSION_CONNECTION', 'central'),
 
     /*
     |--------------------------------------------------------------------------
@@ -170,7 +170,7 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    'secure' => env('SESSION_SECURE_COOKIE', env('APP_ENV', 'local') === 'production'),
 
     /*
     |--------------------------------------------------------------------------

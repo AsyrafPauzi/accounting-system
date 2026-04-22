@@ -82,46 +82,39 @@ export default function BalanceSheet({ auth, asset_accounts = [], liability_acco
         >
             <Head title="Balance Sheet" />
 
-            {(flash?.success || flash?.error) && (
-                <div
-                    className={`mb-4 rounded-xl border px-4 py-3 text-sm font-medium ${flash.error ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}
-                >
-                    {flash.success || flash.error}
-                </div>
-            )}
 
             <div className="space-y-6">
                 <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100 flex flex-wrap items-end gap-3 bg-slate-50/50">
-                        <form method="get" action={route('balance-sheet.index')} className="flex flex-wrap items-end gap-3">
-                            <div>
-                                <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">As at date</label>
+                    <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+                        <form method="get" action={route('balance-sheet.index')} className="flex flex-col gap-1.5">
+                            <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider ml-1">As at date</label>
+                            <div className="flex flex-wrap items-center gap-3">
                                 <input
                                     type="date"
                                     name="as_at_date"
                                     defaultValue={as_at_date}
                                     className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
                                 />
-                                <p className="text-slate-400 text-[10px] mt-1">Shows balances at end of this day.</p>
+                                <button
+                                    type="submit"
+                                    className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95"
+                                >
+                                    Update report
+                                </button>
+                                <a
+                                    href={`${route('balance-sheet.export.csv')}?${new URLSearchParams({ as_at_date: as_at_date || '' })}`}
+                                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-all active:scale-95"
+                                >
+                                    <Icons.ArrowDownTray /> Download CSV
+                                </a>
+                                <a
+                                    href={`${route('balance-sheet.export.pdf')}?${new URLSearchParams({ as_at_date: as_at_date || '' })}`}
+                                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-all active:scale-95"
+                                >
+                                    <Icons.DocumentArrowDown /> Download PDF
+                                </a>
                             </div>
-                            <button
-                                type="submit"
-                                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-                            >
-                                Update report
-                            </button>
-                            <a
-                                href={`${route('balance-sheet.export.csv')}?${new URLSearchParams({ as_at_date: as_at_date || '' })}`}
-                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
-                            >
-                                <Icons.ArrowDownTray /> Download CSV
-                            </a>
-                            <a
-                                href={`${route('balance-sheet.export.pdf')}?${new URLSearchParams({ as_at_date: as_at_date || '' })}`}
-                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
-                            >
-                                <Icons.DocumentArrowDown /> Download PDF
-                            </a>
+                            <p className="text-slate-400 text-[10px] font-medium ml-1">Shows balances at end of this day.</p>
                         </form>
                     </div>
                 </div>

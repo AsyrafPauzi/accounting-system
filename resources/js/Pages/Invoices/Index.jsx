@@ -151,7 +151,7 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
                             <span className="absolute inset-y-0 left-3 flex items-center text-slate-400"><Icons.MagnifyingGlass /></span>
                             <input type="text" placeholder="Search by invoice # or customer..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onBlur={() => applyFilters({ page: 1 })} className="pl-9 w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500" />
                         </div>
-                        <select value={statusFilter} onChange={(e) => applyFilters({ status: e.target.value, page: 1 })} className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500">
+                        <select value={statusFilter} onChange={(e) => applyFilters({ status: e.target.value, page: 1 })} className="border border-slate-200 rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 min-w-[140px]">
                             <option value="">All statuses</option>
                             <option value="draft">Draft</option>
                             <option value="unpaid">Unpaid</option>
@@ -159,7 +159,7 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
                             <option value="paid">Paid</option>
                             <option value="void">Void</option>
                         </select>
-                        <select value={perPageFilter} onChange={(e) => applyFilters({ per_page: Number(e.target.value), page: 1 })} className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500">
+                        <select value={perPageFilter} onChange={(e) => applyFilters({ per_page: Number(e.target.value), page: 1 })} className="border border-slate-200 rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 min-w-[140px]">
                             <option value={10}>10 per page</option>
                             <option value={25}>25 per page</option>
                             <option value={50}>50 per page</option>
@@ -284,7 +284,11 @@ function ActionsCell({ invoice, setSelectedInvoice, setData, handlePostToLedger,
             <MenuButton className="inline-flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors">
                 <Icons.EllipsisVertical />
             </MenuButton>
-            <MenuItems className="absolute right-0 z-50 mt-2 w-52 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black/5 focus:outline-none py-1">
+            <MenuItems
+                anchor="bottom end"
+                transition
+                className="z-[100] mt-2 w-52 origin-top-right rounded-xl bg-white shadow-xl ring-1 ring-black/5 focus:outline-none py-1 transition duration-100 ease-out data-[closed]:scale-95 data-[closed]:opacity-0"
+            >
                 <MenuItem>
                     <Link href={route('invoices.edit', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
                         <Icons.ChevronRight className="w-4 h-4" /> View

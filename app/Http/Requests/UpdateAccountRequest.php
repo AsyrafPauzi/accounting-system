@@ -7,14 +7,17 @@ use Illuminate\Validation\Rule;
 
 class UpdateAccountRequest extends FormRequest
 {
-    public function authorize(): bool { return true; }
+    public function authorize(): bool
+    {
+        return $this->user()->can('accounts.edit');
+    }
 
     public function rules(): array
     {
-        $account = $this->route('chart_of_account');
+        $id = $this->route('id');
 
         return [
-            'code'          => ['required', 'string', 'max:50', Rule::unique('accounts', 'code')->ignore($account)],
+            'code'          => ['required', 'string', 'max:50', Rule::unique('accounts', 'code')->ignore($id)],
             'name'          => ['required', 'string', 'max:255'],
             'type'          => ['required', 'string', Rule::in(['asset', 'liability', 'equity', 'income', 'expense'])],
             'parent_id'     => ['nullable', 'exists:accounts,id'],

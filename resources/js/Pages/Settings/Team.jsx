@@ -49,7 +49,7 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
                 <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                     <div>
                         <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">
-                            Team & roles
+                            Team & Roles
                         </h2>
                         <p className="text-slate-500 text-sm font-medium mt-1">
                             Each person signs in with their own account. Roles control what they can do in
@@ -65,7 +65,7 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
                 </div>
             }
         >
-            <Head title="Team & roles" />
+            <Head title="Team & Roles" />
 
             <div className="max-w-5xl space-y-8">
                 {teamPermissions.create && (
@@ -188,9 +188,10 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
                                             <td className="px-6 py-3">
                                                 {teamPermissions.edit && assignableRoles.length ? (
                                                     <select
-                                                        className="rounded-lg border border-slate-200 py-1.5 px-2 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
+                                                        className="rounded-lg border border-slate-200 py-1.5 pl-2 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-slate-50 min-w-[140px]"
                                                         value={current}
                                                         onChange={(e) => updateRole(u.id, e.target.value)}
+                                                        disabled={u.is_self}
                                                     >
                                                         {assignableRoles.map((r) => (
                                                             <option key={r} value={r}>
