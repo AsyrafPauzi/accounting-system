@@ -22,6 +22,10 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::prefetch(concurrency: 3);
 
+        if ($this->app->environment('production')) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
+
         \Illuminate\Database\Eloquent\Model::shouldBeStrict(!$this->app->environment('production'));
 
         \Illuminate\Validation\Rules\Password::defaults(function () {
