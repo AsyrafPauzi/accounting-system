@@ -50,13 +50,33 @@ class SubscriptionController extends Controller
 
         $plan = Plan::where('is_active', true)->findOrFail($validated['plan_id']);
 
-        // Check if tenant already has an active subscription
-        $existing = Subscription::where('tenant_id', $tenantId)->active()->exists();
-        if ($existing) {
-            return redirect()->back()->with('error', 'You already have an active subscription. It must expire before you can subscribe again.');
+        // Check if tenant already has an active subscription that is NOT the free Startup plan
+        $currentSubscription = Subscription::where('tenant_id', $tenantId)->active()->with('plan')->first();
+        
+        if ($currentSubscription && $currentSubscription->plan->slug !== 'startup') {
+            return redirect()->back()->with('error', 'You already have an active paid subscription. It must expire before you can change your plan.');
         }
 
-        // Create or update a pending subscription
+        $billAmount = $plan->priceForInterval($validated['interval']);
+
+        // Handle Free Plans (Startup)
+        if ($billAmount <= 0) {
+            $subscription = Subscription::updateOrCreate(
+                ['tenant_id' => $tenantId],
+                [
+                    'plan_id' => $plan->id,
+                    'status' => 'active',
+                    'interval' => $validated['interval'],
+                    'gateway' => 'system',
+                    'current_period_start' => now()->toDateString(),
+                    'current_period_ends_at' => now()->addMonth()->toDateString(),
+                ]
+            );
+
+            return redirect()->route('subscription.success')->with('success', 'Your subscription has been updated to the free plan.');
+        }
+
+        // Create or update a pending subscription for paid plans
         $subscription = Subscription::updateOrCreate(
             ['tenant_id' => $tenantId],
             [
@@ -67,10 +87,17 @@ class SubscriptionController extends Controller
             ]
         );
 
+        Log::info('Initiating subscription checkout', [
+            'tenant_id' => $tenantId,
+            'plan' => $plan->name,
+            'interval' => $validated['interval'],
+            'amount' => $billAmount
+        ]);
+
         $paymentUrl = $toyyibpay->createBill([
             'billName' => "Subscription: {$plan->name}",
             'billDescription' => "{$plan->name} plan ({$validated['interval']}) for tenant {$tenantId}",
-            'billAmount' => $plan->priceForInterval($validated['interval']),
+            'billAmount' => $billAmount,
             'billReturnUrl' => route('subscription.callback'),
             'billCallbackUrl' => route('subscription.webhook'),
             'billExternalReferenceNo' => (string) $subscription->id,
@@ -135,6 +162,41 @@ class SubscriptionController extends Controller
         return response('OK');
     }
 
+    public function webhookExtraUser(Request $request)
+    {
+        Log::info('Toyyibpay Extra User Webhook Received', $request->all());
+
+        $statusId = $request->post('status_id');
+        $externalRef = $request->post('order_id'); // JSON string in billExternalReferenceNo
+
+        if ($statusId == 1 && $externalRef) {
+            $data = json_decode($externalRef, true);
+            
+            if ($data && isset($data['tenant_id'], $data['email'])) {
+                // Check if user already exists to avoid double creation
+                if (! \App\Models\User::where('email', $data['email'])->exists()) {
+                    $targetRole = \App\Models\Role::where('name', $data['role'])->where('guard_name', 'web')->first();
+                    
+                    $user = \App\Models\User::create([
+                        'name' => $data['name'],
+                        'email' => $data['email'],
+                        'password' => \Illuminate\Support\Facades\Hash::make($data['password']),
+                        'tenant_id' => $data['tenant_id'],
+                        'role_id' => $targetRole?->id,
+                    ]);
+
+                    if ($targetRole) {
+                        $user->assignRole($data['role']);
+                    }
+
+                    Log::info('Extra user created via webhook', ['user_id' => $user->id, 'tenant_id' => $data['tenant_id']]);
+                }
+            }
+        }
+
+        return response('OK');
+    }
+
     public function success(): Response
     {
         $user = Auth::user();
@@ -146,6 +208,21 @@ class SubscriptionController extends Controller
 
         return Inertia::render('Subscription/Success', [
             'subscription' => $subscription,
+        ]);
+    }
+
+    public function planSettings(Request $request): Response
+    {
+        $user = $request->user();
+        $tenantId = $user?->tenant_id;
+        abort_if(! $tenantId, 404);
+
+        $subscription = Subscription::where('tenant_id', $tenantId)->active()->with('plan')->first();
+        $userCount = \App\Models\User::where('tenant_id', $tenantId)->count();
+
+        return Inertia::render('Settings/Plan', [
+            'subscription' => $subscription,
+            'userCount' => $userCount,
         ]);
     }
 }

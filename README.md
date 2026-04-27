@@ -58,9 +58,10 @@ Central DB holds users, tenants, plans, subscriptions, sessions, jobs, etc.
 ```bash
 php artisan migrate
 php artisan app:sync-roles-permissions
+php artisan db:seed --class=PlanSeeder
 ```
 
-The plans migration seeds an initial **Pro** plan if none exists. Subscriptions use **mock checkout** in local/dev (no Stripe required).
+The `PlanSeeder` creates the initial subscription plans (Startup, SME, Corporate). Subscriptions use **mock checkout** in local/dev (no Stripe required).
 
 ## 4. MySQL user permissions (important for new sign-ups)
 
@@ -234,6 +235,7 @@ You can still verify in MySQL: `SHOW COLUMNS FROM customers LIKE 'deleted_at';` 
 | `php artisan tenants:migrate` | All tenant DBs (`database/migrations/tenant`) |
 | `php artisan tenants:list` | Show tenant ids (for `--tenants=...`) |
 | `php artisan app:sync-roles-permissions` | Re-seed Spatie roles/permissions (central) + clear permission cache |
+| `php artisan db:seed --class=PlanSeeder` | Seed subscription plans (central) |
 | `php artisan queue:work` | Process queued jobs |
 | `php artisan test` | PHPUnit tests |
 

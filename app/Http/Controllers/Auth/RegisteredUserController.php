@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Plan;
+use App\Models\Subscription;
 use Illuminate\Support\Str; // <--- Add this line
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -54,9 +56,22 @@ class RegisteredUserController extends Controller
             'role_id' => $adminRole?->id,
         ]);
 
-        // Tenant owner: full app access (Spatie roles live on central DB)
         if ($adminRole) {
             $user->assignRole('admin');
+        }
+
+        // 3. Automatically assign to Startup (Free) Plan
+        $startupPlan = Plan::where('slug', 'startup')->first();
+        if ($startupPlan) {
+            Subscription::create([
+                'tenant_id' => $tenant->id,
+                'plan_id' => $startupPlan->id,
+                'status' => 'active',
+                'interval' => 'monthly',
+                'current_period_start' => now()->toDateString(),
+                'current_period_ends_at' => now()->addMonth()->toDateString(),
+                'gateway' => 'system',
+            ]);
         }
 
         event(new Registered($user));

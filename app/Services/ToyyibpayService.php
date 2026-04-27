@@ -38,7 +38,7 @@ class ToyyibpayService
                 'billDescription'          => $data['billDescription'],
                 'billPriceSetting'         => 1,
                 'billPayorInfo'            => 1, // Show payor info
-                'billAmount'               => (int) ($data['billAmount'] * 100), // Convert to cents
+                'billAmount'               => (int) round($data['billAmount'] * 100), // Convert to cents
                 'billReturnUrl'            => $data['billReturnUrl'],
                 'billCallbackUrl'          => $data['billCallbackUrl'],
                 'billExternalReferenceNo'  => $data['billExternalReferenceNo'],
