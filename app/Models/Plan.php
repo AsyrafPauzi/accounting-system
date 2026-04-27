@@ -14,6 +14,8 @@ class Plan extends Model
         'slug',
         'price_monthly',
         'price_yearly',
+        'users_included',
+        'extra_user_price',
         'features',
         'is_active',
     ];
@@ -21,6 +23,7 @@ class Plan extends Model
     protected $casts = [
         'features' => 'array',
         'is_active' => 'boolean',
+        'extra_user_price' => 'decimal:2',
     ];
 
     public function priceForInterval(string $interval): float

@@ -30,6 +30,7 @@ Route::get('/', function () {
 
 // --- Toyyibpay Webhook (Server-to-Server) ---
 Route::post('/subscription/webhook', [SubscriptionController::class, 'webhook'])->name('subscription.webhook');
+Route::post('/subscription/webhook/extra-user', [SubscriptionController::class, 'webhookExtraUser'])->name('subscription.webhook.extra_user');
 
 // --- Dashboard, Profile & App (Auth Required) ---
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -50,6 +51,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Company settings (tenant-level)
     Route::get('/settings/company', [CompanySettingsController::class, 'edit'])->name('settings.company');
     Route::patch('/settings/company', [CompanySettingsController::class, 'update'])->name('settings.company.update');
+    Route::get('/settings/plan', [SubscriptionController::class, 'planSettings'])->name('settings.plan.index');
 
     // Team / users (same tenant only)
     Route::middleware('permission:users.view')->group(function () {

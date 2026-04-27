@@ -39,7 +39,10 @@ class Subscription extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query->whereIn('status', ['active', 'trialing'])
-            ->whereDate('current_period_ends_at', '>=', now()->toDateString());
+            ->where(function ($q) {
+                $q->whereNull('current_period_ends_at')
+                  ->orWhereDate('current_period_ends_at', '>=', now()->toDateString());
+            });
     }
 
     public function isActive(): bool
@@ -48,9 +51,11 @@ class Subscription extends Model
             return false;
         }
 
-        return $this->current_period_ends_at === null
-            ? false
-            : $this->current_period_ends_at->isFuture() || $this->current_period_ends_at->isToday();
+        if ($this->current_period_ends_at === null) {
+            return true;
+        }
+
+        return $this->current_period_ends_at->isFuture() || $this->current_period_ends_at->isToday();
     }
 }
 

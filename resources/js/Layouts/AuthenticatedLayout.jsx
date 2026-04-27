@@ -231,18 +231,17 @@ export default function Authenticated({ user: propUser, header, children }) {
                             </Link>
                         )}
                         <Link
-                            href={getSafeRoute('subscription.index')}
+                            href={getSafeRoute('settings.plan.index')}
                             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                isRouteActive('subscription.index')
+                                isRouteActive('settings.plan.index')
                                     ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
                                     : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
                             }`}
                         >
-                            <span className={isRouteActive('subscription.index') ? 'text-white' : 'text-indigo-500/80'}>
+                            <span className={isRouteActive('settings.plan.index') ? 'text-white' : 'text-indigo-500/80'}>
                                 <Icons.Sparkles />
                             </span>
-                            <span className="flex-1">Subscription</span>
-                            {}
+                            <span className="flex-1">Plan & Usage</span>
                         </Link>
                     </div>
                 </nav>
