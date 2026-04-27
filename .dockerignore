@@ -1,0 +1,14 @@
+.git
+.env
+node_modules
+vendor
+storage/logs/*.log
+storage/framework/sessions/*
+storage/framework/views/*.php
+storage/framework/cache/data/*
+public/build
+Dockerfile
+docker-compose.yml
+.phpunit.result.cache
+phpunit.xml
+tests
