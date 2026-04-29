@@ -14,22 +14,21 @@ class CompanySettingsController extends Controller
     {
         $user = $request->user();
         $tenant = $user && $user->tenant_id ? Tenant::find($user->tenant_id) : null;
-        $data = $tenant?->data ?? [];
-
+        $companyData = $tenant->company ?? [];
         $company = [
-            'legal_name' => $data['company']['legal_name'] ?? '',
-            'display_name' => $data['company']['display_name'] ?? '',
-            'tin' => $data['company']['tin'] ?? '',
-            'brn' => $data['company']['brn'] ?? '',
-            'street' => $data['company']['street'] ?? '',
-            'city' => $data['company']['city'] ?? '',
-            'state' => $data['company']['state'] ?? '',
-            'postcode' => $data['company']['postcode'] ?? '',
-            'country' => $data['company']['country'] ?? 'Malaysia',
-            'phone' => $data['company']['phone'] ?? '',
-            'website' => $data['company']['website'] ?? '',
-            'base_currency' => $data['company']['base_currency'] ?? 'MYR',
-            'financial_year_start_month' => $data['company']['financial_year_start_month'] ?? 1,
+            'legal_name' => $companyData['legal_name'] ?? $tenant->legal_name ?? '',
+            'display_name' => $companyData['display_name'] ?? $tenant->display_name ?? '',
+            'tin' => $companyData['tin'] ?? $tenant->tin ?? '',
+            'brn' => $companyData['brn'] ?? $tenant->brn ?? '',
+            'street' => $companyData['street'] ?? $tenant->street ?? '',
+            'city' => $companyData['city'] ?? $tenant->city ?? '',
+            'state' => $companyData['state'] ?? $tenant->state ?? '',
+            'postcode' => $companyData['postcode'] ?? $tenant->postcode ?? '',
+            'country' => $companyData['country'] ?? $tenant->country ?? 'Malaysia',
+            'phone' => $companyData['phone'] ?? $tenant->phone ?? '',
+            'website' => $companyData['website'] ?? $tenant->website ?? '',
+            'base_currency' => $companyData['base_currency'] ?? $tenant->base_currency ?? 'MYR',
+            'financial_year_start_month' => $companyData['financial_year_start_month'] ?? $tenant->financial_year_start_month ?? 1,
         ];
 
         return Inertia::render('Settings/Company', [
@@ -58,10 +57,7 @@ class CompanySettingsController extends Controller
             'financial_year_start_month' => ['required', 'integer', 'min:1', 'max:12'],
         ]);
 
-        $data = $tenant->data ?? [];
-        $data['company'] = $validated;
-
-        $tenant->data = $data;
+        $tenant->company = $validated;
         $tenant->save();
 
         return redirect()->route('settings.company')->with('success', 'Company settings updated.');

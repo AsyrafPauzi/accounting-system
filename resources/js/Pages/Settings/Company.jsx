@@ -7,7 +7,8 @@ const labelClass =
     'block text-[10px] font-semibold text-slate-400 uppercase tracking-wider';
 
 export default function Company({ auth, company }) {
-    const canViewTeam = auth?.teamPermissions?.view;
+    const planPermissions = auth?.planPermissions ?? {};
+    const canViewTeam = auth?.teamPermissions?.view && planPermissions['users.view'];
     const { data, setData, patch, processing, errors } = useForm({
         legal_name: company.legal_name || '',
         display_name: company.display_name || '',
