@@ -1,6 +1,8 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, usePage } from '@inertiajs/react';
+import { alertUpgrade } from '@/utils/swal';
+
 
 const Icons = {
     Scale: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>,
@@ -108,10 +110,23 @@ export default function BalanceSheet({ auth, asset_accounts = [], liability_acco
                                     <Icons.ArrowDownTray /> Download CSV
                                 </a>
                                 <a
-                                    href={`${route('balance-sheet.export.pdf')}?${new URLSearchParams({ as_at_date: as_at_date || '' })}`}
-                                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-all active:scale-95"
+                                    href={auth.planPermissions['reports.export.full'] ? `${route('balance-sheet.export.pdf')}?${new URLSearchParams({ as_at_date: as_at_date || '' })}` : '#'}
+                                    onClick={(e) => {
+                                        if (!auth.planPermissions['reports.export.full']) {
+                                            e.preventDefault();
+                                            alertUpgrade('Professional PDF reports are available on the Corporate plan.');
+                                        }
+                                    }}
+                                    className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 ${
+                                        auth.planPermissions['reports.export.full']
+                                            ? 'text-slate-600 bg-white border border-slate-200 hover:bg-slate-50'
+                                            : 'text-slate-400 bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100'
+                                    }`}
                                 >
                                     <Icons.DocumentArrowDown /> Download PDF
+                                    {!auth.planPermissions['reports.export.full'] && (
+                                        <svg className="w-3 h-3 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                                    )}
                                 </a>
                             </div>
                             <p className="text-slate-400 text-[10px] font-medium ml-1">Shows balances at end of this day.</p>
