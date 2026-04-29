@@ -35,15 +35,20 @@ class RolesAndPermissionsSeeder extends Seeder
             'accounts.view', 'accounts.create', 'accounts.edit', 'accounts.delete',
 
             // Journals & Ledger
-            'journal.view', 'general-ledger.view',
+            'journal.view', 'journal.create', 'journal.edit', 'journal.post', 'journal.delete',
+            'general-ledger.view',
 
             // Reports
-            'reports.view', 'reports.export',
+            'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet',
+            'reports.cashflow', 'reports.aged-reports', 'reports.export.limited', 'reports.export.full',
 
             // Settings & Admin
             'settings.view', 'settings.edit',
             'admin.tenants',
             'users.view', 'users.create', 'users.edit', 'users.delete',
+            'roles.manage', 'permissions.manage',
+            'dashboard.basic', 'dashboard.standard', 'dashboard.advanced',
+            'audit-logs.view', 'integrations.view',
         ];
 
         foreach ($permissions as $permission) {
@@ -71,8 +76,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'suppliers.view', 'suppliers.create', 'suppliers.edit',
             'credit-notes.view', 'credit-notes.create',
             'accounts.view', 'accounts.create', 'accounts.edit',
-            'journal.view', 'general-ledger.view',
-            'reports.view', 'reports.export',
+            'journal.view', 'journal.create', 'journal.edit', 'journal.post', 'journal.delete',
+            'general-ledger.view',
+            'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet',
+            'reports.cashflow', 'reports.aged-reports', 'reports.export.full',
             'settings.view',
         ]);
 
@@ -82,7 +89,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.email',
             'customers.view', 'customers.create', 'customers.edit',
             'credit-notes.view', 'credit-notes.create',
-            'reports.view',
+            'reports.view', 'reports.profit-loss', 'reports.sales',
         ]);
 
         // Viewer — read-only everywhere
@@ -90,7 +97,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $viewer->syncPermissions([
             'invoices.view', 'bills.view', 'customers.view', 'suppliers.view',
             'credit-notes.view', 'accounts.view', 'journal.view',
-            'general-ledger.view', 'reports.view',
+            'general-ledger.view', 'reports.view', 'reports.profit-loss', 'reports.sales',
         ]);
     }
 }

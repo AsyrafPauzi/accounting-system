@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Stancl\Tenancy\Database\Concerns\CentralConnection;
 
 class Subscription extends Model
 {
-    use CentralConnection;
+    use CentralConnection, Auditable;
 
     protected $fillable = [
         'tenant_id',
