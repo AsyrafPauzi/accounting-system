@@ -27,25 +27,25 @@ const Icons = {
 const navConfig = [
     { group: 'Main', links: [{ name: 'Dashboard', route: 'dashboard', Icon: Icons.ChartBar }] },
     { group: 'Sales (Revenue)', links: [
-        { name: 'Invoices', route: 'invoices.index', Icon: Icons.Document, planPermission: 'invoices.view' },
-        { name: 'Credit Notes', route: 'credit-notes.index', Icon: Icons.ReceiptRefund, planPermission: 'credit-notes.view' },
-        { name: 'Customers', route: 'customers.index', Icon: Icons.Users, planPermission: 'customers.view' },
+        { name: 'Invoices', route: 'invoices.index', Icon: Icons.Document, planPermission: 'invoices.view', userPermission: 'invoices.view' },
+        { name: 'Credit Notes', route: 'credit-notes.index', Icon: Icons.ReceiptRefund, planPermission: 'credit-notes.view', userPermission: 'credit-notes.view' },
+        { name: 'Customers', route: 'customers.index', Icon: Icons.Users, planPermission: 'customers.view', userPermission: 'customers.view' },
     ]},
     { group: 'Purchases (Expenses)', links: [
-        { name: 'Suppliers', route: 'suppliers.index', Icon: Icons.BuildingOffice, planPermission: 'suppliers.view' },
-        { name: 'Bills / Purchases', route: 'bills.index', Icon: Icons.ShoppingCart, planPermission: 'bills.view' },
-        { name: 'Accounts Payable', route: 'accounts-payable.index', Icon: Icons.Document, planPermission: 'reports.aged-reports', subtitle: 'Outstanding and aging' },
+        { name: 'Suppliers', route: 'suppliers.index', Icon: Icons.BuildingOffice, planPermission: 'suppliers.view', userPermission: 'suppliers.view' },
+        { name: 'Bills / Purchases', route: 'bills.index', Icon: Icons.ShoppingCart, planPermission: 'bills.view', userPermission: 'bills.view' },
+        { name: 'Accounts Payable', route: 'accounts-payable.index', Icon: Icons.Document, planPermission: 'reports.aged-reports', userPermission: 'reports.aged-reports', subtitle: 'Outstanding and aging' },
     ]},
     { group: 'Accounting', links: [
-        { name: 'Chart of Accounts', route: 'chart-of-accounts.index', Icon: Icons.Folder, planPermission: 'accounts.view', subtitle: 'Accounts used in postings and reports' },
-        { name: 'General Ledger', route: 'general-ledger.index', Icon: Icons.BookOpen, planPermission: 'general-ledger.view', subtitle: 'By journal entry' },
-        { name: 'Manual Journal Entry', route: 'journal.index', Icon: Icons.Scale, planPermission: 'journal.create', subtitle: 'Post custom journal entries' },
-        { name: 'Trial Balance', route: 'trial-balance.index', Icon: Icons.Scale, planPermission: 'general-ledger.view', subtitle: 'Verify account balances' },
+        { name: 'Chart of Accounts', route: 'chart-of-accounts.index', Icon: Icons.Folder, planPermission: 'accounts.view', userPermission: 'accounts.view', subtitle: 'Accounts used in postings and reports' },
+        { name: 'General Ledger', route: 'general-ledger.index', Icon: Icons.BookOpen, planPermission: 'general-ledger.view', userPermission: 'general-ledger.view', subtitle: 'By journal entry' },
+        { name: 'Manual Journal Entry', route: 'journal.index', Icon: Icons.Scale, planPermission: 'journal.create', userPermission: 'journal.view', subtitle: 'Post custom journal entries' },
+        { name: 'Trial Balance', route: 'trial-balance.index', Icon: Icons.Scale, planPermission: 'general-ledger.view', userPermission: 'general-ledger.view', subtitle: 'Verify account balances' },
     ]},
     { group: 'Reports', links: [
-        { name: 'Reports', route: 'reports.index', Icon: Icons.ChartPie, planPermission: 'reports.view', subtitle: 'Financial statements & analysis', activeRoutes: ['reports.index', 'general-ledger.report', 'profit-and-loss.index', 'reports.sales.index', 'balance-sheet.index', 'cashflow-summary.index', 'aged-receivables.index'] },
+        { name: 'Reports', route: 'reports.index', Icon: Icons.ChartPie, planPermission: 'reports.view', userPermission: 'reports.view', subtitle: 'Financial statements & analysis', activeRoutes: ['reports.index', 'general-ledger.report', 'profit-and-loss.index', 'reports.sales.index', 'balance-sheet.index', 'cashflow-summary.index', 'aged-receivables.index'] },
     ]},
-    // { group: 'Compliance', links: [
+];    // { group: 'Compliance', links: [
     //     { name: 'LHDN MyInvois', route: 'dashboard', Icon: Icons.DocumentCheck, requirePaid: true },
     // ]},
 ];
@@ -60,6 +60,9 @@ export default function Authenticated({ user: propUser, header, children }) {
     const isAdmin = user?.role_name === 'super-admin';
     const isImpersonating = Boolean(auth?.impersonator_id);
     const planPermissions = auth?.planPermissions ?? {};
+    const permissions = auth?.permissions ?? [];
+
+    const hasPermission = (p) => permissions.includes(p) || isAdmin;
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [openGroups, setOpenGroups] = useState({});
 
@@ -184,7 +187,11 @@ export default function Authenticated({ user: propUser, header, children }) {
                         </div>
                     )}
                     {navConfig.map((section, idx) => {
-                        const visibleLinks = section.links.filter(link => !link.planPermission || planPermissions[link.planPermission]);
+                        const visibleLinks = section.links.filter(link => {
+                            const planOk = !link.planPermission || planPermissions[link.planPermission];
+                            const userOk = !link.userPermission || hasPermission(link.userPermission);
+                            return planOk && userOk;
+                        });
                         
                         if (visibleLinks.length === 0) return null;
                         const isOpen = openGroups[section.group];
@@ -295,7 +302,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                                 </span>
                                 <span className="flex-1">Company settings</span>
                             </Link>
-                            {teamPermissions.view && planPermissions['users.view'] && (
+                            {hasPermission('users.view') && planPermissions['users.view'] && (
                                 <Link
                                     href={getSafeRoute('settings.team.index')}
                                     className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
@@ -310,7 +317,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                                     <span className="flex-1">Team & Roles</span>
                                 </Link>
                             )}
-                            {planPermissions['audit-logs.view'] && (
+                            {hasPermission('audit-logs.view') && planPermissions['audit-logs.view'] && (
                                 <Link
                                     href={getSafeRoute('audit-logs.index')}
                                     className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
@@ -320,7 +327,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                                     }`}
                                 >
                                     <span className={isRouteActive('audit-logs.index') ? 'text-white' : 'text-indigo-500/80'}>
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 0-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
                                     </span>
                                     <span className="flex-1">Audit Logs</span>
                                 </Link>

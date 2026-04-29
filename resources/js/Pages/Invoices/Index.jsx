@@ -110,9 +110,11 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
                     <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Sales Invoices</h2>
                     <p className="text-slate-500 text-sm font-medium mt-1">Create, manage and track revenue documents</p>
                 </div>
-                <Link href={route('invoices.create')} className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all duration-200">
-                    <Icons.Plus /> Create Invoice
-                </Link>
+                {auth.permissions.includes('invoices.create') && (
+                    <Link href={route('invoices.create')} className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all duration-200">
+                        <Icons.Plus /> Create Invoice
+                    </Link>
+                )}
             </div>
         }>
             <Head title="Invoices" />
@@ -303,51 +305,59 @@ function ActionsCell({ auth, invoice, setSelectedInvoice, setData, handlePostToL
                 </MenuItem>
                 {isDraft && (
                     <>
-                        <MenuItem>
-                            <button type="button" onClick={() => handlePostToLedger(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-blue-600 hover:bg-blue-50">
-                                <Icons.Check /> Post to ledger
-                            </button>
-                        </MenuItem>
-                        <MenuItem>
-                            <Link href={route('invoices.edit', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
-                                <Icons.Pencil /> Edit
-                            </Link>
-                        </MenuItem>
-                        <MenuItem>
-                            <button type="button" onClick={() => handleDelete(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50">
-                                Delete draft
-                            </button>
-                        </MenuItem>
+                        {auth.permissions.includes('invoices.post') && (
+                            <MenuItem>
+                                <button type="button" onClick={() => handlePostToLedger(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-blue-600 hover:bg-blue-50">
+                                    <Icons.Check /> Post to ledger
+                                </button>
+                            </MenuItem>
+                        )}
+                        {auth.permissions.includes('invoices.edit') && (
+                            <MenuItem>
+                                <Link href={route('invoices.edit', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+                                    <Icons.Pencil /> Edit
+                                </Link>
+                            </MenuItem>
+                        )}
+                        {auth.permissions.includes('invoices.delete') && (
+                            <MenuItem>
+                                <button type="button" onClick={() => handleDelete(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50">
+                                    Delete draft
+                                </button>
+                            </MenuItem>
+                        )}
                     </>
                 )}
                 {!isDraft && !isVoid && (
                     <>
-                        {invoice.status !== 'paid' && auth.planPermissions['invoices.record-payment'] && (
+                        {invoice.status !== 'paid' && auth.planPermissions['invoices.record-payment'] && auth.permissions.includes('invoices.record-payment') && (
                             <MenuItem>
                                 <button type="button" onClick={() => { setSelectedInvoice(invoice); setData('amount', (parseFloat(invoice.total_amount) - parseFloat(invoice.amount_paid)).toFixed(2)); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-emerald-600 hover:bg-emerald-50">
                                     <Icons.Currency /> Record payment
                                 </button>
                             </MenuItem>
                         )}
-                        {auth.planPermissions['credit-notes.view'] && (
+                        {auth.planPermissions['credit-notes.view'] && auth.permissions.includes('credit-notes.create') && (
                             <MenuItem>
                                 <Link href={route('credit-notes.create', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
                                     <Icons.ReceiptRefund /> Credit note
                                 </Link>
                             </MenuItem>
                         )}
-                        {invoice.customer_email && auth.planPermissions['invoices.email'] && (
+                        {invoice.customer_email && auth.planPermissions['invoices.email'] && auth.permissions.includes('invoices.email') && (
                             <MenuItem>
                                 <button type="button" onClick={() => handleEmailInvoice(invoice.id)} disabled={emailingId === invoice.id} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50">
                                     <Icons.PaperAirplane /> {emailingId === invoice.id ? 'Emailing…' : 'Email'}
                                 </button>
                             </MenuItem>
                         )}
-                        <MenuItem>
-                            <button type="button" onClick={() => handleVoid(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50">
-                                Void invoice
-                            </button>
-                        </MenuItem>
+                        {auth.permissions.includes('invoices.void') && (
+                            <MenuItem>
+                                <button type="button" onClick={() => handleVoid(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50">
+                                    Void invoice
+                                </button>
+                            </MenuItem>
+                        )}
                     </>
                 )}
             </MenuItems>

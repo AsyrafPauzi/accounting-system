@@ -65,39 +65,56 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::whereNotIn('name', ['admin.tenants'])->get()
         );
 
-        // Accountant — full financial access, no admin
+        // Accountant — full financial access, no admin management
         $accountant = Role::firstOrCreate(['name' => 'accountant', 'guard_name' => 'web']);
         $accountant->syncPermissions([
-            'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.post',
-            'invoices.void', 'invoices.record-payment', 'invoices.email',
-            'bills.view', 'bills.create', 'bills.edit', 'bills.post', 'bills.void', 'bills.record-payment',
-            'customers.view', 'customers.create', 'customers.edit',
-            'customers.edit-credit-risk',
-            'suppliers.view', 'suppliers.create', 'suppliers.edit',
+            'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.post', 'invoices.void', 'invoices.record-payment', 'invoices.email', 'invoices.delete',
+            'bills.view', 'bills.create', 'bills.edit', 'bills.post', 'bills.void', 'bills.record-payment', 'bills.delete',
+            'customers.view', 'customers.create', 'customers.edit', 'customers.delete', 'customers.edit-credit-risk',
+            'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
             'credit-notes.view', 'credit-notes.create',
-            'accounts.view', 'accounts.create', 'accounts.edit',
+            'accounts.view', 'accounts.create', 'accounts.edit', 'accounts.delete',
             'journal.view', 'journal.create', 'journal.edit', 'journal.post', 'journal.delete',
             'general-ledger.view',
-            'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet',
-            'reports.cashflow', 'reports.aged-reports', 'reports.export.full',
-            'settings.view',
+            'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet', 'reports.cashflow', 'reports.aged-reports', 'reports.export.full',
+            'settings.view', 'audit-logs.view', 'integrations.view',
+            'dashboard.basic', 'dashboard.standard', 'dashboard.advanced',
         ]);
 
-        // Sales — invoices and customers only, read-only on everything else
+        // Sales — invoices and customers only (full access), read-only on everything else
         $sales = Role::firstOrCreate(['name' => 'sales', 'guard_name' => 'web']);
         $sales->syncPermissions([
-            'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.email',
+            // Full Sales Access
+            'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.post', 'invoices.void', 'invoices.record-payment', 'invoices.email',
             'customers.view', 'customers.create', 'customers.edit',
             'credit-notes.view', 'credit-notes.create',
+            
+            // View Only Access on others
+            'bills.view',
+            'suppliers.view',
+            'accounts.view',
+            'journal.view',
+            'general-ledger.view',
             'reports.view', 'reports.profit-loss', 'reports.sales',
+            'settings.view',
+            'dashboard.basic', 'dashboard.standard',
         ]);
 
         // Viewer — read-only everywhere
         $viewer = Role::firstOrCreate(['name' => 'viewer', 'guard_name' => 'web']);
         $viewer->syncPermissions([
-            'invoices.view', 'bills.view', 'customers.view', 'suppliers.view',
-            'credit-notes.view', 'accounts.view', 'journal.view',
-            'general-ledger.view', 'reports.view', 'reports.profit-loss', 'reports.sales',
+            'invoices.view',
+            'bills.view',
+            'customers.view',
+            'suppliers.view',
+            'credit-notes.view',
+            'accounts.view',
+            'journal.view',
+            'general-ledger.view',
+            'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet', 'reports.cashflow', 'reports.aged-reports',
+            'settings.view',
+            'audit-logs.view',
+            'dashboard.basic',
         ]);
     }
 }

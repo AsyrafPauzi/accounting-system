@@ -34,12 +34,14 @@ export default function Index({ auth, suppliers = [], totalAp = 0 }) {
                         <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Supplier Directory</h2>
                         <p className="text-slate-500 text-sm font-medium mt-1">Vendor database for bills and purchases</p>
                     </div>
-                    <Link
-                        href={route('suppliers.create')}
-                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all duration-200"
-                    >
-                        <Icons.Plus /> Add supplier
-                    </Link>
+                    {auth.permissions.includes('suppliers.create') && (
+                        <Link
+                            href={route('suppliers.create')}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all duration-200"
+                        >
+                            <Icons.Plus /> Add supplier
+                        </Link>
+                    )}
                 </div>
             }
         >
@@ -138,12 +140,14 @@ export default function Index({ auth, suppliers = [], totalAp = 0 }) {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                <Link
-                                                    href={route('suppliers.edit', supplier.id)}
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                                                >
-                                                    <Icons.Pencil /> Edit
-                                                </Link>
+                                                {auth.permissions.includes('suppliers.edit') && (
+                                                    <Link
+                                                        href={route('suppliers.edit', supplier.id)}
+                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                                                    >
+                                                        <Icons.Pencil /> Edit
+                                                    </Link>
+                                                )}
                                                 <Link
                                                     href={route('suppliers.show', supplier.id)}
                                                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"

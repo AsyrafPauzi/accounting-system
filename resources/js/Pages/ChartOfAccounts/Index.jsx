@@ -95,7 +95,7 @@ export default function Index({ auth, accounts = [], groupedByType = {} }) {
                                     <svg className="w-3 h-3 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                                 )}
                             </a>
-                            {auth.planPermissions['accounts.create'] && (
+                            {auth.planPermissions['accounts.create'] && auth.permissions.includes('accounts.create') && (
                                 <Link
                                     href={route('chart-of-accounts.create')}
                                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all duration-200"
@@ -228,7 +228,7 @@ export default function Index({ auth, accounts = [], groupedByType = {} }) {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    {auth.planPermissions['accounts.edit'] && (
+                                                    {auth.planPermissions['accounts.edit'] && auth.permissions.includes('accounts.edit') && (
                                                         <Link
                                                             href={route('chart-of-accounts.edit', acc.id)}
                                                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
@@ -236,7 +236,7 @@ export default function Index({ auth, accounts = [], groupedByType = {} }) {
                                                             <Icons.Pencil /> Edit
                                                         </Link>
                                                     )}
-                                                    {auth.planPermissions['accounts.delete'] && (
+                                                    {auth.planPermissions['accounts.delete'] && auth.permissions.includes('accounts.delete') && (
                                                         <button
                                                             type="button"
                                                             onClick={() => handleDelete(acc.id, acc.name)}

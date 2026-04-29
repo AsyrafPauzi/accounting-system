@@ -43,6 +43,7 @@ class HandleInertiaRequests extends Middleware
                     'edit' => $user?->can('users.edit') ?? false,
                     'delete' => $user?->can('users.delete') ?? false,
                 ],
+                'permissions' => $user ? $user->getAllPermissions()->pluck('name')->toArray() : [],
                 'hasActiveSubscription' => function () use ($request) {
                     $user = $request->user();
                     if (! $user || ! $user->tenant_id) {

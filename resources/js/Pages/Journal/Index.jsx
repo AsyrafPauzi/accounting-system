@@ -124,27 +124,33 @@ export default function Index({ auth, journals, can_create }) {
                                                 <div className="flex justify-center items-center gap-2">
                                                     {journal.status === 'draft' && (
                                                         <>
-                                                            <Link
-                                                                href={route('journal.edit', journal.id)}
-                                                                className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
-                                                                title="Edit"
-                                                            >
-                                                                <Icons.Edit />
-                                                            </Link>
-                                                            <button
-                                                                onClick={() => handlePost(journal.id)}
-                                                                className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all duration-200"
-                                                                title="Post to Ledger"
-                                                            >
-                                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDelete(journal.id)}
-                                                                className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all duration-200"
-                                                                title="Delete"
-                                                            >
-                                                                <Icons.Trash />
-                                                            </button>
+                                                            {auth.permissions.includes('journal.edit') && (
+                                                                <Link
+                                                                    href={route('journal.edit', journal.id)}
+                                                                    className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                                                                    title="Edit"
+                                                                >
+                                                                    <Icons.Edit />
+                                                                </Link>
+                                                            )}
+                                                            {auth.permissions.includes('journal.post') && (
+                                                                <button
+                                                                    onClick={() => handlePost(journal.id)}
+                                                                    className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all duration-200"
+                                                                    title="Post to Ledger"
+                                                                >
+                                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                                                </button>
+                                                            )}
+                                                            {auth.permissions.includes('journal.delete') && (
+                                                                <button
+                                                                    onClick={() => handleDelete(journal.id)}
+                                                                    className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all duration-200"
+                                                                    title="Delete"
+                                                                >
+                                                                    <Icons.Trash />
+                                                                </button>
+                                                            )}
                                                         </>
                                                     )}
                                                     {journal.status === 'posted' && (

@@ -110,12 +110,14 @@ export default function Index({ auth, bills = [], suppliers = [], assetAccounts 
                         <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Bills & Purchases</h2>
                         <p className="text-slate-500 text-sm font-medium mt-1">Record expenses and track payables</p>
                     </div>
-                    <Link
-                        href={route('bills.create')}
-                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all duration-200"
-                    >
-                        <Icons.Plus /> Create bill
-                    </Link>
+                    {auth.permissions.includes('bills.create') && (
+                        <Link
+                            href={route('bills.create')}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all duration-200"
+                        >
+                            <Icons.Plus /> Create bill
+                        </Link>
+                    )}
                 </div>
             }
         >
@@ -245,18 +247,24 @@ export default function Index({ auth, bills = [], suppliers = [], assetAccounts 
                                                 <div className="flex items-center justify-end gap-2 flex-wrap">
                                                     {bill.status === 'draft' && (
                                                         <>
-                                                            <button onClick={() => handlePost(bill.id)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700">
-                                                                <Icons.Check /> Post
-                                                            </button>
-                                                            <Link href={route('bills.edit', bill.id)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">
-                                                                <Icons.Pencil /> Edit
-                                                            </Link>
-                                                            <button onClick={() => handleDelete(bill.id)} className="inline-flex px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-rose-600 hover:bg-rose-50">
-                                                                Delete
-                                                            </button>
+                                                            {auth.permissions.includes('bills.post') && (
+                                                                <button onClick={() => handlePost(bill.id)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700">
+                                                                    <Icons.Check /> Post
+                                                                </button>
+                                                            )}
+                                                            {auth.permissions.includes('bills.edit') && (
+                                                                <Link href={route('bills.edit', bill.id)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                                                                    <Icons.Pencil /> Edit
+                                                                </Link>
+                                                            )}
+                                                            {auth.permissions.includes('bills.delete') && (
+                                                                <button onClick={() => handleDelete(bill.id)} className="inline-flex px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-rose-600 hover:bg-rose-50">
+                                                                    Delete
+                                                                </button>
+                                                            )}
                                                         </>
                                                     )}
-                                                    {bill.status !== 'draft' && bill.status !== 'void' && balanceDue > 0 && (
+                                                    {bill.status !== 'draft' && bill.status !== 'void' && balanceDue > 0 && auth.permissions.includes('bills.record-payment') && (
                                                         <button
                                                             onClick={() => openPaymentModal(bill)}
                                                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
@@ -264,7 +272,7 @@ export default function Index({ auth, bills = [], suppliers = [], assetAccounts 
                                                             <Icons.Currency /> Record payment
                                                         </button>
                                                     )}
-                                                    {bill.status !== 'draft' && bill.status !== 'void' && (
+                                                    {bill.status !== 'draft' && bill.status !== 'void' && auth.permissions.includes('bills.void') && (
                                                         <button onClick={() => handleVoid(bill.id)} className="inline-flex px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-rose-600 hover:bg-rose-50">
                                                             Void
                                                         </button>
