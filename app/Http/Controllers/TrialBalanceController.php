@@ -25,19 +25,18 @@ class TrialBalanceController extends Controller
             ->join('journal_entries', 'journal_items.journal_entry_id', '=', 'journal_entries.id')
             ->whereDate('journal_entries.date', '<=', $asOfDate)
             ->select(
-                'journal_items.account_id',
                 'journal_items.account_code',
                 DB::raw('SUM(journal_items.debit) as total_debit'),
                 DB::raw('SUM(journal_items.credit) as total_credit')
             )
-            ->groupBy('journal_items.account_id', 'journal_items.account_code')
+            ->groupBy('journal_items.account_code')
             ->get()
-            ->keyBy('account_id');
+            ->keyBy('account_code');
 
         $accounts = Account::orderBy('code')->get();
 
         $trialBalance = $accounts->map(function ($account) use ($balances) {
-            $balance = $balances->get($account->id);
+            $balance = $balances->get($account->code);
             
             $debit = $balance ? (float) $balance->total_debit : 0;
             $credit = $balance ? (float) $balance->total_credit : 0;

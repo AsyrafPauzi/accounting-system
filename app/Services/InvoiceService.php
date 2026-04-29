@@ -130,12 +130,14 @@ class InvoiceService
                 + (float) $invoice->shipping_amount
                 + (float) $invoice->rounding_adjustment;
 
+            $accountMap = DB::table('accounts')->whereIn('code', ['1100', '4000', '2100'])->pluck('id', 'code');
+
             $journalItems = [
-                ['journal_entry_id' => $journalId, 'account_code' => '1100', 'debit' => $invoice->total_amount, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
-                ['journal_entry_id' => $journalId, 'account_code' => '4000', 'debit' => 0, 'credit' => $revenueNet, 'created_at' => now(), 'updated_at' => now()],
+                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['1100'] ?? null, 'account_code' => '1100', 'debit' => $invoice->total_amount, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
+                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['4000'] ?? null, 'account_code' => '4000', 'debit' => 0, 'credit' => $revenueNet, 'created_at' => now(), 'updated_at' => now()],
             ];
             if ($invoice->tax_amount > 0) {
-                $journalItems[] = ['journal_entry_id' => $journalId, 'account_code' => '2100', 'debit' => 0, 'credit' => $invoice->tax_amount, 'created_at' => now(), 'updated_at' => now()];
+                $journalItems[] = ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2100'] ?? null, 'account_code' => '2100', 'debit' => 0, 'credit' => $invoice->tax_amount, 'created_at' => now(), 'updated_at' => now()];
             }
 
             DB::table('journal_items')->insert($journalItems);
@@ -166,12 +168,14 @@ class InvoiceService
                 + (float) $invoice->shipping_amount
                 + (float) $invoice->rounding_adjustment;
 
+            $accountMap = DB::table('accounts')->whereIn('code', ['1100', '4000', '2100'])->pluck('id', 'code');
+
             $reversals = [
-                ['journal_entry_id' => $journalId, 'account_code' => '1100', 'debit' => 0, 'credit' => $invoice->total_amount, 'created_at' => now(), 'updated_at' => now()],
-                ['journal_entry_id' => $journalId, 'account_code' => '4000', 'debit' => $revenueNet, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
+                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['1100'] ?? null, 'account_code' => '1100', 'debit' => 0, 'credit' => $invoice->total_amount, 'created_at' => now(), 'updated_at' => now()],
+                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['4000'] ?? null, 'account_code' => '4000', 'debit' => $revenueNet, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
             ];
             if ($invoice->tax_amount > 0) {
-                $reversals[] = ['journal_entry_id' => $journalId, 'account_code' => '2100', 'debit' => $invoice->tax_amount, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()];
+                $reversals[] = ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2100'] ?? null, 'account_code' => '2100', 'debit' => $invoice->tax_amount, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()];
             }
 
             DB::table('journal_items')->insert($reversals);
@@ -206,9 +210,11 @@ class InvoiceService
                 'updated_at'     => now(),
             ]);
 
+            $accountMap = DB::table('accounts')->whereIn('code', [$bankAccountCode, '1100'])->pluck('id', 'code');
+
             DB::table('journal_items')->insert([
-                ['journal_entry_id' => $journalId, 'account_code' => $bankAccountCode, 'debit' => $amount, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
-                ['journal_entry_id' => $journalId, 'account_code' => '1100', 'debit' => 0, 'credit' => $amount, 'created_at' => now(), 'updated_at' => now()],
+                ['journal_entry_id' => $journalId, 'account_id' => $accountMap[$bankAccountCode] ?? null, 'account_code' => $bankAccountCode, 'debit' => $amount, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
+                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['1100'] ?? null, 'account_code' => '1100', 'debit' => 0, 'credit' => $amount, 'created_at' => now(), 'updated_at' => now()],
             ]);
         });
     }
@@ -246,12 +252,14 @@ class InvoiceService
             + (float) ($invoice->shipping_amount ?? 0)
             + $totals['roundingAdjustment'];
 
+        $accountMap = DB::table('accounts')->whereIn('code', ['1100', '4000', '2100'])->pluck('id', 'code');
+
         $journalItems = [
-            ['journal_entry_id' => $journal->id, 'account_code' => '1100', 'debit' => $totals['roundedTotal'], 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
-            ['journal_entry_id' => $journal->id, 'account_code' => '4000', 'debit' => 0, 'credit' => $revenueNet, 'created_at' => now(), 'updated_at' => now()],
+            ['journal_entry_id' => $journal->id, 'account_id' => $accountMap['1100'] ?? null, 'account_code' => '1100', 'debit' => $totals['roundedTotal'], 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
+            ['journal_entry_id' => $journal->id, 'account_id' => $accountMap['4000'] ?? null, 'account_code' => '4000', 'debit' => 0, 'credit' => $revenueNet, 'created_at' => now(), 'updated_at' => now()],
         ];
         if ($totals['taxTotal'] > 0) {
-            $journalItems[] = ['journal_entry_id' => $journal->id, 'account_code' => '2100', 'debit' => 0, 'credit' => $totals['taxTotal'], 'created_at' => now(), 'updated_at' => now()];
+            $journalItems[] = ['journal_entry_id' => $journal->id, 'account_id' => $accountMap['2100'] ?? null, 'account_code' => '2100', 'debit' => 0, 'credit' => $totals['taxTotal'], 'created_at' => now(), 'updated_at' => now()];
         }
 
         DB::table('journal_items')->insert($journalItems);
