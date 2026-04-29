@@ -17,8 +17,6 @@ class AuditLog extends Model
         'event',
         'old_values',
         'new_values',
-        'ip_address',
-        'user_agent',
         'created_at',
     ];
 
