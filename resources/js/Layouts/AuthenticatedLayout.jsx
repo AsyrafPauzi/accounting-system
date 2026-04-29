@@ -45,10 +45,8 @@ const navConfig = [
     { group: 'Reports', links: [
         { name: 'Reports', route: 'reports.index', Icon: Icons.ChartPie, planPermission: 'reports.view', userPermission: 'reports.view', subtitle: 'Financial statements & analysis', activeRoutes: ['reports.index', 'general-ledger.report', 'profit-and-loss.index', 'reports.sales.index', 'balance-sheet.index', 'cashflow-summary.index', 'aged-receivables.index'] },
     ]},
-];    // { group: 'Compliance', links: [
-    //     { name: 'LHDN MyInvois', route: 'dashboard', Icon: Icons.DocumentCheck, requirePaid: true },
-    // ]},
 ];
+
 
 export default function Authenticated({ user: propUser, header, children }) {
     const page = usePage();
