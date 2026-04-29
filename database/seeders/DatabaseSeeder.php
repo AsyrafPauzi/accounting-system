@@ -16,18 +16,23 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            PlanSeeder::class,
             RolesAndPermissionsSeeder::class,
         ]);
 
-        $superRole = \App\Models\Role::where('name', 'super-admin')->first();
+        // Create Super Admin User
+        $superAdmin = User::updateOrCreate(
+            ['email' => 'admin@accounter.com'],
+            [
+                'name' => 'System Admin',
+                'password' => \Hash::make('Admin123!'),
+                'email_verified_at' => now(),
+            ]
+        );
 
-        $user = User::factory()->create([
-            'name' => 'Test Admin',
-            'email' => 'test@example.com',
-            'role_id' => $superRole?->id,
-        ]);
+        $superRole = \App\Models\Role::where('name', 'super-admin')->first();
         if ($superRole) {
-            $user->assignRole('super-admin');
+            $superAdmin->assignRole('super-admin');
         }
     }
 }
