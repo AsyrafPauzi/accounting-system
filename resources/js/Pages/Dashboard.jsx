@@ -34,6 +34,11 @@ export default function Dashboard({ auth, stats = {} }) {
         : 0;
     const netMonth = period.net_this_month ?? 0;
 
+    const planPermissions = auth?.planPermissions ?? {};
+    const isBasic = planPermissions['dashboard.basic'];
+    const isStandard = planPermissions['dashboard.standard'];
+    const isAdvanced = planPermissions['dashboard.advanced'] || auth.user.role_name === 'super-admin';
+
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -43,7 +48,7 @@ export default function Dashboard({ auth, stats = {} }) {
                         Welcome back, <span className="text-blue-600">{auth.user?.name?.split(' ')[0] || 'there'}</span>
                     </h1>
                     <p className="text-slate-500 text-sm">
-                        Here’s your business at a glance.
+                        {isBasic ? 'Your business at a glance.' : 'Here’s your business analytics.'}
                     </p>
                 </div>
             }
@@ -51,10 +56,10 @@ export default function Dashboard({ auth, stats = {} }) {
             <Head title="Dashboard" />
 
             <div className="space-y-6 sm:space-y-8 pb-8 min-w-0 w-full">
-                {/* Top 4 KPIs — 2x2 on mobile, 4 col on desktop */}
+                {/* Top 4 KPIs — Always shown for all levels */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 min-w-0">
                     <Link
-                        href={route('aged-receivables.index')}
+                        href={planPermissions['reports.aged-reports'] ? route('aged-receivables.index') : route('invoices.index')}
                         className="rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-4 sm:p-5 shadow-lg shadow-blue-500/20 flex flex-col min-h-[100px] sm:min-h-[112px] min-w-0 active:opacity-90"
                     >
                         <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider opacity-90">Receivables</span>
@@ -71,7 +76,7 @@ export default function Dashboard({ auth, stats = {} }) {
                     </Link>
 
                     <Link
-                        href={route('accounts-payable.index')}
+                        href={planPermissions['reports.aged-reports'] ? route('accounts-payable.index') : route('bills.index')}
                         className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-sm flex flex-col min-h-[100px] sm:min-h-[112px] hover:border-slate-300 hover:shadow-md transition-all min-w-0 active:opacity-90"
                     >
                         <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Payables</span>
@@ -110,123 +115,154 @@ export default function Dashboard({ auth, stats = {} }) {
                     </div>
                 </div>
 
-                {/* Revenue & Payables — two cards side by side on lg */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                        <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Revenue</h2>
-                            <Link href={route('invoices.index')} className="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
-                                Invoices <Icons.ChevronRight />
-                            </Link>
-                        </div>
-                        <div className="p-4 sm:p-6">
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                                <div>
-                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Invoiced</p>
-                                    <p className="text-base sm:text-lg font-bold text-slate-900 font-mono mt-0.5">{fmt(invoices.total_invoiced, { currency: true })}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Collected</p>
-                                    <p className="text-base sm:text-lg font-bold text-emerald-600 font-mono mt-0.5">{fmt(invoices.total_collected, { currency: true })}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Outstanding</p>
-                                    <p className="text-base sm:text-lg font-bold text-rose-600 font-mono mt-0.5">{fmt(invoices.total_outstanding, { currency: true })}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Overdue</p>
-                                    <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{invoices.overdue_count}</p>
-                                </div>
+                {/* Revenue & Payables — Shown for Standard (SME) and Advanced (Corporate) */}
+                {(isStandard || isAdvanced) && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                            <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Revenue Analysis</h2>
+                                <Link href={route('invoices.index')} className="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
+                                    Invoices <Icons.ChevronRight />
+                                </Link>
                             </div>
-                            <Link
-                                href={route('aged-receivables.index')}
-                                className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
-                            >
-                                Aged receivables <Icons.ChevronRight />
-                            </Link>
-                        </div>
-                    </section>
-
-                    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                        <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Payables</h2>
-                            <Link href={route('bills.index')} className="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
-                                Bills <Icons.ChevronRight />
-                            </Link>
-                        </div>
-                        <div className="p-4 sm:p-6">
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                                <div>
-                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Suppliers</p>
-                                    <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{suppliers.total} <span className="text-xs font-normal text-slate-500">({suppliers.active} active)</span></p>
+                            <div className="p-4 sm:p-6">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                                    <div>
+                                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Invoiced</p>
+                                        <p className="text-base sm:text-lg font-bold text-slate-900 font-mono mt-0.5">{fmt(invoices.total_invoiced, { currency: true })}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Collected</p>
+                                        <p className="text-base sm:text-lg font-bold text-emerald-600 font-mono mt-0.5">{fmt(invoices.total_collected, { currency: true })}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Outstanding</p>
+                                        <p className="text-base sm:text-lg font-bold text-rose-600 font-mono mt-0.5">{fmt(invoices.total_outstanding, { currency: true })}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Overdue</p>
+                                        <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{invoices.overdue_count}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Outstanding</p>
-                                    <p className="text-base sm:text-lg font-bold text-rose-600 font-mono mt-0.5">{fmt(bills.total_ap, { currency: true })}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Unpaid bills</p>
-                                    <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{bills.unpaid_count}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Overdue</p>
-                                    <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{bills.overdue_count}</p>
-                                </div>
+                                {planPermissions['reports.aged-reports'] && (
+                                    <Link
+                                        href={route('aged-receivables.index')}
+                                        className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                                    >
+                                        Aged receivables <Icons.ChevronRight />
+                                    </Link>
+                                )}
                             </div>
+                        </section>
+
+                        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                            <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Payables Analysis</h2>
+                                <Link href={route('bills.index')} className="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
+                                    Bills <Icons.ChevronRight />
+                                </Link>
+                            </div>
+                            <div className="p-4 sm:p-6">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                                    <div>
+                                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Suppliers</p>
+                                        <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{suppliers.total} <span className="text-xs font-normal text-slate-500">({suppliers.active} active)</span></p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Outstanding</p>
+                                        <p className="text-base sm:text-lg font-bold text-rose-600 font-mono mt-0.5">{fmt(bills.total_ap, { currency: true })}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Unpaid bills</p>
+                                        <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{bills.unpaid_count}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Overdue</p>
+                                        <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{bills.overdue_count}</p>
+                                    </div>
+                                </div>
+                                {planPermissions['reports.aged-reports'] && (
+                                    <Link
+                                        href={route('accounts-payable.index')}
+                                        className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                                    >
+                                        Accounts payable <Icons.ChevronRight />
+                                    </Link>
+                                )}
+                            </div>
+                        </section>
+                    </div>
+                )}
+
+                {/* Quick Links Row — Standard & Advanced */}
+                {(isStandard || isAdvanced) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                        {planPermissions['reports.cashflow'] && (
                             <Link
-                                href={route('accounts-payable.index')}
-                                className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                                href={route('cashflow-summary.index')}
+                                className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm hover:border-slate-300 hover:shadow-md transition-all flex items-center gap-4"
                             >
-                                Accounts payable <Icons.ChevronRight />
+                                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                                    <Icons.ChartBar />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-bold text-slate-800">Cashflow</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">Sales vs expenses</p>
+                                </div>
+                                <Icons.ChevronRight className="flex-shrink-0 text-slate-300 w-5 h-5" />
                             </Link>
-                        </div>
-                    </section>
-                </div>
+                        )}
 
-                {/* This month + Reports + Credit notes — single row on desktop */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-                    <Link
-                        href={route('cashflow-summary.index')}
-                        className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm hover:border-slate-300 hover:shadow-md transition-all flex items-center gap-4"
-                    >
-                        <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                            <Icons.ChartBar />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-slate-800">Cashflow</p>
-                            <p className="text-xs text-slate-500 mt-0.5">Sales vs expenses · view graph</p>
-                        </div>
-                        <Icons.ChevronRight className="flex-shrink-0 text-slate-300 w-5 h-5" />
-                    </Link>
+                        {planPermissions['reports.view'] && (
+                            <Link
+                                href={route('reports.index')}
+                                className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm hover:border-slate-300 hover:shadow-md transition-all flex items-center gap-4"
+                            >
+                                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                    <Icons.Document />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-bold text-slate-800">Reports Hub</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">P&L, Sales & more</p>
+                                </div>
+                                <Icons.ChevronRight className="flex-shrink-0 text-slate-300 w-5 h-5" />
+                            </Link>
+                        )}
 
-                    <Link
-                        href={route('reports.index')}
-                        className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm hover:border-slate-300 hover:shadow-md transition-all flex items-center gap-4"
-                    >
-                        <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                            <Icons.Document />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-slate-800">Reports</p>
-                            <p className="text-xs text-slate-500 mt-0.5">P&L, Balance Sheet & more</p>
-                        </div>
-                        <Icons.ChevronRight className="flex-shrink-0 text-slate-300 w-5 h-5" />
-                    </Link>
+                        {planPermissions['credit-notes.view'] && (
+                            <Link
+                                href={route('credit-notes.index')}
+                                className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm hover:border-slate-300 hover:shadow-md transition-all flex items-center gap-4"
+                            >
+                                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
+                                    <Icons.ReceiptRefund />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-bold text-slate-800">Credit notes</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">{creditNotes.count} issued</p>
+                                </div>
+                                <Icons.ChevronRight className="flex-shrink-0 text-slate-300 w-5 h-5" />
+                            </Link>
+                        )}
 
-                    <Link
-                        href={route('credit-notes.index')}
-                        className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm hover:border-slate-300 hover:shadow-md transition-all flex items-center gap-4"
-                    >
-                        <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
-                            <Icons.ReceiptRefund />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-slate-800">Credit notes</p>
-                            <p className="text-xs text-slate-500 mt-0.5">{creditNotes.count} issued · {fmt(creditNotes.value, { currency: true })}</p>
-                        </div>
-                        <Icons.ChevronRight className="flex-shrink-0 text-slate-300 w-5 h-5" />
-                    </Link>
-                </div>
+                        {/* Corporate Feature: Audit Logs */}
+                        {isAdvanced && (
+                            <Link 
+                                href={route('audit-logs.index')}
+                                className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm flex items-center gap-4 group hover:border-slate-300 hover:shadow-md transition-all active:scale-[0.98] duration-200"
+                            >
+                                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-bold text-slate-800">Audit Logs</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">Track all system changes</p>
+                                </div>
+                                <Icons.ChevronRight className="text-slate-300 group-hover:text-blue-600 transition-colors flex-shrink-0 w-5 h-5" />
+                            </Link>
+                        )}
+                    </div>
+                )}
             </div>
         </AuthenticatedLayout>
     );
