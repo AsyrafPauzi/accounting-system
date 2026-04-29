@@ -19,7 +19,7 @@ class CustomerController extends Controller
      */
     private function accountManagerIdRule()
     {
-        return Rule::exists('users', 'id')->where('tenant_id', auth()->user()->tenant_id);
+        return Rule::exists(User::class, 'id')->where('tenant_id', auth()->user()->tenant_id);
     }
 
     private function tenantUsersForSelect()

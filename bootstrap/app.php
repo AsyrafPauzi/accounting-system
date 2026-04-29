@@ -36,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'permission' => CheckPermission::class,
             'role'       => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'plan.permission' => \App\Http\Middleware\CheckPlanPermission::class,
         ]);
 
         $middleware->trustProxies(at: '*');

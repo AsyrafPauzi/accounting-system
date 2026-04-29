@@ -165,10 +165,17 @@ class InvoiceController extends Controller
     public function edit($id)
     {
         $invoice = Invoice::with('items')->findOrFail($id);
+        $journalEntryId = DB::table('journal_entries')
+            ->where('reference_type', 'Invoice')
+            ->where('reference_id', $invoice->id)
+            ->latest()
+            ->value('id');
+
         return Inertia::render('Invoices/Edit', [
             'invoice'    => $invoice,
             'customers'  => Customer::all(),
             'lhdn_codes' => $this->getLhdnCodes(),
+            'journal_entry_id' => $journalEntryId,
         ]);
     }
 

@@ -66,6 +66,28 @@ class HandleInertiaRequests extends Middleware
 
                     return $subscription?->current_period_ends_at;
                 },
+                'planPermissions' => function () use ($request) {
+                    $user = $request->user();
+                    if (! $user || ! $user->tenant_id) {
+                        return [];
+                    }
+
+                    /** @var Tenant|null $tenant */
+                    $tenant = Tenant::find($user->tenant_id);
+                    if (! $tenant) {
+                        return [];
+                    }
+
+                    $subscription = $tenant->activeSubscription();
+                    if (! $subscription || ! $subscription->plan) {
+                        return [];
+                    }
+
+                    // Return permissions as an object: ['permission.name' => true, ...]
+                    return $subscription->plan->permissions->pluck('name')->mapWithKeys(function ($name) {
+                        return [$name => true];
+                    })->toArray();
+                },
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

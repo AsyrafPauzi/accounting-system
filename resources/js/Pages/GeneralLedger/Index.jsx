@@ -1,6 +1,8 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
+import { alertUpgrade } from '@/utils/swal';
+
 
 const Icons = {
     BookOpen: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>,
@@ -62,10 +64,23 @@ export default function Index({ auth, entries = [], filters = {}, stats = {}, pa
                             <Icons.ArrowDownTray /> CSV
                         </a>
                         <a
-                            href={`${route('general-ledger.export.pdf')}?${new URLSearchParams(Object.fromEntries(Object.entries({ date_from, date_to, reference_type }).filter(([, v]) => v != null && v !== '')))}`}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
+                            href={auth.planPermissions['reports.export.full'] ? `${route('general-ledger.export.pdf')}?${new URLSearchParams(Object.fromEntries(Object.entries({ date_from, date_to, reference_type }).filter(([, v]) => v != null && v !== '')))}` : '#'}
+                            onClick={(e) => {
+                                if (!auth.planPermissions['reports.export.full']) {
+                                    e.preventDefault();
+                                    alertUpgrade('Professional PDF exports are available on the Corporate plan.');
+                                }
+                            }}
+                            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                                auth.planPermissions['reports.export.full']
+                                    ? 'text-slate-600 bg-white border border-slate-200 hover:bg-slate-50'
+                                    : 'text-slate-400 bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100'
+                            }`}
                         >
                             <Icons.DocumentArrowDown /> PDF
+                            {!auth.planPermissions['reports.export.full'] && (
+                                <svg className="w-3 h-3 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                            )}
                         </a>
                         <Link
                             href={route('general-ledger.report')}

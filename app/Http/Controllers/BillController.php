@@ -80,6 +80,12 @@ class BillController extends Controller
     public function edit(int $id): Response|RedirectResponse
     {
         $bill = Bill::with(['supplier', 'items'])->findOrFail($id);
+        $journalEntryId = \Illuminate\Support\Facades\DB::table('journal_entries')
+            ->where('reference_type', 'Bill')
+            ->where('reference_id', $bill->id)
+            ->latest()
+            ->value('id');
+
         $expenseAccounts = Account::where('type', 'expense')->active()->orderBy('code')->get(['code', 'name'])->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->code} — {$a->name}"])->values()->all();
         $assetAccounts = Account::where('type', 'asset')->active()->orderBy('code')->get(['code', 'name'])->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->code} — {$a->name}"])->values()->all();
 
@@ -88,6 +94,7 @@ class BillController extends Controller
             'suppliers'       => Supplier::orderBy('name')->get(['id', 'name', 'code']),
             'expenseAccounts' => $expenseAccounts,
             'assetAccounts'   => $assetAccounts,
+            'journal_entry_id' => $journalEntryId,
         ]);
     }
 

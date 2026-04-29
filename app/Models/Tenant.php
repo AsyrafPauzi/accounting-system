@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Stancl\Tenancy\Database\Models\Tenant as BaseTenant;
 use Stancl\Tenancy\Contracts\TenantWithDatabase;
 use Stancl\Tenancy\Database\Concerns\HasDatabase;
@@ -9,7 +10,7 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
 
 class Tenant extends BaseTenant implements TenantWithDatabase
 {
-    use HasDatabase, CentralConnection;
+    use HasDatabase, CentralConnection, Auditable;
 
     // This makes sure the database name is based on the company ID
     public static function getCustomColumns(): array
@@ -25,6 +26,16 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     public function activeSubscription()
     {
         return $this->subscription()->active()->first();
+    }
+
+    public function hasPlanPermission(string $permission): bool
+    {
+        $subscription = $this->activeSubscription();
+        if (! $subscription || ! $subscription->plan) {
+            return false;
+        }
+
+        return $subscription->plan->hasPermission($permission);
     }
 
     public function hasActiveSubscription(): bool

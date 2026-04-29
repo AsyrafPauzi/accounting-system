@@ -14,7 +14,7 @@ const inputClass = "w-full border border-slate-200 rounded-xl py-2.5 px-4 text-s
 const inputReadonlyClass = "w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-400 bg-slate-50";
 const labelClass = "block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5";
 
-export default function Edit({ auth, invoice, customers = [], lhdn_codes = [] }) {
+export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], journal_entry_id = null }) {
     // Initialize form with existing invoice data and its nested items
     const { data, setData, put, processing, errors } = useForm({
         customer_id: invoice.customer_id || '',
@@ -121,6 +121,12 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [] })
                             </div>
                         </div>
                         <div className="flex gap-2">
+                            {auth.planPermissions['general-ledger.view'] && journal_entry_id && (
+                                <Link href={route('general-ledger.show', journal_entry_id)} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-blue-600 bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-all duration-200">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                                    View Accounting Entry
+                                </Link>
+                            )}
                             <a href={route('invoices.pdf', invoice.id)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-slate-600 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all duration-200">
                                 <Icons.ArrowDownTray /> Download PDF
                             </a>
