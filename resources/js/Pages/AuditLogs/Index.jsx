@@ -28,6 +28,19 @@ export default function Index({ auth, logs }) {
     const formatValue = (val) => {
         if (val === null) return <span className="text-slate-400 italic">null</span>;
         if (typeof val === 'boolean') return <span className={val ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>{val ? 'TRUE' : 'FALSE'}</span>;
+        
+        // Detect and format date strings (ISO or space-separated)
+        if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}/.test(val)) {
+            const date = new Date(val.replace(' ', 'T')); // Ensure T for reliable parsing
+            if (!isNaN(date.getTime())) {
+                return (
+                    <span className="text-blue-600 font-semibold tracking-tight">
+                        {date.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                );
+            }
+        }
+
         if (typeof val === 'object') return JSON.stringify(val);
         return String(val);
     };
@@ -81,7 +94,7 @@ export default function Index({ auth, logs }) {
                                                 </div>
                                                 <div className="flex flex-col">
                                                     <span className="text-sm font-bold text-slate-700">{log.user_name}</span>
-                                                    <span className="text-[10px] text-slate-400 font-medium">{log.user_id ? `ID: ${log.user_id}` : 'System Process'}</span>
+                                                    <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">{log.user_role}</span>
                                                 </div>
                                             </div>
                                         </td>

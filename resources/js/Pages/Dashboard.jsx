@@ -246,7 +246,7 @@ export default function Dashboard({ auth, stats = {} }) {
                         )}
 
                         {/* Corporate Feature: Audit Logs */}
-                        {isAdvanced && (
+                        {isAdvanced && (auth.permissions.includes('audit-logs.view') || auth.user.role_name === 'super-admin') && (
                             <Link 
                                 href={route('audit-logs.index')}
                                 className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm flex items-center gap-4 group hover:border-slate-300 hover:shadow-md transition-all active:scale-[0.98] duration-200"

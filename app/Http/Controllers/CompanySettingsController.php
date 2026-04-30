@@ -39,6 +39,11 @@ class CompanySettingsController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $user = $request->user();
+
+        if (! $user->hasAnyRole(['admin', 'super-admin'])) {
+            return redirect()->back()->with('error', 'Only administrators can update company settings.');
+        }
+
         $tenant = $user && $user->tenant_id ? Tenant::findOrFail($user->tenant_id) : null;
 
         $validated = $request->validate([

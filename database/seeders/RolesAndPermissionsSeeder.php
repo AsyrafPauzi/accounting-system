@@ -113,7 +113,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'general-ledger.view',
             'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet', 'reports.cashflow', 'reports.aged-reports',
             'settings.view',
-            'audit-logs.view',
             'dashboard.basic',
         ]);
     }

@@ -16,7 +16,7 @@ class AuditLogController extends Controller
     {
         $tenantId = $request->user()->tenant_id;
 
-        $logs = AuditLog::with('user')
+        $logs = AuditLog::with('user.roles')
             ->orderBy('created_at', 'desc')
             ->paginate(20)
             ->withQueryString()
@@ -24,6 +24,8 @@ class AuditLogController extends Controller
                 return [
                     'id' => $log->id,
                     'user_name' => $log->user_name ?? $log->user?->name ?? 'System',
+                    'user_id' => $log->user_id,
+                    'user_role' => $log->user?->role_name ?? 'System',
                     'event' => $log->event,
                     'auditable_type' => class_basename($log->auditable_type),
                     'auditable_id' => $log->auditable_id,
