@@ -19,5 +19,13 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
             PlanSeeder::class,
         ]);
+
+        $demoAdmin = User::where('email', 'demo@accounter.com')->first();
+        if ($demoAdmin) {
+            $superRole = \App\Models\Role::where('name', 'super-admin')->first();
+            if ($superRole) {
+                $demoAdmin->assignRole('super-admin');
+            }
+        }
     }
 }

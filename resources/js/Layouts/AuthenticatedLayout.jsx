@@ -173,7 +173,7 @@ export default function Authenticated({ user: propUser, header, children }) {
 
                 {/* Navigation */}
                 <nav className="flex-1 py-5 overflow-y-auto px-3 bg-white">
-                    {!hasActiveSubscription && (
+                    {!hasActiveSubscription && !isAdmin && (
                         <div className="mb-4 mx-1 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 text-amber-900 text-[11px] font-medium flex items-center justify-between shadow-sm shadow-amber-100/50">
                             <span>You&apos;re on Free tier.</span>
                             <Link
@@ -185,6 +185,9 @@ export default function Authenticated({ user: propUser, header, children }) {
                         </div>
                     )}
                     {navConfig.map((section, idx) => {
+                        // Hide all standard groups for Super Admin (Main, Sales, etc.)
+                        if (isAdmin && section.group !== 'Admin') return null;
+
                         const visibleLinks = section.links.filter(link => {
                             const planOk = !link.planPermission || planPermissions[link.planPermission];
                             const userOk = !link.userPermission || hasPermission(link.userPermission);
@@ -276,79 +279,82 @@ export default function Authenticated({ user: propUser, header, children }) {
                         </div>
                     )}
 
-                    <div className="mb-2">
-                        <button 
-                            onClick={() => toggleGroup('Company')}
-                            className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-bold text-indigo-600/90 uppercase tracking-widest hover:bg-indigo-50/50 rounded-lg transition-colors group"
-                        >
-                            <span>Company</span>
-                            <span className={`transition-transform duration-200 ${openGroups['Company'] ? 'rotate-0' : '-rotate-90 text-indigo-300'}`}>
-                                <Icons.ChevronDown />
-                            </span>
-                        </button>
-                        <div className={`mt-1 space-y-0.5 overflow-hidden transition-all duration-300 ${openGroups['Company'] ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                            <Link
-                                href={getSafeRoute('settings.company')}
-                                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                    isRouteActive('settings.company')
-                                        ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
-                                        : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
-                                }`}
+                    {/* Only show Company settings group if NOT a super-admin */}
+                    {!isAdmin && (
+                        <div className="mb-2">
+                            <button 
+                                onClick={() => toggleGroup('Company')}
+                                className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-bold text-indigo-600/90 uppercase tracking-widest hover:bg-indigo-50/50 rounded-lg transition-colors group"
                             >
-                                <span className={isRouteActive('settings.company') ? 'text-white' : 'text-indigo-500/80'}>
-                                    <Icons.BuildingOffice />
+                                <span>Company</span>
+                                <span className={`transition-transform duration-200 ${openGroups['Company'] ? 'rotate-0' : '-rotate-90 text-indigo-300'}`}>
+                                    <Icons.ChevronDown />
                                 </span>
-                                <span className="flex-1">Company settings</span>
-                            </Link>
-                            {hasPermission('users.view') && planPermissions['users.view'] && (
+                            </button>
+                            <div className={`mt-1 space-y-0.5 overflow-hidden transition-all duration-300 ${openGroups['Company'] ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                 <Link
-                                    href={getSafeRoute('settings.team.index')}
+                                    href={getSafeRoute('settings.company')}
                                     className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                        isRouteActive('settings.team.index')
+                                        isRouteActive('settings.company')
                                             ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
                                             : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
                                     }`}
                                 >
-                                    <span className={isRouteActive('settings.team.index') ? 'text-white' : 'text-indigo-500/80'}>
-                                        <Icons.Users />
+                                    <span className={isRouteActive('settings.company') ? 'text-white' : 'text-indigo-500/80'}>
+                                        <Icons.BuildingOffice />
                                     </span>
-                                    <span className="flex-1">Team & Roles</span>
+                                    <span className="flex-1">Company settings</span>
                                 </Link>
-                            )}
-                            {hasPermission('audit-logs.view') && planPermissions['audit-logs.view'] && (
-                                <Link
-                                    href={getSafeRoute('audit-logs.index')}
-                                    className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                        isRouteActive('audit-logs.index')
-                                            ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
-                                            : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
-                                    }`}
-                                >
-                                    <span className={isRouteActive('audit-logs.index') ? 'text-white' : 'text-indigo-500/80'}>
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                        </svg>
-                                    </span>
-                                    <span className="flex-1">Audit Logs</span>
-                                </Link>
-                            )}
-                            {(user.role_name === 'admin' || user.role_name === 'super-admin') && (
-                                <Link
-                                    href={getSafeRoute('settings.plan.index')}
-                                    className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                        isRouteActive('settings.plan.index')
-                                            ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
-                                            : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
-                                    }`}
-                                >
-                                    <span className={isRouteActive('settings.plan.index') ? 'text-white' : 'text-indigo-500/80'}>
-                                        <Icons.Sparkles />
-                                    </span>
-                                    <span className="flex-1">Plan & Usage</span>
-                                </Link>
-                            )}
+                                {hasPermission('users.view') && planPermissions['users.view'] && (
+                                    <Link
+                                        href={getSafeRoute('settings.team.index')}
+                                        className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                                            isRouteActive('settings.team.index')
+                                                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
+                                                : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
+                                        }`}
+                                    >
+                                        <span className={isRouteActive('settings.team.index') ? 'text-white' : 'text-indigo-500/80'}>
+                                            <Icons.Users />
+                                        </span>
+                                        <span className="flex-1">Team & Roles</span>
+                                    </Link>
+                                )}
+                                {hasPermission('audit-logs.view') && planPermissions['audit-logs.view'] && (
+                                    <Link
+                                        href={getSafeRoute('audit-logs.index')}
+                                        className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                                            isRouteActive('audit-logs.index')
+                                                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
+                                                : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
+                                        }`}
+                                    >
+                                        <span className={isRouteActive('audit-logs.index') ? 'text-white' : 'text-indigo-500/80'}>
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                            </svg>
+                                        </span>
+                                        <span className="flex-1">Audit Logs</span>
+                                    </Link>
+                                )}
+                                {(user.role_name === 'admin' || user.role_name === 'super-admin') && (
+                                    <Link
+                                        href={getSafeRoute('settings.plan.index')}
+                                        className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                                            isRouteActive('settings.plan.index')
+                                                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
+                                                : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
+                                        }`}
+                                    >
+                                        <span className={isRouteActive('settings.plan.index') ? 'text-white' : 'text-indigo-500/80'}>
+                                            <Icons.Sparkles />
+                                        </span>
+                                        <span className="flex-1">Plan & Usage</span>
+                                    </Link>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </nav>
 
                 {/* User block */}
