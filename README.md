@@ -1,5 +1,7 @@
 # Accounter (Malaysia Edition)
 
+[![Deployment](https://img.shields.io/badge/Deployment-Guide-blue)](./DEPLOYMENT.md)
+
 Multi-tenant accounting SaaS built with **Laravel 12**, **Inertia.js**, and **React**. Each company gets its own database (Stancl Tenancy). Use this guide to run the app locally and test core flows.
 
 ## Requirements
