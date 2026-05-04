@@ -16,6 +16,8 @@ php artisan view:cache
 if [ "$RUN_MIGRATIONS" = "true" ]; then
     echo "Running Migrations..."
     php artisan migrate --force
+    echo "Running Seeders..."
+    php artisan db:seed --force
 fi
 
 # If a command is passed to the entrypoint, execute it instead of starting Supervisor
