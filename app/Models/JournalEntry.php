@@ -2,14 +2,22 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\HasUuid;
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class JournalEntry extends Model
 {
-    use SoftDeletes, HasUuid;
-    protected $fillable = ['date', 'description', 'reference_type', 'reference_id'];
+    use SoftDeletes, Auditable;
+    protected $fillable = [
+        'date',
+        'description',
+        'reference_number',
+        'type',
+        'status',
+        'reference_type',
+        'reference_id'
+    ];
 
     protected function casts(): array
     {
@@ -39,6 +47,9 @@ class JournalEntry extends Model
         }
         if ($this->reference_type === 'Bill' || $this->reference_type === 'Bill Payment') {
             return route('bills.edit', $this->reference_id);
+        }
+        if ($this->type === 'manual') {
+            return route('journal.index');
         }
 
         return null;

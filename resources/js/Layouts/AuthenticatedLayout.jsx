@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import { Link, usePage } from '@inertiajs/react';
 import MobileQuickAction from '@/Components/MobileQuickAction';
+import { toastSuccess, toastError } from '@/utils/swal';
 
 const Icons = {
     ChartBar: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
@@ -15,34 +16,37 @@ const Icons = {
     ChartPie: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /></svg>,
     Scale: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>,
     DocumentCheck: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+    Exclamation: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
     Sparkles: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5zM19 11l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z" /></svg>,
     Menu: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>,
     X: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>,
+    ChevronDown: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>,
+    ChevronRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
 };
 
 const navConfig = [
     { group: 'Main', links: [{ name: 'Dashboard', route: 'dashboard', Icon: Icons.ChartBar }] },
     { group: 'Sales (Revenue)', links: [
-        { name: 'Invoices', route: 'invoices.index', Icon: Icons.Document },
-        { name: 'Credit Notes', route: 'credit-notes.index', Icon: Icons.ReceiptRefund },
-        { name: 'Customers', route: 'customers.index', Icon: Icons.Users },
+        { name: 'Invoices', route: 'invoices.index', Icon: Icons.Document, planPermission: 'invoices.view', userPermission: 'invoices.view' },
+        { name: 'Credit Notes', route: 'credit-notes.index', Icon: Icons.ReceiptRefund, planPermission: 'credit-notes.view', userPermission: 'credit-notes.view' },
+        { name: 'Customers', route: 'customers.index', Icon: Icons.Users, planPermission: 'customers.view', userPermission: 'customers.view' },
     ]},
     { group: 'Purchases (Expenses)', links: [
-        { name: 'Suppliers', route: 'suppliers.index', Icon: Icons.BuildingOffice, requirePaid: true },
-        { name: 'Bills / Purchases', route: 'bills.index', Icon: Icons.ShoppingCart, requirePaid: true },
-        { name: 'Accounts Payable', route: 'accounts-payable.index', Icon: Icons.Document, requirePaid: true, subtitle: 'Outstanding and aging' },
+        { name: 'Suppliers', route: 'suppliers.index', Icon: Icons.BuildingOffice, planPermission: 'suppliers.view', userPermission: 'suppliers.view' },
+        { name: 'Bills / Purchases', route: 'bills.index', Icon: Icons.ShoppingCart, planPermission: 'bills.view', userPermission: 'bills.view' },
+        { name: 'Accounts Payable', route: 'accounts-payable.index', Icon: Icons.Document, planPermission: 'reports.aged-reports', userPermission: 'reports.aged-reports', subtitle: 'Outstanding and aging' },
     ]},
     { group: 'Accounting', links: [
-        { name: 'Chart of Accounts', route: 'chart-of-accounts.index', Icon: Icons.Folder, requirePaid: true, subtitle: 'Accounts used in postings and reports' },
-        { name: 'General Ledger', route: 'general-ledger.index', Icon: Icons.BookOpen, requirePaid: true, subtitle: 'By journal entry' },
+        { name: 'Chart of Accounts', route: 'chart-of-accounts.index', Icon: Icons.Folder, planPermission: 'accounts.view', userPermission: 'accounts.view', subtitle: 'Accounts used in postings and reports' },
+        { name: 'General Ledger', route: 'general-ledger.index', Icon: Icons.BookOpen, planPermission: 'general-ledger.view', userPermission: 'general-ledger.view', subtitle: 'By journal entry' },
+        { name: 'Manual Journal Entry', route: 'journal.index', Icon: Icons.Scale, planPermission: 'journal.create', userPermission: 'journal.view', subtitle: 'Post custom journal entries' },
+        { name: 'Trial Balance', route: 'trial-balance.index', Icon: Icons.Scale, planPermission: 'general-ledger.view', userPermission: 'general-ledger.view', subtitle: 'Verify account balances' },
     ]},
     { group: 'Reports', links: [
-        { name: 'Reports', route: 'reports.index', Icon: Icons.ChartPie, requirePaid: true, subtitle: 'P&L, Balance Sheet, Cashflow, Aged AR & more', activeRoutes: ['reports.index', 'general-ledger.report', 'profit-and-loss.index', 'balance-sheet.index', 'cashflow-summary.index', 'aged-receivables.index'] },
+        { name: 'Reports', route: 'reports.index', Icon: Icons.ChartPie, planPermission: 'reports.view', userPermission: 'reports.view', subtitle: 'Financial statements & analysis', activeRoutes: ['reports.index', 'general-ledger.report', 'profit-and-loss.index', 'reports.sales.index', 'balance-sheet.index', 'cashflow-summary.index', 'aged-receivables.index'] },
     ]},
-    // { group: 'Compliance', links: [
-    //     { name: 'LHDN MyInvois', route: 'dashboard', Icon: Icons.DocumentCheck, requirePaid: true },
-    // ]},
 ];
+
 
 export default function Authenticated({ user: propUser, header, children }) {
     const page = usePage();
@@ -53,7 +57,43 @@ export default function Authenticated({ user: propUser, header, children }) {
     const teamPermissions = auth?.teamPermissions ?? { view: false, create: false, edit: false, delete: false };
     const isAdmin = user?.role_name === 'super-admin';
     const isImpersonating = Boolean(auth?.impersonator_id);
+    const planPermissions = auth?.planPermissions ?? {};
+    const permissions = auth?.permissions ?? [];
+
+    const hasPermission = (p) => permissions.includes(p) || isAdmin;
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [openGroups, setOpenGroups] = useState({});
+
+    // Toggle group open/close
+    const toggleGroup = (groupName) => {
+        setOpenGroups(prev => ({
+            ...prev,
+            [groupName]: !prev[groupName]
+        }));
+    };
+
+    // Auto-expand active group on load
+    useEffect(() => {
+        const initialOpenGroups = {};
+        navConfig.forEach(section => {
+            const hasActive = section.links.some(link => 
+                link.activeRoutes 
+                    ? link.activeRoutes.some(r => isRouteActive(r))
+                    : isRouteActive(link.route)
+            );
+            if (hasActive) {
+                initialOpenGroups[section.group] = true;
+            }
+        });
+        
+        // Also check Admin and Company groups
+        if (isRouteActive('admin.tenants.index')) initialOpenGroups['Admin'] = true;
+        if (isRouteActive('settings.company') || isRouteActive('settings.team.index') || isRouteActive('audit-logs.index') || isRouteActive('settings.plan.index')) {
+            initialOpenGroups['Company'] = true;
+        }
+
+        setOpenGroups(initialOpenGroups);
+    }, [url]);
 
     // Close mobile sidebar on route change (e.g. after clicking a link)
     useEffect(() => {
@@ -87,6 +127,15 @@ export default function Authenticated({ user: propUser, header, children }) {
             return '#'; 
         }
     };
+
+    // Flash messages are now handled via static banners in the main content area.
+    useEffect(() => {
+        if (flash?.success || flash?.error || flash?.info) {
+            // Scroll to top to ensure the user sees the persistent banner
+            const mainContent = document.querySelector('main');
+            if (mainContent) mainContent.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, [flash]);
 
     return (
         <div className="flex h-screen bg-gradient-to-br from-slate-100 via-indigo-50/70 to-violet-100/80 overflow-hidden font-sans">
@@ -135,114 +184,170 @@ export default function Authenticated({ user: propUser, header, children }) {
                             </Link>
                         </div>
                     )}
-                    {navConfig.map((section, idx) => (
-                        <div key={idx} className="mb-5">
-                            <h3 className="px-3 mb-2 text-[10px] font-bold text-indigo-600/90 uppercase tracking-widest">
-                                {section.group}
-                            </h3>
-                            <div className="space-y-0.5">
-                                {section.links.map((link) => {
-                                    const Icon = link.Icon;
-                                    const active = link.activeRoutes
-                                        ? link.activeRoutes.some((r) => isRouteActive(r))
-                                        : isRouteActive(link.route);
-                                    const isPaidOnly = link.requirePaid;
-                                    const disabled = isPaidOnly && !hasActiveSubscription;
-                                    return (
-                                        <Link
-                                            key={link.name}
-                                            href={disabled ? route('subscription.index') : getSafeRoute(link.route)}
-                                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                                active
-                                                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
-                                                    : disabled
-                                                        ? 'text-slate-400 hover:text-slate-600 hover:bg-white/60'
-                                                        : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
-                                            }`}
-                                        >
-                                            <span className={active ? 'text-white' : 'text-indigo-500/80'}>
-                                                <Icon />
-                                            </span>
-                                            <span className="flex-1 min-w-0">
-                                                <span className="block truncate">{link.name}</span>
-                                                {link.subtitle && (
-                                                    <span className={`block text-[10px] font-normal mt-0.5 truncate ${active ? 'text-indigo-100' : 'text-slate-500'}`}>
-                                                        {link.subtitle}
-                                                    </span>
+                    {navConfig.map((section, idx) => {
+                        const visibleLinks = section.links.filter(link => {
+                            const planOk = !link.planPermission || planPermissions[link.planPermission];
+                            const userOk = !link.userPermission || hasPermission(link.userPermission);
+                            return planOk && userOk;
+                        });
+                        
+                        if (visibleLinks.length === 0) return null;
+                        const isOpen = openGroups[section.group];
+
+                        return (
+                            <div key={idx} className="mb-2">
+                                <button 
+                                    onClick={() => toggleGroup(section.group)}
+                                    className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-bold text-indigo-600/90 uppercase tracking-widest hover:bg-indigo-50/50 rounded-lg transition-colors group"
+                                >
+                                    <span>{section.group}</span>
+                                    <span className={`transition-transform duration-200 ${isOpen ? 'rotate-0' : '-rotate-90 text-indigo-300'}`}>
+                                        <Icons.ChevronDown />
+                                    </span>
+                                </button>
+                                
+                                <div className={`mt-1 space-y-0.5 overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                    {visibleLinks.map((link) => {
+                                        const Icon = link.Icon;
+                                        const active = link.activeRoutes
+                                            ? link.activeRoutes.some((r) => isRouteActive(r))
+                                            : isRouteActive(link.route);
+                                        const isPaidOnly = link.requirePaid;
+                                        const disabled = isPaidOnly && !hasActiveSubscription;
+                                        return (
+                                            <Link
+                                                key={link.name}
+                                                href={disabled ? route('subscription.index') : getSafeRoute(link.route)}
+                                                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                                                    active
+                                                        ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
+                                                        : disabled
+                                                            ? 'text-slate-400 hover:text-slate-600 hover:bg-white/60'
+                                                            : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
+                                                }`}
+                                            >
+                                                <span className={active ? 'text-white' : 'text-indigo-500/80'}>
+                                                    <Icon />
+                                                </span>
+                                                <span className="flex-1 min-w-0">
+                                                    <span className="block truncate">{link.name}</span>
+                                                    {link.subtitle && (
+                                                        <span className={`block text-[10px] font-normal mt-0.5 truncate ${active ? 'text-indigo-100' : 'text-slate-500'}`}>
+                                                            {link.subtitle}
+                                                        </span>
+                                                    )}
+                                                </span>
+                                                {active && (
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-white/90 flex-shrink-0 shadow-sm" />
                                                 )}
-                                            </span>
-                                            {active && (
-                                                <span className="w-1.5 h-1.5 rounded-full bg-white/90 flex-shrink-0 shadow-sm" />
-                                            )}
-                                        </Link>
-                                    );
-                                })}
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
 
                     {isAdmin && (
-                        <div className="mb-5">
-                            <h3 className="px-3 mb-2 text-[10px] font-bold text-indigo-600/90 uppercase tracking-widest">Admin</h3>
-                            <Link
-                                href={getSafeRoute('admin.tenants.index')}
-                                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                    isRouteActive('admin.tenants.index')
-                                        ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
-                                        : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
-                                }`}
+                        <div className="mb-2">
+                            <button 
+                                onClick={() => toggleGroup('Admin')}
+                                className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-bold text-indigo-600/90 uppercase tracking-widest hover:bg-indigo-50/50 rounded-lg transition-colors group"
                             >
-                                <span className={isRouteActive('admin.tenants.index') ? 'text-white' : 'text-indigo-500/80'}><Icons.BuildingOffice /></span>
-                                <span className="flex-1">Tenant Admin</span>
-                                {isRouteActive('admin.tenants.index') && <span className="w-1.5 h-1.5 rounded-full bg-white/90" />}
-                            </Link>
+                                <span>Admin</span>
+                                <span className={`transition-transform duration-200 ${openGroups['Admin'] ? 'rotate-0' : '-rotate-90 text-indigo-300'}`}>
+                                    <Icons.ChevronDown />
+                                </span>
+                            </button>
+                            <div className={`mt-1 space-y-0.5 overflow-hidden transition-all duration-300 ${openGroups['Admin'] ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                <Link
+                                    href={getSafeRoute('admin.tenants.index')}
+                                    className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                                        isRouteActive('admin.tenants.index')
+                                            ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
+                                            : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
+                                    }`}
+                                >
+                                    <span className={isRouteActive('admin.tenants.index') ? 'text-white' : 'text-indigo-500/80'}><Icons.BuildingOffice /></span>
+                                    <span className="flex-1">Tenant Admin</span>
+                                    {isRouteActive('admin.tenants.index') && <span className="w-1.5 h-1.5 rounded-full bg-white/90" />}
+                                </Link>
+                            </div>
                         </div>
                     )}
-                    <div className="mb-5">
-                        <h3 className="px-3 mb-2 text-[10px] font-bold text-indigo-600/90 uppercase tracking-widest">
-                            Company
-                        </h3>
-                        <Link
-                            href={getSafeRoute('settings.company')}
-                            className={`mb-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                isRouteActive('settings.company')
-                                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
-                                    : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
-                            }`}
+
+                    <div className="mb-2">
+                        <button 
+                            onClick={() => toggleGroup('Company')}
+                            className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-bold text-indigo-600/90 uppercase tracking-widest hover:bg-indigo-50/50 rounded-lg transition-colors group"
                         >
-                            <span className={isRouteActive('settings.company') ? 'text-white' : 'text-indigo-500/80'}>
-                                <Icons.BuildingOffice />
+                            <span>Company</span>
+                            <span className={`transition-transform duration-200 ${openGroups['Company'] ? 'rotate-0' : '-rotate-90 text-indigo-300'}`}>
+                                <Icons.ChevronDown />
                             </span>
-                            <span className="flex-1">Company settings</span>
-                        </Link>
-                        {teamPermissions.view && (
+                        </button>
+                        <div className={`mt-1 space-y-0.5 overflow-hidden transition-all duration-300 ${openGroups['Company'] ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
                             <Link
-                                href={getSafeRoute('settings.team.index')}
-                                className={`mb-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                    isRouteActive('settings.team.index')
+                                href={getSafeRoute('settings.company')}
+                                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                                    isRouteActive('settings.company')
                                         ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
                                         : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
                                 }`}
                             >
-                                <span className={isRouteActive('settings.team.index') ? 'text-white' : 'text-indigo-500/80'}>
-                                    <Icons.Users />
+                                <span className={isRouteActive('settings.company') ? 'text-white' : 'text-indigo-500/80'}>
+                                    <Icons.BuildingOffice />
                                 </span>
-                                <span className="flex-1">Team & Roles</span>
+                                <span className="flex-1">Company settings</span>
                             </Link>
-                        )}
-                        <Link
-                            href={getSafeRoute('settings.plan.index')}
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                isRouteActive('settings.plan.index')
-                                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
-                                    : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
-                            }`}
-                        >
-                            <span className={isRouteActive('settings.plan.index') ? 'text-white' : 'text-indigo-500/80'}>
-                                <Icons.Sparkles />
-                            </span>
-                            <span className="flex-1">Plan & Usage</span>
-                        </Link>
+                            {hasPermission('users.view') && planPermissions['users.view'] && (
+                                <Link
+                                    href={getSafeRoute('settings.team.index')}
+                                    className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                                        isRouteActive('settings.team.index')
+                                            ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
+                                            : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
+                                    }`}
+                                >
+                                    <span className={isRouteActive('settings.team.index') ? 'text-white' : 'text-indigo-500/80'}>
+                                        <Icons.Users />
+                                    </span>
+                                    <span className="flex-1">Team & Roles</span>
+                                </Link>
+                            )}
+                            {hasPermission('audit-logs.view') && planPermissions['audit-logs.view'] && (
+                                <Link
+                                    href={getSafeRoute('audit-logs.index')}
+                                    className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                                        isRouteActive('audit-logs.index')
+                                            ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
+                                            : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
+                                    }`}
+                                >
+                                    <span className={isRouteActive('audit-logs.index') ? 'text-white' : 'text-indigo-500/80'}>
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                        </svg>
+                                    </span>
+                                    <span className="flex-1">Audit Logs</span>
+                                </Link>
+                            )}
+                            {(user.role_name === 'admin' || user.role_name === 'super-admin') && (
+                                <Link
+                                    href={getSafeRoute('settings.plan.index')}
+                                    className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                                        isRouteActive('settings.plan.index')
+                                            ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
+                                            : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
+                                    }`}
+                                >
+                                    <span className={isRouteActive('settings.plan.index') ? 'text-white' : 'text-indigo-500/80'}>
+                                        <Icons.Sparkles />
+                                    </span>
+                                    <span className="flex-1">Plan & Usage</span>
+                                </Link>
+                            )}
+                        </div>
                     </div>
                 </nav>
 
@@ -319,22 +424,35 @@ export default function Authenticated({ user: propUser, header, children }) {
                         </div>
                     )}
 
-                    {flash?.success && (
-                        <div className="max-w-7xl mx-auto mb-4 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium">
-                            {flash.success}
-                        </div>
-                    )}
-                    {flash?.info && (
-                        <div className="max-w-7xl mx-auto mb-4 px-4 py-3 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-800 text-sm font-medium">
-                            {flash.info}
-                        </div>
-                    )}
-                    {flash?.error && (
-                        <div className="max-w-7xl mx-auto mb-4 px-4 py-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-medium">
-                            {flash.error}
-                        </div>
-                    )}
                     <div className="max-w-7xl mx-auto min-w-0">
+                        {/* Static Flash Banners (Reverted from toasts) */}
+                        {flash?.success && (
+                            <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center gap-3 text-emerald-800 animate-in fade-in slide-in-from-top-4 duration-300 shadow-sm shadow-emerald-100">
+                                <div className="p-1.5 bg-emerald-100 rounded-lg text-emerald-600">
+                                    <Icons.DocumentCheck />
+                                </div>
+                                <p className="text-sm font-bold">{flash.success}</p>
+                            </div>
+                        )}
+
+                        {flash?.error && (
+                            <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-center gap-3 text-rose-800 animate-in fade-in slide-in-from-top-4 duration-300 shadow-sm shadow-rose-100">
+                                <div className="p-1.5 bg-rose-100 rounded-lg text-rose-600">
+                                    <Icons.Exclamation />
+                                </div>
+                                <p className="text-sm font-bold">{flash.error}</p>
+                            </div>
+                        )}
+
+                        {flash?.info && (
+                            <div className="mb-6 p-4 rounded-2xl bg-blue-50 border border-blue-200 flex items-center gap-3 text-blue-800 animate-in fade-in slide-in-from-top-4 duration-300 shadow-sm shadow-blue-100">
+                                <div className="p-1.5 bg-blue-100 rounded-lg text-blue-600">
+                                    <Icons.Sparkles />
+                                </div>
+                                <p className="text-sm font-bold">{flash.info}</p>
+                            </div>
+                        )}
+
                         {children}
                     </div>
                 </main>

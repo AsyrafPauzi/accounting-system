@@ -12,6 +12,7 @@ class ChartOfAccountsSeeder extends Seeder
         $accounts = [
             ['code' => '1100', 'name' => 'Accounts Receivable', 'type' => 'asset'],
             ['code' => '1200', 'name' => 'Cash at Bank', 'type' => 'asset'],
+            ['code' => '1210', 'name' => 'Petty Cash', 'type' => 'asset'],
             ['code' => '2100', 'name' => 'SST Payable', 'type' => 'liability'],
             ['code' => '2110', 'name' => 'Accounts Payable', 'type' => 'liability'],
             ['code' => '4000', 'name' => 'Sales Revenue', 'type' => 'income'],

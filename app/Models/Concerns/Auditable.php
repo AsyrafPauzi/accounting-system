@@ -48,8 +48,6 @@ trait Auditable
             'event'          => $event,
             'old_values'     => $old ? $filter($old) : null,
             'new_values'     => $new ? $filter($new) : null,
-            'ip_address'     => Request::ip(),
-            'user_agent'     => Request::userAgent(),
         ]);
     }
 

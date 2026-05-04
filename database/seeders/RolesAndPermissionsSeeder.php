@@ -35,15 +35,20 @@ class RolesAndPermissionsSeeder extends Seeder
             'accounts.view', 'accounts.create', 'accounts.edit', 'accounts.delete',
 
             // Journals & Ledger
-            'journal.view', 'general-ledger.view',
+            'journal.view', 'journal.create', 'journal.edit', 'journal.post', 'journal.delete',
+            'general-ledger.view',
 
             // Reports
-            'reports.view', 'reports.export',
+            'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet',
+            'reports.cashflow', 'reports.aged-reports', 'reports.export.limited', 'reports.export.full',
 
             // Settings & Admin
             'settings.view', 'settings.edit',
             'admin.tenants',
             'users.view', 'users.create', 'users.edit', 'users.delete',
+            'roles.manage', 'permissions.manage',
+            'dashboard.basic', 'dashboard.standard', 'dashboard.advanced',
+            'audit-logs.view', 'integrations.view',
         ];
 
         foreach ($permissions as $permission) {
@@ -60,37 +65,55 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::whereNotIn('name', ['admin.tenants'])->get()
         );
 
-        // Accountant — full financial access, no admin
+        // Accountant — full financial access, no admin management
         $accountant = Role::firstOrCreate(['name' => 'accountant', 'guard_name' => 'web']);
         $accountant->syncPermissions([
-            'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.post',
-            'invoices.void', 'invoices.record-payment', 'invoices.email',
-            'bills.view', 'bills.create', 'bills.edit', 'bills.post', 'bills.void', 'bills.record-payment',
-            'customers.view', 'customers.create', 'customers.edit',
-            'customers.edit-credit-risk',
-            'suppliers.view', 'suppliers.create', 'suppliers.edit',
+            'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.post', 'invoices.void', 'invoices.record-payment', 'invoices.email', 'invoices.delete',
+            'bills.view', 'bills.create', 'bills.edit', 'bills.post', 'bills.void', 'bills.record-payment', 'bills.delete',
+            'customers.view', 'customers.create', 'customers.edit', 'customers.delete', 'customers.edit-credit-risk',
+            'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
             'credit-notes.view', 'credit-notes.create',
-            'accounts.view', 'accounts.create', 'accounts.edit',
-            'journal.view', 'general-ledger.view',
-            'reports.view', 'reports.export',
-            'settings.view',
+            'accounts.view', 'accounts.create', 'accounts.edit', 'accounts.delete',
+            'journal.view', 'journal.create', 'journal.edit', 'journal.post', 'journal.delete',
+            'general-ledger.view',
+            'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet', 'reports.cashflow', 'reports.aged-reports', 'reports.export.full',
+            'settings.view', 'audit-logs.view', 'integrations.view',
+            'dashboard.basic', 'dashboard.standard', 'dashboard.advanced',
         ]);
 
-        // Sales — invoices and customers only, read-only on everything else
+        // Sales — invoices and customers only (full access), read-only on everything else
         $sales = Role::firstOrCreate(['name' => 'sales', 'guard_name' => 'web']);
         $sales->syncPermissions([
-            'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.email',
+            // Full Sales Access
+            'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.post', 'invoices.void', 'invoices.record-payment', 'invoices.email',
             'customers.view', 'customers.create', 'customers.edit',
             'credit-notes.view', 'credit-notes.create',
-            'reports.view',
+            
+            // View Only Access on others
+            'bills.view',
+            'suppliers.view',
+            'accounts.view',
+            'journal.view',
+            'general-ledger.view',
+            'reports.view', 'reports.profit-loss', 'reports.sales',
+            'settings.view',
+            'dashboard.basic', 'dashboard.standard',
         ]);
 
         // Viewer — read-only everywhere
         $viewer = Role::firstOrCreate(['name' => 'viewer', 'guard_name' => 'web']);
         $viewer->syncPermissions([
-            'invoices.view', 'bills.view', 'customers.view', 'suppliers.view',
-            'credit-notes.view', 'accounts.view', 'journal.view',
-            'general-ledger.view', 'reports.view',
+            'invoices.view',
+            'bills.view',
+            'customers.view',
+            'suppliers.view',
+            'credit-notes.view',
+            'accounts.view',
+            'journal.view',
+            'general-ledger.view',
+            'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet', 'reports.cashflow', 'reports.aged-reports',
+            'settings.view',
+            'dashboard.basic',
         ]);
     }
 }

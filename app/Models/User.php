@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -11,7 +12,7 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, CentralConnection, HasRoles;
+    use HasFactory, Notifiable, CentralConnection, HasRoles, Auditable;
 
     /**
      * Central `users` rows are scoped by `tenant_id` to an organization.

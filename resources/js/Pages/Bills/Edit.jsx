@@ -20,7 +20,7 @@ function formatMoney(n) {
     return (Number(n) || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [], assetAccounts = [] }) {
+export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [], assetAccounts = [], journal_entry_id = null }) {
     const isDraft = bill.status === 'draft';
     const balanceDue = isDraft || bill.status === 'void' ? 0 : Math.max(0, (parseFloat(bill.total_amount) || 0) - (parseFloat(bill.amount_paid) || 0));
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -139,6 +139,12 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                             <button type="button" onClick={() => setShowPaymentModal(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100">
                                 <Icons.Currency /> Record payment
                             </button>
+                        )}
+                        {auth.planPermissions['general-ledger.view'] && journal_entry_id && (
+                            <Link href={route('general-ledger.show', journal_entry_id)} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-blue-600 bg-blue-50 border border-blue-100 hover:bg-blue-100">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                                Accounting Entry
+                            </Link>
                         )}
                         {!isDraft && bill.status !== 'void' && (
                             <button type="button" onClick={handleVoid} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50">

@@ -1,6 +1,8 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
+import { alertUpgrade } from '@/utils/swal';
+
 
 const Icons = {
     Document: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
@@ -62,10 +64,23 @@ export default function Report({ auth, transactions = [], accountsMap = {}, filt
                             <Icons.ArrowDownTray /> CSV
                         </a>
                         <a
-                            href={`${route('general-ledger.report.export.pdf')}?${new URLSearchParams(Object.fromEntries(Object.entries({ date_from, date_to, reference_type, account_code }).filter(([, v]) => v != null && v !== '')))}`}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
+                            href={auth.planPermissions['reports.export.full'] ? `${route('general-ledger.report.export.pdf')}?${new URLSearchParams(Object.fromEntries(Object.entries({ date_from, date_to, reference_type, account_code }).filter(([, v]) => v != null && v !== '')))}` : '#'}
+                            onClick={(e) => {
+                                if (!auth.planPermissions['reports.export.full']) {
+                                    e.preventDefault();
+                                    alertUpgrade('Professional PDF reports are available on the Corporate plan.');
+                                }
+                            }}
+                            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                                auth.planPermissions['reports.export.full']
+                                    ? 'text-slate-600 bg-white border border-slate-200 hover:bg-slate-50'
+                                    : 'text-slate-400 bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100'
+                            }`}
                         >
                             <Icons.DocumentArrowDown /> PDF
+                            {!auth.planPermissions['reports.export.full'] && (
+                                <svg className="w-3 h-3 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                            )}
                         </a>
                         <Link
                             href={route('general-ledger.index')}

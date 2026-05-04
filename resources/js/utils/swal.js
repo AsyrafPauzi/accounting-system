@@ -52,3 +52,21 @@ export function toastError(message, options = {}) {
         ...options,
     });
 }
+/**
+ * Plan restriction alert
+ */
+export function alertUpgrade(message = 'This feature is available on the Corporate plan.') {
+    return Swal.fire({
+        icon: 'info',
+        title: 'Upgrade Required',
+        text: message,
+        showCancelButton: true,
+        confirmButtonText: 'View Plans',
+        cancelButtonText: 'Maybe later',
+        confirmButtonColor: '#2563eb',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = '/subscription';
+        }
+    });
+}

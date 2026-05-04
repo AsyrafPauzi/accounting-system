@@ -36,19 +36,18 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'permission' => CheckPermission::class,
             'role'       => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'plan.permission' => \App\Http\Middleware\CheckPlanPermission::class,
         ]);
 
         $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, $request) {
-            $message = 'Your session has expired or the page was idle for too long. Please refresh and try again.';
-            
             if ($request->expectsJson()) {
-                return response()->json(['message' => $message], 419);
+                return response()->json(['message' => 'Session expired. Please log in again.'], 419);
             }
             
-            return back()->with('error', $message);
+            return redirect()->route('login')->with('info', 'Your session has expired. Please log in again.');
         });
 
         $exceptions->render(function (\Spatie\Permission\Exceptions\UnauthorizedException $e, $request) {

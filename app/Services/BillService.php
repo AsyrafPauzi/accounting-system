@@ -82,10 +82,14 @@ class BillService
                 'updated_at'     => now(),
             ]);
 
+            $codes = $bill->items->pluck('account_code')->push('2100')->unique()->toArray();
+            $accountMap = DB::table('accounts')->whereIn('code', $codes)->pluck('id', 'code');
+
             $debitRows = [];
             foreach ($bill->items as $item) {
                 $debitRows[] = [
                     'journal_entry_id' => $journalId,
+                    'account_id'       => $accountMap[$item->account_code] ?? null,
                     'account_code'     => $item->account_code,
                     'debit'            => $item->amount,
                     'credit'           => 0,
@@ -96,6 +100,7 @@ class BillService
             if ($bill->tax_amount > 0) {
                 $debitRows[] = [
                     'journal_entry_id' => $journalId,
+                    'account_id'       => $accountMap['2100'] ?? null,
                     'account_code'     => '2100',
                     'debit'            => $bill->tax_amount,
                     'credit'           => 0,
@@ -105,8 +110,11 @@ class BillService
             }
             DB::table('journal_items')->insert($debitRows);
 
+            $apAccountId = DB::table('accounts')->where('code', self::AP_ACCOUNT)->value('id');
+
             DB::table('journal_items')->insert([
                 'journal_entry_id' => $journalId,
+                'account_id'       => $apAccountId,
                 'account_code'     => self::AP_ACCOUNT,
                 'debit'            => 0,
                 'credit'           => $bill->total_amount,
@@ -136,10 +144,14 @@ class BillService
                 'updated_at'     => now(),
             ]);
 
+            $codes = $bill->items->pluck('account_code')->push('2100')->unique()->toArray();
+            $accountMap = DB::table('accounts')->whereIn('code', $codes)->pluck('id', 'code');
+
             $creditRows = [];
             foreach ($bill->items as $item) {
                 $creditRows[] = [
                     'journal_entry_id' => $journalId,
+                    'account_id'       => $accountMap[$item->account_code] ?? null,
                     'account_code'     => $item->account_code,
                     'debit'            => 0,
                     'credit'           => $item->amount,
@@ -150,6 +162,7 @@ class BillService
             if ($bill->tax_amount > 0) {
                 $creditRows[] = [
                     'journal_entry_id' => $journalId,
+                    'account_id'       => $accountMap['2100'] ?? null,
                     'account_code'     => '2100',
                     'debit'            => 0,
                     'credit'           => $bill->tax_amount,
@@ -159,8 +172,11 @@ class BillService
             }
             DB::table('journal_items')->insert($creditRows);
 
+            $apAccountId = DB::table('accounts')->where('code', self::AP_ACCOUNT)->value('id');
+
             DB::table('journal_items')->insert([
                 'journal_entry_id' => $journalId,
+                'account_id'       => $apAccountId,
                 'account_code'     => self::AP_ACCOUNT,
                 'debit'            => $bill->total_amount,
                 'credit'           => 0,
@@ -197,9 +213,11 @@ class BillService
                 'updated_at'     => now(),
             ]);
 
+            $accountMap = DB::table('accounts')->whereIn('code', [self::AP_ACCOUNT, $bankAccountCode])->pluck('id', 'code');
+
             DB::table('journal_items')->insert([
-                ['journal_entry_id' => $journalId, 'account_code' => self::AP_ACCOUNT, 'debit' => $amount, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
-                ['journal_entry_id' => $journalId, 'account_code' => $bankAccountCode, 'debit' => 0, 'credit' => $amount, 'created_at' => now(), 'updated_at' => now()],
+                ['journal_entry_id' => $journalId, 'account_id' => $accountMap[self::AP_ACCOUNT] ?? null, 'account_code' => self::AP_ACCOUNT, 'debit' => $amount, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
+                ['journal_entry_id' => $journalId, 'account_id' => $accountMap[$bankAccountCode] ?? null, 'account_code' => $bankAccountCode, 'debit' => 0, 'credit' => $amount, 'created_at' => now(), 'updated_at' => now()],
             ]);
         });
     }

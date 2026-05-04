@@ -98,7 +98,7 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
                 )}
             </td>
             <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
-                <ActionsCell invoice={invoice} setSelectedInvoice={setSelectedInvoice} setData={setData} handlePostToLedger={handlePostToLedger} handleVoid={handleVoid} handleDelete={handleDelete} handleEmailInvoice={handleEmailInvoice} emailingId={emailingId} />
+                <ActionsCell auth={auth} invoice={invoice} setSelectedInvoice={setSelectedInvoice} setData={setData} handlePostToLedger={handlePostToLedger} handleVoid={handleVoid} handleDelete={handleDelete} handleEmailInvoice={handleEmailInvoice} emailingId={emailingId} />
             </td>
         </>
     );
@@ -110,9 +110,11 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
                     <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Sales Invoices</h2>
                     <p className="text-slate-500 text-sm font-medium mt-1">Create, manage and track revenue documents</p>
                 </div>
-                <Link href={route('invoices.create')} className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all duration-200">
-                    <Icons.Plus /> Create Invoice
-                </Link>
+                {auth.permissions.includes('invoices.create') && (
+                    <Link href={route('invoices.create')} className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all duration-200">
+                        <Icons.Plus /> Create Invoice
+                    </Link>
+                )}
             </div>
         }>
             <Head title="Invoices" />
@@ -206,7 +208,7 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
                                         <p className="text-sm font-mono font-semibold text-slate-800 mt-1">RM {parseFloat(invoice.total_amount || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
                                         <span className={`inline-flex mt-2 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${getStatusBadge(invoice.status)}`}>{invoice.status}</span>
                                     </div>
-                                    <ActionsCell invoice={invoice} setSelectedInvoice={setSelectedInvoice} setData={setData} handlePostToLedger={handlePostToLedger} handleVoid={handleVoid} handleDelete={handleDelete} handleEmailInvoice={handleEmailInvoice} emailingId={emailingId} />
+                                    <ActionsCell auth={auth} invoice={invoice} setSelectedInvoice={setSelectedInvoice} setData={setData} handlePostToLedger={handlePostToLedger} handleVoid={handleVoid} handleDelete={handleDelete} handleEmailInvoice={handleEmailInvoice} emailingId={emailingId} />
                                 </div>
                             </div>
                         )) : (
@@ -245,21 +247,23 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
                                     <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Amount (RM)</label>
                                     <div className="relative">
                                         <span className="absolute inset-y-0 left-4 flex items-center text-slate-400 font-medium">RM</span>
-                                        <input type="number" value={data.amount} onChange={e => setData('amount', e.target.value)} className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500" step="0.01" required />
+                                        <input type="number" value={data.amount} onChange={e => setData('amount', e.target.value)} className={`w-full pl-12 pr-4 py-3 border rounded-xl font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 ${errors.amount ? 'border-rose-500 ring-1 ring-rose-500' : 'border-slate-200'}`} step="0.01" required />
                                     </div>
-                                    {errors.amount && <p className="text-rose-500 text-xs mt-1 font-medium">{errors.amount}</p>}
+                                    {errors.amount && <p className="text-rose-500 text-[10px] mt-1.5 font-bold uppercase tracking-tight">{errors.amount}</p>}
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Date</label>
-                                        <input type="date" value={data.payment_date} onChange={e => setData('payment_date', e.target.value)} className="w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-blue-500" required />
+                                        <input type="date" value={data.payment_date} onChange={e => setData('payment_date', e.target.value)} className={`w-full border rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-blue-500 ${errors.payment_date ? 'border-rose-500' : 'border-slate-200'}`} required />
+                                        {errors.payment_date && <p className="text-rose-500 text-[10px] mt-1.5 font-bold uppercase tracking-tight">{errors.payment_date}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Account</label>
-                                        <select value={data.bank_account_code} onChange={e => setData('bank_account_code', e.target.value)} className="w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-blue-500">
+                                        <select value={data.bank_account_code} onChange={e => setData('bank_account_code', e.target.value)} className={`w-full border rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-blue-500 ${errors.bank_account_code ? 'border-rose-500' : 'border-slate-200'}`}>
                                             <option value="1200">Maybank (1200)</option>
                                             <option value="1210">Petty Cash (1210)</option>
                                         </select>
+                                        {errors.bank_account_code && <p className="text-rose-500 text-[10px] mt-1.5 font-bold uppercase tracking-tight">{errors.bank_account_code}</p>}
                                     </div>
                                 </div>
                                 <div className="flex gap-3 pt-4">
@@ -275,7 +279,7 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
     );
 }
 
-function ActionsCell({ invoice, setSelectedInvoice, setData, handlePostToLedger, handleVoid, handleDelete, handleEmailInvoice, emailingId }) {
+function ActionsCell({ auth, invoice, setSelectedInvoice, setData, handlePostToLedger, handleVoid, handleDelete, handleEmailInvoice, emailingId }) {
     const isDraft = invoice.status === 'draft';
     const isVoid = invoice.status === 'void';
 
@@ -301,49 +305,59 @@ function ActionsCell({ invoice, setSelectedInvoice, setData, handlePostToLedger,
                 </MenuItem>
                 {isDraft && (
                     <>
-                        <MenuItem>
-                            <button type="button" onClick={() => handlePostToLedger(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-blue-600 hover:bg-blue-50">
-                                <Icons.Check /> Post to ledger
-                            </button>
-                        </MenuItem>
-                        <MenuItem>
-                            <Link href={route('invoices.edit', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
-                                <Icons.Pencil /> Edit
-                            </Link>
-                        </MenuItem>
-                        <MenuItem>
-                            <button type="button" onClick={() => handleDelete(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50">
-                                Delete draft
-                            </button>
-                        </MenuItem>
+                        {auth.permissions.includes('invoices.post') && (
+                            <MenuItem>
+                                <button type="button" onClick={() => handlePostToLedger(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-blue-600 hover:bg-blue-50">
+                                    <Icons.Check /> Post to ledger
+                                </button>
+                            </MenuItem>
+                        )}
+                        {auth.permissions.includes('invoices.edit') && (
+                            <MenuItem>
+                                <Link href={route('invoices.edit', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+                                    <Icons.Pencil /> Edit
+                                </Link>
+                            </MenuItem>
+                        )}
+                        {auth.permissions.includes('invoices.delete') && (
+                            <MenuItem>
+                                <button type="button" onClick={() => handleDelete(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50">
+                                    Delete draft
+                                </button>
+                            </MenuItem>
+                        )}
                     </>
                 )}
                 {!isDraft && !isVoid && (
                     <>
-                        {invoice.status !== 'paid' && (
+                        {invoice.status !== 'paid' && auth.planPermissions['invoices.record-payment'] && auth.permissions.includes('invoices.record-payment') && (
                             <MenuItem>
                                 <button type="button" onClick={() => { setSelectedInvoice(invoice); setData('amount', (parseFloat(invoice.total_amount) - parseFloat(invoice.amount_paid)).toFixed(2)); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-emerald-600 hover:bg-emerald-50">
                                     <Icons.Currency /> Record payment
                                 </button>
                             </MenuItem>
                         )}
-                        <MenuItem>
-                            <Link href={route('credit-notes.create', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
-                                <Icons.ReceiptRefund /> Credit note
-                            </Link>
-                        </MenuItem>
-                        {invoice.customer_email && (
+                        {auth.planPermissions['credit-notes.view'] && auth.permissions.includes('credit-notes.create') && (
+                            <MenuItem>
+                                <Link href={route('credit-notes.create', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+                                    <Icons.ReceiptRefund /> Credit note
+                                </Link>
+                            </MenuItem>
+                        )}
+                        {invoice.customer_email && auth.planPermissions['invoices.email'] && auth.permissions.includes('invoices.email') && (
                             <MenuItem>
                                 <button type="button" onClick={() => handleEmailInvoice(invoice.id)} disabled={emailingId === invoice.id} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50">
                                     <Icons.PaperAirplane /> {emailingId === invoice.id ? 'Emailing…' : 'Email'}
                                 </button>
                             </MenuItem>
                         )}
-                        <MenuItem>
-                            <button type="button" onClick={() => handleVoid(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50">
-                                Void invoice
-                            </button>
-                        </MenuItem>
+                        {auth.permissions.includes('invoices.void') && (
+                            <MenuItem>
+                                <button type="button" onClick={() => handleVoid(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50">
+                                    Void invoice
+                                </button>
+                            </MenuItem>
+                        )}
                     </>
                 )}
             </MenuItems>

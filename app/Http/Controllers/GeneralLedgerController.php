@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class GeneralLedgerController extends Controller
 {
-    protected const REFERENCE_TYPES = ['Invoice', 'Invoice Payment', 'Credit Note', 'Bill', 'Bill Payment'];
+    protected const REFERENCE_TYPES = ['Invoice', 'Invoice Payment', 'Credit Note', 'Bill', 'Bill Payment', 'Manual'];
 
     /**
      * General Ledger Report: all transactions (journal item lines) in list format.

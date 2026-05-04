@@ -10,7 +10,17 @@ class CheckPermission
 {
     public function handle(Request $request, Closure $next, string $permission): Response
     {
-        if (!$request->user()?->can($permission)) {
+        $permissions = explode('|', $permission);
+        $hasPermission = false;
+
+        foreach ($permissions as $p) {
+            if ($request->user()?->can(trim($p))) {
+                $hasPermission = true;
+                break;
+            }
+        }
+
+        if (!$hasPermission) {
             if ($request->expectsJson()) {
                 return response()->json(['message' => 'Forbidden.'], 403);
             }

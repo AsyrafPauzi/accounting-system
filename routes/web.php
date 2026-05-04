@@ -18,6 +18,7 @@ use App\Http\Controllers\ProfitAndLossController;
 use App\Http\Controllers\BalanceSheetController;
 use App\Http\Controllers\CashflowSummaryController;
 use App\Http\Controllers\AgedReceivablesController;
+use App\Http\Controllers\JournalController;
 use App\Http\Controllers\ReportsHubController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -53,17 +54,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/settings/company', [CompanySettingsController::class, 'update'])->name('settings.company.update');
     Route::get('/settings/plan', [SubscriptionController::class, 'planSettings'])->name('settings.plan.index');
 
+    Route::middleware(['permission:audit-logs.view', 'plan.permission:audit-logs.view'])->group(function () {
+        Route::get('/settings/audit-logs', [\App\Http\Controllers\AuditLogController::class, 'index'])->name('audit-logs.index');
+    });
+
     // Team / users (same tenant only)
-    Route::middleware('permission:users.view')->group(function () {
+    Route::middleware(['permission:users.view', 'plan.permission:users.view'])->group(function () {
         Route::get('/settings/team', [TenantUserController::class, 'index'])->name('settings.team.index');
     });
     Route::post('/settings/team', [TenantUserController::class, 'store'])
-        ->middleware(['permission:users.create', 'throttle:creation'])
+        ->middleware(['permission:users.create', 'plan.permission:users.view', 'throttle:creation'])
         ->name('settings.team.store');
-    Route::middleware('permission:users.edit')->group(function () {
+    Route::middleware(['permission:users.edit', 'plan.permission:users.view'])->group(function () {
         Route::patch('/settings/team/{user}', [TenantUserController::class, 'update'])->name('settings.team.update');
     });
-    Route::middleware('permission:users.delete')->group(function () {
+    Route::middleware(['permission:users.delete', 'plan.permission:users.view'])->group(function () {
         Route::delete('/settings/team/{user}', [TenantUserController::class, 'destroy'])->name('settings.team.destroy');
     });
 
@@ -107,10 +112,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('permission:invoices.void')->group(function () {
         Route::post('/invoices/{id}/void', [InvoiceController::class, 'voidInvoice'])->name('invoices.void');
     });
-    Route::middleware('permission:invoices.email')->group(function () {
+    Route::middleware(['permission:invoices.email', 'plan.permission:invoices.email'])->group(function () {
         Route::post('/invoices/{id}/email', [InvoiceController::class, 'emailPdf'])->name('invoices.email');
     });
-    Route::middleware('permission:invoices.record-payment')->group(function () {
+    Route::middleware(['permission:invoices.record-payment', 'plan.permission:invoices.record-payment'])->group(function () {
         Route::post('/invoices/{id}/payments', [InvoiceController::class, 'recordPayment'])->name('invoices.record-payment');
     });
 
@@ -124,65 +129,67 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // --- Suppliers ---
-    Route::middleware('permission:suppliers.view')->group(function () {
+    Route::middleware(['permission:suppliers.view', 'plan.permission:suppliers.view'])->group(function () {
         Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
     });
-    Route::middleware('permission:suppliers.create')->group(function () {
+    Route::middleware(['permission:suppliers.create', 'plan.permission:suppliers.view'])->group(function () {
         Route::get('/suppliers/create', [SupplierController::class, 'create'])->name('suppliers.create');
         Route::post('/suppliers', [SupplierController::class, 'store'])
             ->middleware('throttle:creation')
             ->name('suppliers.store');
     });
-    Route::middleware('permission:suppliers.view')->group(function () {
+    Route::middleware(['permission:suppliers.view', 'plan.permission:suppliers.view'])->group(function () {
         Route::get('/suppliers/{id}', [SupplierController::class, 'show'])->name('suppliers.show');
     });
-    Route::middleware('permission:suppliers.edit')->group(function () {
+    Route::middleware(['permission:suppliers.edit', 'plan.permission:suppliers.view'])->group(function () {
         Route::get('/suppliers/{id}/edit', [SupplierController::class, 'edit'])->name('suppliers.edit');
         Route::put('/suppliers/{id}', [SupplierController::class, 'update'])->name('suppliers.update');
     });
-    Route::middleware('permission:suppliers.delete')->group(function () {
+    Route::middleware(['permission:suppliers.delete', 'plan.permission:suppliers.view'])->group(function () {
         Route::delete('/suppliers/{id}', [SupplierController::class, 'destroy'])->name('suppliers.destroy');
     });
 
     // --- Bills ---
-    Route::middleware('permission:bills.view')->group(function () {
+    Route::middleware(['permission:bills.view', 'plan.permission:bills.view'])->group(function () {
         Route::get('/bills', [BillController::class, 'index'])->name('bills.index');
         Route::get('/bills/{id}/edit', [BillController::class, 'edit'])->name('bills.edit');
     });
-    Route::middleware('permission:bills.create')->group(function () {
+    Route::middleware(['permission:bills.create', 'plan.permission:bills.view'])->group(function () {
         Route::get('/bills/create', [BillController::class, 'create'])->name('bills.create');
         Route::post('/bills', [BillController::class, 'store'])
             ->middleware('throttle:creation')
             ->name('bills.store');
     });
-    Route::middleware('permission:bills.edit')->group(function () {
+    Route::middleware(['permission:bills.edit', 'plan.permission:bills.view'])->group(function () {
         Route::put('/bills/{id}', [BillController::class, 'update'])->name('bills.update');
     });
-    Route::middleware('permission:bills.delete')->group(function () {
+    Route::middleware(['permission:bills.delete', 'plan.permission:bills.view'])->group(function () {
         Route::delete('/bills/{id}', [BillController::class, 'destroy'])->name('bills.destroy');
     });
-    Route::middleware('permission:bills.post')->group(function () {
+    Route::middleware(['permission:bills.post', 'plan.permission:bills.view'])->group(function () {
         Route::post('/bills/{id}/post', [BillController::class, 'postBill'])->name('bills.post');
     });
-    Route::middleware('permission:bills.void')->group(function () {
+    Route::middleware(['permission:bills.void', 'plan.permission:bills.view'])->group(function () {
         Route::post('/bills/{id}/void', [BillController::class, 'voidBill'])->name('bills.void');
     });
-    Route::middleware('permission:bills.record-payment')->group(function () {
+    Route::middleware(['permission:bills.record-payment', 'plan.permission:bills.view'])->group(function () {
         Route::post('/bills/{id}/payments', [BillController::class, 'recordPayment'])->name('bills.record-payment');
     });
 
-    // --- Accounts Payable ---
-    Route::middleware('permission:bills.view')->group(function () {
-        Route::get('/accounts-payable', [AccountsPayableController::class, 'index'])->name('accounts-payable.index');
-    });
 
     // --- Chart of Accounts ---
-    Route::middleware('permission:accounts.view')->group(function () {
+    Route::middleware(['permission:accounts.view', 'plan.permission:accounts.view'])->group(function () {
         Route::get('/chart-of-accounts', [ChartOfAccountsController::class, 'index'])->name('chart-of-accounts.index');
-        Route::get('/chart-of-accounts/export/csv', [ChartOfAccountsController::class, 'exportCsv'])->name('chart-of-accounts.export.csv');
-        Route::get('/chart-of-accounts/export/pdf', [ChartOfAccountsController::class, 'exportPdf'])->name('chart-of-accounts.export.pdf');
+        
+        Route::middleware('permission:reports.export.limited|reports.export.full')->group(function () {
+            Route::get('/chart-of-accounts/export/csv', [ChartOfAccountsController::class, 'exportCsv'])->name('chart-of-accounts.export.csv');
+        });
+        
+        Route::middleware('permission:reports.export.full')->group(function () {
+            Route::get('/chart-of-accounts/export/pdf', [ChartOfAccountsController::class, 'exportPdf'])->name('chart-of-accounts.export.pdf');
+        });
     });
-    Route::middleware('permission:accounts.create')->group(function () {
+    Route::middleware(['permission:accounts.create', 'plan.permission:accounts.create'])->group(function () {
         Route::get('/chart-of-accounts/create', [ChartOfAccountsController::class, 'create'])->name('chart-of-accounts.create');
         Route::post('/chart-of-accounts', [ChartOfAccountsController::class, 'store'])
             ->middleware('throttle:creation')
@@ -191,37 +198,92 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('throttle:creation')
             ->name('chart-of-accounts.seed-default');
     });
-    Route::middleware('permission:accounts.edit')->group(function () {
+    Route::middleware(['permission:accounts.edit', 'plan.permission:accounts.edit'])->group(function () {
         Route::get('/chart-of-accounts/{id}/edit', [ChartOfAccountsController::class, 'edit'])->name('chart-of-accounts.edit');
         Route::put('/chart-of-accounts/{id}', [ChartOfAccountsController::class, 'update'])->name('chart-of-accounts.update');
     });
-    Route::middleware('permission:accounts.delete')->group(function () {
+    Route::middleware(['permission:accounts.delete', 'plan.permission:accounts.delete'])->group(function () {
         Route::delete('/chart-of-accounts/{id}', [ChartOfAccountsController::class, 'destroy'])->name('chart-of-accounts.destroy');
     });
 
     // --- General Ledger ---
-    Route::middleware('permission:general-ledger.view')->group(function () {
+    Route::middleware(['permission:general-ledger.view', 'plan.permission:general-ledger.view'])->group(function () {
         Route::get('/general-ledger', [GeneralLedgerController::class, 'index'])->name('general-ledger.index');
-        Route::get('/general-ledger/export/csv', [GeneralLedgerController::class, 'exportCsv'])->name('general-ledger.export.csv');
-        Route::get('/general-ledger/export/pdf', [GeneralLedgerController::class, 'exportPdf'])->name('general-ledger.export.pdf');
         Route::get('/general-ledger/report', [GeneralLedgerController::class, 'report'])->name('general-ledger.report');
-        Route::get('/general-ledger/report/export/csv', [GeneralLedgerController::class, 'exportReportCsv'])->name('general-ledger.report.export.csv');
-        Route::get('/general-ledger/report/export/pdf', [GeneralLedgerController::class, 'exportReportPdf'])->name('general-ledger.report.export.pdf');
+        Route::get('/trial-balance', [App\Http\Controllers\TrialBalanceController::class, 'index'])->name('trial-balance.index');
         Route::get('/general-ledger/{id}', [GeneralLedgerController::class, 'show'])->name('general-ledger.show');
+
+        Route::middleware('permission:reports.export.limited|reports.export.full')->group(function () {
+            Route::get('/general-ledger/export/csv', [GeneralLedgerController::class, 'exportCsv'])->name('general-ledger.export.csv');
+            Route::get('/general-ledger/report/export/csv', [GeneralLedgerController::class, 'exportReportCsv'])->name('general-ledger.report.export.csv');
+        });
+
+        Route::middleware('permission:reports.export.full')->group(function () {
+            Route::get('/general-ledger/export/pdf', [GeneralLedgerController::class, 'exportPdf'])->name('general-ledger.export.pdf');
+            Route::get('/general-ledger/report/export/pdf', [GeneralLedgerController::class, 'exportReportPdf'])->name('general-ledger.report.export.pdf');
+        });
     });
 
-    // --- Reports ---
-    Route::middleware('permission:reports.view')->group(function () {
-        Route::get('/profit-and-loss', [ProfitAndLossController::class, 'index'])->name('profit-and-loss.index');
-        Route::get('/balance-sheet', [BalanceSheetController::class, 'index'])->name('balance-sheet.index');
-        Route::get('/cashflow-summary', [CashflowSummaryController::class, 'index'])->name('cashflow-summary.index');
-        Route::get('/aged-receivables', [AgedReceivablesController::class, 'index'])->name('aged-receivables.index');
+    // --- Manual Journals ---
+    Route::middleware(['permission:journal.view', 'plan.permission:journal.view'])->group(function () {
+        Route::get('/journal/manual', [JournalController::class, 'index'])->name('journal.index');
+    });
+
+    Route::middleware(['permission:journal.create', 'plan.permission:journal.create'])->group(function () {
+        Route::get('/journal/manual/create', [JournalController::class, 'create'])->name('journal.create');
+        Route::post('/journal/manual', [JournalController::class, 'store'])
+            ->middleware('throttle:creation')
+            ->name('journal.store');
+    });
+
+    Route::middleware(['permission:journal.edit', 'plan.permission:journal.create'])->group(function () {
+        Route::get('/journal/manual/{journal}/edit', [JournalController::class, 'edit'])->name('journal.edit');
+        Route::put('/journal/manual/{journal}', [JournalController::class, 'update'])->name('journal.update');
+    });
+
+    Route::middleware(['permission:journal.post', 'plan.permission:journal.create'])->group(function () {
+        Route::post('/journal/manual/{journal}/post', [JournalController::class, 'post'])->name('journal.post');
+    });
+
+    Route::middleware(['permission:journal.delete', 'plan.permission:journal.create'])->group(function () {
+        Route::delete('/journal/manual/{journal}', [JournalController::class, 'destroy'])->name('journal.destroy');
+    });
+
+    // --- Reports Hub ---
+    Route::middleware(['permission:reports.view', 'plan.permission:reports.view'])->group(function () {
         Route::get('/reports', [ReportsHubController::class, 'index'])->name('reports.index');
     });
-    Route::middleware('permission:reports.export')->group(function () {
+
+    // --- Individual Reports (Plan Gated) ---
+    Route::middleware(['permission:reports.profit-loss', 'plan.permission:reports.profit-loss'])->group(function () {
+        Route::get('/profit-and-loss', [ProfitAndLossController::class, 'index'])->name('profit-and-loss.index');
+    });
+
+    Route::middleware(['permission:reports.sales', 'plan.permission:reports.sales'])->group(function () {
+        Route::get('/reports/sales', [\App\Http\Controllers\SalesReportController::class, 'index'])->name('reports.sales.index');
+    });
+
+    Route::middleware(['permission:reports.balance-sheet', 'plan.permission:reports.balance-sheet'])->group(function () {
+        Route::get('/balance-sheet', [BalanceSheetController::class, 'index'])->name('balance-sheet.index');
+    });
+
+    Route::middleware(['permission:reports.cashflow', 'plan.permission:reports.cashflow'])->group(function () {
+        Route::get('/cashflow-summary', [CashflowSummaryController::class, 'index'])->name('cashflow-summary.index');
+    });
+
+    Route::middleware(['permission:reports.aged-reports', 'plan.permission:reports.aged-reports'])->group(function () {
+        Route::get('/aged-receivables', [AgedReceivablesController::class, 'index'])->name('aged-receivables.index');
+        Route::get('/accounts-payable', [AccountsPayableController::class, 'index'])->name('accounts-payable.index');
+    });
+
+    // --- Exports (Differentiated by Limited/Full) ---
+    Route::middleware(['permission:reports.export.limited|reports.export.full'])->group(function () {
         Route::get('/profit-and-loss/export/csv', [ProfitAndLossController::class, 'exportCsv'])->name('profit-and-loss.export.csv');
-        Route::get('/profit-and-loss/export/pdf', [ProfitAndLossController::class, 'exportPdf'])->name('profit-and-loss.export.pdf');
         Route::get('/balance-sheet/export/csv', [BalanceSheetController::class, 'exportCsv'])->name('balance-sheet.export.csv');
+    });
+
+    Route::middleware(['permission:reports.export.full'])->group(function () {
+        Route::get('/profit-and-loss/export/pdf', [ProfitAndLossController::class, 'exportPdf'])->name('profit-and-loss.export.pdf');
         Route::get('/balance-sheet/export/pdf', [BalanceSheetController::class, 'exportPdf'])->name('balance-sheet.export.pdf');
     });
 

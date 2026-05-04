@@ -41,7 +41,7 @@ class StoreCustomerRequest extends FormRequest
             'region'                 => 'nullable|string|max:50',
             'account_manager_id'     => [
                 'nullable',
-                Rule::exists('users', 'id')->where('tenant_id', $this->user()->tenant_id),
+                Rule::exists(\App\Models\User::class, 'id')->where('tenant_id', $this->user()->tenant_id),
             ],
             'invoice_delivery_method'=> 'nullable|string|in:email,none',
             'send_statement'         => 'nullable|boolean',
