@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolesAndPermissionsSeeder::class,
             PlanSeeder::class,
+            TestingAccountsSeeder::class,
         ]);
 
         $demoAdmin = User::where('email', 'demo@accounter.com')->first();

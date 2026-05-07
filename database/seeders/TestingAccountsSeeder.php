@@ -14,37 +14,40 @@ class TestingAccountsSeeder extends Seeder
      */
     public function run(): void
     {
-        $emails = [
-            'admin@hirix.ai',
-            'corporate@accounter.com',
-            'sme@accounter.com'
+        $accounts = [
+            'admin@hirix.ai' => 'corporate',
+            'corporate@accounter.com' => 'corporate',
+            'sme@accounter.com' => 'sme'
         ];
 
-        // Find the Corporate plan - this is the "full access" plan
-        $plan = Plan::where('slug', 'corporate')->first();
-
-        if (!$plan) {
-            $this->command->error('Corporate plan not found! Please run PlanSeeder first.');
-            return;
-        }
-
-        foreach ($emails as $email) {
+        foreach ($accounts as $email => $planSlug) {
             $user = User::where('email', $email)->first();
+            $plan = Plan::where('slug', $planSlug)->first();
+
+            if (!$plan) {
+                $this->command->error("Plan $planSlug not found for $email.");
+                continue;
+            }
 
             if ($user) {
-                // Apply the Corporate plan with a Lifetime duration
+                if (!$user->tenant_id) {
+                    $this->command->warn("User $email has no tenant_id. Skipping.");
+                    continue;
+                }
+
                 Subscription::updateOrCreate(
                     ['tenant_id' => $user->tenant_id],
                     [
                         'plan_id' => $plan->id,
                         'status' => 'active',
-                        'interval' => 'lifetime', // Triggers "Lifetime Access" in UI
+                        'interval' => 'lifetime',
                         'current_period_start' => now(),
-                        'current_period_ends_at' => null, // Permanent access
+                        'current_period_ends_at' => null, // No expiry
                         'gateway' => 'system'
                     ]
                 );
-                $this->command->info("Activated Lifetime Corporate for: $email");
+
+                $this->command->info("Updated $email to " . ucfirst($planSlug) . " Lifetime Access.");
             } else {
                 $this->command->warn("User not found: $email");
             }

@@ -31,6 +31,10 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+        $tenant = null;
+        if ($user && $user->tenant_id) {
+            $tenant = Tenant::find($user->tenant_id);
+        }
 
         return [
             ...parent::share($request),
@@ -44,37 +48,14 @@ class HandleInertiaRequests extends Middleware
                     'delete' => $user?->can('users.delete') ?? false,
                 ],
                 'permissions' => $user ? $user->getAllPermissions()->pluck('name')->toArray() : [],
-                'hasActiveSubscription' => function () use ($request) {
-                    $user = $request->user();
-                    if (! $user || ! $user->tenant_id) {
-                        return false;
-                    }
-
-                    /** @var Tenant|null $tenant */
-                    $tenant = Tenant::find($user->tenant_id);
-
+                'hasActiveSubscription' => function () use ($tenant) {
                     return $tenant ? $tenant->hasActiveSubscription() : false;
                 },
-                'subscription_ends_at' => function () use ($request) {
-                    $user = $request->user();
-                    if (! $user || ! $user->tenant_id) {
-                        return null;
-                    }
-
-                    /** @var Tenant|null $tenant */
-                    $tenant = Tenant::find($user->tenant_id);
+                'subscription_ends_at' => function () use ($tenant) {
                     $subscription = $tenant?->activeSubscription();
-
                     return $subscription?->current_period_ends_at;
                 },
-                'planPermissions' => function () use ($request) {
-                    $user = $request->user();
-                    if (! $user || ! $user->tenant_id) {
-                        return [];
-                    }
-
-                    /** @var Tenant|null $tenant */
-                    $tenant = Tenant::find($user->tenant_id);
+                'planPermissions' => function () use ($tenant) {
                     if (! $tenant) {
                         return [];
                     }
@@ -84,7 +65,6 @@ class HandleInertiaRequests extends Middleware
                         return [];
                     }
 
-                    // Return permissions as an object: ['permission.name' => true, ...]
                     return $subscription->plan->permissions->pluck('name')->mapWithKeys(function ($name) {
                         return [$name => true];
                     })->toArray();

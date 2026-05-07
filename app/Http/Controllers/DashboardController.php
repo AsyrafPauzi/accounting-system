@@ -51,8 +51,8 @@ class DashboardController extends Controller
             ->sum('total_amount');
 
         // Credit Notes
-        $creditNotesCount = DB::table('credit_notes')->count();
-        $creditNotesValue = (float) DB::table('credit_notes')->sum('total_amount');
+        $creditNotesCount = \App\Models\CreditNote::count();
+        $creditNotesValue = (float) \App\Models\CreditNote::sum('total_amount');
 
         // Suppliers
         $supplierCount = Supplier::count();

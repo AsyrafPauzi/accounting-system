@@ -47,12 +47,23 @@ export default function PlanSettings({ auth, subscription, userCount }) {
                                     </span>
                                 )}
                             </div>
-                            <p className="text-slate-500 text-sm mt-1">
-                                {subscription?.interval === 'lifetime' 
-                                    ? 'Lifetime Access' 
-                                    : (subscription?.interval === 'yearly' ? 'Billed yearly' : 'Billed monthly')
-                                } 
-                                {subscription?.current_period_ends_at && ` • Renews on ${new Date(subscription.current_period_ends_at).toLocaleDateString()}`}
+                            <p className="text-slate-500 text-sm mt-1 font-medium">
+                                {subscription?.interval === 'lifetime' ? (
+                                    <>
+                                        <span className="text-emerald-600 font-bold">Lifetime Access</span>
+                                        <span className="text-slate-400"> • Expires: Never</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        {subscription?.interval === 'yearly' ? 'Yearly Subscription' : 'Monthly Subscription'}
+                                        {subscription?.current_period_ends_at && (
+                                            <span className="text-slate-400">
+                                                {' • '}
+                                                {subscription?.gateway === 'system' ? 'Expires' : 'Renews'} on {new Date(subscription.current_period_ends_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                            </span>
+                                        )}
+                                    </>
+                                )}
                             </p>
                         </div>
                         <Link
