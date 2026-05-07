@@ -9,105 +9,130 @@
             margin: 0;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: DejaVu Sans, sans-serif; font-size: 10px; color: #000; line-height: 1.5; background: #fff; }
+        body { font-family: DejaVu Sans, sans-serif; font-size: 10px; color: #334155; line-height: 1.5; background: #fff; }
         
         .page { padding: 0; position: relative; min-height: 297mm; }
         
-        /* Top Header Bar - Black & White */
+        /* Top Header Bar */
         .top-bar {
-            background-color: #000;
+            background-color: #0f172a;
             color: #fff;
-            padding: 20px 40px;
             display: table;
             width: 100%;
+            border-bottom: 8px solid #334155;
         }
-        .top-bar-left { display: table-cell; vertical-align: middle; width: 50%; }
-        .top-bar-right { display: table-cell; vertical-align: middle; width: 50%; text-align: right; font-size: 9px; }
-        .top-bar-right span { margin-left: 20px; }
-        .invoice-title { font-size: 32px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
+        .top-bar-left { 
+            display: table-cell; 
+            vertical-align: middle; 
+            width: 50%; 
+            padding: 30px 0 30px 40px; 
+        }
+        .top-bar-right { 
+            display: table-cell; 
+            vertical-align: middle; 
+            width: 50%; 
+            text-align: right; 
+            padding: 30px 40px 30px 0;
+            font-size: 10px; 
+        }
+        .top-bar-right span { display: block; margin-bottom: 2px; }
+        .invoice-title { font-size: 28px; font-weight: bold; text-transform: uppercase; letter-spacing: 4px; line-height: 1; }
         
         .content { padding: 40px; }
         
         /* Company & Addresses */
-        .addresses-section { display: table; width: 100%; margin-bottom: 40px; }
-        .address-col { display: table-cell; width: 33.33%; vertical-align: top; padding-right: 15px; }
+        .addresses-section { display: table; width: 100%; margin-bottom: 40px; border-collapse: collapse; }
+        .address-col { display: table-cell; width: 33.33%; vertical-align: top; }
+        .address-col-inner { padding-right: 20px; }
+        .address-col-last .address-col-inner { padding-right: 0; }
         
-        .logo-box { margin-bottom: 12px; }
-        .logo-text { font-size: 22px; font-weight: 900; color: #000; text-transform: uppercase; border-bottom: 3px solid #000; display: inline-block; padding-bottom: 2px; }
-        .logo-headline { font-size: 8px; color: #666; letter-spacing: 3px; margin-top: 4px; text-transform: uppercase; }
+        .address-title { 
+            font-weight: 800; 
+            color: #0f172a; 
+            margin-bottom: 12px; 
+            font-size: 10px; 
+            text-transform: uppercase; 
+            letter-spacing: 1px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 6px;
+        }
         
-        .address-title { font-weight: bold; color: #000; margin-bottom: 8px; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 2px; }
-        .address-details { font-size: 9px; color: #333; line-height: 1.5; }
+        .logo-text { font-size: 18px; font-weight: 900; color: #0f172a; text-transform: uppercase; margin-bottom: 4px; display: block; }
+        .logo-headline { font-size: 8px; color: #64748b; letter-spacing: 1px; margin-bottom: 8px; text-transform: uppercase; }
+        
+        .address-details { font-size: 9px; color: #475569; line-height: 1.6; }
         
         /* Table Styling */
         .table-container { margin-bottom: 40px; }
         table { width: 100%; border-collapse: collapse; }
         th { 
-            background-color: #f1f5f9; 
-            color: #000; 
+            background-color: #f8fafc; 
+            color: #0f172a; 
             text-align: left; 
             padding: 12px; 
             font-size: 9px; 
             text-transform: uppercase;
             font-weight: 800;
-            border-top: 2px solid #000;
-            border-bottom: 2px solid #000;
+            border-top: 1px solid #0f172a;
+            border-bottom: 1px solid #0f172a;
         }
         td { 
             padding: 12px; 
-            border-bottom: 1px solid #eee; 
+            border-bottom: 1px solid #f1f5f9; 
             font-size: 9px;
             vertical-align: top;
-            color: #111;
+            color: #1e293b;
         }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
         
         /* Summary Section */
         .bottom-section { display: table; width: 100%; margin-top: 20px; }
-        .bottom-left { display: table-cell; width: 60%; vertical-align: top; }
+        .bottom-left { display: table-cell; width: 60%; vertical-align: top; padding-right: 40px; }
         .bottom-right { display: table-cell; width: 40%; vertical-align: top; }
         
         .instruction-box { margin-bottom: 25px; }
-        .instruction-title { font-weight: bold; color: #000; margin-bottom: 10px; font-size: 10px; text-transform: uppercase; }
-        .instruction-text { font-size: 9px; color: #444; line-height: 1.6; }
+        .instruction-title { font-weight: bold; color: #0f172a; margin-bottom: 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .instruction-text { font-size: 9px; color: #64748b; line-height: 1.6; }
         
         /* Totals */
-        .totals-table { width: 100%; border-top: 2px solid #000; padding-top: 10px; }
-        .totals-table td { border: none; padding: 6px 0; }
-        .totals-label { color: #555; text-transform: uppercase; font-size: 8px; font-weight: bold; }
-        .totals-value { text-align: right; font-weight: 600; color: #000; font-size: 10px; }
-        .totals-row-total { border-top: 1px solid #000; margin-top: 5px; padding-top: 10px; }
-        .totals-row-total .totals-value { font-weight: 800; font-size: 12px; }
+        .totals-table { width: 100%; margin-top: 0; }
+        .totals-table td { border: none; padding: 4px 0; }
+        .totals-label { color: #64748b; text-transform: uppercase; font-size: 8px; font-weight: bold; }
+        .totals-value { text-align: right; font-weight: 600; color: #0f172a; font-size: 10px; }
+        .totals-row-total { border-top: 2px solid #0f172a; }
+        .totals-row-total td { padding-top: 12px; }
+        .totals-row-total .totals-value { font-weight: 800; font-size: 14px; color: #0f172a; }
         
         .balance-box { 
-            background-color: #000; 
+            background-color: #0f172a; 
             color: #fff; 
             padding: 15px; 
             margin-top: 20px;
-            display: table;
             width: 100%;
         }
-        .balance-label { display: table-cell; font-weight: 800; font-size: 12px; text-transform: uppercase; }
-        .balance-value { display: table-cell; text-align: right; font-weight: 800; font-size: 14px; }
+        .balance-table { width: 100%; border: none; }
+        .balance-table td { border: none; padding: 0; color: #fff; }
+        .balance-label { font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+        .balance-value { text-align: right; font-weight: 800; font-size: 16px; }
         
         /* Signatures */
         .signature-section { 
-            margin-top: 80px; 
+            margin-top: 60px; 
             display: table; 
             width: 100%; 
         }
         .signature-col { display: table-cell; width: 50%; text-align: center; vertical-align: bottom; }
-        .signature-line { border-top: 1px solid #000; width: 75%; margin: 0 auto 10px; }
-        .signature-name { font-weight: bold; font-size: 10px; color: #000; text-transform: uppercase; }
-        .signature-label { font-size: 8px; color: #666; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+        .signature-line { border-top: 1px solid #94a3b8; width: 70%; margin: 0 auto 10px; }
+        .signature-name { font-weight: bold; font-size: 10px; color: #0f172a; text-transform: uppercase; }
+        .signature-label { font-size: 8px; color: #64748b; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
         
         .footer-note {
             margin-top: 60px;
             text-align: center;
             font-size: 8px;
-            color: #999;
-            border-top: 1px solid #eee;
+            color: #94a3b8;
+            border-top: 1px solid #f1f5f9;
             padding-top: 20px;
         }
     </style>
@@ -130,45 +155,52 @@
         <div class="content">
             <div class="addresses-section">
                 <div class="address-col">
-                    <div class="logo-box">
-                        <div class="logo-text">{{ $company['name'] }}</div>
-                        @if(!empty($company['tin']) || !empty($company['brn']))
-                            <div class="logo-headline">Reg: {{ $company['brn'] ?? 'N/A' }}</div>
-                        @endif
-                    </div>
-                    <div class="address-details">
-                        {{ $company['address'] }}<br>
-                        {{ $company['city'] }}, {{ $company['state'] }} {{ $company['zip'] }}<br>
-                        {{ $company['country'] }}<br>
-                        @if($company['phone']) Tel: {{ $company['phone'] }}<br> @endif
-                        @if($company['email']) {{ $company['email'] }}<br> @endif
-                        {{ $company['website'] }}
-                    </div>
-                </div>
-                <div class="address-col">
-                    <div class="address-title">Bill to</div>
-                    <div class="address-details">
-                        <strong>{{ $customer->name }}</strong><br>
-                        @if($customer->billing_street || $customer->billing_city)
-                            {{ $customer->billing_street }}<br>
-                            {{ $customer->billing_city }}{{ $customer->billing_state ? ', ' . $customer->billing_state : '' }} {{ $customer->billing_zip ?? '' }}<br>
-                            {{ $customer->billing_country }}
-                        @endif
-                        @if($customer->email)
-                            <br>{{ $customer->email }}
-                        @endif
+                    <div class="address-col-inner">
+                        <div class="address-title">From</div>
+                        <div class="logo-box">
+                            <div class="logo-text">{{ $company['name'] }}</div>
+                            @if(!empty($company['tin']) || !empty($company['brn']))
+                                <div class="logo-headline">Reg: {{ $company['brn'] ?? 'N/A' }}</div>
+                            @endif
+                        </div>
+                        <div class="address-details">
+                            {{ $company['address'] }}<br>
+                            {{ $company['city'] }}, {{ $company['state'] }} {{ $company['zip'] }}<br>
+                            {{ $company['country'] }}<br>
+                            @if($company['phone']) Tel: {{ $company['phone'] }}<br> @endif
+                            @if($company['email']) {{ $company['email'] }}<br> @endif
+                            {{ $company['website'] }}
+                        </div>
                     </div>
                 </div>
                 <div class="address-col">
-                    <div class="address-title">Ship to</div>
-                    <div class="address-details">
-                        @if($customer->shipping_street || $customer->shipping_city)
-                            {{ $customer->shipping_street }}<br>
-                            {{ $customer->shipping_city }}{{ $customer->shipping_state ? ', ' . $customer->shipping_state : '' }} {{ $customer->shipping_zip ?? '' }}<br>
-                            {{ $customer->shipping_country }}
-                        @else
-                            <em>Same as billing</em>
-                        @endif
+                    <div class="address-col-inner">
+                        <div class="address-title">Bill to</div>
+                        <div class="address-details">
+                            <strong>{{ $customer->name }}</strong><br>
+                            @if($customer->billing_street || $customer->billing_city)
+                                {{ $customer->billing_street }}<br>
+                                {{ $customer->billing_city }}{{ $customer->billing_state ? ', ' . $customer->billing_state : '' }} {{ $customer->billing_zip ?? '' }}<br>
+                                {{ $customer->billing_country }}
+                            @endif
+                            @if($customer->email)
+                                <br>{{ $customer->email }}
+                            @endif
+                        </div>
+                    </div>
+                </div>
+                <div class="address-col address-col-last">
+                    <div class="address-col-inner">
+                        <div class="address-title">Ship to</div>
+                        <div class="address-details">
+                            @if($customer->shipping_street || $customer->shipping_city)
+                                {{ $customer->shipping_street }}<br>
+                                {{ $customer->shipping_city }}{{ $customer->shipping_state ? ', ' . $customer->shipping_state : '' }} {{ $customer->shipping_zip ?? '' }}<br>
+                                {{ $customer->shipping_country }}
+                            @else
+                                <em>Same as billing</em>
+                            @endif
+                        </div>
                     </div>
                 </div>
             </div>
@@ -254,8 +286,12 @@
                     </table>
                     
                     <div class="balance-box">
-                        <div class="balance-label">Balance Due:</div>
-                        <div class="balance-value">{{ number_format($invoice->total_amount - $invoice->amount_paid, 2) }} {{ $company['currency'] ?? 'MYR' }}</div>
+                        <table class="balance-table">
+                            <tr>
+                                <td class="balance-label">Balance Due</td>
+                                <td class="balance-value">{{ number_format($invoice->total_amount - $invoice->amount_paid, 2) }} {{ $company['currency'] ?? 'MYR' }}</td>
+                            </tr>
+                        </table>
                     </div>
                 </div>
             </div>
