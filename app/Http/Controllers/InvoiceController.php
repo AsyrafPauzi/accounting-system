@@ -210,9 +210,15 @@ class InvoiceController extends Controller
     {
         $invoice = Invoice::with(['items', 'customer'])->findOrFail($id);
         
-        /** @var \App\Models\Tenant $tenant */
-        $tenant = \App\Models\Tenant::find(auth()->user()->tenant_id);
-        $company = $tenant ? $tenant->getCompanyDetails() : config('invoice.company');
+        $company = config('invoice.company');
+        if (function_exists('tenant') && tenant()) {
+            $company = tenant()->getCompanyDetails();
+        } elseif (auth()->check() && auth()->user()->tenant_id) {
+            $tenant = \App\Models\Tenant::find(auth()->user()->tenant_id);
+            if ($tenant) {
+                $company = $tenant->getCompanyDetails();
+            }
+        }
 
         return $this->generatePdf($invoice, $company);
     }

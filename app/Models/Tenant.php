@@ -12,9 +12,6 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 {
     use HasDatabase, CentralConnection, Auditable;
     
-    protected $casts = [
-        'company' => 'array',
-    ];
 
 
     // This makes sure the database name is based on the company ID
@@ -52,21 +49,19 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 
     public function getCompanyDetails(): array
     {
-        $data = $this->company ?? [];
-        
         return [
-            'name'     => $data['display_name'] ?? $data['legal_name'] ?? config('app.name'),
-            'address'  => $data['street'] ?? config('invoice.company.address'),
-            'city'     => $data['city'] ?? config('invoice.company.city'),
-            'state'    => $data['state'] ?? config('invoice.company.state'),
-            'zip'      => $data['postcode'] ?? config('invoice.company.zip'),
-            'country'  => $data['country'] ?? config('invoice.company.country'),
-            'phone'    => $data['phone'] ?? config('invoice.company.phone'),
-            'email'    => $data['email'] ?? config('invoice.company.email'),
-            'website'  => $data['website'] ?? config('invoice.company.website'),
-            'tin'      => $data['tin'] ?? config('invoice.company.tin'),
-            'brn'      => $data['brn'] ?? config('invoice.company.brn'),
-            'currency' => $data['base_currency'] ?? config('invoice.company.currency', 'MYR'),
+            'name'     => $this->display_name ?: ($this->legal_name ?: config('app.name')),
+            'address'  => $this->street ?: config('invoice.company.address'),
+            'city'     => $this->city ?: config('invoice.company.city'),
+            'state'    => $this->state ?: config('invoice.company.state'),
+            'zip'      => $this->postcode ?: config('invoice.company.zip'),
+            'country'  => $this->country ?: config('invoice.company.country'),
+            'phone'    => $this->phone ?: config('invoice.company.phone'),
+            'email'    => $this->email ?: config('invoice.company.email'),
+            'website'  => $this->website ?: config('invoice.company.website'),
+            'tin'      => $this->tin ?: config('invoice.company.tin'),
+            'brn'      => $this->brn ?: config('invoice.company.brn'),
+            'currency' => $this->base_currency ?: config('invoice.company.currency', 'MYR'),
         ];
     }
 }
