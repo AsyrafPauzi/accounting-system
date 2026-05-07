@@ -77,7 +77,7 @@ class CustomerController extends Controller
                 ]);
             }
         }
-        return redirect()->route('customers.index');
+        return redirect()->route('customers.index')->with('success', 'Customer created successfully.');
     }
 
     /**
@@ -115,7 +115,7 @@ class CustomerController extends Controller
             'brn' => $validated['brn'],
         ]));
 
-        return response()->json(['customer' => $customer->fresh()], 201);
+        return back()->with('success', 'Customer "' . $customer->name . '" created and selected.')->with('new_customer_id', $customer->id);
     }
 
     public function show($id)

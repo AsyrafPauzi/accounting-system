@@ -29,6 +29,10 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
+Route::get('/public/invoices/{uuid}/download', [InvoiceController::class, 'publicDownloadPdf'])
+    ->name('public.invoices.download')
+    ->middleware('signed');
+
 // --- Toyyibpay Webhook (Server-to-Server) ---
 Route::post('/subscription/webhook', [SubscriptionController::class, 'webhook'])->name('subscription.webhook');
 Route::post('/subscription/webhook/extra-user', [SubscriptionController::class, 'webhookExtraUser'])->name('subscription.webhook.extra_user');

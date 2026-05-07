@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import { Link, usePage } from '@inertiajs/react';
 import MobileQuickAction from '@/Components/MobileQuickAction';
-import { toastSuccess, toastError } from '@/utils/swal';
 
 const Icons = {
     ChartBar: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
@@ -157,7 +156,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                             <ApplicationLogo className="block h-6 w-auto fill-current text-white" />
                         </div>
                         <div className="min-w-0">
-                            <span className="font-bold text-indigo-950 tracking-tight text-base block truncate">Accounter</span>
+                            <span className="font-bold text-indigo-950 tracking-tight text-base block truncate">{page.props.app_name}</span>
                             <span className="block text-[10px] font-semibold text-indigo-600/80 uppercase tracking-wider">Malaysia Edition</span>
                         </div>
                     </div>
@@ -397,7 +396,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                         <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 shadow-sm shadow-indigo-500/20">
                             <ApplicationLogo className="block h-4 w-auto fill-current text-white" />
                         </div>
-                        <span className="font-bold text-indigo-950 tracking-tight truncate">Accounter</span>
+                        <span className="font-bold text-indigo-950 tracking-tight truncate">{page.props.app_name}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] font-bold text-indigo-600/60 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded-md">MY</span>
@@ -431,7 +430,6 @@ export default function Authenticated({ user: propUser, header, children }) {
                     )}
 
                     <div className="max-w-7xl mx-auto min-w-0">
-                        {/* Static Flash Banners (Reverted from toasts) */}
                         {flash?.success && (
                             <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center gap-3 text-emerald-800 animate-in fade-in slide-in-from-top-4 duration-300 shadow-sm shadow-emerald-100">
                                 <div className="p-1.5 bg-emerald-100 rounded-lg text-emerald-600">

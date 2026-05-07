@@ -18,14 +18,16 @@ class SendInvoiceEmail implements ShouldQueue
 
     public int $invoiceId;
     public array $recipients;
+    public array $company;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(int $invoiceId, array $recipients)
+    public function __construct(int $invoiceId, array $recipients, array $company = [])
     {
         $this->invoiceId = $invoiceId;
         $this->recipients = $recipients;
+        $this->company = $company;
     }
 
     /**
@@ -34,7 +36,15 @@ class SendInvoiceEmail implements ShouldQueue
     public function handle(): void
     {
         $invoice = Invoice::with(['items', 'customer'])->findOrFail($this->invoiceId);
-        $company = config('invoice.company');
+        
+        $company = $this->company;
+        
+        if (empty($company)) {
+            $company = config('invoice.company');
+            if (function_exists('tenant') && tenant()) {
+                $company = tenant()->getCompanyDetails();
+            }
+        }
 
         Mail::to($this->recipients)->send(new InvoiceEmail($invoice, $company));
 

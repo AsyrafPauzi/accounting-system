@@ -95,6 +95,16 @@ class HandleInertiaRequests extends Middleware
                 'error'   => fn () => $request->session()->get('error'),
                 'info'    => fn () => $request->session()->get('info'),
             ],
+            'app_name' => function () use ($request) {
+                $user = $request->user();
+                if ($user && $user->tenant_id) {
+                    $tenant = Tenant::find($user->tenant_id);
+                    if ($tenant && $tenant->company) {
+                        return $tenant->company['display_name'] ?? $tenant->company['legal_name'] ?? config('app.name');
+                    }
+                }
+                return config('app.name');
+            },
         ];
     }
 }

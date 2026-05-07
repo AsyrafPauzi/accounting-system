@@ -7,9 +7,8 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
-use Barryvdh\DomPDF\Facade\Pdf;
 
-class InvoiceEmail extends Mailable implements ShouldQueue
+class InvoiceEmail extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -40,23 +39,23 @@ class InvoiceEmail extends Mailable implements ShouldQueue
             ':company' => $company['name'] ?? config('app.name'),
         ]);
 
-        $pdf = Pdf::loadView('pdf.invoice', [
-            'invoice' => $invoice,
-            'customer' => $customer,
-            'company' => $company,
-        ])->setPaper('a4', 'portrait');
+        // Generate a secure signed URL for public download
+        $downloadUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'public.invoices.download',
+            now()->addDays(30),
+            [
+                'uuid' => $invoice->uuid,
+                'tenant_id' => function_exists('tenant') && tenant() ? tenant('id') : auth()->user()->tenant_id,
+            ]
+        );
 
-        return $this->subject($subject)
+        return $this->from(config('mail.from.address'), $company['name'] ?? config('app.name'))
+            ->subject($subject)
             ->view('emails.invoice', [
                 'invoice' => $invoice,
                 'customer' => $customer,
                 'company' => $company,
-            ])
-            ->attachData(
-                $pdf->output(),
-                "Invoice-{$invoice->invoice_number}.pdf",
-                ['mime' => 'application/pdf']
-            );
+                'download_url' => $downloadUrl,
+            ]);
     }
 }
-

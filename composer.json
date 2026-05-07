@@ -16,6 +16,8 @@
         "pragmarx/google2fa-laravel": "*",
         "spatie/laravel-permission": "^7.2",
         "stancl/tenancy": "^3.9",
+        "symfony/http-client": "^8.0",
+        "symfony/mailgun-mailer": "^8.0",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {

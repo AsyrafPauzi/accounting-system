@@ -4,45 +4,59 @@
     <meta charset="UTF-8">
     <title>Invoice {{ $invoice->invoice_number }}</title>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #f8fafc; padding: 24px; color: #0f172a;">
-    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 24px; border: 1px solid #e2e8f0;">
-        <h1 style="font-size: 20px; margin: 0 0 8px 0;">
-            {{ $company['name'] ?? config('app.name') }}
-        </h1>
-        <p style="margin: 0 0 16px 0; font-size: 14px; color: #64748b;">
-            Invoice #{{ $invoice->invoice_number }}
-        </p>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; padding: 40px 20px; color: #0f172a; margin: 0;">
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0;">
+        <!-- Header Bar -->
+        <div style="background-color: #000000; padding: 30px; text-align: center;">
+            <h1 style="color: #ffffff; font-size: 20px; font-weight: 800; margin: 0; text-transform: uppercase; letter-spacing: 2px;">
+                Invoice Issued
+            </h1>
+        </div>
+        
+        <div style="padding: 40px;">
+            <div style="margin-bottom: 30px; border-bottom: 2px solid #f1f5f9; padding-bottom: 20px;">
+                <h2 style="font-size: 18px; font-weight: 800; margin: 0 0 5px 0; color: #000000; text-transform: uppercase;">
+                    {{ $company['name'] }}
+                </h2>
+                <div style="font-size: 13px; color: #64748b; font-weight: 600;">
+                    Invoice #{{ $invoice->invoice_number }}
+                </div>
+            </div>
 
-        <p style="font-size: 14px; margin-bottom: 12px;">
-            Dear {{ $customer->name }},
-        </p>
-
-        <p style="font-size: 14px; margin-bottom: 12px;">
-            {{ config('invoice.email.intro_text') }}
-        </p>
-
-        <p style="font-size: 14px; margin-bottom: 16px;">
-            <strong>Amount:</strong>
-            RM {{ number_format($invoice->total_amount, 2) }}
-        </p>
-
-        @if(!empty($company['email']))
-            <p style="font-size: 13px; margin-bottom: 8px; color: #64748b;">
-                If you have any questions about this invoice, reply to this email at
-                <a href="mailto:{{ $company['email'] }}" style="color: #2563eb; text-decoration: none;">
-                    {{ $company['email'] }}
-                </a>.
+            <p style="font-size: 15px; line-height: 1.6; color: #334155; margin-bottom: 25px;">
+                Hello <strong>{{ $customer->name }}</strong>,
             </p>
-        @endif
+            
+            <p style="font-size: 15px; line-height: 1.6; color: #334155; margin-bottom: 30px;">
+                We have issued a new invoice for your recent transaction. Please find the summary below:
+            </p>
 
-        <p style="font-size: 13px; margin-top: 24px; color: #64748b;">
-            {{ config('invoice.email.footer_text') }}
-        </p>
+            <!-- Summary Box -->
+            <div style="background-color: #f8fafc; border-radius: 12px; padding: 25px; margin-bottom: 35px; border: 1px solid #e2e8f0; text-align: center;">
+                <span style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">Amount Due</span>
+                <span style="font-size: 28px; font-weight: 800; color: #000000;">{{ number_format($invoice->total_amount - $invoice->amount_paid, 2) }} {{ $company['currency'] ?? 'MYR' }}</span>
+            </div>
 
-        <p style="font-size: 13px; margin-top: 4px; color: #64748b;">
-            {{ $company['name'] ?? config('app.name') }}
-        </p>
+            <!-- Button -->
+            <div style="text-align: center; margin-bottom: 40px;">
+                <a href="{{ $download_url }}" style="display: inline-block; background-color: #000000; color: #ffffff; padding: 16px 36px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 15px;">
+                    Download PDF Invoice
+                </a>
+            </div>
+
+            <div style="padding-top: 30px; border-top: 1px solid #f1f5f9; font-size: 13px; color: #64748b; line-height: 1.6;">
+                <p style="margin: 0 0 10px 0; font-weight: 700; color: #0f172a;">Contact Us</p>
+                @if($company['phone']) <div style="margin-bottom: 4px;">Tel: {{ $company['phone'] }}</div> @endif
+                @if($company['email']) <div style="margin-bottom: 4px;">Email: {{ $company['email'] }}</div> @endif
+                <div>Website: {{ $company['website'] }}</div>
+            </div>
+        </div>
+
+        <div style="background-color: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #f1f5f9;">
+            <p style="font-size: 12px; color: #94a3b8; margin: 0;">
+                &copy; {{ date('Y') }} {{ $company['name'] }}. All rights reserved.
+            </p>
+        </div>
     </div>
 </body>
 </html>
-

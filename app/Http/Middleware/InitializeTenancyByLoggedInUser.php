@@ -10,14 +10,23 @@ class InitializeTenancyByLoggedInUser
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // 1. Check if the user is logged in
+        // 1. Check if this is a public invoice download request (prioritize request param)
+        if ($request->is('public/invoices/*/download') && $request->has('tenant_id')) {
+            $tenant = \App\Models\Tenant::find($request->input('tenant_id'));
+            if ($tenant) {
+                tenancy()->initialize($tenant);
+                return $next($request);
+            }
+        }
+
+        // 2. Otherwise, check if the user is logged in
         if (auth()->check() && auth()->user()->tenant_id) {
             
-            // 2. Find their specific company (Tenant)
+            // 3. Find their specific company (Tenant)
             $tenant = \App\Models\Tenant::find(auth()->user()->tenant_id);
             
             if ($tenant) {
-                // 3. MAGIC: Tell Laravel to switch to THIS company's private database
+                // 4. MAGIC: Tell Laravel to switch to THIS company's private database
                 tenancy()->initialize($tenant);
             }
         }

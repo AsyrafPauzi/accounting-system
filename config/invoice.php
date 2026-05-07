@@ -20,6 +20,7 @@ return [
         'website' => env('INVOICE_COMPANY_WEBSITE', null),
         'tin'     => env('INVOICE_COMPANY_TIN', null),
         'brn'     => env('INVOICE_COMPANY_BRN', null),
+        'currency' => env('INVOICE_COMPANY_CURRENCY', 'MYR'),
     ],
 
     /*

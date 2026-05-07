@@ -10,6 +10,8 @@ use Inertia\Inertia;
 
 class CreditNoteController extends Controller
 {
+    public function __construct(protected \App\Services\InvoiceService $invoiceService) {}
+
     public function index()
     {
         // Fetch all Credit Notes with Customer names
@@ -75,6 +77,10 @@ class CreditNoteController extends Controller
                     'updated_at' => now()
                 ]);
             }
+
+            // Update related invoice status
+            $invoice = Invoice::findOrFail($request->invoice_id);
+            $this->invoiceService->recalculateStatus($invoice);
 
             // ACCOUNTING: Reverse the Ledger (Decrease Revenue and Decrease AR)
             $journalId = DB::table('journal_entries')->insertGetId([
