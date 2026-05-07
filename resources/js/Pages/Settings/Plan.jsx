@@ -48,7 +48,10 @@ export default function PlanSettings({ auth, subscription, userCount }) {
                                 )}
                             </div>
                             <p className="text-slate-500 text-sm mt-1">
-                                {subscription?.interval === 'yearly' ? 'Billed yearly' : 'Billed monthly'} 
+                                {subscription?.interval === 'lifetime' 
+                                    ? 'Lifetime Access' 
+                                    : (subscription?.interval === 'yearly' ? 'Billed yearly' : 'Billed monthly')
+                                } 
                                 {subscription?.current_period_ends_at && ` • Renews on ${new Date(subscription.current_period_ends_at).toLocaleDateString()}`}
                             </p>
                         </div>

@@ -29,6 +29,7 @@ class ExpireSubscriptions extends Command
         $today = now()->toDateString();
 
         $count = Subscription::where('status', 'active')
+            ->whereNotNull('current_period_ends_at')
             ->whereDate('current_period_ends_at', '<', $today)
             ->update(['status' => 'expired']);
 

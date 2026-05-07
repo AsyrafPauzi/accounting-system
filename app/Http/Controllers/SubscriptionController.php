@@ -45,7 +45,7 @@ class SubscriptionController extends Controller
                     }
                 },
             ],
-            'interval' => ['required', 'in:monthly,yearly'],
+            'interval' => ['required', 'in:monthly,yearly,lifetime'],
         ]);
 
         $plan = Plan::where('is_active', true)->findOrFail($validated['plan_id']);
@@ -144,9 +144,11 @@ class SubscriptionController extends Controller
                 $plan = $subscription->plan;
                 
                 $periodStart = now();
-                $periodEnd = $subscription->interval === 'yearly'
-                    ? now()->addYear()
-                    : now()->addMonth();
+                $periodEnd = match($subscription->interval) {
+                    'lifetime' => null,
+                    'yearly' => now()->addYear(),
+                    default => now()->addMonth(),
+                };
 
                 $subscription->update([
                     'status' => 'active',
