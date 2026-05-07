@@ -27,7 +27,7 @@ Deployments are automated whenever code is merged into the `main` branch.
 You must set these in `GitHub Repo Settings > Secrets and variables > Actions`:
 - `AWS_ACCESS_KEY_ID`: IAM User Access Key.
 - `AWS_SECRET_ACCESS_KEY`: IAM User Secret Key.
-- `AWS_REGION`: e.g., `ap-southeast-3` (Malaysia).
+- `AWS_REGION`: e.g., `ap-southeast-5` (Malaysia).
 - `ECR_REPOSITORY`: The ECR repository name.
 - `ECS_CLUSTER`: The ECS cluster name.
 - `ECS_SERVICE`: The ECS service name.
