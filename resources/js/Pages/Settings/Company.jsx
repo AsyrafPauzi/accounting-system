@@ -20,6 +20,7 @@ export default function Company({ auth, company }) {
         postcode: company.postcode || '',
         country: company.country || 'Malaysia',
         phone: company.phone || '',
+        email: company.email || '',
         website: company.website || '',
         base_currency: company.base_currency || 'MYR',
         financial_year_start_month: company.financial_year_start_month || 1,
@@ -187,7 +188,7 @@ export default function Company({ auth, company }) {
                                 />
                             </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label className={labelClass}>Phone</label>
                                 <input
@@ -197,6 +198,19 @@ export default function Company({ auth, company }) {
                                     onChange={(e) => setData('phone', e.target.value)}
                                     disabled={!isAdmin}
                                 />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Company Email</label>
+                                <input
+                                    type="email"
+                                    className={inputClass}
+                                    value={data.email}
+                                    onChange={(e) => setData('email', e.target.value)}
+                                    disabled={!isAdmin}
+                                />
+                                {errors.email && (
+                                    <p className="text-rose-500 text-xs mt-1">{errors.email}</p>
+                                )}
                             </div>
                             <div>
                                 <label className={labelClass}>Website</label>

@@ -219,6 +219,26 @@ class InvoiceService
         });
     }
 
+    public function recalculateStatus(Invoice $invoice): void
+    {
+        $totalCredits = DB::table('credit_notes')
+            ->where('invoice_id', $invoice->id)
+            ->whereNull('deleted_at')
+            ->sum('total_amount');
+
+        $effectiveBalance = (float)$invoice->total_amount - (float)$invoice->amount_paid - (float)$totalCredits;
+
+        if ($effectiveBalance <= 0) {
+            $invoice->status = 'paid';
+        } elseif ($invoice->amount_paid > 0 || $totalCredits > 0) {
+            $invoice->status = 'partially paid';
+        } else {
+            $invoice->status = 'unpaid';
+        }
+
+        $invoice->save();
+    }
+
     private function syncItems(Invoice $invoice, array $items): void
     {
         foreach ($items as $item) {

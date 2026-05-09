@@ -14,21 +14,23 @@ class CompanySettingsController extends Controller
     {
         $user = $request->user();
         $tenant = $user && $user->tenant_id ? Tenant::find($user->tenant_id) : null;
-        $companyData = $tenant->company ?? [];
+        
+        // Stancl/Tenancy stores attributes in the 'data' JSON column but makes them accessible directly
         $company = [
-            'legal_name' => $companyData['legal_name'] ?? $tenant->legal_name ?? '',
-            'display_name' => $companyData['display_name'] ?? $tenant->display_name ?? '',
-            'tin' => $companyData['tin'] ?? $tenant->tin ?? '',
-            'brn' => $companyData['brn'] ?? $tenant->brn ?? '',
-            'street' => $companyData['street'] ?? $tenant->street ?? '',
-            'city' => $companyData['city'] ?? $tenant->city ?? '',
-            'state' => $companyData['state'] ?? $tenant->state ?? '',
-            'postcode' => $companyData['postcode'] ?? $tenant->postcode ?? '',
-            'country' => $companyData['country'] ?? $tenant->country ?? 'Malaysia',
-            'phone' => $companyData['phone'] ?? $tenant->phone ?? '',
-            'website' => $companyData['website'] ?? $tenant->website ?? '',
-            'base_currency' => $companyData['base_currency'] ?? $tenant->base_currency ?? 'MYR',
-            'financial_year_start_month' => $companyData['financial_year_start_month'] ?? $tenant->financial_year_start_month ?? 1,
+            'legal_name' => $tenant->legal_name ?? '',
+            'display_name' => $tenant->display_name ?? '',
+            'tin' => $tenant->tin ?? '',
+            'brn' => $tenant->brn ?? '',
+            'street' => $tenant->street ?? '',
+            'city' => $tenant->city ?? '',
+            'state' => $tenant->state ?? '',
+            'postcode' => $tenant->postcode ?? '',
+            'country' => $tenant->country ?? 'Malaysia',
+            'phone' => $tenant->phone ?? '',
+            'email' => $tenant->email ?? '',
+            'website' => $tenant->website ?? '',
+            'base_currency' => $tenant->base_currency ?? 'MYR',
+            'financial_year_start_month' => $tenant->financial_year_start_month ?? 1,
         ];
 
         return Inertia::render('Settings/Company', [
@@ -57,12 +59,13 @@ class CompanySettingsController extends Controller
             'postcode' => ['nullable', 'string', 'max:20'],
             'country' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255'],
             'website' => ['nullable', 'string', 'max:255'],
             'base_currency' => ['required', 'string', 'max:10'],
             'financial_year_start_month' => ['required', 'integer', 'min:1', 'max:12'],
         ]);
 
-        $tenant->company = $validated;
+        $tenant->fill($validated);
         $tenant->save();
 
         return redirect()->route('settings.company')->with('success', 'Company settings updated.');

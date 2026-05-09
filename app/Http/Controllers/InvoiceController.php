@@ -209,15 +209,52 @@ class InvoiceController extends Controller
     public function downloadPdf($id)
     {
         $invoice = Invoice::with(['items', 'customer'])->findOrFail($id);
+        
         $company = config('invoice.company');
+        if (function_exists('tenant') && tenant()) {
+            $company = tenant()->getCompanyDetails();
+        } elseif (auth()->check() && auth()->user()->tenant_id) {
+            $tenant = \App\Models\Tenant::find(auth()->user()->tenant_id);
+            if ($tenant) {
+                $company = $tenant->getCompanyDetails();
+            }
+        }
 
-        $pdf = Pdf::loadView('pdf.invoice', [
-            'invoice'  => $invoice,
-            'customer' => $invoice->customer,
-            'company'  => $company,
-        ])->setPaper('a4', 'portrait');
+        return $this->generatePdf($invoice, $company);
+    }
 
-        return $pdf->download("Invoice-{$invoice->invoice_number}.pdf");
+    /**
+     * Public download via signed URL (No auth required).
+     */
+    public function publicDownloadPdf($uuid)
+    {
+        $invoice = Invoice::with(['items', 'customer'])->where('uuid', $uuid)->firstOrFail();
+        
+        $company = config('invoice.company');
+        if (function_exists('tenant') && tenant()) {
+            $company = tenant()->getCompanyDetails();
+        }
+
+        return $this->generatePdf($invoice, $company);
+    }
+
+    private function generatePdf($invoice, $company)
+    {
+        try {
+            $invoice->loadMissing(['items', 'customer']);
+            
+            $pdf = Pdf::loadView('pdf.invoice', [
+                'invoice'  => $invoice,
+                'customer' => $invoice->customer,
+                'company'  => $company,
+            ])->setPaper('a4', 'portrait');
+
+            return $pdf->stream("Invoice-{$invoice->invoice_number}.pdf");
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Could not generate PDF. Please contact support.',
+            ], 500);
+        }
     }
 
     /**
@@ -255,7 +292,11 @@ class InvoiceController extends Controller
             'last_emailed_to'     => implode(',', $recipients),
         ])->save();
 
-        SendInvoiceEmail::dispatch($invoice->id, $recipients);
+        /** @var \App\Models\Tenant $tenant */
+        $tenant = \App\Models\Tenant::find(auth()->user()->tenant_id);
+        $company = $tenant ? $tenant->getCompanyDetails() : config('invoice.company');
+
+        SendInvoiceEmail::dispatch($invoice->id, $recipients, $company);
 
         return redirect()->back()->with('success', 'Invoice email queued for delivery.');
     }

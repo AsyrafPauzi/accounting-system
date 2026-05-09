@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, useForm, Link, router } from '@inertiajs/react';
 
 const Icons = {
     ChevronLeft: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>,
@@ -99,7 +99,6 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
         e.preventDefault();
         setQuickCustomerErrors({});
         setQuickSubmitting(true);
-        const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
         const payload = {
             name: quickCustomer.name,
             email: quickCustomer.email,
@@ -111,35 +110,25 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
             ...(quickCustomer.billing_state && { billing_state: quickCustomer.billing_state }),
             ...(quickCustomer.billing_zip && { billing_zip: quickCustomer.billing_zip }),
         };
-        try {
-            const res = await fetch(route('customers.quick-store'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': csrf || '',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: JSON.stringify(payload),
-            });
-            const json = await res.json().catch(() => ({}));
-            if (res.ok) {
-                const customer = json.customer;
-                setNewCustomers(prev => [...prev, customer]);
-                setData('customer_id', String(customer.id));
+        router.post(route('customers.quick-store'), payload, {
+            preserveState: true,
+            preserveScroll: true,
+            onSuccess: (page) => {
+                const newId = page.props.flash.new_customer_id;
+                if (newId) {
+                    setData('customer_id', String(newId));
+                }
                 setShowNewCustomerModal(false);
                 setQuickCustomer(initialQuickCustomer);
                 setQuickCustomerErrors({});
-            } else if (res.status === 422 && json.errors) {
-                setQuickCustomerErrors(json.errors);
-            } else {
-                setQuickCustomerErrors({ form: json.message || 'Could not create customer.' });
+            },
+            onError: (errors) => {
+                setQuickCustomerErrors(errors);
+            },
+            onFinish: () => {
+                setQuickSubmitting(false);
             }
-        } catch (err) {
-            setQuickCustomerErrors({ form: 'Network error. Please try again.' });
-        } finally {
-            setQuickSubmitting(false);
-        }
+        });
     };
 
     return (
