@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { confirm } from '@/utils/swal';
+import Modal from '@/Components/Modal';
 
 const Icons = {
     ChevronLeft: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>,
@@ -10,6 +11,7 @@ const Icons = {
     Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
     Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
     Currency: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+    ExternalLink: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>,
 };
 
 const inputClass = 'w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors';
@@ -24,6 +26,7 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
     const isDraft = bill.status === 'draft';
     const balanceDue = isDraft || bill.status === 'void' ? 0 : Math.max(0, (parseFloat(bill.total_amount) || 0) - (parseFloat(bill.amount_paid) || 0));
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [showReceiptModal, setShowReceiptModal] = useState(false);
 
     const initialItems = (bill.items && bill.items.length > 0)
         ? bill.items.map((item) => ({
@@ -160,7 +163,7 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
         >
             <Head title={`Bill ${bill.bill_number}`} />
 
-            <div className="space-y-8 max-w-4xl">
+            <div className="space-y-8 max-w-4xl mx-auto">
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                         <h3 className="text-sm font-bold text-slate-800">Bill details</h3>
@@ -215,6 +218,32 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                     </div>
                 </div>
 
+                {/* Receipt Section */}
+                {bill.receipt_url && (
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                            <h3 className="text-sm font-bold text-slate-800">Attached receipt</h3>
+                            <button 
+                                type="button"
+                                onClick={() => setShowReceiptModal(true)}
+                                className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1"
+                            >
+                                View full size <Icons.ExternalLink />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <div className="rounded-xl overflow-hidden border border-slate-100 bg-slate-50 max-h-96 flex items-center justify-center relative group">
+                                <img 
+                                    src={bill.receipt_url} 
+                                    alt="Receipt" 
+                                    className="max-w-full max-h-96 object-contain cursor-zoom-in transition-transform"
+                                    onClick={() => setShowReceiptModal(true)}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                         <h3 className="text-sm font-bold text-slate-800">Line items</h3>
@@ -267,11 +296,32 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                             </tbody>
                         </table>
                     </div>
-                    <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-6">
-                        <span className="text-sm font-medium text-slate-600">Subtotal: RM {subtotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
-                        {tax > 0 && <span className="text-sm font-medium text-slate-600">Tax: RM {tax.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>}
-                        <span className="text-lg font-bold text-slate-800">Total: RM {total.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
-                        {!isDraft && balanceDue > 0 && <span className="text-rose-600 font-semibold">Balance due: RM {formatMoney(balanceDue)}</span>}
+                    <div className="px-6 py-8 border-t border-slate-100 bg-slate-50/50">
+                        <div className="flex flex-col gap-5 text-right items-end">
+                            <div>
+                                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Subtotal</span>
+                                <span className="text-sm font-semibold text-slate-700 font-mono">RM {subtotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            
+                            {tax > 0 && (
+                                <div>
+                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Tax</span>
+                                    <span className="text-sm font-semibold text-slate-700 font-mono">RM {tax.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            )}
+
+                            <div className="pt-4 border-t border-slate-200 w-32">
+                                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total</span>
+                                <span className="text-xl font-black text-slate-900 font-mono underline decoration-blue-500 decoration-4 underline-offset-8">RM {total.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                            </div>
+
+                            {!isDraft && balanceDue > 0 && (
+                                <div className="pt-2">
+                                    <span className="block text-[10px] font-bold text-rose-400 uppercase tracking-widest mb-1">Balance due</span>
+                                    <span className="text-lg font-bold text-rose-600 font-mono">RM {formatMoney(balanceDue)}</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -286,6 +336,36 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                     </div>
                 )}
             </div>
+
+            {/* Receipt Modal */}
+            <Modal show={showReceiptModal} onClose={() => setShowReceiptModal(false)} maxWidth="2xl">
+                <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold text-slate-900">Receipt Preview</h3>
+                        <button onClick={() => setShowReceiptModal(false)} className="p-2 text-slate-400 hover:text-slate-600">
+                            <IconX size={20} />
+                        </button>
+                    </div>
+                    <div className="bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center h-[70vh] p-4 overflow-hidden">
+                        <img 
+                            src={bill.receipt_url} 
+                            alt="Receipt Full Size" 
+                            className="max-w-full max-h-full object-contain shadow-2xl transition-transform duration-300" 
+                        />
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                        <a 
+                            href={bill.receipt_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-700"
+                        >
+                            <Icons.ExternalLink />
+                            Open in New Tab
+                        </a>
+                    </div>
+                </div>
+            </Modal>
 
             {showPaymentModal && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
@@ -334,3 +414,9 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
         </AuthenticatedLayout>
     );
 }
+
+const IconX = ({ size = 20, ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="M18 6L6 18M6 6l12 12" />
+    </svg>
+);

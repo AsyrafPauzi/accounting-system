@@ -8,14 +8,19 @@ use App\Models\Account;
 use App\Models\Bill;
 use App\Models\Supplier;
 use App\Services\BillService;
+use App\Services\OCRService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
 
 class BillController extends Controller
 {
-    public function __construct(protected BillService $billService) {}
+    public function __construct(
+        protected BillService $billService,
+        protected OCRService $ocrService
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -161,5 +166,67 @@ class BillController extends Controller
         }
 
         return redirect()->route('bills.index')->with('success', 'Payment recorded.');
+    }
+
+    /**
+     * Upload a receipt and process it with OCR.
+     */
+    public function uploadReceipt(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'receipt' => 'required|image|max:10240', // 10MB max
+            'bill_id' => 'nullable|exists:bills,id',
+        ]);
+
+        $file = $request->file('receipt');
+        $path = $file->store('receipts', 'public');
+
+        // Process OCR
+        $ocrResult = $this->ocrService->process($path);
+
+        if ($request->has('bill_id')) {
+            $bill = Bill::findOrFail($request->bill_id);
+            $bill->update([
+                'receipt_path' => $path,
+                'ocr_status' => $ocrResult['status'] === 'success' ? 'completed' : 'failed',
+                'ocr_data' => $ocrResult['data'] ?? null,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'path' => $path,
+            'url' => route('bills.receipt', $request->bill_id ?? 0) . '?path=' . urlencode($path),
+            'ocr_data' => $ocrResult['data'] ?? null,
+        ]);
+    }
+
+    /**
+     * Serve the receipt file securely.
+     */
+    public function showReceipt(Request $request, $id = null)
+    {
+        $path = $request->query('path');
+        
+        if (!$path && $id) {
+            $bill = Bill::find($id);
+            $path = $bill?->receipt_path;
+        }
+
+        if (!$path) {
+            abort(404);
+        }
+
+        // Clean up path
+        $path = ltrim($path, '/');
+        if (str_starts_with($path, 'storage/')) {
+            $path = substr($path, 8);
+        }
+
+        if (!Storage::disk('public')->exists($path)) {
+            abort(404);
+        }
+
+        return response()->file(Storage::disk('public')->path($path));
     }
 }

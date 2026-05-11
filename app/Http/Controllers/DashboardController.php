@@ -119,6 +119,12 @@ class DashboardController extends Controller
                     'expenses_this_month' => $expensesThisMonth,
                     'net_this_month' => round($salesThisMonth - $expensesThisMonth, 2),
                 ],
+                'audit' => [
+                    'total' => Bill::count(),
+                    'unaudited' => Bill::where('audit_status', 'unaudited')->orWhereNull('audit_status')->count(),
+                    'verified' => Bill::where('audit_status', 'verified')->count(),
+                    'flagged' => Bill::where('audit_status', 'flagged')->count(),
+                ],
             ],
         ]);
     }

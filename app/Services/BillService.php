@@ -35,6 +35,12 @@ class BillService
                 'private_notes' => $data['private_notes'] ?? null,
                 'reference'     => $data['reference'] ?? null,
                 'created_by'    => $data['created_by'] ?? null,
+                'receipt_path'  => $data['receipt_path'] ?? null,
+                'ocr_status'    => $data['ocr_status'] ?? 'none',
+                'ocr_data'      => $data['ocr_data'] ?? null,
+                'audit_status'  => $data['audit_status'] ?? 'unaudited',
+                'audited_at'    => $data['audited_at'] ?? null,
+                'audited_by'    => $data['audited_by'] ?? null,
             ]);
 
             $this->syncItems($bill, $items);
@@ -57,6 +63,12 @@ class BillService
                 'tax_amount'    => $totals['taxAmount'],
                 'private_notes' => $data['private_notes'] ?? null,
                 'reference'     => $data['reference'] ?? null,
+                'receipt_path'  => $data['receipt_path'] ?? $bill->receipt_path,
+                'ocr_status'    => $data['ocr_status'] ?? $bill->ocr_status,
+                'ocr_data'      => $data['ocr_data'] ?? $bill->ocr_data,
+                'audit_status'  => $data['audit_status'] ?? $bill->audit_status,
+                'audited_at'    => $data['audited_at'] ?? $bill->audited_at,
+                'audited_by'    => $data['audited_by'] ?? $bill->audited_by,
             ]);
 
             $bill->items()->delete();

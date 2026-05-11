@@ -64,7 +64,6 @@ class HandleInertiaRequests extends Middleware
                     if (! $subscription || ! $subscription->plan) {
                         return [];
                     }
-
                     return $subscription->plan->permissions->pluck('name')->mapWithKeys(function ($name) {
                         return [$name => true];
                     })->toArray();

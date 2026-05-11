@@ -49,6 +49,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'roles.manage', 'permissions.manage',
             'dashboard.basic', 'dashboard.standard', 'dashboard.advanced',
             'audit-logs.view', 'integrations.view',
+            'audit.view',
         ];
 
         foreach ($permissions as $permission) {

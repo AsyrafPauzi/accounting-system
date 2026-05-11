@@ -128,6 +128,7 @@ class PlanSeeder extends Seeder
                     'Credit Notes',
                     'Payment Tracking',
                     'Email Invoices',
+                    'Audit & Compliance',
                 ],
                 'is_active' => true,
             ]

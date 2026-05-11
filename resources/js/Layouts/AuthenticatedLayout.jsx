@@ -21,6 +21,7 @@ const Icons = {
     X: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>,
     ChevronDown: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>,
     ChevronRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
+    Audit: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
 };
 
 const navConfig = [
@@ -304,6 +305,21 @@ export default function Authenticated({ user: propUser, header, children }) {
                                     </span>
                                     <span className="flex-1">Company settings</span>
                                 </Link>
+                                {hasPermission('audit.view') && planPermissions['audit-logs.view'] && (
+                                    <Link
+                                        href={getSafeRoute('audit.index')}
+                                        className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                                            isRouteActive('audit.index')
+                                                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
+                                                : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
+                                        }`}
+                                    >
+                                        <span className={isRouteActive('audit.index') ? 'text-white' : 'text-indigo-500/80'}>
+                                            <Icons.Audit />
+                                        </span>
+                                        <span className="flex-1">Audit Compliance</span>
+                                    </Link>
+                                )}
                                 {hasPermission('users.view') && planPermissions['users.view'] && (
                                     <Link
                                         href={getSafeRoute('settings.team.index')}
