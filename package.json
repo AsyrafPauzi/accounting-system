@@ -23,6 +23,7 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
+        "@tabler/icons-react": "^3.43.0",
         "recharts": "^2.15.0",
         "sweetalert2": "^11.26.21"
     }

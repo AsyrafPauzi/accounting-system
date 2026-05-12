@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { confirm } from '@/utils/swal';
+import Modal from '@/Components/Modal';
 
 const Icons = {
     Document: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
@@ -12,6 +13,7 @@ const Icons = {
     ChevronRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
     MagnifyingGlass: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
     Currency: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+    FileText: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
 };
 
 function formatMoney(n) {
@@ -33,6 +35,7 @@ export default function Index({ auth, bills = [], suppliers = [], assetAccounts 
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [supplierFilter, setSupplierFilter] = useState('');
+    const [selectedBillForReceipt, setSelectedBillForReceipt] = useState(null);
     const [selectedBill, setSelectedBill] = useState(null);
 
     const { data, setData, post, processing, reset, errors } = useForm({
@@ -210,6 +213,7 @@ export default function Index({ auth, bills = [], suppliers = [], assetAccounts 
                                     <th className="px-6 py-4">Supplier</th>
                                     <th className="px-6 py-4">Due date</th>
                                     <th className="px-6 py-4">Status</th>
+                                    <th className="px-6 py-4">Receipt</th>
                                     <th className="px-6 py-4 text-right">Total</th>
                                     <th className="px-6 py-4 text-right">Balance</th>
                                     <th className="px-6 py-4 text-right">Actions</th>
@@ -236,6 +240,20 @@ export default function Index({ auth, bills = [], suppliers = [], assetAccounts 
                                                 <span className={`inline-flex w-fit px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${getStatusBadge(bill.status)}`}>
                                                     {bill.status}
                                                 </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {bill.receipt_url ? (
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); setSelectedBillForReceipt(bill); }}
+                                                        className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors inline-flex items-center gap-1"
+                                                        title="View Receipt"
+                                                    >
+                                                        <Icons.FileText />
+                                                        <span className="text-[10px] font-bold">VIEW</span>
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-slate-300 text-[10px] font-medium italic">None</span>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 text-right font-mono text-sm font-semibold text-slate-800 tabular-nums">
                                                 RM {formatMoney(bill.total_amount)}
@@ -297,6 +315,40 @@ export default function Index({ auth, bills = [], suppliers = [], assetAccounts 
                         </table>
                     </div>
                 </div>
+
+                <Modal show={selectedBillForReceipt !== null} onClose={() => setSelectedBillForReceipt(null)} maxWidth="2xl">
+                    <div className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-bold text-slate-900">Receipt Preview</h3>
+                            <button onClick={() => setSelectedBillForReceipt(null)} className="p-2 text-slate-400 hover:text-slate-600">
+                                <IconX size={20} />
+                            </button>
+                        </div>
+                        <div className="bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center h-[70vh] p-4 overflow-hidden">
+                            <img 
+                                src={selectedBillForReceipt?.receipt_url} 
+                                alt="Receipt Full Size" 
+                                className="max-w-full max-h-full object-contain shadow-2xl transition-transform duration-300" 
+                            />
+                        </div>
+                        <div className="mt-4 flex justify-end gap-3">
+                            <a 
+                                href={selectedBillForReceipt?.receipt_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="px-4 py-2 text-slate-600 border border-slate-200 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-slate-50"
+                            >
+                                Open in New Tab
+                            </a>
+                            <button 
+                                onClick={() => setSelectedBillForReceipt(null)}
+                                className="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-bold"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
 
                 {selectedBill && (
                     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
@@ -374,3 +426,9 @@ export default function Index({ auth, bills = [], suppliers = [], assetAccounts 
         </AuthenticatedLayout>
     );
 }
+
+const IconX = ({ size = 20, ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="M18 6L6 18M6 6l12 12" />
+    </svg>
+);

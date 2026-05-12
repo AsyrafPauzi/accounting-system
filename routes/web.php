@@ -62,6 +62,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/settings/audit-logs', [\App\Http\Controllers\AuditLogController::class, 'index'])->name('audit-logs.index');
     });
 
+    // --- Audit Module ---
+    Route::middleware(['permission:audit.view', 'plan.permission:audit-logs.view'])->group(function () {
+        Route::get('/audit', [\App\Http\Controllers\AuditController::class, 'index'])->name('audit.index');
+        Route::get('/audit/report', [\App\Http\Controllers\AuditController::class, 'report'])->name('audit.report');
+        Route::post('/audit/{id}/verify', [\App\Http\Controllers\AuditController::class, 'verify'])->name('audit.verify');
+        Route::post('/audit/{id}/flag', [\App\Http\Controllers\AuditController::class, 'flag'])->name('audit.flag');
+    });
+
     // Team / users (same tenant only)
     Route::middleware(['permission:users.view', 'plan.permission:users.view'])->group(function () {
         Route::get('/settings/team', [TenantUserController::class, 'index'])->name('settings.team.index');
@@ -157,12 +165,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['permission:bills.view', 'plan.permission:bills.view'])->group(function () {
         Route::get('/bills', [BillController::class, 'index'])->name('bills.index');
         Route::get('/bills/{id}/edit', [BillController::class, 'edit'])->name('bills.edit');
+        Route::get('/bills/{id?}/receipt', [BillController::class, 'showReceipt'])->name('bills.receipt');
     });
     Route::middleware(['permission:bills.create', 'plan.permission:bills.view'])->group(function () {
         Route::get('/bills/create', [BillController::class, 'create'])->name('bills.create');
         Route::post('/bills', [BillController::class, 'store'])
             ->middleware('throttle:creation')
             ->name('bills.store');
+        Route::post('/bills/upload-receipt', [BillController::class, 'uploadReceipt'])->name('bills.upload-receipt');
     });
     Route::middleware(['permission:bills.edit', 'plan.permission:bills.view'])->group(function () {
         Route::put('/bills/{id}', [BillController::class, 'update'])->name('bills.update');

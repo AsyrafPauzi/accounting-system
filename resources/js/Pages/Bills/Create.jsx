@@ -1,6 +1,7 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
+import ReceiptUpload from '@/Components/ReceiptUpload';
 
 const Icons = {
     ChevronLeft: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>,
@@ -24,10 +25,69 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
         tax_amount: 0,
         reference: '',
         private_notes: '',
+        receipt_path: '',
+        ocr_status: 'none',
+        ocr_data: null,
         items: [
             { account_code: (expenseAccounts && expenseAccounts[0]?.value) || '', description: '', quantity: 1, unit_amount: 0, amount: 0 },
         ],
     });
+
+    const handleOcrComplete = (ocrData, url, path) => {
+        if (!ocrData) return;
+
+        // Auto-populate form
+        const updates = {
+            receipt_path: path || url,
+            ocr_status: 'completed',
+            ocr_data: ocrData,
+        };
+
+        if (ocrData.bill_date) updates.bill_date = ocrData.bill_date;
+        if (ocrData.reference) updates.reference = ocrData.reference;
+        if (ocrData.tax_amount) updates.tax_amount = ocrData.tax_amount;
+
+        // Try to match supplier if it's a mock or we have a name
+        if (ocrData.supplier_name) {
+            const supplier = suppliers.find(s => 
+                s.name.toLowerCase().includes(ocrData.supplier_name.toLowerCase()) || 
+                ocrData.supplier_name.toLowerCase().includes(s.name.toLowerCase())
+            );
+            if (supplier) {
+                updates.supplier_id = String(supplier.id);
+            }
+        }
+
+        // Handle items
+        if (ocrData.items && ocrData.items.length > 0) {
+            updates.items = ocrData.items.map(item => ({
+                account_code: (expenseAccounts && expenseAccounts[0]?.value) || '',
+                description: item.description || '',
+                quantity: 1,
+                unit_amount: item.amount || 0,
+                amount: item.amount || 0,
+            }));
+        } else if (ocrData.total_amount) {
+            // If no items but total amount, update the first item
+            const newItems = [...data.items];
+            newItems[0] = { 
+                ...newItems[0], 
+                amount: ocrData.total_amount,
+                unit_amount: ocrData.total_amount,
+                description: 'Extracted from receipt'
+            };
+            updates.items = newItems;
+        }
+
+        // Apply all updates
+        Object.entries(updates).forEach(([key, value]) => {
+            setData(key, value);
+        });
+
+        // Special case for mass update ( setData doesn't batch well in old Inertia, 
+        // but let's assume it works or we use a manual object merge)
+        setData(prev => ({ ...prev, ...updates }));
+    };
 
     const addItem = () => {
         setData('items', [
@@ -81,7 +141,10 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
         >
             <Head title="Create bill" />
 
-            <form onSubmit={submit} className="space-y-8 max-w-4xl">
+            <div className="max-w-4xl mx-auto">
+                <form onSubmit={submit} className="space-y-8">
+                <ReceiptUpload onOcrComplete={handleOcrComplete} />
+
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                         <h3 className="text-sm font-bold text-slate-800">Bill details</h3>
@@ -204,7 +267,8 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
                         {processing ? 'Saving...' : 'Save as draft'}
                     </button>
                 </div>
-            </form>
+                </form>
+            </div>
         </AuthenticatedLayout>
     );
 }

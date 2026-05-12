@@ -193,6 +193,63 @@ export default function Dashboard({ auth, stats = {} }) {
                         </section>
                     </div>
                 )}
+                
+                {/* Compliance Analysis — Advanced (Corporate) Only */}
+                {isAdvanced && stats.audit && (
+                    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                        <div className="px-4 sm:px-6 py-4 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="p-1 bg-indigo-100 rounded text-indigo-600">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                </div>
+                                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Compliance Status</h2>
+                            </div>
+                            <Link href={route('audit.index')} className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+                                Review Compliance <Icons.ChevronRight />
+                            </Link>
+                        </div>
+                        <div className="p-4 sm:p-6">
+                            <div className="flex flex-col md:flex-row items-center gap-8">
+                                <div className="relative w-20 h-20 flex-shrink-0">
+                                    <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                                        <circle cx="18" cy="18" r="16" fill="none" className="stroke-slate-100" strokeWidth="4" />
+                                        <circle 
+                                            cx="18" cy="18" r="16" fill="none" 
+                                            className="stroke-indigo-600 transition-all duration-1000" 
+                                            strokeWidth="4" 
+                                            strokeDasharray={`${Math.max(5, ((stats.audit.verified + stats.audit.flagged) / (stats.audit.total || 1)) * 100)}, 100`} 
+                                            strokeLinecap="round" 
+                                        />
+                                    </svg>
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <span className="text-sm font-black text-slate-900">
+                                            {Math.round(((stats.audit.verified + stats.audit.flagged) / (stats.audit.total || 1)) * 100)}%
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 flex-1">
+                                    <div className="p-3 rounded-xl border border-slate-100 bg-slate-50/50">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Items</p>
+                                        <p className="text-lg font-bold text-slate-900 font-mono">{stats.audit.total}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl border border-emerald-100 bg-emerald-50/30">
+                                        <p className="text-[10px] font-bold text-emerald-600/70 uppercase tracking-widest mb-1">Verified</p>
+                                        <p className="text-lg font-bold text-emerald-600 font-mono">{stats.audit.verified}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl border border-rose-100 bg-rose-50/30">
+                                        <p className="text-[10px] font-bold text-rose-600/70 uppercase tracking-widest mb-1">Unaudited</p>
+                                        <p className="text-lg font-bold text-rose-600 font-mono">{stats.audit.unaudited}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl border border-amber-100 bg-amber-50/30">
+                                        <p className="text-[10px] font-bold text-amber-600/70 uppercase tracking-widest mb-1">Flagged</p>
+                                        <p className="text-lg font-bold text-amber-600 font-mono">{stats.audit.flagged}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                )}
 
                 {/* Quick Links Row — Standard & Advanced */}
                 {(isStandard || isAdvanced) && (
