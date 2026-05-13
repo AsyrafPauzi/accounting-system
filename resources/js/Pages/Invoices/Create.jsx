@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, Link, router } from '@inertiajs/react';
 
@@ -12,9 +12,13 @@ const inputClass = "w-full border border-slate-200 rounded-xl py-2.5 px-4 text-s
 const inputReadonlyClass = "w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-400 bg-slate-50";
 const labelClass = "block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5";
 
+function currencyPrefix(currency) {
+    return (currency || 'MYR').toUpperCase() === 'USD' ? 'US$' : 'RM';
+}
+
 const initialQuickCustomer = { name: '', code: '', email: '', tin: '', brn: '', billing_street: '', billing_city: '', billing_state: '', billing_zip: '' };
 
-export default function Create({ auth, customers = [], lhdn_codes = [], customer_id: preselectedCustomerId = null, next_invoice_number: suggestedInvoiceNumber = null }) {
+export default function Create({ auth, customers = [], lhdn_codes = [], customer_id: preselectedCustomerId = null, next_invoice_number: suggestedInvoiceNumber = null, base_currency = 'MYR' }) {
     const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
     const [newCustomers, setNewCustomers] = useState([]);
     const [quickCustomer, setQuickCustomer] = useState(initialQuickCustomer);
@@ -31,6 +35,8 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
         due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Default Net 30
         shipping_amount: 0,
         customer_notes: '',
+        currency: 'MYR',
+        exchange_rate: '1',
         items: [
             { 
                 description: '', 
@@ -42,6 +48,20 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
             }
         ],
     });
+
+    useEffect(() => {
+        const cur = (data.currency || 'MYR').toUpperCase();
+        const base = (base_currency || 'MYR').toUpperCase();
+        if (cur === base) {
+            if (String(data.exchange_rate) !== '1') {
+                setData('exchange_rate', '1');
+            }
+            return;
+        }
+        if (data.exchange_rate === '1' || data.exchange_rate === 1) {
+            setData('exchange_rate', '');
+        }
+    }, [data.currency, base_currency]);
 
     const addItem = () => {
         setData('items', [
@@ -84,11 +104,12 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
     const totalDiscount = calculateTotalDiscount();
     const totalTax = calculateTax();
     const shipping = parseFloat(data.shipping_amount || 0);
-    
-    // Calculate Rounding (Malaysia 5-Sen Rule)
+    const invCur = (data.currency || 'MYR').toUpperCase();
+    const roundStep = invCur === 'MYR' ? 0.05 : 0.01;
     const rawTotal = (subtotal - totalDiscount) + totalTax + shipping;
-    const roundedTotal = (Math.round(rawTotal / 0.05) * 0.05);
+    const roundedTotal = (Math.round(rawTotal / roundStep) * roundStep);
     const roundingAdjustment = roundedTotal - rawTotal;
+    const curSym = currencyPrefix(data.currency);
 
     const submit = (e) => {
         e.preventDefault();
@@ -144,7 +165,7 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                             <span className="p-2.5 rounded-xl bg-blue-100 text-blue-600"><Icons.Document /></span>
                             <div>
                                 <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">New Invoice</h2>
-                                <p className="text-slate-500 text-sm font-medium mt-1">LHDN compliant · 5-sen rounding</p>
+                                <p className="text-slate-500 text-sm font-medium mt-1">LHDN compliant · {invCur === 'MYR' ? '5-sen rounding (MYR)' : 'Cent rounding (USD)'}</p>
                             </div>
                         </div>
                     </div>
@@ -198,6 +219,22 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                             <label className={labelClass}>Due Date</label>
                             <input type="date" value={data.due_date} onChange={e => setData('due_date', e.target.value)} className={inputClass} />
                         </div>
+                        <div>
+                            <label className={labelClass}>Invoice currency</label>
+                            <select value={data.currency} onChange={e => setData('currency', e.target.value)} className={inputClass}>
+                                <option value="MYR">MYR — Malaysian Ringgit</option>
+                                <option value="USD">USD — US Dollar</option>
+                            </select>
+                            {errors.currency && <p className="text-rose-500 text-xs font-medium mt-1">{errors.currency}</p>}
+                        </div>
+                        {(data.currency || 'MYR').toUpperCase() !== (base_currency || 'MYR').toUpperCase() && (
+                            <div className="md:col-span-2">
+                                <label className={labelClass}>Exchange rate ({(base_currency || 'MYR').toUpperCase()} per 1 {data.currency})</label>
+                                <input type="number" step="0.000001" min="0.000001" value={data.exchange_rate} onChange={e => setData('exchange_rate', e.target.value)} className={inputClass} placeholder="e.g. 4.72" />
+                                <p className="text-xs text-slate-400 mt-1.5">Ledger posting converts line totals into your company base currency using this rate.</p>
+                                {errors.exchange_rate && <p className="text-rose-500 text-xs font-medium mt-1">{errors.exchange_rate}</p>}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -209,8 +246,8 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                                     <th className="p-6">LHDN classification</th>
                                     <th className="p-6">Description</th>
                                     <th className="p-6 text-center w-24">Qty</th>
-                                    <th className="p-6 w-32">Price (RM)</th>
-                                    <th className="p-6 w-32">Disc (RM)</th>
+                                    <th className="p-6 w-32">Price ({invCur})</th>
+                                    <th className="p-6 w-32">Disc ({invCur})</th>
                                     <th className="p-6 text-center w-32">Tax</th>
                                     <th className="p-6 text-right w-40">Total</th>
                                     <th className="p-6 w-16"></th>
@@ -301,15 +338,15 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                         <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
                                 <div className="flex justify-between text-sm">
                                     <span className="font-bold text-slate-500 uppercase tracking-tighter">Subtotal (Gross)</span>
-                                    <span className="font-mono font-bold text-slate-700">RM {subtotal.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
+                                    <span className="font-mono font-bold text-slate-700">{curSym} {subtotal.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span className="font-bold text-rose-400 uppercase tracking-tighter">Line Discounts</span>
-                                    <span className="font-mono font-bold text-rose-500">- RM {totalDiscount.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
+                                    <span className="font-mono font-bold text-rose-500">- {curSym} {totalDiscount.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span className="font-bold text-slate-400 uppercase tracking-tighter">SST (Service Tax)</span>
-                                    <span className="font-mono font-bold text-slate-700">+ RM {totalTax.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
+                                    <span className="font-mono font-bold text-slate-700">+ {curSym} {totalTax.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
                                 </div>
                                 <div className="flex justify-between items-center py-2 border-t border-slate-50">
                                     <span className="font-bold text-slate-400 uppercase tracking-tighter">Shipping/Handling</span>
@@ -321,13 +358,13 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                                     />
                                 </div>
                                 <div className="flex justify-between text-xs text-slate-400">
-                                    <span>5-Sen Rounding</span>
+                                    <span>{invCur === 'MYR' ? '5-Sen Rounding' : 'Cent Rounding'}</span>
                                     <span className="font-mono">{roundingAdjustment.toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between items-center pt-4 border-t-2 border-slate-100">
                                     <span className="font-bold text-slate-800 uppercase tracking-tighter">Grand Total</span>
                                     <span className="text-2xl font-bold text-blue-600 font-mono tabular-nums">
-                                        RM {roundedTotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
+                                        {curSym} {roundedTotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
                         </div>

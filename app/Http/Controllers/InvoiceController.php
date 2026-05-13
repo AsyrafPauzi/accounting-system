@@ -16,6 +16,24 @@ use Inertia\Inertia;
 class InvoiceController extends Controller
 {
     public function __construct(protected InvoiceService $invoiceService) {}
+
+    /**
+     * Company books base currency (for FX hint on invoices).
+     */
+    protected function tenantBaseCurrency(): string
+    {
+        if (function_exists('tenant') && tenant()) {
+            return strtoupper((string) (tenant()->base_currency ?? 'MYR'));
+        }
+        if (auth()->check() && auth()->user()->tenant_id) {
+            $t = \App\Models\Tenant::find(auth()->user()->tenant_id);
+            if ($t?->base_currency) {
+                return strtoupper((string) $t->base_currency);
+            }
+        }
+
+        return 'MYR';
+    }
     /**
      * Official LHDN Classification Codes for Malaysia
      */
@@ -115,6 +133,7 @@ class InvoiceController extends Controller
             'lhdn_codes' => $this->getLhdnCodes(),
             'customer_id' => $request->query('customer_id'),
             'next_invoice_number' => $nextNumber,
+            'base_currency' => $this->tenantBaseCurrency(),
         ]);
     }
 
@@ -176,6 +195,7 @@ class InvoiceController extends Controller
             'customers'  => Customer::all(),
             'lhdn_codes' => $this->getLhdnCodes(),
             'journal_entry_id' => $journalEntryId,
+            'base_currency' => $this->tenantBaseCurrency(),
         ]);
     }
 

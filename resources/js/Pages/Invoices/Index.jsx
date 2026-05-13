@@ -32,6 +32,20 @@ function getStatusBadge(status) {
     return styles[status] || 'bg-slate-100 text-slate-600';
 }
 
+function formatInvoiceAmount(invoice) {
+    const c = (invoice.currency || 'MYR').toUpperCase();
+    const n = parseFloat(invoice.total_amount || 0);
+    const f = n.toLocaleString('en-MY', { minimumFractionDigits: 2 });
+    return c === 'USD' ? `US$ ${f}` : `RM ${f}`;
+}
+
+function formatInvoiceBalance(invoice) {
+    const c = (invoice.currency || 'MYR').toUpperCase();
+    const n = parseFloat(invoice.total_amount) - parseFloat(invoice.amount_paid);
+    const f = n.toFixed(2);
+    return c === 'USD' ? `US$ ${f}` : `RM ${f}`;
+}
+
 export default function Index({ auth, invoices = [], totalOutstanding = 0, totalCollected = 0, totalCount = 0, paginator = {}, filters = {} }) {
     const { current_page = 1, last_page = 1, per_page = 10, total = 0, from = 0, to = 0 } = paginator;
     const { search = '', status: statusFilter = '', per_page: perPageFilter = 10 } = filters;
@@ -92,9 +106,9 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
                 <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${getStatusBadge(invoice.status)}`}>{invoice.status}</span>
             </td>
             <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
-                <div className="font-mono text-sm font-semibold text-slate-800">RM {parseFloat(invoice.total_amount || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</div>
+                <div className="font-mono text-sm font-semibold text-slate-800">{formatInvoiceAmount(invoice)}</div>
                 {parseFloat(invoice.amount_paid) > 0 && invoice.status !== 'paid' && (
-                    <p className="text-xs text-rose-600 tabular-nums">Bal: RM {(parseFloat(invoice.total_amount) - parseFloat(invoice.amount_paid)).toFixed(2)}</p>
+                    <p className="text-xs text-rose-600 tabular-nums">Bal: {formatInvoiceBalance(invoice)}</p>
                 )}
             </td>
             <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
@@ -205,7 +219,7 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
                                     <div className="min-w-0 flex-1">
                                         <Link href={route('invoices.edit', invoice.id)} className="font-semibold text-slate-800 hover:text-blue-600">{invoice.invoice_number}</Link>
                                         <p className="text-xs text-slate-500 mt-0.5">{invoice.customer_name || 'Walk-in'}</p>
-                                        <p className="text-sm font-mono font-semibold text-slate-800 mt-1">RM {parseFloat(invoice.total_amount || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
+                                        <p className="text-sm font-mono font-semibold text-slate-800 mt-1">{formatInvoiceAmount(invoice)}</p>
                                         <span className={`inline-flex mt-2 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${getStatusBadge(invoice.status)}`}>{invoice.status}</span>
                                     </div>
                                     <ActionsCell auth={auth} invoice={invoice} setSelectedInvoice={setSelectedInvoice} setData={setData} handlePostToLedger={handlePostToLedger} handleVoid={handleVoid} handleDelete={handleDelete} handleEmailInvoice={handleEmailInvoice} emailingId={emailingId} />
@@ -244,9 +258,9 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
                             </div>
                             <form onSubmit={handlePaymentSubmit} className="space-y-5">
                                 <div>
-                                    <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Amount (RM)</label>
+                                    <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Amount ({(selectedInvoice.currency || 'MYR').toUpperCase()})</label>
                                     <div className="relative">
-                                        <span className="absolute inset-y-0 left-4 flex items-center text-slate-400 font-medium">RM</span>
+                                        <span className="absolute inset-y-0 left-4 flex items-center text-slate-400 font-medium">{(selectedInvoice.currency || 'MYR').toUpperCase() === 'USD' ? 'US$' : 'RM'}</span>
                                         <input type="number" value={data.amount} onChange={e => setData('amount', e.target.value)} className={`w-full pl-12 pr-4 py-3 border rounded-xl font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 ${errors.amount ? 'border-rose-500 ring-1 ring-rose-500' : 'border-slate-200'}`} step="0.01" required />
                                     </div>
                                     {errors.amount && <p className="text-rose-500 text-[10px] mt-1.5 font-bold uppercase tracking-tight">{errors.amount}</p>}

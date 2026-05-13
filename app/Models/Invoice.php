@@ -24,6 +24,8 @@ class Invoice extends Model
         'status', 
         'issue_date',
         'due_date',
+        'currency',
+        'exchange_rate',
         'shipping_amount',
         'rounding_adjustment',
         'customer_notes',

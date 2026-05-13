@@ -3,15 +3,48 @@
 namespace App\Services;
 
 use App\Models\Invoice;
-use App\Models\InvoiceItem;
 use Illuminate\Support\Facades\DB;
 
 class InvoiceService
 {
     /**
+     * Smallest currency unit for invoice total rounding (Malaysia 5 sen vs typical 1 cent).
+     */
+    public static function roundingStep(string $currency): float
+    {
+        return strtoupper($currency) === 'MYR' ? 0.05 : 0.01;
+    }
+
+    /**
+     * Multiplier to express invoice amounts in the tenant's base currency for the GL.
+     * When invoice currency matches base, returns 1. Otherwise uses stored exchange_rate
+     * as "base currency per 1 unit of invoice currency" (e.g. MYR per 1 USD).
+     */
+    public function ledgerBaseMultiplier(Invoice $invoice): float
+    {
+        $invoiceCurrency = strtoupper((string) ($invoice->currency ?: 'MYR'));
+        $base = $this->tenantBaseCurrency();
+        if ($invoiceCurrency === $base) {
+            return 1.0;
+        }
+        $rate = (float) ($invoice->exchange_rate ?? 0);
+
+        return $rate > 0 ? $rate : 1.0;
+    }
+
+    private function tenantBaseCurrency(): string
+    {
+        if (function_exists('tenant') && tenant()) {
+            return strtoupper((string) (tenant()->base_currency ?? 'MYR'));
+        }
+
+        return 'MYR';
+    }
+
+    /**
      * Compute totals from a line-item array.
      */
-    public function computeTotals(array $items, float $shipping = 0.0): array
+    public function computeTotals(array $items, float $shipping = 0.0, string $currency = 'MYR'): array
     {
         $subtotal = collect($items)->sum(fn ($i) => $i['quantity'] * $i['unit_price']);
         $discountTotal = collect($items)->sum(fn ($i) => (float) ($i['discount_amount'] ?? 0));
@@ -21,7 +54,8 @@ class InvoiceService
         });
 
         $rawTotal = ($subtotal - $discountTotal) + $taxTotal + $shipping;
-        $roundedTotal = round($rawTotal / 0.05) * 0.05;
+        $step = self::roundingStep($currency);
+        $roundedTotal = round($rawTotal / $step) * $step;
         $roundingAdjustment = $roundedTotal - $rawTotal;
 
         return compact('subtotal', 'discountTotal', 'taxTotal', 'roundedTotal', 'roundingAdjustment');
@@ -33,7 +67,9 @@ class InvoiceService
     public function create(array $data, array $items): Invoice
     {
         return DB::transaction(function () use ($data, $items) {
-            $totals = $this->computeTotals($items, (float) ($data['shipping_amount'] ?? 0));
+            $currency = strtoupper((string) ($data['currency'] ?? 'MYR'));
+            $totals = $this->computeTotals($items, (float) ($data['shipping_amount'] ?? 0), $currency);
+            $exchangeRate = $this->normalizedExchangeRate($currency, $data['exchange_rate'] ?? null);
 
             $invoice = Invoice::create([
                 'invoice_number'     => $data['invoice_number'],
@@ -41,6 +77,8 @@ class InvoiceService
                 'customer_id'        => $data['customer_id'],
                 'issue_date'         => $data['issue_date'],
                 'due_date'           => $data['due_date'] ?? null,
+                'currency'           => $currency,
+                'exchange_rate'      => $exchangeRate,
                 'amount_before_tax'  => $totals['subtotal'],
                 'discount_total'     => $totals['discountTotal'],
                 'tax_amount'         => $totals['taxTotal'],
@@ -65,13 +103,18 @@ class InvoiceService
     public function update(Invoice $invoice, array $data, array $items): void
     {
         DB::transaction(function () use ($invoice, $data, $items) {
-            $totals = $this->computeTotals($items, (float) ($data['shipping_amount'] ?? 0));
+            $currency = strtoupper((string) ($data['currency'] ?? $invoice->currency ?? 'MYR'));
+            $totals = $this->computeTotals($items, (float) ($data['shipping_amount'] ?? 0), $currency);
+            $exchangeRate = $this->normalizedExchangeRate($currency, $data['exchange_rate'] ?? $invoice->exchange_rate);
 
             $invoice->update([
+                'invoice_number'     => $data['invoice_number'],
                 'customer_id'        => $data['customer_id'],
                 'msic_code'          => $data['msic_code'],
                 'issue_date'         => $data['issue_date'],
                 'due_date'           => $data['due_date'] ?? null,
+                'currency'           => $currency,
+                'exchange_rate'      => $exchangeRate,
                 'amount_before_tax'  => $totals['subtotal'],
                 'discount_total'     => $totals['discountTotal'],
                 'tax_amount'         => $totals['taxTotal'],
@@ -126,18 +169,23 @@ class InvoiceService
                 'updated_at'     => now(),
             ]);
 
-            $revenueNet = (float) ($invoice->amount_before_tax - $invoice->discount_total)
+            $m = $this->ledgerBaseMultiplier($invoice);
+
+            $revenueNet = ((float) ($invoice->amount_before_tax - $invoice->discount_total)
                 + (float) $invoice->shipping_amount
-                + (float) $invoice->rounding_adjustment;
+                + (float) $invoice->rounding_adjustment) * $m;
 
             $accountMap = DB::table('accounts')->whereIn('code', ['1100', '4000', '2100'])->pluck('id', 'code');
 
+            $totalBase = (float) $invoice->total_amount * $m;
+            $taxBase = (float) $invoice->tax_amount * $m;
+
             $journalItems = [
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['1100'] ?? null, 'account_code' => '1100', 'debit' => $invoice->total_amount, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
+                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['1100'] ?? null, 'account_code' => '1100', 'debit' => $totalBase, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
                 ['journal_entry_id' => $journalId, 'account_id' => $accountMap['4000'] ?? null, 'account_code' => '4000', 'debit' => 0, 'credit' => $revenueNet, 'created_at' => now(), 'updated_at' => now()],
             ];
             if ($invoice->tax_amount > 0) {
-                $journalItems[] = ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2100'] ?? null, 'account_code' => '2100', 'debit' => 0, 'credit' => $invoice->tax_amount, 'created_at' => now(), 'updated_at' => now()];
+                $journalItems[] = ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2100'] ?? null, 'account_code' => '2100', 'debit' => 0, 'credit' => $taxBase, 'created_at' => now(), 'updated_at' => now()];
             }
 
             DB::table('journal_items')->insert($journalItems);
@@ -164,18 +212,23 @@ class InvoiceService
                 'updated_at'     => now(),
             ]);
 
-            $revenueNet = (float) ($invoice->amount_before_tax - $invoice->discount_total)
+            $m = $this->ledgerBaseMultiplier($invoice);
+
+            $revenueNet = ((float) ($invoice->amount_before_tax - $invoice->discount_total)
                 + (float) $invoice->shipping_amount
-                + (float) $invoice->rounding_adjustment;
+                + (float) $invoice->rounding_adjustment) * $m;
 
             $accountMap = DB::table('accounts')->whereIn('code', ['1100', '4000', '2100'])->pluck('id', 'code');
 
+            $totalBase = (float) $invoice->total_amount * $m;
+            $taxBase = (float) $invoice->tax_amount * $m;
+
             $reversals = [
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['1100'] ?? null, 'account_code' => '1100', 'debit' => 0, 'credit' => $invoice->total_amount, 'created_at' => now(), 'updated_at' => now()],
+                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['1100'] ?? null, 'account_code' => '1100', 'debit' => 0, 'credit' => $totalBase, 'created_at' => now(), 'updated_at' => now()],
                 ['journal_entry_id' => $journalId, 'account_id' => $accountMap['4000'] ?? null, 'account_code' => '4000', 'debit' => $revenueNet, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
             ];
             if ($invoice->tax_amount > 0) {
-                $reversals[] = ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2100'] ?? null, 'account_code' => '2100', 'debit' => $invoice->tax_amount, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()];
+                $reversals[] = ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2100'] ?? null, 'account_code' => '2100', 'debit' => $taxBase, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()];
             }
 
             DB::table('journal_items')->insert($reversals);
@@ -212,9 +265,12 @@ class InvoiceService
 
             $accountMap = DB::table('accounts')->whereIn('code', [$bankAccountCode, '1100'])->pluck('id', 'code');
 
+            $m = $this->ledgerBaseMultiplier($invoice);
+            $amountBase = $amount * $m;
+
             DB::table('journal_items')->insert([
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap[$bankAccountCode] ?? null, 'account_code' => $bankAccountCode, 'debit' => $amount, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['1100'] ?? null, 'account_code' => '1100', 'debit' => 0, 'credit' => $amount, 'created_at' => now(), 'updated_at' => now()],
+                ['journal_entry_id' => $journalId, 'account_id' => $accountMap[$bankAccountCode] ?? null, 'account_code' => $bankAccountCode, 'debit' => $amountBase, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
+                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['1100'] ?? null, 'account_code' => '1100', 'debit' => 0, 'credit' => $amountBase, 'created_at' => now(), 'updated_at' => now()],
             ]);
         });
     }
@@ -268,20 +324,36 @@ class InvoiceService
 
         DB::table('journal_items')->where('journal_entry_id', $journal->id)->delete();
 
-        $revenueNet = (float) ($totals['subtotal'] - $totals['discountTotal'])
+        $m = $this->ledgerBaseMultiplier($invoice);
+
+        $revenueNet = ((float) ($totals['subtotal'] - $totals['discountTotal'])
             + (float) ($invoice->shipping_amount ?? 0)
-            + $totals['roundingAdjustment'];
+            + $totals['roundingAdjustment']) * $m;
 
         $accountMap = DB::table('accounts')->whereIn('code', ['1100', '4000', '2100'])->pluck('id', 'code');
 
+        $totalBase = $totals['roundedTotal'] * $m;
+        $taxBase = $totals['taxTotal'] * $m;
+
         $journalItems = [
-            ['journal_entry_id' => $journal->id, 'account_id' => $accountMap['1100'] ?? null, 'account_code' => '1100', 'debit' => $totals['roundedTotal'], 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
+            ['journal_entry_id' => $journal->id, 'account_id' => $accountMap['1100'] ?? null, 'account_code' => '1100', 'debit' => $totalBase, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()],
             ['journal_entry_id' => $journal->id, 'account_id' => $accountMap['4000'] ?? null, 'account_code' => '4000', 'debit' => 0, 'credit' => $revenueNet, 'created_at' => now(), 'updated_at' => now()],
         ];
         if ($totals['taxTotal'] > 0) {
-            $journalItems[] = ['journal_entry_id' => $journal->id, 'account_id' => $accountMap['2100'] ?? null, 'account_code' => '2100', 'debit' => 0, 'credit' => $totals['taxTotal'], 'created_at' => now(), 'updated_at' => now()];
+            $journalItems[] = ['journal_entry_id' => $journal->id, 'account_id' => $accountMap['2100'] ?? null, 'account_code' => '2100', 'debit' => 0, 'credit' => $taxBase, 'created_at' => now(), 'updated_at' => now()];
         }
 
         DB::table('journal_items')->insert($journalItems);
+    }
+
+    private function normalizedExchangeRate(string $currency, mixed $rate): float
+    {
+        $currency = strtoupper($currency);
+        if ($currency === $this->tenantBaseCurrency()) {
+            return 1.0;
+        }
+        $r = (float) $rate;
+
+        return $r > 0 ? $r : 1.0;
     }
 }

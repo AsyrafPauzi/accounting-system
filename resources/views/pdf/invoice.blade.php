@@ -138,6 +138,9 @@
     </style>
 </head>
 <body>
+    @php
+        $invoiceCurrency = strtoupper((string) ($invoice->currency ?? 'MYR'));
+    @endphp
     <div class="page">
         <div class="top-bar">
             <div class="top-bar-left">
@@ -210,10 +213,10 @@
                     <thead>
                         <tr>
                             <th style="width: 45%">Description</th>
-                            <th class="text-right" style="width: 15%">Rate ({{ $company['currency'] ?? 'MYR' }})</th>
+                            <th class="text-right" style="width: 15%">Rate ({{ $invoiceCurrency }})</th>
                             <th class="text-center" style="width: 10%">Qty</th>
                             <th class="text-center" style="width: 10%">Tax %</th>
-                            <th class="text-right" style="width: 20%">Amount</th>
+                            <th class="text-right" style="width: 20%">Amount ({{ $invoiceCurrency }})</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -257,31 +260,31 @@
                     <table class="totals-table">
                         <tr>
                             <td class="totals-label">Subtotal:</td>
-                            <td class="totals-value">{{ number_format($invoice->amount_before_tax, 2) }}</td>
+                            <td class="totals-value">{{ number_format($invoice->amount_before_tax, 2) }} {{ $invoiceCurrency }}</td>
                         </tr>
                         @if(($invoice->discount_total ?? 0) > 0)
                         <tr>
                             <td class="totals-label">Discount:</td>
-                            <td class="totals-value">-{{ number_format($invoice->discount_total, 2) }}</td>
+                            <td class="totals-value">-{{ number_format($invoice->discount_total, 2) }} {{ $invoiceCurrency }}</td>
                         </tr>
                         @endif
                         <tr>
                             <td class="totals-label">Tax Total:</td>
-                            <td class="totals-value">{{ number_format($invoice->tax_amount, 2) }}</td>
+                            <td class="totals-value">{{ number_format($invoice->tax_amount, 2) }} {{ $invoiceCurrency }}</td>
                         </tr>
                         @if(($invoice->shipping_amount ?? 0) > 0)
                         <tr>
                             <td class="totals-label">Shipping:</td>
-                            <td class="totals-value">{{ number_format($invoice->shipping_amount, 2) }}</td>
+                            <td class="totals-value">{{ number_format($invoice->shipping_amount, 2) }} {{ $invoiceCurrency }}</td>
                         </tr>
                         @endif
                         <tr class="totals-row-total">
                             <td class="totals-label">Grand Total:</td>
-                            <td class="totals-value">{{ number_format($invoice->total_amount, 2) }} {{ $company['currency'] ?? 'MYR' }}</td>
+                            <td class="totals-value">{{ number_format($invoice->total_amount, 2) }} {{ $invoiceCurrency }}</td>
                         </tr>
                         <tr>
                             <td class="totals-label">Paid to Date:</td>
-                            <td class="totals-value">{{ number_format($invoice->amount_paid, 2) }}</td>
+                            <td class="totals-value">{{ number_format($invoice->amount_paid, 2) }} {{ $invoiceCurrency }}</td>
                         </tr>
                     </table>
                     
@@ -289,7 +292,7 @@
                         <table class="balance-table">
                             <tr>
                                 <td class="balance-label">Balance Due</td>
-                                <td class="balance-value">{{ number_format($invoice->total_amount - $invoice->amount_paid, 2) }} {{ $company['currency'] ?? 'MYR' }}</td>
+                                <td class="balance-value">{{ number_format($invoice->total_amount - $invoice->amount_paid, 2) }} {{ $invoiceCurrency }}</td>
                             </tr>
                         </table>
                     </div>

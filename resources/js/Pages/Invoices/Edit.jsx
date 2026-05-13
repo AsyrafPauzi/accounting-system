@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, Link } from '@inertiajs/react';
 
@@ -14,7 +14,11 @@ const inputClass = "w-full border border-slate-200 rounded-xl py-2.5 px-4 text-s
 const inputReadonlyClass = "w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-400 bg-slate-50";
 const labelClass = "block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5";
 
-export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], journal_entry_id = null }) {
+function currencyPrefix(currency) {
+    return (currency || 'MYR').toUpperCase() === 'USD' ? 'US$' : 'RM';
+}
+
+export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], journal_entry_id = null, base_currency = 'MYR' }) {
     // Initialize form with existing invoice data and its nested items
     const { data, setData, put, processing, errors } = useForm({
         customer_id: invoice.customer_id || '',
@@ -24,6 +28,19 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
         due_date: invoice.due_date || '',
         shipping_amount: parseFloat(invoice.shipping_amount || 0),
         customer_notes: invoice.customer_notes || '',
+        currency: (invoice.currency || 'MYR').toUpperCase(),
+        exchange_rate: (() => {
+            const cur = (invoice.currency || 'MYR').toUpperCase();
+            const base = (base_currency || 'MYR').toUpperCase();
+            if (cur === base) {
+                return '1';
+            }
+            const er = invoice.exchange_rate;
+            if (er != null && Number(er) > 0) {
+                return String(Number(er));
+            }
+            return '';
+        })(),
         // Map existing items from the database to the form state
         items: invoice.items && invoice.items.length > 0 
             ? invoice.items.map(item => ({
@@ -36,6 +53,20 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
             })) 
             : [{ description: '', quantity: 1, unit_price: 0, tax_rate: 8, discount_amount: 0, item_classification: '011' }],
     });
+
+    useEffect(() => {
+        const cur = (data.currency || 'MYR').toUpperCase();
+        const base = (base_currency || 'MYR').toUpperCase();
+        if (cur === base) {
+            if (String(data.exchange_rate) !== '1') {
+                setData('exchange_rate', '1');
+            }
+            return;
+        }
+        if (data.exchange_rate === '1' || data.exchange_rate === 1) {
+            setData('exchange_rate', '');
+        }
+    }, [data.currency, base_currency]);
 
     const addItem = () => {
         setData('items', [
@@ -77,11 +108,12 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
     const totalDiscount = calculateTotalDiscount();
     const totalTax = calculateTax();
     const shipping = parseFloat(data.shipping_amount || 0);
-    
-    // Calculate Rounding (Malaysia 5-Sen Rule)
+    const invCur = (data.currency || 'MYR').toUpperCase();
+    const roundStep = invCur === 'MYR' ? 0.05 : 0.01;
     const rawTotal = (subtotal - totalDiscount) + totalTax + shipping;
-    const roundedTotal = (Math.round(rawTotal / 0.05) * 0.05);
+    const roundedTotal = (Math.round(rawTotal / roundStep) * roundStep);
     const roundingAdjustment = roundedTotal - rawTotal;
+    const curSym = currencyPrefix(data.currency);
 
     const submit = (e) => {
         e.preventDefault();
@@ -206,7 +238,15 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                 <div>
                                     <label className={labelClass}>Invoice Number</label>
-                                    <div className={inputReadonlyClass}>{data.invoice_number}</div>
+                                    <input
+                                        type="text"
+                                        value={data.invoice_number}
+                                        onChange={e => setData('invoice_number', e.target.value)}
+                                        className={`${inputClass} font-mono text-slate-800`}
+                                        required
+                                    />
+                                    {errors.invoice_number && <p className="text-rose-500 text-xs font-medium mt-1">{errors.invoice_number}</p>}
+                                    <p className="text-xs text-slate-400 mt-1.5">Must be unique. Another invoice cannot reuse this number while it exists.</p>
                                 </div>
                                 <div>
                                     <label className={labelClass}>MSIC Code</label>
@@ -229,6 +269,22 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                                     <label className={labelClass}>Due Date</label>
                                     <input type="date" value={data.due_date} onChange={e => setData('due_date', e.target.value)} className={inputClass} />
                                 </div>
+                                <div>
+                                    <label className={labelClass}>Invoice currency</label>
+                                    <select value={data.currency} onChange={e => setData('currency', e.target.value)} className={inputClass}>
+                                        <option value="MYR">MYR — Malaysian Ringgit</option>
+                                        <option value="USD">USD — US Dollar</option>
+                                    </select>
+                                    {errors.currency && <p className="text-rose-500 text-xs font-medium mt-1">{errors.currency}</p>}
+                                </div>
+                                {(data.currency || 'MYR').toUpperCase() !== (base_currency || 'MYR').toUpperCase() && (
+                                    <div className="md:col-span-2">
+                                        <label className={labelClass}>Exchange rate ({(base_currency || 'MYR').toUpperCase()} per 1 {data.currency})</label>
+                                        <input type="number" step="0.000001" min="0.000001" value={data.exchange_rate} onChange={e => setData('exchange_rate', e.target.value)} className={inputClass} />
+                                        <p className="text-xs text-slate-400 mt-1.5">Ledger posting converts amounts using this rate.</p>
+                                        {errors.exchange_rate && <p className="text-rose-500 text-xs font-medium mt-1">{errors.exchange_rate}</p>}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -240,8 +296,8 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                                         <th className="p-6">LHDN classification</th>
                                         <th className="p-6">Description</th>
                                         <th className="p-6 text-center w-24">Qty</th>
-                                        <th className="p-6 w-32">Price (RM)</th>
-                                        <th className="p-6 w-32">Disc (RM)</th>
+                                        <th className="p-6 w-32">Price ({invCur})</th>
+                                        <th className="p-6 w-32">Disc ({invCur})</th>
                                         <th className="p-6 text-center w-32">Tax</th>
                                         <th className="p-6 text-right w-40">Total</th>
                                         <th className="p-6 w-16"></th>
@@ -331,15 +387,15 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                                 <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
                                     <div className="flex justify-between text-sm">
                                         <span className="font-bold text-slate-500 uppercase tracking-tighter">Subtotal (Gross)</span>
-                                        <span className="font-mono font-bold text-slate-700">RM {subtotal.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
+                                        <span className="font-mono font-bold text-slate-700">{curSym} {subtotal.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
                                     </div>
                                     <div className="flex justify-between text-sm">
                                         <span className="font-bold text-rose-400 uppercase tracking-tighter">Line Discounts</span>
-                                        <span className="font-mono font-bold text-rose-500">- RM {totalDiscount.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
+                                        <span className="font-mono font-bold text-rose-500">- {curSym} {totalDiscount.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
                                     </div>
                                     <div className="flex justify-between text-sm">
                                         <span className="font-bold text-slate-400 uppercase tracking-tighter">SST (Tax)</span>
-                                        <span className="font-mono font-bold text-slate-700">+ RM {totalTax.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
+                                        <span className="font-mono font-bold text-slate-700">+ {curSym} {totalTax.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
                                     </div>
                                     <div className="flex justify-between items-center py-2 border-t border-slate-50">
                                         <span className="font-bold text-slate-400 uppercase tracking-tighter">Shipping</span>
@@ -351,13 +407,13 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                                         />
                                     </div>
                                     <div className="flex justify-between text-xs text-slate-400">
-                                        <span>5-Sen Rounding</span>
+                                        <span>{invCur === 'MYR' ? '5-Sen Rounding' : 'Cent Rounding'}</span>
                                         <span className="font-mono">{roundingAdjustment.toFixed(2)}</span>
                                     </div>
                                     <div className="flex justify-between items-center pt-4 border-t-2 border-slate-100">
                                         <span className="font-bold text-slate-800 uppercase tracking-tighter">Grand Total</span>
                                         <span className="text-2xl font-bold text-blue-600 font-mono tabular-nums">
-                                            RM {roundedTotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
+                                            {curSym} {roundedTotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
                                         </span>
                                     </div>
                                 </div>
