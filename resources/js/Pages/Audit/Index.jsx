@@ -15,6 +15,24 @@ import {
 } from '@tabler/icons-react';
 import Modal from '@/Components/Modal';
 
+function IconX({ size = 24, ...props }) {
+    return (
+        <svg
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+    );
+}
+
 export default function Index({ auth, bills, filters, stats }) {
     const [selectedBill, setSelectedBill] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -150,7 +168,9 @@ export default function Index({ auth, bills, filters, stats }) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {bills.data.map((bill) => (
+                                {(bills?.data ?? []).map((bill) => {
+                                    const auditLabel = bill.audit_status ?? 'unaudited';
+                                    return (
                                     <tr key={bill.id} className="hover:bg-slate-50/80 transition-colors group">
                                         <td className="px-6 py-4">
                                             <div className="font-bold text-slate-900">{bill.bill_number}</div>
@@ -164,7 +184,7 @@ export default function Index({ auth, bills, filters, stats }) {
                                             <div className="text-xs text-slate-400 truncate max-w-[200px]">{bill.private_notes || bill.reference || 'No notes'}</div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="font-mono font-bold text-slate-800">RM {parseFloat(bill.total_amount).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</div>
+                                            <div className="font-mono font-bold text-slate-800">RM {(Number(bill.total_amount) || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</div>
                                         </td>
                                         <td className="px-6 py-4">
                                             {bill.receipt_path ? (
@@ -183,10 +203,10 @@ export default function Index({ auth, bills, filters, stats }) {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
-                                                ${bill.audit_status === 'verified' ? 'bg-emerald-100 text-emerald-700' : 
-                                                  bill.audit_status === 'flagged' ? 'bg-rose-100 text-rose-700' : 
+                                                ${auditLabel === 'verified' ? 'bg-emerald-100 text-emerald-700' :
+                                                  auditLabel === 'flagged' ? 'bg-rose-100 text-rose-700' :
                                                   'bg-slate-100 text-slate-600'}`}>
-                                                {bill.audit_status}
+                                                {auditLabel}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
@@ -198,7 +218,7 @@ export default function Index({ auth, bills, filters, stats }) {
                                                 >
                                                     <IconEye size={18} />
                                                 </Link>
-                                                {bill.audit_status !== 'verified' && (
+                                                {auditLabel !== 'verified' && (
                                                     <button 
                                                         onClick={() => handleVerify(bill.id)}
                                                         disabled={isProcessing}
@@ -208,7 +228,7 @@ export default function Index({ auth, bills, filters, stats }) {
                                                         <IconCheck size={18} />
                                                     </button>
                                                 )}
-                                                {bill.audit_status === 'unaudited' && (
+                                                {auditLabel === 'unaudited' && (
                                                     <button 
                                                         onClick={() => handleFlag(bill.id)}
                                                         disabled={isProcessing}
@@ -221,8 +241,9 @@ export default function Index({ auth, bills, filters, stats }) {
                                             </div>
                                         </td>
                                     </tr>
-                                ))}
-                                {bills.data.length === 0 && (
+                                    );
+                                })}
+                                {(bills?.data ?? []).length === 0 && (
                                     <tr>
                                         <td colSpan="6" className="px-6 py-20 text-center">
                                             <div className="flex flex-col items-center">
@@ -291,7 +312,7 @@ export default function Index({ auth, bills, filters, stats }) {
                                 <div className="space-y-3">
                                     <div className="flex justify-between">
                                         <span className="text-xs text-slate-500">Total Amount</span>
-                                        <span className="text-sm font-bold text-slate-800">RM {parseFloat(selectedBill?.total_amount).toFixed(2)}</span>
+                                        <span className="text-sm font-bold text-slate-800">RM {(Number(selectedBill?.total_amount) || 0).toFixed(2)}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-xs text-slate-500">Date</span>
@@ -329,19 +350,3 @@ export default function Index({ auth, bills, filters, stats }) {
         </AuthenticatedLayout>
     );
 }
-
-const IconX = ({ size = 24, ...props }) => (
-    <svg 
-        width={size} 
-        height={size} 
-        viewBox="0 0 24 24" 
-        fill="none" 
-        stroke="currentColor" 
-        strokeWidth="2" 
-        strokeLinecap="round" 
-        strokeLinejoin="round" 
-        {...props}
-    >
-        <path d="M18 6L6 18M6 6l12 12" />
-    </svg>
-);

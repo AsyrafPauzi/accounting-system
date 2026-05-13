@@ -32,6 +32,27 @@ class Customer extends Model
         return $this->hasMany(Invoice::class);
     }
 
+    /**
+     * Human-readable reason this customer cannot be deleted, or null if deletion is allowed.
+     * Only non–soft-deleted invoices and credit notes count.
+     */
+    public function deletionBlockedReason(): ?string
+    {
+        if ($this->invoices()->exists()) {
+            return 'This customer is linked to one or more invoices. Remove or void those invoices first.';
+        }
+
+        if (CreditNote::query()->where('customer_id', $this->id)->exists()) {
+            return 'This customer is linked to credit notes. Resolve those documents first.';
+        }
+
+        if (static::query()->where('parent_id', $this->id)->exists()) {
+            return 'This customer has subsidiary accounts. Reassign those customers first.';
+        }
+
+        return null;
+    }
+
     public function accountManager()
     {
         return $this->belongsTo(User::class, 'account_manager_id');

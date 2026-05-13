@@ -1,6 +1,7 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, useForm, Link, router } from '@inertiajs/react';
+import { confirm } from '@/utils/swal';
 import {
     INDUSTRY_OPTIONS,
     PAYMENT_TERM_PRESETS,
@@ -19,13 +20,14 @@ const Icons = {
     Truck: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1h1m4-1V6a1 1 0 00-1-1h-2.829M19 6v2a1 1 0 01-1 1h-1m-1 1V6a1 1 0 00-1-1h-1M4 6v2a1 1 0 001 1h1m1 1V6a1 1 0 00-1-1h-1" /></svg>,
     DocumentText: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
     ArrowPath: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>,
+    Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
 };
 
 const inputClass = "w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors";
 const inputReadonlyClass = "w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-400 bg-slate-50";
 const labelClass = "block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5";
 
-export default function Edit({ auth, customer, users = [] }) {
+export default function Edit({ auth, customer, users = [], can_delete_customer = false, delete_blocked_reason = null }) {
     const indState = deriveIndustryState(customer.industry || '');
     const ptState = derivePaymentTermsState(customer.payment_terms ?? 30);
 
@@ -132,6 +134,20 @@ export default function Edit({ auth, customer, users = [] }) {
         });
     };
 
+    const handleDelete = async () => {
+        if (!can_delete_customer) return;
+        const ok = await confirm({
+            title: 'Delete this customer?',
+            text: `Remove "${customer.name}"? This cannot be undone.`,
+            confirmText: 'Delete customer',
+            confirmColor: '#dc2626',
+            icon: 'warning',
+        });
+        if (ok) {
+            router.delete(route('customers.destroy', customer.id));
+        }
+    };
+
     return (
         <AuthenticatedLayout 
             user={auth.user} 
@@ -185,6 +201,7 @@ export default function Edit({ auth, customer, users = [] }) {
                 </div>
             }
         >
+            <>
             <Head title={`Edit ${customer.name}`} />
             
             <form id="customer-edit-form" onSubmit={submit} className="space-y-6">
@@ -535,6 +552,31 @@ export default function Edit({ auth, customer, users = [] }) {
                     </div>
                 </div>
             </form>
+            {auth.permissions.includes('customers.delete') && (
+                <div className="mt-8 p-6 rounded-2xl border border-rose-100 bg-rose-50/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h3 className="font-semibold text-rose-900 text-sm">Delete customer</h3>
+                        <p className="text-xs text-rose-700/90 mt-1 max-w-xl">
+                            {can_delete_customer
+                                ? 'Permanently removes this record from your directory. Invoices and credit notes must be cleared first.'
+                                : (delete_blocked_reason || 'This customer cannot be deleted yet.')}
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        disabled={!can_delete_customer}
+                        onClick={handleDelete}
+                        className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold shrink-0 ${
+                            can_delete_customer
+                                ? 'text-white bg-rose-600 hover:bg-rose-700 shadow-sm'
+                                : 'text-rose-300 bg-rose-100 cursor-not-allowed'
+                        }`}
+                    >
+                        <Icons.Trash /> Delete customer
+                    </button>
+                </div>
+            )}
+            </>
         </AuthenticatedLayout>
     );
 }

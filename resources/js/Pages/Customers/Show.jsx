@@ -1,6 +1,7 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import { confirm } from '@/utils/swal';
 
 // Icon components for cleaner, modern look
 const Icons = {
@@ -49,9 +50,12 @@ const Icons = {
     ExternalLink: () => (
         <svg className="w-3.5 h-3.5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
     ),
+    Trash: () => (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+    ),
 };
 
-export default function Show({ auth, customer, invoices = [], stats, auditLogs = [] }) {
+export default function Show({ auth, customer, invoices = [], stats, auditLogs = [], can_delete_customer = false, delete_blocked_reason = null }) {
     const formatAddress = (street, city, state, zip, country) => {
         if (!street && !city) return <span className="text-slate-400 italic">No address provided</span>;
         return (
@@ -63,6 +67,20 @@ export default function Show({ auth, customer, invoices = [], stats, auditLogs =
     };
 
     const websiteUrl = customer.website?.startsWith('http') ? customer.website : customer.website ? `https://${customer.website}` : null;
+
+    const handleDelete = async () => {
+        if (!can_delete_customer) return;
+        const ok = await confirm({
+            title: 'Delete this customer?',
+            text: `Remove "${customer.name}" from your directory? This cannot be undone.`,
+            confirmText: 'Delete customer',
+            confirmColor: '#dc2626',
+            icon: 'warning',
+        });
+        if (ok) {
+            router.delete(route('customers.destroy', customer.id));
+        }
+    };
 
     return (
         <AuthenticatedLayout 
@@ -106,6 +124,21 @@ export default function Show({ auth, customer, invoices = [], stats, auditLogs =
                         >
                             <Icons.Pencil /> Edit
                         </Link>
+                        {auth.permissions.includes('customers.delete') && (
+                            <button
+                                type="button"
+                                disabled={!can_delete_customer}
+                                title={delete_blocked_reason || 'Delete customer'}
+                                onClick={handleDelete}
+                                className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold border transition-all duration-200 ${
+                                    can_delete_customer
+                                        ? 'text-rose-700 bg-white border-rose-200 hover:bg-rose-50'
+                                        : 'text-slate-300 bg-slate-50 border-slate-200 cursor-not-allowed'
+                                }`}
+                            >
+                                <Icons.Trash /> Delete
+                            </button>
+                        )}
                         <Link 
                             href={route('invoices.create', { customer_id: customer.id })} 
                             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all duration-200"

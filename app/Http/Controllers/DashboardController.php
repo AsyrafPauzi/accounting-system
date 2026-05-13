@@ -121,7 +121,9 @@ class DashboardController extends Controller
                 ],
                 'audit' => [
                     'total' => Bill::count(),
-                    'unaudited' => Bill::where('audit_status', 'unaudited')->orWhereNull('audit_status')->count(),
+                    'unaudited' => Bill::where(function ($q) {
+                        $q->where('audit_status', 'unaudited')->orWhereNull('audit_status');
+                    })->count(),
                     'verified' => Bill::where('audit_status', 'verified')->count(),
                     'flagged' => Bill::where('audit_status', 'flagged')->count(),
                 ],

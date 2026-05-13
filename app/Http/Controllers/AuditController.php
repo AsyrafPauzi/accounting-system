@@ -37,11 +37,12 @@ class AuditController extends Controller
             ],
             'stats' => [
                 'total' => Bill::whereYear('bill_date', $year)->count(),
-                'unaudited' => Bill::whereYear('bill_date', $year)->where(function($q) {
+                'unaudited' => Bill::whereYear('bill_date', $year)->where(function ($q) {
                     $q->where('audit_status', 'unaudited')->orWhereNull('audit_status');
                 })->count(),
                 'verified' => Bill::whereYear('bill_date', $year)->where('audit_status', 'verified')->count(),
-            ]
+                'flagged' => Bill::whereYear('bill_date', $year)->where('audit_status', 'flagged')->count(),
+            ],
         ]);
     }
 
@@ -80,7 +81,7 @@ class AuditController extends Controller
     /**
      * Verify a transaction.
      */
-    public function verify(Request $request, int $id): RedirectResponse
+    public function verify(Request $request, string $id): RedirectResponse
     {
         $bill = Bill::findOrFail($id);
         
@@ -96,7 +97,7 @@ class AuditController extends Controller
     /**
      * Flag a transaction for review.
      */
-    public function flag(Request $request, int $id): RedirectResponse
+    public function flag(Request $request, string $id): RedirectResponse
     {
         $bill = Bill::findOrFail($id);
         

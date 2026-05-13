@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import { confirm } from '@/utils/swal';
 
 const Icons = {
     Users: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>,
@@ -9,6 +10,7 @@ const Icons = {
     Pencil: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>,
     ChevronRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
     MagnifyingGlass: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
+    Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
 };
 
 export default function Index({ auth, customers = [] }) {
@@ -26,6 +28,20 @@ export default function Index({ auth, customers = [] }) {
     });
 
     const totalOutstanding = customers.reduce((sum, c) => sum + (parseFloat(c.balance) || 0), 0);
+
+    const handleDelete = async (customer) => {
+        if (!customer.can_delete) return;
+        const ok = await confirm({
+            title: 'Delete this customer?',
+            text: `Remove "${customer.name}" from your directory? You can only do this when they have no invoices or credit notes.`,
+            confirmText: 'Delete customer',
+            confirmColor: '#dc2626',
+            icon: 'warning',
+        });
+        if (ok) {
+            router.delete(route('customers.destroy', customer.id));
+        }
+    };
 
     return (
         <AuthenticatedLayout 
@@ -168,6 +184,21 @@ export default function Index({ auth, customers = [] }) {
                                                     >
                                                         <Icons.Pencil /> Edit
                                                     </Link>
+                                                )}
+                                                {auth.permissions.includes('customers.delete') && (
+                                                    <button
+                                                        type="button"
+                                                        disabled={!customer.can_delete}
+                                                        title={customer.delete_blocked_reason || 'Delete customer'}
+                                                        onClick={() => handleDelete(customer)}
+                                                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                                            customer.can_delete
+                                                                ? 'text-rose-600 hover:bg-rose-50'
+                                                                : 'text-slate-300 cursor-not-allowed'
+                                                        }`}
+                                                    >
+                                                        <Icons.Trash /> Delete
+                                                    </button>
                                                 )}
                                                 <Link 
                                                     href={route('customers.show', customer.id)} 

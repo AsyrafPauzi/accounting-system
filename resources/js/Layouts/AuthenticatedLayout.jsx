@@ -88,7 +88,14 @@ export default function Authenticated({ user: propUser, header, children }) {
         
         // Also check Admin and Company groups
         if (isRouteActive('admin.tenants.index')) initialOpenGroups['Admin'] = true;
-        if (isRouteActive('settings.company') || isRouteActive('settings.team.index') || isRouteActive('audit-logs.index') || isRouteActive('settings.plan.index')) {
+        if (
+            isRouteActive('settings.company') ||
+            isRouteActive('settings.team.index') ||
+            isRouteActive('audit-logs.index') ||
+            isRouteActive('settings.plan.index') ||
+            isRouteActive('audit.index') ||
+            url.startsWith('/audit')
+        ) {
             initialOpenGroups['Company'] = true;
         }
 
@@ -154,11 +161,13 @@ export default function Authenticated({ user: propUser, header, children }) {
                 <div className="p-4 sm:p-6 flex items-center justify-between gap-3 border-b border-indigo-100/80 bg-white">
                     <div className="flex items-center gap-3 min-w-0">
                         <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 via-violet-600 to-indigo-700 shadow-lg shadow-indigo-500/35 ring-2 ring-white/80">
-                            <ApplicationLogo className="block h-6 w-auto fill-current text-white" />
+                            <ApplicationLogo className="block h-6 w-6 fill-current text-white" />
                         </div>
                         <div className="min-w-0">
-                            <span className="font-bold text-indigo-950 tracking-tight text-base block truncate">{page.props.app_name}</span>
-                            <span className="block text-[10px] font-semibold text-indigo-600/80 uppercase tracking-wider">Malaysia Edition</span>
+                            <span className="font-bold text-indigo-950 tracking-tight text-base block truncate">{page.props.product_name}</span>
+                            {String(page.props.product_tagline ?? '').trim() !== '' && (
+                                <span className="block text-[10px] font-semibold text-indigo-600/80 uppercase tracking-wider truncate">{page.props.product_tagline}</span>
+                            )}
                         </div>
                     </div>
                     <button
@@ -410,12 +419,14 @@ export default function Authenticated({ user: propUser, header, children }) {
                 <div className="lg:hidden flex-shrink-0 flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur-lg border-b border-indigo-100/80 z-20 sticky top-0">
                     <div className="flex items-center gap-3 min-w-0">
                         <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 shadow-sm shadow-indigo-500/20">
-                            <ApplicationLogo className="block h-4 w-auto fill-current text-white" />
+                            <ApplicationLogo className="block h-4 w-4 fill-current text-white" />
                         </div>
-                        <span className="font-bold text-indigo-950 tracking-tight truncate">{page.props.app_name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-indigo-600/60 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded-md">MY</span>
+                        <div className="min-w-0">
+                            <span className="font-bold text-indigo-950 tracking-tight truncate block text-sm">{page.props.product_name}</span>
+                            {String(page.props.product_tagline ?? '').trim() !== '' && (
+                                <span className="text-[10px] font-semibold text-indigo-600/70 uppercase tracking-wider truncate block">{page.props.product_tagline}</span>
+                            )}
+                        </div>
                     </div>
                 </div>
 

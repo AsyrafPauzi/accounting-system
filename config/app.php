@@ -13,7 +13,21 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('APP_NAME', 'BukuCloud'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Product branding (sidebar, auth screens, document titles)
+    |--------------------------------------------------------------------------
+    |
+    | Shown in the app shell. Defaults to BukuCloud so the UI is not tied to
+    | APP_NAME (often still "Laravel" in local .env). Set APP_PRODUCT_NAME to override.
+    |
+    */
+
+    'product_name' => env('APP_PRODUCT_NAME', 'BukuCloud'),
+
+    'product_tagline' => env('APP_PRODUCT_TAGLINE', ''),
 
     /*
     |--------------------------------------------------------------------------

@@ -1,7 +1,10 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 
 export default function Guest({ children }) {
+    const { product_name: productName } = usePage().props;
+    const displayName = productName || 'BukuCloud';
+
     return (
         <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 px-4">
             <div className="relative w-full max-w-md">
@@ -10,7 +13,7 @@ export default function Guest({ children }) {
 
                 <div className="relative flex flex-col items-center">
                     <Link href="/" className="mb-6">
-                        <ApplicationLogo className="w-16 h-16 fill-current text-white" />
+                        <ApplicationLogo className="w-14 h-14 fill-current text-white" />
                     </Link>
 
                     <div className="w-full px-8 py-10 bg-white/95 backdrop-blur border border-slate-200/80 shadow-xl shadow-slate-900/30 rounded-2xl">
@@ -18,7 +21,7 @@ export default function Guest({ children }) {
                     </div>
                     
                     <p className="mt-6 text-slate-400 text-xs">
-                        &copy; {new Date().getFullYear()} Accounter MY. All rights reserved.
+                        &copy; {new Date().getFullYear()} {displayName}. All rights reserved.
                     </p>
                 </div>
             </div>

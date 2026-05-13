@@ -41,6 +41,9 @@ class CustomerController extends Controller
                 ->whereNotNull('due_date')
                 ->where('due_date', '<', now()->toDateString())
                 ->exists();
+            $customer->delete_blocked_reason = $customer->deletionBlockedReason();
+            $customer->can_delete = $customer->delete_blocked_reason === null;
+
             return $customer;
         });
 
@@ -156,19 +159,28 @@ class CustomerController extends Controller
 
         $auditLogs = $customer->auditLogs()->with('user')->latest('created_at')->limit(50)->get();
 
+        $deleteBlockedReason = $customer->deletionBlockedReason();
+
         return Inertia::render('Customers/Show', [
             'customer' => $customer,
             'invoices' => $invoices,
             'stats' => $stats,
             'auditLogs' => $auditLogs,
+            'can_delete_customer' => $deleteBlockedReason === null,
+            'delete_blocked_reason' => $deleteBlockedReason,
         ]);
     }
 
     public function edit($id)
     {
+        $customer = Customer::with(['accountManager', 'contacts'])->findOrFail($id);
+        $deleteBlockedReason = $customer->deletionBlockedReason();
+
         return Inertia::render('Customers/Edit', [
-            'customer' => Customer::with(['accountManager', 'contacts'])->findOrFail($id),
+            'customer' => $customer,
             'users' => $this->tenantUsersForSelect(),
+            'can_delete_customer' => $deleteBlockedReason === null,
+            'delete_blocked_reason' => $deleteBlockedReason,
         ]);
     }
 
@@ -229,5 +241,24 @@ class CustomerController extends Controller
         }
 
         return redirect()->route('customers.index')->with('success', 'Customer updated successfully.');
+    }
+
+    /**
+     * Soft-delete a customer when they have no blocking relations (invoices, credit notes, subsidiaries).
+     */
+    public function destroy($id)
+    {
+        $customer = Customer::findOrFail($id);
+
+        if ($reason = $customer->deletionBlockedReason()) {
+            return redirect()->back()->with('error', $reason);
+        }
+
+        DB::transaction(function () use ($customer) {
+            $customer->contacts()->delete();
+            $customer->delete();
+        });
+
+        return redirect()->route('customers.index')->with('success', 'Customer deleted successfully.');
     }
 }
