@@ -29,6 +29,7 @@ class Invoice extends Model
         'shipping_amount',
         'rounding_adjustment',
         'customer_notes',
+        'show_signature',
         'created_by',
         'lhdn_status',
         'last_emailed_at',
@@ -36,7 +37,14 @@ class Invoice extends Model
         'last_emailed_status',
         'last_emailed_error',
     ];
-                            
+
+    protected function casts(): array
+    {
+        return [
+            'show_signature' => 'boolean',
+        ];
+    }
+
     // This allows $invoice->items()->create() to work
     public function items()
     {

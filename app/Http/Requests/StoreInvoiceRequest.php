@@ -19,6 +19,9 @@ class StoreInvoiceRequest extends FormRequest
         if ($currency === $this->tenantBaseCurrencyForValidation()) {
             $this->merge(['exchange_rate' => 1]);
         }
+        $this->merge([
+            'show_signature' => filter_var($this->input('show_signature', true), FILTER_VALIDATE_BOOLEAN),
+        ]);
     }
 
     public function rules(): array
@@ -47,6 +50,7 @@ class StoreInvoiceRequest extends FormRequest
             'items.*.discount_amount'     => 'nullable|numeric',
             'shipping_amount'             => 'nullable|numeric',
             'customer_notes'              => 'nullable|string',
+            'show_signature'              => 'boolean',
         ];
     }
 
