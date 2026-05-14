@@ -15,7 +15,7 @@ return new class extends Migration
         /** @var \Spatie\Permission\Models\Permission $permission */
         $permission = \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'audit.view']);
         
-        $adminRoles = \Spatie\Permission\Models\Role::whereIn('name', ['admin', 'super-admin'])->get();
+        $adminRoles = \Spatie\Permission\Models\Role::whereIn('name', ['admin', 'super-admin'])->with('permissions')->get();
         
         foreach ($adminRoles as $role) {
             /** @var \Spatie\Permission\Models\Role $role */
