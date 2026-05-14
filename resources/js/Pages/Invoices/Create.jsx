@@ -378,7 +378,7 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                     <div className="bg-white rounded-2xl shadow-xl border border-slate-200/80 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <div className="p-6 border-b border-slate-200">
                             <h3 className="text-lg font-bold text-slate-900">New customer</h3>
-                            <p className="text-sm text-slate-500 mt-0.5">Add a customer to use on this invoice. Required fields: Name, Email, TIN, BRN.</p>
+                            <p className="text-sm text-slate-500 mt-0.5">Add a customer to use on this invoice. Name and Email are required.</p>
                         </div>
                         <form onSubmit={submitQuickCustomer} className="p-6 space-y-4">
                             {quickCustomerErrors.form && (
@@ -401,13 +401,13 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className={labelClass}>TIN *</label>
-                                    <input type="text" value={quickCustomer.tin} onChange={e => setQuickCustomer(c => ({ ...c, tin: e.target.value }))} className={inputClass} required />
+                                    <label className={labelClass}>TIN</label>
+                                    <input type="text" value={quickCustomer.tin} onChange={e => setQuickCustomer(c => ({ ...c, tin: e.target.value }))} className={inputClass} />
                                     {quickCustomerErrors.tin && <p className="text-rose-500 text-xs mt-1">{quickCustomerErrors.tin[0]}</p>}
                                 </div>
                                 <div>
-                                    <label className={labelClass}>BRN *</label>
-                                    <input type="text" value={quickCustomer.brn} onChange={e => setQuickCustomer(c => ({ ...c, brn: e.target.value }))} className={inputClass} required />
+                                    <label className={labelClass}>BRN</label>
+                                    <input type="text" value={quickCustomer.brn} onChange={e => setQuickCustomer(c => ({ ...c, brn: e.target.value }))} className={inputClass} />
                                     {quickCustomerErrors.brn && <p className="text-rose-500 text-xs mt-1">{quickCustomerErrors.brn[0]}</p>}
                                 </div>
                             </div>

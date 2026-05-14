@@ -16,8 +16,8 @@ class QuickStoreCustomerRequest extends FormRequest
         return [
             'name'           => ['required', 'string', 'max:255'],
             'email'          => ['required', 'email'],
-            'tin'            => ['required', 'string', 'max:50'],
-            'brn'            => ['required', 'string', 'max:50'],
+            'tin'            => ['nullable', 'string', 'max:50'],
+            'brn'            => ['nullable', 'string', 'max:50'],
             'code'           => ['nullable', 'string', 'unique:customers,code'],
             'billing_street' => ['nullable', 'string', 'max:500'],
             'billing_city'   => ['nullable', 'string', 'max:100'],

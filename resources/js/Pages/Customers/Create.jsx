@@ -194,12 +194,12 @@ export default function Create({ auth, users = [] }) {
                         </div>
                         <div>
                             <label className={labelClass}>LHDN TIN</label>
-                            <input type="text" value={data.tin} onChange={e => setData('tin', e.target.value)} className={inputClass} placeholder="C1234567890" required />
+                            <input type="text" value={data.tin} onChange={e => setData('tin', e.target.value)} className={inputClass} placeholder="C1234567890" />
                             {errors.tin && <p className="text-rose-500 text-xs font-medium mt-1">{errors.tin}</p>}
                         </div>
                         <div>
                             <label className={labelClass}>SSM BRN</label>
-                            <input type="text" value={data.brn} onChange={e => setData('brn', e.target.value)} className={inputClass} placeholder="202401021234" required />
+                            <input type="text" value={data.brn} onChange={e => setData('brn', e.target.value)} className={inputClass} placeholder="202401021234" />
                             {errors.brn && <p className="text-rose-500 text-xs font-medium mt-1">{errors.brn}</p>}
                         </div>
                     </div>
@@ -344,20 +344,20 @@ export default function Create({ auth, users = [] }) {
                         <div className="space-y-4">
                             <div>
                                 <label className={labelClass}>Street</label>
-                                <textarea placeholder="Address line 1" value={data.billing_street} onChange={e => setData('billing_street', e.target.value)} className={`${inputClass} resize-none h-20`} required />
+                                <textarea placeholder="Address line 1" value={data.billing_street} onChange={e => setData('billing_street', e.target.value)} className={`${inputClass} resize-none h-20`} />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className={labelClass}>City</label>
-                                    <input type="text" placeholder="Kuala Lumpur" value={data.billing_city} onChange={e => setData('billing_city', e.target.value)} className={inputClass} required />
+                                    <input type="text" placeholder="Kuala Lumpur" value={data.billing_city} onChange={e => setData('billing_city', e.target.value)} className={inputClass} />
                                 </div>
                                 <div>
                                     <label className={labelClass}>Postcode</label>
-                                    <input type="text" placeholder="50000" value={data.billing_zip} onChange={e => setData('billing_zip', e.target.value)} className={inputClass} required />
+                                    <input type="text" placeholder="50000" value={data.billing_zip} onChange={e => setData('billing_zip', e.target.value)} className={inputClass} />
                                 </div>
                                 <div>
                                     <label className={labelClass}>State</label>
-                                    <select value={data.billing_state} onChange={e => setData('billing_state', e.target.value)} className={inputClass} required>
+                                    <select value={data.billing_state} onChange={e => setData('billing_state', e.target.value)} className={inputClass}>
                                         <option value="">Select</option>
                                         {malaysianStates.map(state => <option key={state} value={state}>{state}</option>)}
                                     </select>
