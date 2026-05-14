@@ -17,6 +17,7 @@ php artisan view:cache
 if [ "$RUN_MIGRATIONS" = "true" ]; then
     echo "Running Migrations..."
     php artisan migrate --force
+    php artisan tenants:migrate --force
     echo "Running Seeders..."
     php artisan db:seed --force
 fi
