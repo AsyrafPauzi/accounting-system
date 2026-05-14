@@ -299,6 +299,7 @@
                 </div>
             </div>
 
+            @if($invoice->show_signature)
             <div class="signature-section">
                 <div class="signature-col">
                     <div class="signature-line"></div>
@@ -311,9 +312,14 @@
                     <div class="signature-label">Authorized Signature</div>
                 </div>
             </div>
+            @endif
             
             <div class="footer-note">
-                This is a computer-generated document. No physical signature required.
+                @if($invoice->show_signature)
+                    Signature blocks are provided where acknowledgment is required.
+                @else
+                    This is a computer-generated document. No physical signature required.
+                @endif
             </div>
         </div>
     </div>

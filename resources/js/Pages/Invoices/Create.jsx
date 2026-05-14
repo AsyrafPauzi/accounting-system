@@ -35,6 +35,7 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
         due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Default Net 30
         shipping_amount: 0,
         customer_notes: '',
+        show_signature: true,
         currency: 'MYR',
         exchange_rate: '1',
         items: [
@@ -291,6 +292,7 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                                                 <option value="0">0%</option>
                                                 <option value="6">6%</option>
                                                 <option value="8">8%</option>
+                                                <option value="16">16%</option>
                                             </select>
                                         </td>
                                         <td className="p-4 text-right">
@@ -331,6 +333,19 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                                 className={`${inputClass} resize-none h-28`}
                                 placeholder="Payment instructions, thank you message..."
                             />
+                            <div className="flex items-start gap-3 mt-4 pt-4 border-t border-slate-100">
+                                <input
+                                    type="checkbox"
+                                    id="invoice-show-signature"
+                                    checked={Boolean(data.show_signature)}
+                                    onChange={(e) => setData('show_signature', e.target.checked)}
+                                    className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <label htmlFor="invoice-show-signature" className="text-sm text-slate-700 cursor-pointer select-none">
+                                    <span className="font-semibold text-slate-800">Show signature lines on PDF</span>
+                                    <span className="block text-slate-500 text-xs mt-0.5">When enabled, customer and authorized signature blocks appear at the bottom of the invoice PDF. Turn off for a computer-generated layout only.</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
 

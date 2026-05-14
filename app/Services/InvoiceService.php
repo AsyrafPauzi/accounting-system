@@ -86,6 +86,7 @@ class InvoiceService
                 'rounding_adjustment'=> $totals['roundingAdjustment'],
                 'total_amount'       => $totals['roundedTotal'],
                 'customer_notes'     => $data['customer_notes'] ?? null,
+                'show_signature'     => filter_var($data['show_signature'] ?? true, FILTER_VALIDATE_BOOLEAN),
                 'status'             => 'draft',
                 'lhdn_status'        => 'pending',
                 'created_by'         => $data['created_by'] ?? null,
@@ -122,6 +123,7 @@ class InvoiceService
                 'rounding_adjustment'=> $totals['roundingAdjustment'],
                 'total_amount'       => $totals['roundedTotal'],
                 'customer_notes'     => $data['customer_notes'] ?? null,
+                'show_signature'     => filter_var($data['show_signature'] ?? $invoice->show_signature ?? true, FILTER_VALIDATE_BOOLEAN),
             ]);
 
             $invoice->items()->delete();
