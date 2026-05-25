@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use Database\Seeders\Concerns\ProvisionsTenantDatabase;
 use App\Models\Plan;
 use App\Models\Role;
 use App\Models\Subscription;
@@ -13,6 +14,8 @@ use Illuminate\Support\Str;
 
 class TestingAccountsSeeder extends Seeder
 {
+    use ProvisionsTenantDatabase;
+
     /**
      * Run the database seeds.
      */
@@ -84,7 +87,7 @@ class TestingAccountsSeeder extends Seeder
         }
 
         $companyId = $this->generateUniqueTenantId($tenantDisplayName);
-        $tenant = Tenant::create(['id' => $companyId]);
+        $tenant = $this->createTenantWithDatabase($companyId);
 
         $adminRole = Role::where('name', 'admin')->where('guard_name', 'web')->first();
 

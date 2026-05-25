@@ -11,15 +11,20 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-# Run migrations (only if not in local environment or if forced)
-# In production, it's safer to run this manually or via a CI/CD pipeline, 
-# but for simple deployments, we can do it here.
+# When RUN_MIGRATIONS=true (set on the ECS task definition):
+#   1. Central migrate  — creates/updates central tables (users, roles, plans, …)
+#   2. db:seed          — roles, plans, etc. must exist before the app serves traffic
+#   3. tenants:migrate  — applies tenant DB migrations (requires tenant DBs to exist)
+# Seed cannot run before migrate: tables do not exist yet.
 if [ "$RUN_MIGRATIONS" = "true" ]; then
-    echo "Running Migrations..."
+    echo "Running central migrations..."
     php artisan migrate --force
-    php artisan tenants:migrate --force
-    echo "Running Seeders..."
+
+    echo "Running seeders..."
     php artisan db:seed --force
+
+    echo "Running tenant migrations..."
+    php artisan tenants:migrate --force
 fi
 
 # If a command is passed to the entrypoint, execute it instead of starting Supervisor

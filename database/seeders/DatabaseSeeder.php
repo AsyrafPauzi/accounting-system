@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
             PlanSeeder::class,
             TestingAccountsSeeder::class,
+            AexloraAccountSeeder::class,
         ]);
 
         $demoAdmin = User::where('email', 'demo@accounter.com')->first();
