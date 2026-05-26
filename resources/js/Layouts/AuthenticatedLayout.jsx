@@ -87,7 +87,12 @@ export default function Authenticated({ user: propUser, header, children }) {
         });
         
         // Also check Admin and Company groups
-        if (isRouteActive('admin.tenants.index')) initialOpenGroups['Admin'] = true;
+        if (
+            isRouteActive('admin.tenants.index') ||
+            isRouteActive('admin.plans.index') ||
+            isRouteActive('admin.users.index') ||
+            isRouteActive('admin.audit-logs.index')
+        ) initialOpenGroups['Admin'] = true;
         if (
             isRouteActive('settings.company') ||
             isRouteActive('settings.team.index') ||
@@ -271,19 +276,29 @@ export default function Authenticated({ user: propUser, header, children }) {
                                     <Icons.ChevronDown />
                                 </span>
                             </button>
-                            <div className={`mt-1 space-y-0.5 overflow-hidden transition-all duration-300 ${openGroups['Admin'] ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                                <Link
-                                    href={getSafeRoute('admin.tenants.index')}
-                                    className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                        isRouteActive('admin.tenants.index')
-                                            ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
-                                            : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
-                                    }`}
-                                >
-                                    <span className={isRouteActive('admin.tenants.index') ? 'text-white' : 'text-indigo-500/80'}><Icons.BuildingOffice /></span>
-                                    <span className="flex-1">Tenant Admin</span>
-                                    {isRouteActive('admin.tenants.index') && <span className="w-1.5 h-1.5 rounded-full bg-white/90" />}
-                                </Link>
+                            <div className={`mt-1 space-y-0.5 overflow-hidden transition-all duration-300 ${openGroups['Admin'] ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                {[
+                                    { name: 'Tenants', route: 'admin.tenants.index', Icon: Icons.BuildingOffice },
+                                    { name: 'Plan Catalog', route: 'admin.plans.index', Icon: Icons.Sparkles },
+                                    { name: 'Platform Users', route: 'admin.users.index', Icon: Icons.Users },
+                                    { name: 'Audit Log', route: 'admin.audit-logs.index', Icon: Icons.Audit },
+                                ].map((link) => (
+                                    <Link
+                                        key={link.name}
+                                        href={getSafeRoute(link.route)}
+                                        className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                                            isRouteActive(link.route)
+                                                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
+                                                : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
+                                        }`}
+                                    >
+                                        <span className={isRouteActive(link.route) ? 'text-white' : 'text-indigo-500/80'}>
+                                            <link.Icon />
+                                        </span>
+                                        <span className="flex-1">{link.name}</span>
+                                        {isRouteActive(link.route) && <span className="w-1.5 h-1.5 rounded-full bg-white/90" />}
+                                    </Link>
+                                ))}
                             </div>
                         </div>
                     )}

@@ -134,6 +134,8 @@ class PlanSeeder extends Seeder
             ]
         );
 
-        $corporate->syncPermissions(Permission::whereNotIn('name', ['admin.tenants'])->get());
+        $corporate->syncPermissions(
+            Permission::whereNotIn('name', ['admin.tenants', 'admin.plans', 'admin.users', 'admin.audit'])->get()
+        );
     }
 }

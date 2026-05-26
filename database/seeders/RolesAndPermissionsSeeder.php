@@ -44,7 +44,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Settings & Admin
             'settings.view', 'settings.edit',
-            'admin.tenants',
+            'admin.tenants', 'admin.plans', 'admin.users', 'admin.audit',
             'users.view', 'users.create', 'users.edit', 'users.delete',
             'roles.manage', 'permissions.manage',
             'dashboard.basic', 'dashboard.standard', 'dashboard.advanced',
@@ -60,10 +60,10 @@ class RolesAndPermissionsSeeder extends Seeder
         $superAdmin = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
         $superAdmin->syncPermissions(Permission::all());
 
-        // Admin — all except super-admin tenant tools
+        // Admin — all except platform-operator permissions
         $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
         $admin->syncPermissions(
-            Permission::whereNotIn('name', ['admin.tenants'])->get()
+            Permission::whereNotIn('name', ['admin.tenants', 'admin.plans', 'admin.users', 'admin.audit'])->get()
         );
 
         // Accountant — full financial access, no admin management

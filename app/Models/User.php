@@ -34,6 +34,7 @@ class User extends Authenticatable
         'role_id',
         'company_id',
         'tenant_id',
+        'is_active',
         'two_factor_secret',
         'two_factor_confirmed_at',
     ];
@@ -55,9 +56,10 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
+            'email_verified_at'      => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
-            'password' => 'hashed',
+            'password'               => 'hashed',
+            'is_active'              => 'boolean',
         ];
     }
 }
