@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
-use Stancl\Tenancy\Database\Concerns\CentralConnection;
-
 use Spatie\Permission\Traits\HasPermissions;
+use Stancl\Tenancy\Database\Concerns\CentralConnection;
 
 class Plan extends Model
 {
-    use CentralConnection, HasPermissions;
+    use CentralConnection, HasPermissions, Auditable;
 
     protected $guard_name = 'web';
 

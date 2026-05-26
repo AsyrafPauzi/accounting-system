@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Admin\AssignSubscriptionRequest;
+use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Http\Request;
+use App\Services\AdminSubscriptionService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
 use Inertia\Inertia;
@@ -15,32 +18,122 @@ use Symfony\Component\Process\Process;
 
 class TenantAdminController extends Controller
 {
+    public function __construct(private AdminSubscriptionService $subscriptionService) {}
+
     /**
-     * Simple admin view of all tenants and their databases.
+     * Simple admin view of all tenants, their databases, and subscription status.
      */
     public function index(Request $request): Response
     {
         abort_unless($request->user() && $request->user()->hasRole('super-admin'), 403);
 
-        $tenants = Tenant::all()->map(function (Tenant $tenant) {
+        $subscriptionsByTenant = Subscription::with('plan')
+            ->get()
+            ->keyBy('tenant_id');
+
+        $tenants = Tenant::all()->map(function (Tenant $tenant) use ($subscriptionsByTenant) {
             $dbName = method_exists($tenant, 'database') ? $tenant->database()->getName() : null;
             $owner = User::where('tenant_id', $tenant->getKey())->orderBy('id')->first();
+            $sub = $subscriptionsByTenant->get($tenant->getKey());
 
             return [
-                'id' => $tenant->getKey(),
-                'name' => $tenant->getKey(),
+                'id'       => $tenant->getKey(),
+                'name'     => $tenant->getKey(),
                 'database' => $dbName,
-                'owner' => $owner ? [
-                    'id' => $owner->id,
-                    'name' => $owner->name,
+                'owner'    => $owner ? [
+                    'id'    => $owner->id,
+                    'name'  => $owner->name,
                     'email' => $owner->email,
+                ] : null,
+                'subscription' => $sub ? [
+                    'plan_id'              => $sub->plan_id,
+                    'plan_name'            => $sub->plan?->name ?? '—',
+                    'plan_slug'            => $sub->plan?->slug ?? null,
+                    'status'               => $sub->status,
+                    'interval'             => $sub->interval,
+                    'current_period_ends_at' => $sub->current_period_ends_at?->toDateString(),
+                    'gateway'              => $sub->gateway,
+                    'is_active'            => $sub->isActive(),
                 ] : null,
             ];
         });
 
+        $plans = Plan::where('is_active', true)
+            ->orderBy('price_monthly')
+            ->get(['id', 'name', 'slug', 'price_monthly', 'price_yearly']);
+
         return Inertia::render('Admin/Tenants/Index', [
             'tenants' => $tenants,
+            'plans'   => $plans,
         ]);
+    }
+
+    /**
+     * Assign or change a tenant's subscription plan and duration.
+     */
+    public function assignSubscription(AssignSubscriptionRequest $request, Tenant $tenant): RedirectResponse
+    {
+        abort_unless($request->user()->hasRole('super-admin'), 403);
+
+        $this->subscriptionService->assign($tenant, $request->validated());
+
+        return redirect()->route('admin.tenants.index')
+            ->with('success', "Plan updated for tenant {$tenant->getKey()}.");
+    }
+
+    /**
+     * Extend the current subscription by a number of days.
+     */
+    public function extendSubscription(Request $request, Tenant $tenant): RedirectResponse
+    {
+        abort_unless($request->user()->hasRole('super-admin'), 403);
+
+        $validated = $request->validate([
+            'days' => ['required', 'integer', 'min:1', 'max:3650'],
+        ]);
+
+        $this->subscriptionService->extend($tenant, (int) $validated['days']);
+
+        return redirect()->route('admin.tenants.index')
+            ->with('success', "Subscription extended by {$validated['days']} days for tenant {$tenant->getKey()}.");
+    }
+
+    /**
+     * Cancel a tenant's subscription.
+     */
+    public function cancelSubscription(Request $request, Tenant $tenant): RedirectResponse
+    {
+        abort_unless($request->user()->hasRole('super-admin'), 403);
+
+        $this->subscriptionService->cancel($tenant);
+
+        return redirect()->route('admin.tenants.index')
+            ->with('success', "Subscription cancelled for tenant {$tenant->getKey()}.");
+    }
+
+    /**
+     * Grant lifetime access to a tenant.
+     */
+    public function grantLifetimeSubscription(Request $request, Tenant $tenant): RedirectResponse
+    {
+        abort_unless($request->user()->hasRole('super-admin'), 403);
+
+        $validated = $request->validate([
+            'plan_id' => [
+                'required',
+                'integer',
+                function ($attribute, $value, $fail) {
+                    if (! Plan::where('id', $value)->exists()) {
+                        $fail('The selected plan does not exist.');
+                    }
+                },
+            ],
+        ]);
+
+        $this->subscriptionService->grantLifetime($tenant, (int) $validated['plan_id']);
+
+        return redirect()->route('admin.tenants.index')
+            ->with('success', "Lifetime access granted for tenant {$tenant->getKey()}.");
     }
 
     /**
@@ -52,7 +145,6 @@ class TenantAdminController extends Controller
 
         $user = User::findOrFail($userId);
 
-        // Remember the original admin so we can restore later if needed.
         if (! $request->session()->has('impersonator_id')) {
             $request->session()->put('impersonator_id', $request->user()->id);
         }
@@ -79,7 +171,7 @@ class TenantAdminController extends Controller
     }
 
     /**
-     * Export tenant database as a SQL dump (admin only). Saves a copy for retrieval/backup.
+     * Export tenant database as a SQL dump (admin only).
      */
     public function backup(Request $request, Tenant $tenant)
     {
@@ -95,35 +187,31 @@ class TenantAdminController extends Controller
             $username = $config['username'] ?? 'root';
             $password = $config['password'] ?? '';
             $tmpFile = storage_path('app/tenant_backup_' . $tenant->getKey() . '_' . date('Y-m-d_His') . '.sql');
-            $args = [
-                'mysqldump',
-                '-h', $host,
-                '-P', $port,
-                '-u', $username,
-                $dbName,
-            ];
+            $args = ['mysqldump', '-h', $host, '-P', $port, '-u', $username, $dbName];
             if ($password !== '') {
                 $args[] = '--password=' . $password;
             }
             $process = new Process($args);
             $process->setTimeout(120);
             $process->run();
-            if (!$process->isSuccessful()) {
+            if (! $process->isSuccessful()) {
                 return redirect()->route('admin.tenants.index')
                     ->with('error', 'Backup failed: ' . $process->getErrorOutput());
             }
             file_put_contents($tmpFile, $process->getOutput());
             $filename = 'tenant-' . $tenant->getKey() . '-backup-' . date('Y-m-d_His') . '.sql';
+
             return response()->download($tmpFile, $filename)->deleteFileAfterSend(true);
         }
 
         if (($config['driver'] ?? '') === 'sqlite') {
             $tenantPath = $dbName && str_starts_with($dbName, '/') ? $dbName : database_path($dbName ?: ('tenant_' . $tenant->getKey() . '.sqlite'));
-            if (!file_exists($tenantPath)) {
+            if (! file_exists($tenantPath)) {
                 return redirect()->route('admin.tenants.index')
                     ->with('error', 'Tenant database file not found.');
             }
             $filename = 'tenant-' . $tenant->getKey() . '-backup-' . date('Y-m-d_His') . '.sqlite';
+
             return response()->download($tenantPath, $filename);
         }
 
@@ -132,8 +220,7 @@ class TenantAdminController extends Controller
     }
 
     /**
-     * Delete the tenant and its database (admin only). TenantDeleted event runs DeleteDatabase job.
-     * Central records (users, subscriptions) for this tenant are removed first.
+     * Delete the tenant and its database (admin only).
      */
     public function destroy(Request $request, Tenant $tenant): RedirectResponse
     {
@@ -148,4 +235,3 @@ class TenantAdminController extends Controller
             ->with('success', 'Tenant and its database have been deleted.');
     }
 }
-

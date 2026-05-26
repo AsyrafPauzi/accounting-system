@@ -12,6 +12,9 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\CompanySettingsController;
 use App\Http\Controllers\TenantUserController;
 use App\Http\Controllers\TenantAdminController;
+use App\Http\Controllers\AdminPlanController;
+use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\AdminAuditLogController;
 use App\Http\Controllers\ChartOfAccountsController;
 use App\Http\Controllers\GeneralLedgerController;
 use App\Http\Controllers\ProfitAndLossController;
@@ -84,14 +87,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/settings/team/{user}', [TenantUserController::class, 'destroy'])->name('settings.team.destroy');
     });
 
-    // --- Admin (permission-gated) ---
+    // --- Admin: Tenant management ---
     Route::middleware('permission:admin.tenants')->group(function () {
         Route::get('/admin/tenants', [TenantAdminController::class, 'index'])->name('admin.tenants.index');
-        
+
+        // Destructive tenant actions — low limit (backup/delete/impersonate)
         Route::middleware('throttle:sensitive')->group(function () {
             Route::get('/admin/tenants/{tenant}/backup', [TenantAdminController::class, 'backup'])->name('admin.tenants.backup');
             Route::delete('/admin/tenants/{tenant}', [TenantAdminController::class, 'destroy'])->name('admin.tenants.destroy');
             Route::post('/admin/tenants/impersonate/{user}', [TenantAdminController::class, 'impersonate'])->name('admin.tenants.impersonate');
+        });
+
+        // Subscription management — higher limit for normal admin workflow
+        Route::middleware('throttle:creation')->group(function () {
+            Route::put('/admin/tenants/{tenant}/subscription', [TenantAdminController::class, 'assignSubscription'])->name('admin.tenants.subscription.assign');
+            Route::post('/admin/tenants/{tenant}/subscription/extend', [TenantAdminController::class, 'extendSubscription'])->name('admin.tenants.subscription.extend');
+            Route::post('/admin/tenants/{tenant}/subscription/cancel', [TenantAdminController::class, 'cancelSubscription'])->name('admin.tenants.subscription.cancel');
+            Route::post('/admin/tenants/{tenant}/subscription/lifetime', [TenantAdminController::class, 'grantLifetimeSubscription'])->name('admin.tenants.subscription.lifetime');
         });
     });
 
@@ -99,6 +111,41 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/admin/tenants/stop-impersonating', [TenantAdminController::class, 'stopImpersonating'])
         ->middleware('throttle:sensitive')
         ->name('admin.tenants.stop-impersonating');
+
+    // --- Admin: Plan catalog ---
+    Route::middleware('permission:admin.plans')->group(function () {
+        Route::get('/admin/plans', [AdminPlanController::class, 'index'])->name('admin.plans.index');
+        Route::get('/admin/plans/create', [AdminPlanController::class, 'create'])->name('admin.plans.create');
+        Route::post('/admin/plans', [AdminPlanController::class, 'store'])
+            ->middleware('throttle:creation')
+            ->name('admin.plans.store');
+        Route::get('/admin/plans/{plan}/edit', [AdminPlanController::class, 'edit'])->name('admin.plans.edit');
+        Route::put('/admin/plans/{plan}', [AdminPlanController::class, 'update'])
+            ->middleware('throttle:creation')
+            ->name('admin.plans.update');
+    });
+
+    // --- Admin: Central user management ---
+    Route::middleware('permission:admin.users')->group(function () {
+        Route::get('/admin/users', [AdminUserController::class, 'index'])->name('admin.users.index');
+        Route::post('/admin/users', [AdminUserController::class, 'store'])
+            ->middleware('throttle:creation')
+            ->name('admin.users.store');
+        Route::patch('/admin/users/{user}/role', [AdminUserController::class, 'updateRole'])
+            ->middleware('throttle:creation')
+            ->name('admin.users.role');
+        Route::post('/admin/users/{user}/password-reset', [AdminUserController::class, 'sendPasswordReset'])
+            ->middleware('throttle:sensitive')
+            ->name('admin.users.password-reset');
+        Route::patch('/admin/users/{user}/toggle-active', [AdminUserController::class, 'toggleActive'])
+            ->middleware('throttle:creation')
+            ->name('admin.users.toggle-active');
+    });
+
+    // --- Admin: Platform audit log ---
+    Route::middleware('permission:admin.audit')->group(function () {
+        Route::get('/admin/audit-logs', [AdminAuditLogController::class, 'index'])->name('admin.audit-logs.index');
+    });
 
     // --- Invoices ---
     Route::middleware('permission:invoices.view')->group(function () {
