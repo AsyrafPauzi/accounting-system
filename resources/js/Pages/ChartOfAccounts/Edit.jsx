@@ -14,16 +14,35 @@ const TYPE_OPTIONS = [
     { value: 'expense', label: 'Expense' },
 ];
 
+const SUB_TYPE_OPTIONS_BY_TYPE = {
+    asset: [
+        { value: '', label: '— None —' },
+        { value: 'bank', label: 'Bank' },
+        { value: 'cash', label: 'Cash' },
+    ],
+};
+
 export default function Edit({ auth, account, accounts = [] }) {
     const { data, setData, put, processing, errors } = useForm({
         code: account.code ?? '',
         name: account.name ?? '',
         type: account.type ?? 'asset',
+        sub_type: account.sub_type ?? '',
         parent_id: account.parent_id ?? '',
         description: account.description ?? '',
         is_active: account.is_active ?? true,
         display_order: account.display_order ?? '',
     });
+
+    const subTypeOptions = SUB_TYPE_OPTIONS_BY_TYPE[data.type] || [];
+
+    const handleTypeChange = (value) => {
+        setData((prev) => ({
+            ...prev,
+            type: value,
+            sub_type: SUB_TYPE_OPTIONS_BY_TYPE[value] ? prev.sub_type : '',
+        }));
+    };
 
     const submit = (e) => {
         e.preventDefault();
@@ -85,7 +104,7 @@ export default function Edit({ auth, account, accounts = [] }) {
                             <select
                                 className={inputClass}
                                 value={data.type}
-                                onChange={(e) => setData('type', e.target.value)}
+                                onChange={(e) => handleTypeChange(e.target.value)}
                                 required
                             >
                                 {TYPE_OPTIONS.map((opt) => (
@@ -96,6 +115,24 @@ export default function Edit({ auth, account, accounts = [] }) {
                             </select>
                             {errors.type && <p className="text-rose-500 text-xs mt-1">{errors.type}</p>}
                         </div>
+                        {subTypeOptions.length > 0 && (
+                            <div>
+                                <label className={labelClass}>Subtype</label>
+                                <select
+                                    className={inputClass}
+                                    value={data.sub_type}
+                                    onChange={(e) => setData('sub_type', e.target.value)}
+                                >
+                                    {subTypeOptions.map((opt) => (
+                                        <option key={opt.value} value={opt.value}>
+                                            {opt.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className="text-[11px] text-slate-400 mt-1">Tag asset accounts that hold money so they show in receipt and payment dropdowns.</p>
+                                {errors.sub_type && <p className="text-rose-500 text-xs mt-1">{errors.sub_type}</p>}
+                            </div>
+                        )}
                         <div>
                             <label className={labelClass}>Parent account</label>
                             <select

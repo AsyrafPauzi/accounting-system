@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, Link, router } from '@inertiajs/react';
+import {
+    SUPPORTED_CURRENCIES,
+    currencySymbol,
+    currencyRoundStep,
+    currencyInputStep,
+    roundingLabel,
+    normalizeCurrency,
+} from '@/utils/currency';
 
 const Icons = {
     ChevronLeft: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>,
@@ -13,7 +21,7 @@ const inputReadonlyClass = "w-full border border-slate-200 rounded-xl py-2.5 px-
 const labelClass = "block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5";
 
 function currencyPrefix(currency) {
-    return (currency || 'MYR').toUpperCase() === 'USD' ? 'US$' : 'RM';
+    return currencySymbol(currency);
 }
 
 const initialQuickCustomer = { name: '', code: '', email: '', tin: '', brn: '', billing_street: '', billing_city: '', billing_state: '', billing_zip: '' };
@@ -105,8 +113,8 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
     const totalDiscount = calculateTotalDiscount();
     const totalTax = calculateTax();
     const shipping = parseFloat(data.shipping_amount || 0);
-    const invCur = (data.currency || 'MYR').toUpperCase();
-    const roundStep = invCur === 'MYR' ? 0.05 : 0.01;
+    const invCur = normalizeCurrency(data.currency);
+    const roundStep = currencyRoundStep(invCur);
     const rawTotal = (subtotal - totalDiscount) + totalTax + shipping;
     const roundedTotal = (Math.round(rawTotal / roundStep) * roundStep);
     const roundingAdjustment = roundedTotal - rawTotal;
@@ -166,7 +174,7 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                             <span className="p-2.5 rounded-xl bg-blue-100 text-blue-600"><Icons.Document /></span>
                             <div>
                                 <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">New Invoice</h2>
-                                <p className="text-slate-500 text-sm font-medium mt-1">LHDN compliant · {invCur === 'MYR' ? '5-sen rounding (MYR)' : 'Cent rounding (USD)'}</p>
+                                <p className="text-slate-500 text-sm font-medium mt-1">LHDN compliant · {roundingLabel(invCur)} ({invCur})</p>
                             </div>
                         </div>
                     </div>
@@ -223,8 +231,9 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                         <div>
                             <label className={labelClass}>Invoice currency</label>
                             <select value={data.currency} onChange={e => setData('currency', e.target.value)} className={inputClass}>
-                                <option value="MYR">MYR — Malaysian Ringgit</option>
-                                <option value="USD">USD — US Dollar</option>
+                                {SUPPORTED_CURRENCIES.map((c) => (
+                                    <option key={c.value} value={c.value}>{c.label}</option>
+                                ))}
                             </select>
                             {errors.currency && <p className="text-rose-500 text-xs font-medium mt-1">{errors.currency}</p>}
                         </div>
@@ -373,7 +382,7 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                                     />
                                 </div>
                                 <div className="flex justify-between text-xs text-slate-400">
-                                    <span>{invCur === 'MYR' ? '5-Sen Rounding' : 'Cent Rounding'}</span>
+                                    <span>{roundingLabel(invCur)}</span>
                                     <span className="font-mono">{roundingAdjustment.toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between items-center pt-4 border-t-2 border-slate-100">

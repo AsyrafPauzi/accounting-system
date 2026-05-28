@@ -25,14 +25,14 @@ function getAgingBadge(bucket) {
     return styles[bucket] || 'bg-slate-100 text-slate-600';
 }
 
-export default function Index({ auth, invoices = [], summary = {}, assetAccounts = [] }) {
+export default function Index({ auth, invoices = [], summary = {}, bankAccounts = [] }) {
     const { total_receivable = 0, overdue_count = 0, aging_breakdown = {} } = summary;
     const [selectedInvoice, setSelectedInvoice] = useState(null);
 
     const { data, setData, post, processing, reset } = useForm({
         amount: 0,
         payment_date: new Date().toISOString().split('T')[0],
-        bank_account_code: (assetAccounts && assetAccounts[0]?.value) || '1200',
+        bank_account_code: (bankAccounts && bankAccounts[0]?.value) || '',
     });
 
     const openPaymentModal = (invoice) => {
@@ -40,7 +40,7 @@ export default function Index({ auth, invoices = [], summary = {}, assetAccounts
         setSelectedInvoice(invoice);
         setData('amount', balance > 0 ? balance.toFixed(2) : 0);
         setData('payment_date', new Date().toISOString().split('T')[0]);
-        setData('bank_account_code', (assetAccounts && assetAccounts[0]?.value) || '1200');
+        setData('bank_account_code', (bankAccounts && bankAccounts[0]?.value) || '');
     };
 
     const handlePaymentSubmit = (e) => {
@@ -203,7 +203,10 @@ export default function Index({ auth, invoices = [], summary = {}, assetAccounts
                                     <div>
                                         <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Bank account</label>
                                         <select value={data.bank_account_code} onChange={(e) => setData('bank_account_code', e.target.value)} className="w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm">
-                                            {(assetAccounts || []).map((a) => (
+                                            {(bankAccounts || []).length === 0 && (
+                                                <option value="">No bank/cash accounts — add one in Chart of Accounts</option>
+                                            )}
+                                            {(bankAccounts || []).map((a) => (
                                                 <option key={a.value} value={a.value}>{a.label}</option>
                                             ))}
                                         </select>

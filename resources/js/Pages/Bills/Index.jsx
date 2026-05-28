@@ -31,7 +31,7 @@ function getStatusBadge(status) {
     return styles[status] || 'bg-slate-100 text-slate-600';
 }
 
-export default function Index({ auth, bills = [], suppliers = [], assetAccounts = [], totalOutstanding = 0, totalPaidPeriod = 0 }) {
+export default function Index({ auth, bills = [], suppliers = [], bankAccounts = [], totalOutstanding = 0, totalPaidPeriod = 0 }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [supplierFilter, setSupplierFilter] = useState('');
@@ -41,7 +41,7 @@ export default function Index({ auth, bills = [], suppliers = [], assetAccounts 
     const { data, setData, post, processing, reset, errors } = useForm({
         amount: 0,
         payment_date: new Date().toISOString().split('T')[0],
-        bank_account_code: (assetAccounts && assetAccounts[0]?.value) || '1200',
+        bank_account_code: (bankAccounts && bankAccounts[0]?.value) || '',
     });
 
     const filteredBills = bills.filter((bill) => {
@@ -101,7 +101,7 @@ export default function Index({ auth, bills = [], suppliers = [], assetAccounts 
         setSelectedBill(bill);
         setData('amount', balance > 0 ? balance.toFixed(2) : 0);
         setData('payment_date', new Date().toISOString().split('T')[0]);
-        setData('bank_account_code', (assetAccounts && assetAccounts[0]?.value) || '1200');
+        setData('bank_account_code', (bankAccounts && bankAccounts[0]?.value) || '');
     };
 
     return (
@@ -396,7 +396,10 @@ export default function Index({ auth, bills = [], suppliers = [], assetAccounts 
                                             onChange={(e) => setData('bank_account_code', e.target.value)}
                                             className="w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-blue-500"
                                         >
-                                            {(assetAccounts || []).map((a) => (
+                                            {(bankAccounts || []).length === 0 && (
+                                                <option value="">No bank/cash accounts — add one in Chart of Accounts</option>
+                                            )}
+                                            {(bankAccounts || []).map((a) => (
                                                 <option key={a.value} value={a.value}>{a.label}</option>
                                             ))}
                                         </select>

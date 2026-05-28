@@ -40,12 +40,12 @@ class BillController extends Controller
         $totalOutstanding = $bills->whereIn('status', ['unpaid', 'partially paid'])->sum('balance_due');
         $totalPaidPeriod = $bills->where('status', 'paid')->sum('amount_paid');
 
-        $assetAccounts = Account::where('type', 'asset')->active()->orderBy('code')->get(['code', 'name'])->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->code} — {$a->name}"])->values()->all();
+        $bankAccounts = Account::bankOrCash()->active()->orderBy('code')->get(['code', 'name'])->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->name} ({$a->code})"])->values()->all();
 
         return Inertia::render('Bills/Index', [
             'bills'            => $bills,
             'suppliers'        => Supplier::orderBy('name')->get(['id', 'name', 'code']),
-            'assetAccounts'    => $assetAccounts,
+            'bankAccounts'     => $bankAccounts,
             'totalOutstanding' => round($totalOutstanding, 2),
             'totalPaidPeriod'  => round($totalPaidPeriod, 2),
         ]);
@@ -61,12 +61,10 @@ class BillController extends Controller
         }
 
         $expenseAccounts = Account::where('type', 'expense')->active()->orderBy('code')->get(['code', 'name'])->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->code} — {$a->name}"])->values()->all();
-        $assetAccounts = Account::where('type', 'asset')->active()->orderBy('code')->get(['code', 'name'])->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->code} — {$a->name}"])->values()->all();
 
         return Inertia::render('Bills/Create', [
             'suppliers'           => Supplier::where('is_active', true)->orderBy('name')->get(['id', 'name', 'code']),
             'expenseAccounts'     => $expenseAccounts,
-            'assetAccounts'       => $assetAccounts,
             'nextBillNumber'      => $nextNumber,
             'preselectedSupplierId' => $supplierId ? (int) $supplierId : null,
         ]);
@@ -92,13 +90,13 @@ class BillController extends Controller
             ->value('id');
 
         $expenseAccounts = Account::where('type', 'expense')->active()->orderBy('code')->get(['code', 'name'])->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->code} — {$a->name}"])->values()->all();
-        $assetAccounts = Account::where('type', 'asset')->active()->orderBy('code')->get(['code', 'name'])->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->code} — {$a->name}"])->values()->all();
+        $bankAccounts = Account::bankOrCash()->active()->orderBy('code')->get(['code', 'name'])->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->name} ({$a->code})"])->values()->all();
 
         return Inertia::render('Bills/Edit', [
             'bill'            => $bill,
             'suppliers'       => Supplier::orderBy('name')->get(['id', 'name', 'code']),
             'expenseAccounts' => $expenseAccounts,
-            'assetAccounts'   => $assetAccounts,
+            'bankAccounts'    => $bankAccounts,
             'journal_entry_id' => $journalEntryId,
         ]);
     }

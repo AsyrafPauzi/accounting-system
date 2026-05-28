@@ -70,7 +70,7 @@ class AccountsPayableController extends Controller
             $agingBuckets[$key]['amount'] = round($bucket['amount'], 2);
         }
 
-        $assetAccounts = Account::where('type', 'asset')->active()->orderBy('code')->get(['code', 'name'])->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->code} — {$a->name}"])->values()->all();
+        $bankAccounts = Account::bankOrCash()->active()->orderBy('code')->get(['code', 'name'])->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->name} ({$a->code})"])->values()->all();
 
         return Inertia::render('AccountsPayable/Index', [
             'bills' => $bills,
@@ -79,7 +79,7 @@ class AccountsPayableController extends Controller
                 'overdue_count' => $overdueCount,
                 'aging_breakdown' => $agingBuckets,
             ],
-            'assetAccounts' => $assetAccounts,
+            'bankAccounts' => $bankAccounts,
         ]);
     }
 }

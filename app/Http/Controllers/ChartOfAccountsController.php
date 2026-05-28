@@ -30,6 +30,8 @@ class ChartOfAccountsController extends Controller
                 'name' => $a->name,
                 'type' => $a->type,
                 'type_label' => Account::getTypeLabel($a->type),
+                'sub_type' => $a->sub_type,
+                'sub_type_label' => Account::getSubTypeLabel($a->sub_type),
                 'parent_id' => $a->parent_id,
                 'parent_code' => $a->parent?->code,
                 'description' => $a->description,
@@ -78,6 +80,7 @@ class ChartOfAccountsController extends Controller
                 'code'          => $account->code,
                 'name'          => $account->name,
                 'type'          => $account->type,
+                'sub_type'      => $account->sub_type,
                 'parent_id'     => $account->parent_id,
                 'description'   => $account->description,
                 'is_active'     => $account->is_active,
@@ -130,13 +133,14 @@ class ChartOfAccountsController extends Controller
         $defaults = [
             ['code' => '1000', 'name' => 'Assets', 'type' => 'asset', 'display_order' => 1],
             ['code' => '1100', 'name' => 'Accounts Receivable', 'type' => 'asset', 'display_order' => 2],
-            ['code' => '1200', 'name' => 'Bank', 'type' => 'asset', 'display_order' => 3],
-            ['code' => '2000', 'name' => 'Liabilities', 'type' => 'liability', 'display_order' => 4],
-            ['code' => '2100', 'name' => 'Tax Payable', 'type' => 'liability', 'display_order' => 5],
-            ['code' => '2110', 'name' => 'Accounts Payable', 'type' => 'liability', 'display_order' => 6],
-            ['code' => '3000', 'name' => 'Equity', 'type' => 'equity', 'display_order' => 7],
-            ['code' => '4000', 'name' => 'Revenue', 'type' => 'income', 'display_order' => 8],
-            ['code' => '5000', 'name' => 'Expenses', 'type' => 'expense', 'display_order' => 9],
+            ['code' => '1200', 'name' => 'Bank', 'type' => 'asset', 'sub_type' => 'bank', 'display_order' => 3],
+            ['code' => '1210', 'name' => 'Petty Cash', 'type' => 'asset', 'sub_type' => 'cash', 'display_order' => 4],
+            ['code' => '2000', 'name' => 'Liabilities', 'type' => 'liability', 'display_order' => 5],
+            ['code' => '2100', 'name' => 'Tax Payable', 'type' => 'liability', 'display_order' => 6],
+            ['code' => '2110', 'name' => 'Accounts Payable', 'type' => 'liability', 'display_order' => 7],
+            ['code' => '3000', 'name' => 'Equity', 'type' => 'equity', 'display_order' => 8],
+            ['code' => '4000', 'name' => 'Revenue', 'type' => 'income', 'display_order' => 9],
+            ['code' => '5000', 'name' => 'Expenses', 'type' => 'expense', 'display_order' => 10],
         ];
 
         $existingCodes = Account::pluck('code')->toArray();

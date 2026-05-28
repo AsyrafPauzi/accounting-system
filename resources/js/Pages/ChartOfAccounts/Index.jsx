@@ -209,7 +209,16 @@ export default function Index({ auth, accounts = [], groupedByType = {} }) {
                                             className="border-b border-slate-50 last:border-0 hover:bg-slate-50/80 transition-colors"
                                         >
                                             <td className="px-6 py-4 font-mono text-slate-800 font-semibold">{acc.code}</td>
-                                            <td className="px-6 py-4 font-medium text-slate-800">{acc.name}</td>
+                                            <td className="px-6 py-4 font-medium text-slate-800">
+                                                <div className="flex items-center gap-2">
+                                                    <span>{acc.name}</span>
+                                                    {acc.sub_type_label && (
+                                                        <span className="inline-flex px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 text-blue-600 uppercase tracking-wide">
+                                                            {acc.sub_type_label}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
                                             <td className="px-6 py-4">
                                                 <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-600">
                                                     {acc.type_label}

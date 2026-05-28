@@ -6,6 +6,7 @@ use App\Http\Requests\StoreInvoiceRequest;
 use App\Http\Requests\UpdateInvoiceRequest;
 use App\Services\InvoiceService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\Account;
 use App\Models\Invoice;
 use App\Models\Customer;
 use App\Jobs\SendInvoiceEmail;
@@ -95,8 +96,17 @@ class InvoiceController extends Controller
         $paginator = $baseQuery->paginate($perPage)->withQueryString();
         $invoices = $paginator->items();
 
+        $bankAccounts = Account::bankOrCash()
+            ->active()
+            ->orderBy('code')
+            ->get(['code', 'name'])
+            ->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->name} ({$a->code})"])
+            ->values()
+            ->all();
+
         return Inertia::render('Invoices/Index', [
             'invoices' => $invoices,
+            'bankAccounts' => $bankAccounts,
             'totalOutstanding' => (float) $totalOutstanding,
             'totalCollected' => (float) $totalCollected,
             'totalCount' => $totalCount,

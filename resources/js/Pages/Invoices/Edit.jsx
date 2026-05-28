@@ -1,6 +1,13 @@
 import React, { useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, Link } from '@inertiajs/react';
+import {
+    SUPPORTED_CURRENCIES,
+    currencySymbol,
+    currencyRoundStep,
+    roundingLabel,
+    normalizeCurrency,
+} from '@/utils/currency';
 
 const Icons = {
     ChevronLeft: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>,
@@ -15,7 +22,7 @@ const inputReadonlyClass = "w-full border border-slate-200 rounded-xl py-2.5 px-
 const labelClass = "block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5";
 
 function currencyPrefix(currency) {
-    return (currency || 'MYR').toUpperCase() === 'USD' ? 'US$' : 'RM';
+    return currencySymbol(currency);
 }
 
 export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], journal_entry_id = null, base_currency = 'MYR' }) {
@@ -109,8 +116,8 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
     const totalDiscount = calculateTotalDiscount();
     const totalTax = calculateTax();
     const shipping = parseFloat(data.shipping_amount || 0);
-    const invCur = (data.currency || 'MYR').toUpperCase();
-    const roundStep = invCur === 'MYR' ? 0.05 : 0.01;
+    const invCur = normalizeCurrency(data.currency);
+    const roundStep = currencyRoundStep(invCur);
     const rawTotal = (subtotal - totalDiscount) + totalTax + shipping;
     const roundedTotal = (Math.round(rawTotal / roundStep) * roundStep);
     const roundingAdjustment = roundedTotal - rawTotal;
@@ -273,8 +280,9 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                                 <div>
                                     <label className={labelClass}>Invoice currency</label>
                                     <select value={data.currency} onChange={e => setData('currency', e.target.value)} className={inputClass}>
-                                        <option value="MYR">MYR — Malaysian Ringgit</option>
-                                        <option value="USD">USD — US Dollar</option>
+                                        {SUPPORTED_CURRENCIES.map((c) => (
+                                            <option key={c.value} value={c.value}>{c.label}</option>
+                                        ))}
                                     </select>
                                     {errors.currency && <p className="text-rose-500 text-xs font-medium mt-1">{errors.currency}</p>}
                                 </div>
@@ -422,7 +430,7 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                                         />
                                     </div>
                                     <div className="flex justify-between text-xs text-slate-400">
-                                        <span>{invCur === 'MYR' ? '5-Sen Rounding' : 'Cent Rounding'}</span>
+                                        <span>{roundingLabel(invCur)}</span>
                                         <span className="font-mono">{roundingAdjustment.toFixed(2)}</span>
                                     </div>
                                     <div className="flex justify-between items-center pt-4 border-t-2 border-slate-100">

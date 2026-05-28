@@ -16,6 +16,7 @@ class Account extends Model
         'code',
         'name',
         'type',
+        'sub_type',
         'parent_id',
         'description',
         'is_active',
@@ -42,6 +43,14 @@ class Account extends Model
     }
 
     /**
+     * Asset accounts that hold cash/bank balances (used for receipt + payment dropdowns).
+     */
+    public function scopeBankOrCash(Builder $query): Builder
+    {
+        return $query->where('type', 'asset')->whereIn('sub_type', ['bank', 'cash']);
+    }
+
+    /**
      * Display label for account type.
      */
     public static function getTypeLabel(?string $type): string
@@ -53,6 +62,34 @@ class Account extends Model
             'income' => 'Revenue',
             'expense' => 'Expense',
             default => (string) $type,
+        };
+    }
+
+    /**
+     * Display label for account sub-type (currently only meaningful for asset accounts).
+     */
+    public static function getSubTypeLabel(?string $subType): string
+    {
+        return match ($subType) {
+            'bank' => 'Bank',
+            'cash' => 'Cash',
+            null, '' => '',
+            default => (string) $subType,
+        };
+    }
+
+    /**
+     * Sub-type choices that are valid given an account `type`.
+     * Returns an empty array when the parent type has no sub-types defined.
+     */
+    public static function subTypeOptionsFor(?string $type): array
+    {
+        return match ($type) {
+            'asset' => [
+                ['value' => 'bank', 'label' => 'Bank'],
+                ['value' => 'cash', 'label' => 'Cash'],
+            ],
+            default => [],
         };
     }
 }

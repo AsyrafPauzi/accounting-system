@@ -22,7 +22,7 @@ function formatMoney(n) {
     return (Number(n) || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [], assetAccounts = [], journal_entry_id = null }) {
+export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [], bankAccounts = [], journal_entry_id = null }) {
     const isDraft = bill.status === 'draft';
     const balanceDue = isDraft || bill.status === 'void' ? 0 : Math.max(0, (parseFloat(bill.total_amount) || 0) - (parseFloat(bill.amount_paid) || 0));
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -53,7 +53,7 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
     const paymentForm = useForm({
         amount: balanceDue > 0 ? balanceDue.toFixed(2) : 0,
         payment_date: new Date().toISOString().split('T')[0],
-        bank_account_code: (assetAccounts && assetAccounts[0]?.value) || '1200',
+        bank_account_code: (bankAccounts && bankAccounts[0]?.value) || '',
     });
 
     const addItem = () => {
@@ -393,7 +393,10 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                                 <div>
                                     <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Bank account</label>
                                     <select value={paymentForm.data.bank_account_code} onChange={(e) => paymentForm.setData('bank_account_code', e.target.value)} className="w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm">
-                                        {(assetAccounts || []).map((a) => (
+                                        {(bankAccounts || []).length === 0 && (
+                                            <option value="">No bank/cash accounts — add one in Chart of Accounts</option>
+                                        )}
+                                        {(bankAccounts || []).map((a) => (
                                             <option key={a.value} value={a.value}>{a.label}</option>
                                         ))}
                                     </select>

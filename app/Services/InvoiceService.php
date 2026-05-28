@@ -8,11 +8,18 @@ use Illuminate\Support\Facades\DB;
 class InvoiceService
 {
     /**
-     * Smallest currency unit for invoice total rounding (Malaysia 5 sen vs typical 1 cent).
+     * Smallest currency unit for invoice total rounding.
+     *   MYR — 5 sen (0.05)
+     *   JPY — 1 yen (no fractional unit in everyday use)
+     *   others (e.g. USD) — 1 cent (0.01)
      */
     public static function roundingStep(string $currency): float
     {
-        return strtoupper($currency) === 'MYR' ? 0.05 : 0.01;
+        return match (strtoupper($currency)) {
+            'MYR' => 0.05,
+            'JPY' => 1.0,
+            default => 0.01,
+        };
     }
 
     /**

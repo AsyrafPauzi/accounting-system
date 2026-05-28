@@ -4,6 +4,13 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useForm } from '@inertiajs/react';
 import { confirm } from '@/utils/swal';
+import {
+    currencySymbol,
+    currencyDecimals,
+    currencyInputStep,
+    formatCurrency,
+    normalizeCurrency,
+} from '@/utils/currency';
 
 const Icons = {
     Document: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
@@ -33,20 +40,15 @@ function getStatusBadge(status) {
 }
 
 function formatInvoiceAmount(invoice) {
-    const c = (invoice.currency || 'MYR').toUpperCase();
-    const n = parseFloat(invoice.total_amount || 0);
-    const f = n.toLocaleString('en-MY', { minimumFractionDigits: 2 });
-    return c === 'USD' ? `US$ ${f}` : `RM ${f}`;
+    return formatCurrency(invoice.total_amount, invoice.currency);
 }
 
 function formatInvoiceBalance(invoice) {
-    const c = (invoice.currency || 'MYR').toUpperCase();
-    const n = parseFloat(invoice.total_amount) - parseFloat(invoice.amount_paid);
-    const f = n.toFixed(2);
-    return c === 'USD' ? `US$ ${f}` : `RM ${f}`;
+    const balance = parseFloat(invoice.total_amount || 0) - parseFloat(invoice.amount_paid || 0);
+    return formatCurrency(balance, invoice.currency);
 }
 
-export default function Index({ auth, invoices = [], totalOutstanding = 0, totalCollected = 0, totalCount = 0, paginator = {}, filters = {} }) {
+export default function Index({ auth, invoices = [], bankAccounts = [], totalOutstanding = 0, totalCollected = 0, totalCount = 0, paginator = {}, filters = {} }) {
     const { current_page = 1, last_page = 1, per_page = 10, total = 0, from = 0, to = 0 } = paginator;
     const { search = '', status: statusFilter = '', per_page: perPageFilter = 10 } = filters;
 
@@ -54,10 +56,12 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [emailingId, setEmailingId] = useState(null);
 
+    const defaultBankCode = (bankAccounts && bankAccounts[0]?.value) || '';
+
     const { data, setData, post, processing, reset, errors } = useForm({
         amount: 0,
         payment_date: new Date().toISOString().split('T')[0],
-        bank_account_code: '1200',
+        bank_account_code: defaultBankCode,
     });
 
     const applyFilters = (overrides = {}) => {
@@ -112,7 +116,7 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
                 )}
             </td>
             <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
-                <ActionsCell auth={auth} invoice={invoice} setSelectedInvoice={setSelectedInvoice} setData={setData} handlePostToLedger={handlePostToLedger} handleVoid={handleVoid} handleDelete={handleDelete} handleEmailInvoice={handleEmailInvoice} emailingId={emailingId} />
+                <ActionsCell auth={auth} invoice={invoice} setSelectedInvoice={setSelectedInvoice} setData={setData} defaultBankCode={defaultBankCode} handlePostToLedger={handlePostToLedger} handleVoid={handleVoid} handleDelete={handleDelete} handleEmailInvoice={handleEmailInvoice} emailingId={emailingId} />
             </td>
         </>
     );
@@ -222,7 +226,7 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
                                         <p className="text-sm font-mono font-semibold text-slate-800 mt-1">{formatInvoiceAmount(invoice)}</p>
                                         <span className={`inline-flex mt-2 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${getStatusBadge(invoice.status)}`}>{invoice.status}</span>
                                     </div>
-                                    <ActionsCell auth={auth} invoice={invoice} setSelectedInvoice={setSelectedInvoice} setData={setData} handlePostToLedger={handlePostToLedger} handleVoid={handleVoid} handleDelete={handleDelete} handleEmailInvoice={handleEmailInvoice} emailingId={emailingId} />
+                                    <ActionsCell auth={auth} invoice={invoice} setSelectedInvoice={setSelectedInvoice} setData={setData} defaultBankCode={defaultBankCode} handlePostToLedger={handlePostToLedger} handleVoid={handleVoid} handleDelete={handleDelete} handleEmailInvoice={handleEmailInvoice} emailingId={emailingId} />
                                 </div>
                             </div>
                         )) : (
@@ -258,10 +262,10 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
                             </div>
                             <form onSubmit={handlePaymentSubmit} className="space-y-5">
                                 <div>
-                                    <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Amount ({(selectedInvoice.currency || 'MYR').toUpperCase()})</label>
+                                    <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Amount ({normalizeCurrency(selectedInvoice.currency)})</label>
                                     <div className="relative">
-                                        <span className="absolute inset-y-0 left-4 flex items-center text-slate-400 font-medium">{(selectedInvoice.currency || 'MYR').toUpperCase() === 'USD' ? 'US$' : 'RM'}</span>
-                                        <input type="number" value={data.amount} onChange={e => setData('amount', e.target.value)} className={`w-full pl-12 pr-4 py-3 border rounded-xl font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 ${errors.amount ? 'border-rose-500 ring-1 ring-rose-500' : 'border-slate-200'}`} step="0.01" required />
+                                        <span className="absolute inset-y-0 left-4 flex items-center text-slate-400 font-medium">{currencySymbol(selectedInvoice.currency)}</span>
+                                        <input type="number" value={data.amount} onChange={e => setData('amount', e.target.value)} className={`w-full pl-12 pr-4 py-3 border rounded-xl font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 ${errors.amount ? 'border-rose-500 ring-1 ring-rose-500' : 'border-slate-200'}`} step={currencyInputStep(selectedInvoice.currency)} required />
                                     </div>
                                     {errors.amount && <p className="text-rose-500 text-[10px] mt-1.5 font-bold uppercase tracking-tight">{errors.amount}</p>}
                                 </div>
@@ -274,8 +278,12 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
                                     <div>
                                         <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Account</label>
                                         <select value={data.bank_account_code} onChange={e => setData('bank_account_code', e.target.value)} className={`w-full border rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-blue-500 ${errors.bank_account_code ? 'border-rose-500' : 'border-slate-200'}`}>
-                                            <option value="1200">Maybank (1200)</option>
-                                            <option value="1210">Petty Cash (1210)</option>
+                                            {(bankAccounts || []).length === 0 && (
+                                                <option value="">No bank/cash accounts — add one in Chart of Accounts</option>
+                                            )}
+                                            {(bankAccounts || []).map((a) => (
+                                                <option key={a.value} value={a.value}>{a.label}</option>
+                                            ))}
                                         </select>
                                         {errors.bank_account_code && <p className="text-rose-500 text-[10px] mt-1.5 font-bold uppercase tracking-tight">{errors.bank_account_code}</p>}
                                     </div>
@@ -293,7 +301,7 @@ export default function Index({ auth, invoices = [], totalOutstanding = 0, total
     );
 }
 
-function ActionsCell({ auth, invoice, setSelectedInvoice, setData, handlePostToLedger, handleVoid, handleDelete, handleEmailInvoice, emailingId }) {
+function ActionsCell({ auth, invoice, setSelectedInvoice, setData, defaultBankCode, handlePostToLedger, handleVoid, handleDelete, handleEmailInvoice, emailingId }) {
     const isDraft = invoice.status === 'draft';
     const isVoid = invoice.status === 'void';
 
@@ -346,7 +354,7 @@ function ActionsCell({ auth, invoice, setSelectedInvoice, setData, handlePostToL
                     <>
                         {invoice.status !== 'paid' && auth.planPermissions['invoices.record-payment'] && auth.permissions.includes('invoices.record-payment') && (
                             <MenuItem>
-                                <button type="button" onClick={() => { setSelectedInvoice(invoice); setData('amount', (parseFloat(invoice.total_amount) - parseFloat(invoice.amount_paid)).toFixed(2)); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-emerald-600 hover:bg-emerald-50">
+                                <button type="button" onClick={() => { setSelectedInvoice(invoice); setData('amount', (parseFloat(invoice.total_amount) - parseFloat(invoice.amount_paid)).toFixed(currencyDecimals(invoice.currency))); setData('bank_account_code', defaultBankCode); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-emerald-600 hover:bg-emerald-50">
                                     <Icons.Currency /> Record payment
                                 </button>
                             </MenuItem>
