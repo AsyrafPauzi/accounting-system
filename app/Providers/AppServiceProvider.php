@@ -22,7 +22,9 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::prefetch(concurrency: 3);
 
-        if ($this->app->environment('production')) {
+        // Behind ALB/HTTPS the app often sees HTTP internally; force HTTPS on generated
+        // asset and route URLs so CSP 'self' matches the browser's https:// origin.
+        if ($this->shouldForceHttps()) {
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
 
@@ -39,6 +41,22 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->configureRateLimiting();
+    }
+
+    /**
+     * Whether generated URLs should always use HTTPS (deployed environments behind a TLS-terminating proxy).
+     */
+    protected function shouldForceHttps(): bool
+    {
+        if ($this->app->environment(['local', 'testing'])) {
+            return false;
+        }
+
+        if (env('FORCE_HTTPS') !== null) {
+            return filter_var(env('FORCE_HTTPS'), FILTER_VALIDATE_BOOL);
+        }
+
+        return true;
     }
 
     /**
