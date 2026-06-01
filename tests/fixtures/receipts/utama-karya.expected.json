@@ -1,0 +1,11 @@
+{
+  "vendor_name": "PT UTAMA KARYA TEKNOLOGI",
+  "bill_date": "2026-05-20",
+  "subtotal": 10600000,
+  "tax_amount": 1166000,
+  "total_amount": 11766000,
+  "currency": "IDR",
+  "reference": "UKT-2026-8901",
+  "items_count": 2,
+  "_note": "Indonesian receipt: amounts use European format (10.600.000 = ten million six hundred thousand). Parser likely cannot handle this format yet — flagged as known limitation."
+}

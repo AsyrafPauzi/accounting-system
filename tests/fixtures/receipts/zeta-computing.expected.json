@@ -1,0 +1,11 @@
+{
+  "vendor_name": "ZETA COMPUTING PTE. LTD.",
+  "bill_date": "2026-05-29",
+  "subtotal": 1940.00,
+  "tax_amount": 174.60,
+  "total_amount": 2114.60,
+  "currency": "SGD",
+  "reference": "ZT-88219032",
+  "items_count": 2,
+  "_note": "Page also contains PT NUSANTARA spillover; 'Total Paid:' value sits 19 lines below the label, after the spillover content. Wider per-label fallback in buildLabelAmountMap recovers it."
+}

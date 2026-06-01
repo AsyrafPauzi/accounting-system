@@ -139,12 +139,25 @@ class InvoiceController extends Controller
         }
 
         return Inertia::render('Invoices/Create', [
-            'customers' => Customer::all(),
+            'customers' => $this->customerOptions(),
             'lhdn_codes' => $this->getLhdnCodes(),
             'customer_id' => $request->query('customer_id'),
             'next_invoice_number' => $nextNumber,
             'base_currency' => $this->tenantBaseCurrency(),
         ]);
+    }
+
+    /**
+     * Customer dropdown projection. Only the columns the form actually
+     * renders (id, name, tin) — avoids hauling the full row over the wire
+     * for every invoice form load on tenants with many customers.
+     */
+    protected function customerOptions(): \Illuminate\Support\Collection
+    {
+        return Customer::query()
+            ->select(['id', 'name', 'tin'])
+            ->orderBy('name')
+            ->get();
     }
 
     /**
@@ -202,7 +215,7 @@ class InvoiceController extends Controller
 
         return Inertia::render('Invoices/Edit', [
             'invoice'    => $invoice,
-            'customers'  => Customer::all(),
+            'customers'  => $this->customerOptions(),
             'lhdn_codes' => $this->getLhdnCodes(),
             'journal_entry_id' => $journalEntryId,
             'base_currency' => $this->tenantBaseCurrency(),

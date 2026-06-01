@@ -1,0 +1,11 @@
+{
+  "vendor_name": "NEXA LOGISTICS SDN BHD",
+  "bill_date": "2026-05-12",
+  "subtotal": 5350.00,
+  "tax_amount": 321.00,
+  "total_amount": 5671.00,
+  "currency": "MYR",
+  "reference": "REC-2026-08412",
+  "items_count": 2,
+  "_note": "Page also contains TERRACOTTA BOTANICALS receipt as spillover; parser should pick up only the dominant first receipt."
+}

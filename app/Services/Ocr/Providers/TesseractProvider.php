@@ -3,10 +3,14 @@
 namespace App\Services\Ocr\Providers;
 
 use App\Models\OcrSettings;
+use App\Services\Ocr\ImagePreprocessor;
 use App\Services\Ocr\OcrProviderInterface;
 use App\Services\Ocr\OcrResult;
+use App\Services\Ocr\OcrTextNormalizer;
+use App\Services\Ocr\OcrValidator;
 use App\Services\Ocr\PdfPreprocessor;
 use App\Services\Ocr\ReceiptParser;
+use App\Services\Ocr\TsvParser;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use thiagoalessio\TesseractOCR\TesseractOCR;
@@ -29,6 +33,10 @@ class TesseractProvider implements OcrProviderInterface
     public function __construct(
         private ReceiptParser $parser,
         private PdfPreprocessor $pdfPreprocessor,
+        private ImagePreprocessor $imagePreprocessor,
+        private OcrTextNormalizer $textNormalizer,
+        private OcrValidator $validator,
+        private TsvParser $tsvParser,
     ) {}
 
     public function name(): string
@@ -57,50 +65,146 @@ class TesseractProvider implements OcrProviderInterface
         return $this->extractFromImage($absolutePath);
     }
 
+    /** PSMs we try in priority order. PSM 4 favours single-column receipts;
+     *  PSM 6 handles dense tabular invoices better. */
+    private const PSM_CANDIDATES = [4, 6];
+
+    /** If the first PSM scores at least this many points, we skip the second
+     *  one to save ~1s of OCR time. Threshold tuned: vendor (3) + total (5) +
+     *  3 line items (3) = 11. */
+    private const PSM_EARLY_EXIT_SCORE = 11;
+
     private function extractFromImage(string $absolutePath, ?callable $cleanup = null): OcrResult
     {
         $settings = OcrSettings::current();
         $languages = $settings->tesseract_languages ?: 'eng+msa';
 
-        try {
-            $tesseract = (new TesseractOCR($absolutePath))
-                ->lang(...explode('+', $languages));
+        // Layer 1: clean up the image (deskew, binarize, denoise) before OCR.
+        $preprocessed = $this->imagePreprocessor->process($absolutePath);
+        if ($preprocessed !== $absolutePath) {
+            $previousCleanup = $cleanup;
+            $cleanup = function () use ($preprocessed, $previousCleanup) {
+                @unlink($preprocessed);
+                if ($previousCleanup) $previousCleanup();
+            };
+        }
+        $ocrTarget = $preprocessed;
 
-            $rawText = $tesseract->run();
-        } catch (TesseractOcrException $e) {
-            Log::error('[OCR/Tesseract] Engine error', [
-                'path' => $absolutePath,
-                'error' => $e->getMessage(),
-            ]);
-            if ($cleanup) $cleanup();
-            return OcrResult::failed(
-                provider: $this->name(),
-                error: 'Tesseract OCR engine failed. Check that the tesseract binary and the requested language packs are installed on the server. Error: '.$e->getMessage(),
-            );
-        } catch (\Throwable $e) {
-            Log::error('[OCR/Tesseract] Unexpected error', [
-                'path' => $absolutePath,
-                'error' => $e->getMessage(),
-            ]);
-            if ($cleanup) $cleanup();
-            return OcrResult::failed(
-                provider: $this->name(),
-                error: 'Unexpected error while running Tesseract: '.$e->getMessage(),
-            );
+        // Layer 4: try multiple page-segmentation modes; pick the highest-scoring.
+        $bestResult = null;
+        $bestScore = -1;
+        $lastError = null;
+
+        foreach (self::PSM_CANDIDATES as $psm) {
+            try {
+                $ocrOutput = $this->runOcrAttempt($ocrTarget, $languages, $psm);
+            } catch (TesseractOcrException $e) {
+                $lastError = 'Tesseract OCR engine failed. Check that the tesseract binary and the requested language packs are installed on the server. Error: '.$e->getMessage();
+                Log::error('[OCR/Tesseract] Engine error', [
+                    'path' => $absolutePath, 'ocr_target' => $ocrTarget, 'psm' => $psm, 'error' => $e->getMessage(),
+                ]);
+                continue;
+            } catch (\Throwable $e) {
+                $lastError = 'Unexpected error while running Tesseract: '.$e->getMessage();
+                Log::error('[OCR/Tesseract] Unexpected error', [
+                    'path' => $absolutePath, 'ocr_target' => $ocrTarget, 'psm' => $psm, 'error' => $e->getMessage(),
+                ]);
+                continue;
+            }
+
+            if (trim($ocrOutput['text']) === '') continue;
+
+            $candidate = $this->buildResultFromOcrOutput($ocrOutput);
+            $score = $this->scoreFields($candidate->toLegacyArray()['data'] ?? []);
+
+            Log::debug('[OCR/Tesseract] PSM attempt', ['psm' => $psm, 'score' => $score]);
+
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $bestResult = $candidate;
+            }
+
+            // Latency guard: stop trying more PSMs if we already have a strong result.
+            if ($score >= self::PSM_EARLY_EXIT_SCORE) break;
         }
 
         if ($cleanup) $cleanup();
 
-        if (trim($rawText) === '') {
+        if ($bestResult === null) {
             return OcrResult::failed(
                 provider: $this->name(),
-                error: 'Tesseract produced no readable text. The image may be too blurry, dark, or low-contrast.',
-                rawText: $rawText,
+                error: $lastError ?? 'Tesseract produced no readable text on any page-segmentation mode. The image may be too blurry, dark, or low-contrast.',
             );
         }
 
-        $fields = $this->parser->parse($rawText);
+        // Layer 5: cross-validate the math; boosts/lowers confidence + attaches warnings.
+        return $this->validator->validate($bestResult);
+    }
+
+    /**
+     * Run Tesseract twice on the same image — once for plain text, once for TSV
+     * (with bounding boxes) — at the given PSM. Returns both outputs.
+     *
+     * @return array{text: string, tsv: string}
+     */
+    private function runOcrAttempt(string $ocrTarget, string $languages, int $psm): array
+    {
+        $textRunner = (new TesseractOCR($ocrTarget))
+            ->lang(...explode('+', $languages))
+            ->psm($psm);
+        $text = $textRunner->run();
+
+        // TSV mode failure is non-fatal — text-only is still useful.
+        $tsv = '';
+        try {
+            $tsvRunner = (new TesseractOCR($ocrTarget))
+                ->lang(...explode('+', $languages))
+                ->psm($psm)
+                ->configFile('tsv');
+            $tsv = $tsvRunner->run();
+        } catch (\Throwable $e) {
+            Log::info('[OCR/Tesseract] TSV mode unavailable, continuing text-only', ['psm' => $psm, 'error' => $e->getMessage()]);
+        }
+
+        return ['text' => $text, 'tsv' => $tsv];
+    }
+
+    /**
+     * Build an OcrResult from raw text + TSV using the full parsing pipeline.
+     * Does NOT run the validator (caller does that on the winning candidate).
+     */
+    private function buildResultFromOcrOutput(array $ocrOutput): OcrResult
+    {
+        // Layer 3: fix common OCR confusions inside money/date contexts.
+        $normalizedText = $this->textNormalizer->normalize($ocrOutput['text']);
+
+        $fields = $this->parser->parse($normalizedText);
+
+        // Layer 2: prefer spatial item extraction over line-based regex when available.
+        if ($ocrOutput['tsv'] !== '') {
+            $tsvFields = $this->tsvParser->parse($ocrOutput['tsv']);
+            if (! empty($tsvFields['items'])) {
+                $fields['items'] = $tsvFields['items'];
+            }
+        }
+
         return OcrResult::success($this->name(), $fields);
+    }
+
+    /**
+     * Score a parsed result by completeness. Higher = more useful extraction.
+     * Used to compare PSM attempts against each other.
+     */
+    private function scoreFields(array $data): int
+    {
+        $score = 0;
+        if (! empty($data['supplier_name'])) $score += 3;
+        if (! empty($data['total_amount'])) $score += 5;
+        if (! empty($data['bill_date'])) $score += 2;
+        if (! empty($data['reference'])) $score += 2;
+        if (! empty($data['subtotal'])) $score += 1;
+        $score += min(count($data['items'] ?? []), 5);
+        return $score;
     }
 
     private function extractFromPdf(string $absolutePath): OcrResult
@@ -110,7 +214,8 @@ class TesseractProvider implements OcrProviderInterface
         // Direct text extraction worked → parse and return without OCR.
         if ($pre['mode'] === 'text' && ! empty($pre['text'])) {
             $fields = $this->parser->parse($pre['text']);
-            return OcrResult::success($this->name(), $fields);
+            $result = OcrResult::success($this->name(), $fields);
+            return $this->validator->validate($result);
         }
 
         // PDF→PNG fallback failed → return preprocessing error.

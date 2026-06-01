@@ -34,6 +34,13 @@ return Application::configure(basePath: dirname(__DIR__))
             EnsureSubscribed::class,
         ]);
 
+        // Global per-IP / per-user ceiling. ~5 req/sec sustained — catches
+        // dumb scrapers and abusive clients before they hit per-route
+        // throttles. Targeted limiters (auth, sensitive, creation) still
+        // run on top with their own keys.
+        $middleware->web(append: ['throttle:global']);
+        $middleware->api(prepend: ['throttle:global']);
+
         $middleware->alias([
             'permission' => CheckPermission::class,
             'role'       => \Spatie\Permission\Middleware\RoleMiddleware::class,

@@ -1,0 +1,11 @@
+{
+  "vendor_name": "RESTORE COFFEE ROASTERS",
+  "bill_date": "2026-05-22",
+  "subtotal": 68.00,
+  "tax_amount": 4.08,
+  "total_amount": 78.88,
+  "currency": "MYR",
+  "reference": "RST-9918231",
+  "items_count": 3,
+  "_note": "Receipt has both Service Charge (6.80) and Service Tax (4.08); tax_amount target is the SST line."
+}

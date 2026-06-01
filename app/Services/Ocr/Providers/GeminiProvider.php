@@ -63,6 +63,13 @@ class GeminiProvider implements OcrProviderInterface
 
         try {
             $response = Http::timeout(30)
+                // Hard cap on TCP / TLS handshake. Without this a hung
+                // upstream (DNS issue, packet-loss to googleapis.com)
+                // would tie up a PHP-FPM worker for the full 30s of the
+                // request timeout — multiply by concurrent uploads and
+                // you've effectively self-DoS'd. 5s is generous.
+                ->connectTimeout(5)
+                ->retry(2, 250, throw: false)
                 ->withQueryParameters(['key' => $apiKey])
                 ->acceptJson()
                 ->asJson()
@@ -152,16 +159,28 @@ class GeminiProvider implements OcrProviderInterface
           "tax_amount": number | null,
           "total_amount": number | null,
           "reference": string | null,
-          "items": [{"description": string, "amount": number}]
+          "items": [
+            {
+              "description": string,
+              "quantity": number | null,
+              "unit_amount": number | null,
+              "amount": number
+            }
+          ]
         }
 
         Notes:
         - Receipts are typically in English or Bahasa Malaysia.
-        - "TOTAL" or "JUMLAH" maps to total_amount.
+        - "TOTAL" or "JUMLAH BAYARAN" maps to total_amount.
+        - "JUMLAH" alone (before tax) typically maps to subtotal.
         - "SST" / "GST" / "TAX" / "CUKAI" maps to tax_amount.
         - Default currency is MYR if not specified but RM is shown.
-        - Dates may be DD/MM/YYYY or DD-MM-YYYY format. Always normalize to YYYY-MM-DD.
+        - Dates may be DD/MM/YYYY, DD-MM-YYYY, or "21 Mei 2025" (Bahasa month name). Always normalize to YYYY-MM-DD.
         - Amounts must be numbers (not strings), without currency symbols or thousands separators.
+        - Bahasa month names: Januari=1, Februari=2, Mac=3, April=4, Mei=5, Jun=6, Julai=7, Ogos=8, September=9, Oktober=10, November=11, Disember=12.
+        - For each line item, capture quantity ("Kuantiti") and unit price ("Harga Seunit") if present in a tabular receipt; set them to null when the receipt only shows a flat amount per line.
+        - Do NOT include subtotal/tax/total rows as line items. Only the actual products/services purchased.
+        - For the reference field, prefer the human receipt number (e.g. "RCP250521-001") over bank transaction IDs.
         PROMPT;
     }
 
@@ -202,10 +221,20 @@ class GeminiProvider implements OcrProviderInterface
             $description = trim((string) ($item['description'] ?? ''));
             $amount = $item['amount'] ?? null;
             if ($description === '' || ! is_numeric($amount)) continue;
-            $clean[] = [
+
+            $row = [
                 'description' => $description,
                 'amount' => (float) $amount,
             ];
+
+            $quantity = $item['quantity'] ?? null;
+            $unitAmount = $item['unit_amount'] ?? $item['unit_price'] ?? null;
+            if (is_numeric($quantity) && is_numeric($unitAmount) && (float) $quantity > 0 && (float) $unitAmount > 0) {
+                $row['quantity'] = (float) $quantity;
+                $row['unit_amount'] = (float) $unitAmount;
+            }
+
+            $clean[] = $row;
         }
         return $clean;
     }

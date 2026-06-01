@@ -3,15 +3,17 @@ import GuestLayout from '@/Layouts/GuestLayout';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
+import SpamBotFields from '@/Components/SpamBotFields';
 import TextInput from '@/Components/TextInput';
 import { Head, Link, useForm } from '@inertiajs/react';
 
-export default function Register() {
+export default function Register({ botGuard }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         email: '',
         password: '',
         password_confirmation: '',
+        _hp_email: '',
     });
 
     useEffect(() => {
@@ -35,6 +37,8 @@ export default function Register() {
             </div>
 
             <form onSubmit={submit} className="space-y-5">
+                <SpamBotFields data={data} setData={setData} botGuard={botGuard} />
+
                 <div>
                     <InputLabel htmlFor="name" value="Full Name" />
                     <TextInput

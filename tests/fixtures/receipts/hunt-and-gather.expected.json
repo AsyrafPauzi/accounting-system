@@ -1,0 +1,11 @@
+{
+  "vendor_name": "HUNT & GATHER SDN BHD",
+  "bill_date": "2026-05-05",
+  "subtotal": 19500.00,
+  "tax_amount": 1170.00,
+  "total_amount": 20670.00,
+  "currency": "MYR",
+  "reference": "HG-2026-7881",
+  "items_count": 2,
+  "_note": "Vendor uses CSS letter-spacing; collapseLetterSpacing should reconstruct it via the '&' word-boundary. Page also contains VERTEX LABS receipt as spillover."
+}

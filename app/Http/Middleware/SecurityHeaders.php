@@ -17,12 +17,39 @@ class SecurityHeaders
     {
         $response = $next($request);
 
-        // Security headers
+        // Classic hardening headers.
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
         $response->headers->set('X-XSS-Protection', '1; mode=block');
-        $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+        // Modern process-isolation / capability hardening.
+        // Permissions-Policy disables sensors/APIs we never use, so a future
+        // XSS or untrusted iframe can't ask the browser for camera/mic/etc.
+        $response->headers->set('Permissions-Policy', implode(', ', [
+            'accelerometer=()',
+            'autoplay=()',
+            'camera=()',
+            'display-capture=()',
+            'encrypted-media=()',
+            'fullscreen=(self)',
+            'geolocation=()',
+            'gyroscope=()',
+            'magnetometer=()',
+            'microphone=()',
+            'midi=()',
+            'payment=()',
+            'picture-in-picture=()',
+            'sync-xhr=(self)',
+            'usb=()',
+            'xr-spatial-tracking=()',
+        ]));
+
+        // Cross-origin isolation. Same-origin opener prevents window-tampering
+        // by popups; same-site CORP rejects cross-site fetches of our HTML/JSON.
+        $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
+        $response->headers->set('Cross-Origin-Resource-Policy', 'same-site');
 
         if (app()->environment('local')) {
             // Local dev needs permissive CSP for Vite HMR over various localhost IPs/ports

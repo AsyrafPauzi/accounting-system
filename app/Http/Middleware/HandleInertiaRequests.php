@@ -42,10 +42,12 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
-        $tenant = null;
-        if ($user && $user->tenant_id) {
-            $tenant = Tenant::find($user->tenant_id);
-        }
+
+        // Resolve the tenant ONCE per request. The previous implementation
+        // called Tenant::find twice on every page load (once for auth /
+        // subscription props, once for app_name). Memoising via $tenant
+        // halves that DB cost.
+        $tenant = ($user && $user->tenant_id) ? Tenant::find($user->tenant_id) : null;
 
         return [
             ...parent::share($request),
@@ -58,26 +60,23 @@ class HandleInertiaRequests extends Middleware
                     'edit' => $user?->can('users.edit') ?? false,
                     'delete' => $user?->can('users.delete') ?? false,
                 ],
-                'permissions' => $user ? $user->getAllPermissions()->pluck('name')->toArray() : [],
-                'hasActiveSubscription' => function () use ($tenant) {
-                    return $tenant ? $tenant->hasActiveSubscription() : false;
-                },
+                // Lazy: not every page calls hasPermission() and Inertia
+                // partial reloads can skip resolving permissions entirely.
+                'permissions' => fn () => $user
+                    ? $user->getAllPermissions()->pluck('name')->toArray()
+                    : [],
+                'hasActiveSubscription' => fn () => $tenant ? $tenant->hasActiveSubscription() : false,
                 'subscription_ends_at' => function () use ($tenant) {
                     $subscription = $tenant?->activeSubscription();
                     return $subscription?->current_period_ends_at;
                 },
                 'planPermissions' => function () use ($tenant) {
-                    if (! $tenant) {
-                        return [];
-                    }
-
+                    if (! $tenant) return [];
                     $subscription = $tenant->activeSubscription();
-                    if (! $subscription || ! $subscription->plan) {
-                        return [];
-                    }
-                    return $subscription->plan->permissions->pluck('name')->mapWithKeys(function ($name) {
-                        return [$name => true];
-                    })->toArray();
+                    if (! $subscription || ! $subscription->plan) return [];
+                    return $subscription->plan->permissions->pluck('name')->mapWithKeys(
+                        fn ($name) => [$name => true]
+                    )->toArray();
                 },
             ],
             'flash' => [
@@ -93,15 +92,13 @@ class HandleInertiaRequests extends Middleware
                 ['code' => 'en', 'label' => 'English'],
                 ['code' => 'ms', 'label' => 'Bahasa Malaysia'],
             ],
-            'theme' => fn () => $request->user()?->theme_preference ?? 'light',
+            'theme' => fn () => $user?->theme_preference ?? 'light',
             'deployment_mode' => config('deployment.mode', 'saas'),
-            'app_name' => function () use ($request) {
-                $user = $request->user();
-                if ($user && $user->tenant_id) {
-                    $tenant = Tenant::find($user->tenant_id);
-                    if ($tenant && $tenant->company) {
-                        return $tenant->company['display_name'] ?? $tenant->company['legal_name'] ?? config('app.name');
-                    }
+            'app_name' => function () use ($tenant) {
+                if ($tenant && $tenant->company) {
+                    return $tenant->company['display_name']
+                        ?? $tenant->company['legal_name']
+                        ?? config('app.name');
                 }
                 return config('app.name');
             },

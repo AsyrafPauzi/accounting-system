@@ -1,16 +1,18 @@
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
+import SpamBotFields from '@/Components/SpamBotFields';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 
-export default function ResetPassword({ token, email }) {
+export default function ResetPassword({ token, email, botGuard }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         token: token,
         email: email,
         password: '',
         password_confirmation: '',
+        _hp_email: '',
     });
 
     const submit = (e) => {
@@ -33,6 +35,8 @@ export default function ResetPassword({ token, email }) {
             </div>
 
             <form onSubmit={submit} className="space-y-5">
+                <SpamBotFields data={data} setData={setData} botGuard={botGuard} />
+
                 <div>
                     <InputLabel htmlFor="email" value="Email" />
                     <TextInput

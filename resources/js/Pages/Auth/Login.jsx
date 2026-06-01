@@ -4,14 +4,16 @@ import GuestLayout from '@/Layouts/GuestLayout';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
+import SpamBotFields from '@/Components/SpamBotFields';
 import TextInput from '@/Components/TextInput';
 import { Head, Link, useForm } from '@inertiajs/react';
 
-export default function Login({ status, canResetPassword }) {
+export default function Login({ status, canResetPassword, botGuard }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
         remember: false,
+        _hp_email: '',
     });
 
     useEffect(() => {
@@ -37,6 +39,8 @@ export default function Login({ status, canResetPassword }) {
             {status && <div className="mb-4 font-medium text-sm text-forest text-center">{status}</div>}
 
             <form onSubmit={submit} className="space-y-5">
+                <SpamBotFields data={data} setData={setData} botGuard={botGuard} />
+
                 <div>
                     <InputLabel htmlFor="email" value="Email Address" />
                     <TextInput

@@ -54,7 +54,25 @@ class PdfPreprocessor
             return $this->fail('PDF file not found at '.$pdfAbsolutePath);
         }
 
-        // 1. Try direct text extraction first.
+        // 1. Try direct text extraction. Prefer the `pdftotext` binary
+        //    (Poppler) when available — it handles letter-spacing, kerning,
+        //    and column layouts more cleanly than Smalot/PdfParser, which
+        //    sometimes inserts literal `<>` separators between glyphs for
+        //    PDFs that use CSS letter-spacing or unusual character maps.
+        $pdftotextOutput = $this->extractTextWithPdftotext($pdfAbsolutePath);
+        if ($pdftotextOutput !== null && mb_strlen($pdftotextOutput) >= self::MIN_TEXT_CHARS) {
+            return [
+                'mode' => 'text',
+                'text' => $pdftotextOutput,
+                'image_path' => null,
+                'cleanup' => null,
+                'error' => null,
+            ];
+        }
+
+        // 2. Fall back to Smalot for environments without poppler-utils
+        //    (shouldn't happen in production — Dockerfile installs it — but
+        //    keeps tests / non-Docker dev machines working).
         try {
             $document = $this->parser->parseFile($pdfAbsolutePath);
             $text = trim($document->getText());
@@ -69,14 +87,57 @@ class PdfPreprocessor
                 ];
             }
         } catch (\Throwable $e) {
-            // Bad PDF / encrypted / etc. — keep going to image fallback below.
-            Log::info('[OCR/PdfPreprocessor] Text extraction failed, will try OCR', [
+            Log::info('[OCR/PdfPreprocessor] Smalot text extraction failed, will try OCR', [
                 'error' => $e->getMessage(),
             ]);
         }
 
-        // 2. Fall back to rendering page 1 as PNG via pdftoppm.
+        // 3. Fall back to rendering page 1 as PNG via pdftoppm.
         return $this->renderToImage($pdfAbsolutePath);
+    }
+
+    /**
+     * Extract embedded text via the `pdftotext` binary (poppler-utils).
+     * Returns null if the binary is missing or the call fails — caller
+     * falls back to Smalot, then to image rendering + OCR.
+     */
+    private function extractTextWithPdftotext(string $pdfAbsolutePath): ?string
+    {
+        $binary = $this->resolveBinary('pdftotext');
+        if (! $binary) return null;
+
+        try {
+            // `-` as second arg sends output to stdout. No -layout flag —
+            // it preserves columns but ALSO injects bizarre whitespace into
+            // single-column receipts, which throws off our parsers.
+            $process = new Process([$binary, $pdfAbsolutePath, '-']);
+            $process->setTimeout(15);
+            $process->run();
+
+            if (! $process->isSuccessful()) {
+                Log::info('[OCR/PdfPreprocessor] pdftotext non-zero exit, falling back', [
+                    'stderr' => trim($process->getErrorOutput()),
+                ]);
+                return null;
+            }
+
+            $text = trim($process->getOutput());
+            return $text === '' ? null : $text;
+        } catch (\Throwable $e) {
+            Log::info('[OCR/PdfPreprocessor] pdftotext invocation failed', ['error' => $e->getMessage()]);
+            return null;
+        }
+    }
+
+    private function resolveBinary(string $name): ?string
+    {
+        $which = trim((string) shell_exec('command -v '.escapeshellarg($name).' 2>/dev/null'));
+        if ($which !== '' && is_executable($which)) return $which;
+
+        foreach (['/opt/homebrew/bin/', '/usr/local/bin/', '/usr/bin/'] as $prefix) {
+            if (is_executable($prefix.$name)) return $prefix.$name;
+        }
+        return null;
     }
 
     /**

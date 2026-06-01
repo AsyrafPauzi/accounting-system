@@ -24,10 +24,12 @@ class OcrResult implements Arrayable
         public ?float $totalAmount = null,
         public ?string $currency = null, // 3-letter ISO
         public ?string $reference = null,
-        public array $items = [], // [{description, amount}]
+        public array $items = [], // [{description, amount, quantity?, unit_amount?}]
         public ?string $rawText = null,
         public ?float $confidence = null,
         public ?string $error = null,
+        /** Free-form human-readable warnings from the validator. */
+        public array $warnings = [],
     ) {}
 
     public static function success(string $provider, array $fields = []): self
@@ -88,6 +90,7 @@ class OcrResult implements Arrayable
                 'reference' => $this->reference,
                 'items' => $this->items,
                 'confidence' => $this->confidence,
+                'warnings' => $this->warnings,
                 'provider' => $this->provider,
             ],
         ];
@@ -107,6 +110,7 @@ class OcrResult implements Arrayable
             'reference' => $this->reference,
             'items' => $this->items,
             'confidence' => $this->confidence,
+            'warnings' => $this->warnings,
             'error' => $this->error,
         ];
     }

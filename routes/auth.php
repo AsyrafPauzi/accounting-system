@@ -11,27 +11,31 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
+// All guest auth POSTs run through the dual-key 'auth' limiter
+// (per-IP + per-email) plus the SpamBotGuard (honeypot + time challenge)
+// to absorb credential stuffing, password spraying, and form-spam bots
+// before they reach the controller.
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
-
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    Route::post('register', [RegisteredUserController::class, 'store'])
+        ->middleware(['throttle:auth', \App\Http\Middleware\SpamBotGuard::class]);
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
-
-    Route::post('login', [AuthenticatedSessionController::class, 'store']);
+    Route::post('login', [AuthenticatedSessionController::class, 'store'])
+        ->middleware(['throttle:auth', \App\Http\Middleware\SpamBotGuard::class]);
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
-
     Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
+        ->middleware(['throttle:auth', \App\Http\Middleware\SpamBotGuard::class])
         ->name('password.email');
 
     Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
         ->name('password.reset');
-
     Route::post('reset-password', [NewPasswordController::class, 'store'])
+        ->middleware(['throttle:auth', \App\Http\Middleware\SpamBotGuard::class])
         ->name('password.store');
 });
 

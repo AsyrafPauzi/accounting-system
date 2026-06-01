@@ -24,6 +24,7 @@ class NewPasswordController extends Controller
         return Inertia::render('Auth/ResetPassword', [
             'email' => $request->email,
             'token' => $request->route('token'),
+            'botGuard' => ['ts' => \App\Http\Middleware\SpamBotGuard::freshTimestamp()],
         ]);
     }
 

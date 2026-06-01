@@ -60,13 +60,21 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
 
         // Handle items
         if (ocrData.items && ocrData.items.length > 0) {
-            updates.items = ocrData.items.map(item => ({
-                account_code: (expenseAccounts && expenseAccounts[0]?.value) || '',
-                description: item.description || '',
-                quantity: 1,
-                unit_amount: item.amount || 0,
-                amount: item.amount || 0,
-            }));
+            updates.items = ocrData.items.map(item => {
+                const amount = parseFloat(item.amount) || 0;
+                // Honor qty/unit if OCR provided them; otherwise default to 1 × amount.
+                const quantity = parseFloat(item.quantity) > 0 ? parseFloat(item.quantity) : 1;
+                const unit = parseFloat(item.unit_amount) > 0
+                    ? parseFloat(item.unit_amount)
+                    : (quantity > 0 ? Math.round((amount / quantity) * 100) / 100 : amount);
+                return {
+                    account_code: (expenseAccounts && expenseAccounts[0]?.value) || '',
+                    description: item.description || '',
+                    quantity,
+                    unit_amount: unit,
+                    amount,
+                };
+            });
         } else if (ocrData.total_amount) {
             // If no items but total amount, update the first item
             const newItems = [...data.items];

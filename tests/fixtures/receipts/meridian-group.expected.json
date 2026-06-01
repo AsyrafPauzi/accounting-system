@@ -1,0 +1,10 @@
+{
+  "vendor_name": "THEMERIDIANGROUPPTE . LT D .",
+  "bill_date": "2026-05-15",
+  "tax_amount": 1189.45,
+  "total_amount": 14350.00,
+  "currency": "SGD",
+  "reference": "TMG-2026-00928",
+  "items_count": 2,
+  "_note": "Vendor uses CSS letter-spacing in source which pdftotext renders as 'T H E M E R I D I A N G R O U P P T E . LT D .' — our collapseLetterSpacing produces the joined form. Receipt has no subtotal line (just tax + grand total), so subtotal is intentionally not asserted."
+}

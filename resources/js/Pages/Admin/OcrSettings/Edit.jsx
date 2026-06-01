@@ -443,6 +443,42 @@ export default function OcrSettingsEdit({ settings, providerOptions, modelOption
                                     ))}
                                 </div>
                             ) : null}
+
+                            {testResult.ok && Array.isArray(testResult.body?.result?.items) && testResult.body.result.items.length > 0 && (
+                                <div className="bg-surface rounded-lg border border-border-warm overflow-hidden mb-3">
+                                    <div className="px-3 py-2 border-b border-border-warm bg-cream/50">
+                                        <p className="text-eyebrow font-semibold uppercase text-ink-muted">
+                                            Line items ({testResult.body.result.items.length})
+                                        </p>
+                                    </div>
+                                    <table className="w-full text-xs">
+                                        <thead className="bg-cream/30">
+                                            <tr className="text-left text-ink-muted">
+                                                <th className="px-3 py-1.5 font-semibold">Description</th>
+                                                <th className="px-3 py-1.5 font-semibold text-right w-16">Qty</th>
+                                                <th className="px-3 py-1.5 font-semibold text-right w-24">Unit</th>
+                                                <th className="px-3 py-1.5 font-semibold text-right w-24">Amount</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="font-mono text-ink">
+                                            {testResult.body.result.items.map((item, idx) => (
+                                                <tr key={idx} className="border-t border-border-warm/50">
+                                                    <td className="px-3 py-1.5 break-words">{item.description}</td>
+                                                    <td className="px-3 py-1.5 text-right">
+                                                        {item.quantity ?? <span className="text-ink-muted/50">—</span>}
+                                                    </td>
+                                                    <td className="px-3 py-1.5 text-right">
+                                                        {item.unit_amount != null ? Number(item.unit_amount).toFixed(2) : <span className="text-ink-muted/50">—</span>}
+                                                    </td>
+                                                    <td className="px-3 py-1.5 text-right">
+                                                        {Number(item.amount ?? 0).toFixed(2)}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                             <details className="text-xs">
                                 <summary className="cursor-pointer text-ink-muted hover:text-ink font-medium">
                                     Raw response
