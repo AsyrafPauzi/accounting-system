@@ -14,6 +14,7 @@ export default function Register({ botGuard }) {
         password: '',
         password_confirmation: '',
         _hp_email: '',
+        _hp_ts: botGuard?.ts ?? '',
     });
 
     useEffect(() => {

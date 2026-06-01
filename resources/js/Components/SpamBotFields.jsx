@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 /**
  * Hidden bot-defence fields. Drop this inside any guest <form>.
  *
@@ -13,9 +15,18 @@
  * If either signal trips, the request is rejected silently (generic 422
  * shaped like a normal validation error) so attackers can't tune around
  * it. Real users never see anything.
+ *
+ * Both fields must live in useForm `data` — Inertia posts only that object,
+ * not native <input> values, so `_hp_ts` is synced via setData on mount.
  */
 export default function SpamBotFields({ data, setData, botGuard }) {
     const ts = botGuard?.ts ?? '';
+
+    useEffect(() => {
+        if (ts && setData) {
+            setData('_hp_ts', ts);
+        }
+    }, [ts, setData]);
 
     return (
         <>
@@ -45,9 +56,9 @@ export default function SpamBotFields({ data, setData, botGuard }) {
                 />
             </div>
 
-            {/* Encrypted render timestamp. Read-only — never touched by the
-                user; mirrored into form state so useForm posts it. */}
-            <input type="hidden" name="_hp_ts" value={ts} readOnly />
+            {/* Encrypted render timestamp. Bound to useForm data so Inertia
+                includes it in the POST body (DOM-only inputs are ignored). */}
+            <input type="hidden" name="_hp_ts" value={data?._hp_ts ?? ts} readOnly />
         </>
     );
 }

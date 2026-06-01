@@ -14,6 +14,7 @@ export default function Login({ status, canResetPassword, botGuard }) {
         password: '',
         remember: false,
         _hp_email: '',
+        _hp_ts: botGuard?.ts ?? '',
     });
 
     useEffect(() => {

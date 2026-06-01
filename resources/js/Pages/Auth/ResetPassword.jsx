@@ -13,6 +13,7 @@ export default function ResetPassword({ token, email, botGuard }) {
         password: '',
         password_confirmation: '',
         _hp_email: '',
+        _hp_ts: botGuard?.ts ?? '',
     });
 
     const submit = (e) => {

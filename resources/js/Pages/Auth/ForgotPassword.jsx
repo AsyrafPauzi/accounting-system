@@ -10,6 +10,7 @@ export default function ForgotPassword({ status, botGuard }) {
     const { data, setData, post, processing, errors } = useForm({
         email: '',
         _hp_email: '',
+        _hp_ts: botGuard?.ts ?? '',
     });
 
     const submit = (e) => {
