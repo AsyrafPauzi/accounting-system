@@ -35,20 +35,80 @@ You must set these in `GitHub Repo Settings > Secrets and variables > Actions`:
 - `CONTAINER_NAME`: The name of the container in the task definition (usually `app`).
 
 ## 3. Database Migrations
+
 Migrations are handled in two layers due to the multi-tenant architecture.
 
-### Central Database
-Migrations for the central database (tenants, users, plans) are automatically run during the container startup if the environment variable `RUN_MIGRATIONS` is set to `true` in the ECS Task Definition.
+| Layer | Path | Command |
+|-------|------|---------|
+| Central (users, tenants, plans, OCR settings, …) | `database/migrations/` | `php artisan migrate --force` |
+| Tenant (invoices, bills, GL, …) | `database/migrations/tenant/` | `php artisan tenants:migrate --force` |
 
-### Tenant Databases
-Tenant-specific migrations (invoices, GL, etc.) are **NOT** automatically run by the container startup to avoid performance issues during scaling.
+### Automatic migrations on deploy (recommended)
 
-To migrate tenant databases after a deployment:
-1. Access the container shell (via AWS ECS Exec or a management task).
-2. Run:
-   ```bash
-   php artisan tenants:migrate
-   ```
+Set **`RUN_MIGRATIONS=true`** on the ECS task definition for the app service.
+
+On each container start, `docker/entrypoint.sh` runs (in order):
+
+1. `php artisan migrate --force --isolated` — central schema
+2. `php artisan tenants:migrate --force --isolated` — all tenant databases
+
+`--isolated` uses a cache lock so that during a rolling deploy only one task applies pending migrations; other tasks skip quickly if migrations are already running or complete.
+
+**`db:seed` is not run on startup.** Seeders include demo/test accounts and must not run on every production deploy.
+
+When there are no pending migrations, both commands finish in seconds and the container continues to nginx/supervisor as usual.
+
+### ECS task definition
+
+Add to the app container environment:
+
+```
+RUN_MIGRATIONS=true
+```
+
+You do **not** need a separate one-off migration task after each deploy if this is set. Keep a one-off task or ECS Exec only for emergencies or debugging.
+
+### First-time production database / seeding
+
+Run once manually (ECS Exec or a management task), not on every deploy:
+
+```bash
+php artisan migrate --force
+php artisan tenants:migrate --force
+php artisan db:seed --force   # only on initial install, or when you intend to re-seed
+```
+
+After changing roles or plan permissions in code, prefer:
+
+```bash
+php artisan app:sync-roles-permissions
+```
+
+instead of full `db:seed`.
+
+### Manual migration (fallback)
+
+If `RUN_MIGRATIONS` is unset or a deploy shipped code before migrations ran:
+
+```bash
+php artisan migrate --force
+php artisan tenants:migrate --force
+```
+
+**Always run central `migrate` before `tenants:migrate`.** Running only `tenants:migrate` leaves the central database behind (e.g. missing `users.theme_preference` or `ocr_settings`).
+
+Check status:
+
+```bash
+php artisan migrate:status
+```
+
+### Scaling note
+
+`tenants:migrate` runs against **every** tenant database on each container start. This is fine for a small tenant count. If you grow to many tenants or frequent autoscaling, consider:
+
+- Startup: only `php artisan migrate --force --isolated` (set `RUN_MIGRATIONS` to run central only — customize entrypoint), and
+- A single one-off task per deploy for `tenants:migrate`
 
 ## 4. Manual Deployment (Fallback)
 If GitHub Actions is unavailable, you can deploy manually from your local machine:
@@ -71,7 +131,11 @@ If GitHub Actions is unavailable, you can deploy manually from your local machin
    aws ecs update-service --cluster <cluster_name> --service <service_name> --force-new-deployment --region <region>
    ```
 
+Ensure `RUN_MIGRATIONS=true` on the service so new tasks apply migrations on boot.
+
 ## 5. Troubleshooting
 - **Logs**: View application logs in **AWS CloudWatch** under the log group associated with the ECS Task.
-- **Service Stability**: If a deployment hangs, check the ECS Service "Events" tab for errors (e.g., health check failures).
+- **500 after deploy on central features** (profile theme, `/admin/ocr`): usually missing central migrations — run `php artisan migrate --force` and confirm pending migrations in `migrate:status`.
+- **500 on tenant features** (bills, invoices): usually missing tenant migrations — run `php artisan tenants:migrate --force`.
+- **Service Stability**: If a deployment hangs, check the ECS Service "Events" tab for errors (e.g., health check failures). Slow `tenants:migrate` on many DBs can delay health checks — see scaling note above.
 - **Rollback**: If a deployment fails, you can manually update the ECS Service to use the previous known-good Task Definition revision.
