@@ -110,18 +110,21 @@ class HandleInertiaRequests extends Middleware
 
     /**
      * Load and merge translation JSON for the active locale, falling back to en
-     * for any keys not yet translated. Cached per locale for performance.
+     * for any keys not yet translated. Memoised per-request only.
      */
     protected function loadTranslations(string $locale): array
     {
-        return Cache::remember("translations.{$locale}", 60 * 5, function () use ($locale) {
-            $en = $this->readLangFile('en');
-            if ($locale === 'en') {
-                return $en;
-            }
-            $other = $this->readLangFile($locale);
-            return array_replace_recursive($en, $other);
-        });
+        if (isset(static::$translationsMemo[$locale])) {
+            return static::$translationsMemo[$locale];
+        }
+
+        $en = $this->readLangFile('en');
+        if ($locale === 'en') {
+            return static::$translationsMemo[$locale] = $en;
+        }
+
+        $other = $this->readLangFile($locale);
+        return static::$translationsMemo[$locale] = array_replace_recursive($en, $other);
     }
 
     protected function readLangFile(string $code): array

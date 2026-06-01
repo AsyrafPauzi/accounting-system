@@ -3,55 +3,61 @@
 namespace App\Services;
 
 use App\Models\Bill;
+use App\Services\Ocr\OcrProviderResolver;
+use App\Services\Ocr\OcrResult;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Throwable;
 
+/**
+ * Public-facing OCR entry point. The shape of `process()`'s return value is
+ * the historical contract relied on by BillController and BillService —
+ * do not break it without coordinated callsite updates.
+ *
+ * The actual extraction is delegated to a provider resolved at runtime
+ * from OcrSettings::current()->provider.
+ */
 class OCRService
 {
+    public function __construct(
+        private OcrProviderResolver $resolver,
+    ) {}
+
     /**
-     * Process a receipt image and extract data.
-     * 
-     * @param string $filePath Path to the uploaded receipt
-     * @return array Extracted data
+     * @param string $filePath Storage-relative path on the configured upload disk
+     *                         (e.g. 'receipts/abc.jpg' on the 'public' disk).
+     * @return array{status: string, data: ?array, error?: string, provider?: string}
      */
     public function process(string $filePath): array
     {
-        // Simulate OCR processing delay
-        // sleep(2);
-
-        // In a real implementation, you would call an external API or use a library like Tesseract
-        // For now, we'll return a mock response based on the "visual" presence of data
-        
-        return [
-            'status' => 'success',
-            'data' => [
-                'supplier_name' => 'Mock Supplier Co.',
-                'bill_date' => now()->format('Y-m-d'),
-                'total_amount' => 125.50,
-                'tax_amount' => 7.53,
-                'currency' => 'MYR',
-                'reference' => 'RCPT-' . Str::upper(Str::random(6)),
-                'items' => [
-                    ['description' => 'Office Supplies', 'amount' => 100.00],
-                    ['description' => 'Shipping', 'amount' => 25.50],
-                ]
-            ]
-        ];
+        try {
+            $provider = $this->resolver->resolve();
+            $result = $provider->extract($filePath);
+            return $result->toLegacyArray();
+        } catch (Throwable $e) {
+            Log::error('[OCR] Unexpected exception during extraction', [
+                'path' => $filePath,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return OcrResult::failed(
+                provider: 'unknown',
+                error: 'OCR provider threw an unexpected error. Receipt was saved; please fill fields manually.',
+            )->toLegacyArray();
+        }
     }
 
     /**
-     * Update a bill with OCR results.
+     * Persist OCR output back onto a Bill row. Preserved from the original API
+     * for any callers still using it directly (today there are none but keeping
+     * the method signature stable is cheap insurance).
      */
     public function updateBillWithOCR(Bill $bill, array $ocrResult): void
     {
-        if ($ocrResult['status'] === 'success') {
-            $data = $ocrResult['data'];
-            
+        if (($ocrResult['status'] ?? null) === OcrResult::STATUS_SUCCESS) {
             $bill->update([
                 'ocr_status' => 'completed',
-                'ocr_data' => $data,
-                // We don't automatically overwrite everything unless the user confirms, 
-                // but we store it for the auto-fill feature.
+                'ocr_data' => $ocrResult['data'] ?? null,
             ]);
         } else {
             $bill->update(['ocr_status' => 'failed']);

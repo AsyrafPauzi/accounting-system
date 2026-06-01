@@ -36,6 +36,115 @@
         color: rgb(var(--color-ink));
         font-family: 'Inter', system-ui, sans-serif;
     }
+
+    /*
+     * Dark mode form-field defaults.
+     *
+     * @tailwindcss/forms sets background-color: #fff and color: #000 on these
+     * fields at the base layer, which doesn't flip when the .dark class is
+     * applied. We re-style them here so any input — even ones whose Tailwind
+     * classes don't include explicit dark variants — looks right in dark mode.
+     *
+     * Specificity is intentionally kept at (0,2,0) (one class + one attribute
+     * selector) so any `dark:bg-*` / `dark:text-*` / `dark:placeholder-*`
+     * utility on a specific input still wins.
+     */
+    .dark [type='text'],
+    .dark [type='email'],
+    .dark [type='url'],
+    .dark [type='password'],
+    .dark [type='number'],
+    .dark [type='date'],
+    .dark [type='datetime-local'],
+    .dark [type='month'],
+    .dark [type='search'],
+    .dark [type='tel'],
+    .dark [type='time'],
+    .dark [type='week'],
+    .dark [multiple],
+    .dark textarea,
+    .dark select {
+        background-color: rgb(var(--color-surface));
+        border-color: rgb(var(--color-border-warm));
+        color: rgb(var(--color-ink));
+    }
+
+    .dark [type='text']::placeholder,
+    .dark [type='email']::placeholder,
+    .dark [type='url']::placeholder,
+    .dark [type='password']::placeholder,
+    .dark [type='number']::placeholder,
+    .dark [type='date']::placeholder,
+    .dark [type='datetime-local']::placeholder,
+    .dark [type='month']::placeholder,
+    .dark [type='search']::placeholder,
+    .dark [type='tel']::placeholder,
+    .dark [type='time']::placeholder,
+    .dark [type='week']::placeholder,
+    .dark textarea::placeholder {
+        color: rgb(var(--color-ink-muted));
+        opacity: 0.85;
+    }
+
+    /* Disabled inputs in dark mode — clearly inert but still legible */
+    .dark [type='text']:disabled,
+    .dark [type='email']:disabled,
+    .dark [type='url']:disabled,
+    .dark [type='password']:disabled,
+    .dark [type='number']:disabled,
+    .dark [type='date']:disabled,
+    .dark [type='datetime-local']:disabled,
+    .dark [type='month']:disabled,
+    .dark [type='search']:disabled,
+    .dark [type='tel']:disabled,
+    .dark [type='time']:disabled,
+    .dark [type='week']:disabled,
+    .dark textarea:disabled,
+    .dark select:disabled {
+        background-color: rgb(var(--color-surface-alt));
+        color: rgb(var(--color-ink-muted));
+    }
+
+    /*
+     * Light-mode placeholder bump too — `placeholder-ink-muted/60` was a bit
+     * faint on cream backgrounds. Inputs without an explicit Tailwind
+     * placeholder class now also get a sensible default.
+     */
+    [type='text']::placeholder,
+    [type='email']::placeholder,
+    [type='url']::placeholder,
+    [type='password']::placeholder,
+    [type='number']::placeholder,
+    [type='date']::placeholder,
+    [type='datetime-local']::placeholder,
+    [type='month']::placeholder,
+    [type='search']::placeholder,
+    [type='tel']::placeholder,
+    [type='time']::placeholder,
+    [type='week']::placeholder,
+    textarea::placeholder {
+        color: rgb(var(--color-ink-muted));
+        opacity: 0.7;
+    }
+}
+
+@layer components {
+    /*
+     * Canonical app-wide button sizing.
+     * Matches the sidebar Settings/Logout pair so every action button —
+     * primary CTAs, secondary outlines, danger and ghost — reads at the same
+     * visual weight. Use `.btn-app` (size + shape only) and combine with
+     * variant utilities, or use the BrandButton/PrimaryButton/SecondaryButton
+     * React primitives which apply this class automatically.
+     */
+    .btn-app {
+        @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-terracotta disabled:opacity-50 disabled:cursor-not-allowed;
+    }
+    .btn-app-primary   { @apply btn-app bg-terracotta text-white hover:bg-terracotta-dark dark:hover:bg-terracotta-light; }
+    .btn-app-secondary { @apply btn-app bg-surface text-ink border border-border-warm hover:bg-surface-alt; }
+    .btn-app-danger    { @apply btn-app bg-surface text-terracotta border border-terracotta/30 hover:bg-terracotta/10; }
+    .btn-app-ghost     { @apply btn-app text-ink hover:bg-surface-alt; }
+    .btn-app-forest    { @apply btn-app bg-forest text-white hover:bg-forest-dark dark:bg-forest-light dark:hover:bg-forest; }
 }
 
 @layer utilities {

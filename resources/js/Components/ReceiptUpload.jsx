@@ -13,8 +13,10 @@ export default function ReceiptUpload({ onOcrComplete, billId = null }) {
 
     const processFile = async (file) => {
         if (!file) return;
-        if (!file.type.startsWith('image/')) {
-            setError('Please upload an image file (JPG, PNG)');
+        const isImage = file.type.startsWith('image/');
+        const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+        if (!isImage && !isPdf) {
+            setError('Please upload an image (JPG, PNG, WebP) or PDF file');
             return;
         }
 
@@ -92,7 +94,7 @@ export default function ReceiptUpload({ onOcrComplete, billId = null }) {
                     ref={fileInputRef} 
                     onChange={handleFileChange} 
                     className="hidden" 
-                    accept="image/*"
+                    accept="image/*,application/pdf"
                 />
 
                 <div className="flex flex-col items-center justify-center text-center">
@@ -138,11 +140,11 @@ export default function ReceiptUpload({ onOcrComplete, billId = null }) {
                             <div className="w-12 h-12 bg-surface-alt rounded-full flex items-center justify-center mb-4 group-hover:bg-surface-alt transition-colors">
                                 <IconUpload className="w-6 h-6 text-ink group-hover:text-terracotta" />
                             </div>
-                            <h4 className="text-lg font-semibold text-ink">Upload Physical Receipt</h4>
+                            <h4 className="text-lg font-semibold text-ink">Upload Receipt</h4>
                             <p className="text-sm text-ink-muted mt-1">Drop your receipt here or click to browse</p>
                             <div className="mt-4 flex items-center gap-2 text-xs text-ink-muted">
                                 <IconPhoto size={14} />
-                                <span>Supports JPG, PNG (Max 10MB)</span>
+                                <span>JPG, PNG, WebP, or PDF · Max 10 MB</span>
                             </div>
                         </>
                     )}

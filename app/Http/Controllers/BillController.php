@@ -172,7 +172,10 @@ class BillController extends Controller
     public function uploadReceipt(Request $request): \Illuminate\Http\JsonResponse
     {
         $request->validate([
-            'receipt' => 'required|image|max:10240', // 10MB max
+            // Images for photo-of-receipt uploads, PDFs for e-receipts (Shopee, fuel
+            // station tax invoices, etc.). Tesseract handles PDFs via PdfPreprocessor;
+            // Gemini handles them natively.
+            'receipt' => 'required|file|mimes:jpg,jpeg,png,webp,pdf|max:10240',
             'bill_id' => 'nullable|exists:bills,id',
         ]);
 

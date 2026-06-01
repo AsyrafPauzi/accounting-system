@@ -426,7 +426,7 @@ export default function Create({ auth, users = [] }) {
                             placeholder="Private notes about this customer..." 
                             value={data.internal_notes} 
                             onChange={e => setData('internal_notes', e.target.value)} 
-                            className="w-full bg-ink/80 border border-ink rounded-xl p-4 text-ink-muted text-sm placeholder-ink-muted/60 focus:ring-2 focus:ring-terracotta focus:border-transparent h-28 resize-none"
+                            className="w-full bg-surface border border-border-warm rounded-xl p-4 text-ink text-sm placeholder-ink-muted/70 focus:ring-2 focus:ring-terracotta focus:border-terracotta h-28 resize-none"
                         />
                     </div>
                 </div>

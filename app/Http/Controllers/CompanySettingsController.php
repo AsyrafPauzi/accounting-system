@@ -70,9 +70,8 @@ class CompanySettingsController extends Controller
         $tenant->fill($validated);
         $tenant->save();
 
-        // Bust the cached translations so the new locale is reflected immediately.
-        \Illuminate\Support\Facades\Cache::forget('translations.en');
-        \Illuminate\Support\Facades\Cache::forget('translations.ms');
+        // Translations are now memoised per-request only (see HandleInertiaRequests),
+        // so there's no cross-request cache to bust — the next page load picks up the new locale.
 
         return redirect()->route('settings.company')->with('success', 'Company settings updated.');
     }

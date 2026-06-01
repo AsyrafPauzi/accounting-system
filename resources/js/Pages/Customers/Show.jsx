@@ -86,41 +86,41 @@ export default function Show({ auth, customer, invoices = [], stats, auditLogs =
         <AuthenticatedLayout 
             user={auth.user} 
             header={
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-                    <div className="flex items-start sm:items-center gap-4">
-                        <Link 
-                            href={route('customers.index')} 
-                            className="p-2.5 rounded-xl text-ink-muted hover:text-ink hover:bg-surface-alt transition-all duration-200"
+                <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                        <Link
+                            href={route('customers.index')}
+                            className="p-2 rounded-xl text-ink-muted hover:text-ink hover:bg-surface-alt transition-colors shrink-0"
                         >
                             <Icons.ChevronLeft />
                         </Link>
-                        <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-2xl bg-terracotta flex items-center justify-center text-white text-xl font-black shadow-lg ">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-11 h-11 rounded-xl bg-terracotta flex items-center justify-center text-white text-base font-semibold shrink-0">
                                 {customer.name.charAt(0)}
                             </div>
-                            <div>
+                            <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                    <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">{customer.name}</h2>
-                                    <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider ${
-                                        customer.is_active ? 'bg-forest/10 text-forest' : 'bg-surface-alt text-ink'
+                                    <h1 className="font-display text-lg lg:text-xl font-medium text-ink tracking-tight leading-tight break-words">{customer.name}</h1>
+                                    <span className={`px-2 py-0.5 rounded-md text-eyebrow font-semibold uppercase ${
+                                        customer.is_active ? 'bg-forest/10 text-forest dark:text-forest-light' : 'bg-surface-alt text-ink-muted'
                                     }`}>
                                         {customer.is_active ? 'Active' : 'Suspended'}
                                     </span>
-                                    {customer.credit_hold && <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-mustard/15 text-mustard">Credit hold</span>}
-                                    {customer.risk_rating && <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-semibold ${
-                                        customer.risk_rating === 'high' ? 'bg-terracotta/10 text-terracotta' : customer.risk_rating === 'medium' ? 'bg-mustard/15 text-mustard' : 'bg-surface-alt text-ink'
+                                    {customer.credit_hold && <span className="px-2 py-0.5 rounded-md text-eyebrow font-semibold uppercase bg-mustard/15 text-ink">Credit hold</span>}
+                                    {customer.risk_rating && <span className={`px-2 py-0.5 rounded-md text-eyebrow font-semibold uppercase ${
+                                        customer.risk_rating === 'high' ? 'bg-terracotta/10 text-terracotta' : customer.risk_rating === 'medium' ? 'bg-mustard/15 text-ink' : 'bg-surface-alt text-ink-muted'
                                     }`}>{customer.risk_rating} risk</span>}
                                 </div>
-                                <p className="text-ink-muted text-sm font-medium mt-1">
-                                    {customer.code} · {customer.industry || 'General'}
+                                <p className="text-ink-muted text-xs mt-1 font-mono font-tabular">
+                                    {customer.code} · <span className="font-sans">{customer.industry || 'General'}</span>
                                 </p>
                             </div>
                         </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                        <Link 
-                            href={route('customers.edit', customer.id)} 
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:border-border-warm hover:bg-cream transition-all duration-200"
+                    <div className="flex flex-wrap gap-2 shrink-0">
+                        <Link
+                            href={route('customers.edit', customer.id)}
+                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-ink bg-surface border border-border-warm hover:bg-surface-alt transition-colors"
                         >
                             <Icons.Pencil /> Edit
                         </Link>
@@ -130,26 +130,26 @@ export default function Show({ auth, customer, invoices = [], stats, auditLogs =
                                 disabled={!can_delete_customer}
                                 title={delete_blocked_reason || 'Delete customer'}
                                 onClick={handleDelete}
-                                className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold border transition-all duration-200 ${
+                                className={`inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border transition-colors ${
                                     can_delete_customer
                                         ? 'text-terracotta bg-surface border-terracotta/30 hover:bg-terracotta/10'
-                                        : 'text-ink-muted bg-cream border-border-warm cursor-not-allowed'
+                                        : 'text-ink-muted bg-surface-alt border-border-warm cursor-not-allowed'
                                 }`}
                             >
                                 <Icons.Trash /> Delete
                             </button>
                         )}
-                        <Link 
-                            href={route('invoices.create', { customer_id: customer.id })} 
-                            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta shadow-lg  transition-all duration-200"
+                        <Link
+                            href={route('invoices.create', { customer_id: customer.id })}
+                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-terracotta hover:bg-terracotta-dark dark:hover:bg-terracotta-light transition-colors"
                         >
-                            <Icons.Plus /> New Invoice
+                            <Icons.Plus /> New invoice
                         </Link>
-                        <Link 
-                            href={route('invoices.index')} 
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:border-border-warm hover:bg-cream transition-all duration-200"
+                        <Link
+                            href={route('invoices.index')}
+                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-ink bg-surface border border-border-warm hover:bg-surface-alt transition-colors"
                         >
-                            <Icons.Document /> View All Invoices
+                            <Icons.Document /> All invoices
                         </Link>
                     </div>
                 </div>

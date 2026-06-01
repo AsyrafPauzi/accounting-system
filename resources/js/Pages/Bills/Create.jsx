@@ -195,32 +195,40 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
                 </div>
 
                 <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-border-warm bg-cream/50 flex items-center justify-between">
+                    <div className="px-4 sm:px-6 py-3 border-b border-border-warm bg-cream/50 flex items-center justify-between">
                         <h3 className="text-sm font-display font-medium text-ink">Line items</h3>
-                        <button type="button" onClick={addItem} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt">
+                        <button type="button" onClick={addItem} className="btn-app-secondary text-terracotta">
                             <Icons.Plus /> Add line
                         </button>
                     </div>
                     <div className="overflow-x-auto">
-                        <table className="w-full">
+                        <table className="w-full table-fixed min-w-[760px]">
+                            <colgroup>
+                                <col className="w-[28%]" />
+                                <col className="w-[32%]" />
+                                <col className="w-[10%]" />
+                                <col className="w-[14%]" />
+                                <col className="w-[14%]" />
+                                <col className="w-[2%]" />
+                            </colgroup>
                             <thead>
-                                <tr className="text-left text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
-                                    <th className="px-6 py-3">Account</th>
-                                    <th className="px-6 py-3">Description</th>
-                                    <th className="px-6 py-3 w-32">Qty</th>
-                                    <th className="px-6 py-3 w-32">Unit amount</th>
-                                    <th className="px-6 py-3 w-32 text-right">Amount</th>
-                                    <th className="px-6 py-3 w-12" />
+                                <tr className="text-left text-eyebrow font-semibold text-ink-muted uppercase border-b border-border-warm bg-cream/80">
+                                    <th className="px-3 py-3">Account</th>
+                                    <th className="px-3 py-3">Description</th>
+                                    <th className="px-3 py-3">Qty</th>
+                                    <th className="px-3 py-3">Unit amount</th>
+                                    <th className="px-3 py-3 text-right">Amount</th>
+                                    <th className="px-3 py-3" />
                                 </tr>
                             </thead>
                             <tbody>
                                 {data.items.map((item, index) => (
                                     <tr key={index} className="border-b border-border-warm last:border-0">
-                                        <td className="px-6 py-3">
+                                        <td className="px-3 py-3">
                                             <select
                                                 value={item.account_code}
                                                 onChange={(e) => updateItem(index, 'account_code', e.target.value)}
-                                                className={inputClass}
+                                                className={inputClass + ' w-full'}
                                                 required
                                             >
                                                 <option value="">Select account</option>
@@ -229,19 +237,19 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
                                                 ))}
                                             </select>
                                         </td>
-                                        <td className="px-6 py-3">
-                                            <input type="text" value={item.description} onChange={(e) => updateItem(index, 'description', e.target.value)} className={inputClass} placeholder="Description" />
+                                        <td className="px-3 py-3">
+                                            <input type="text" value={item.description} onChange={(e) => updateItem(index, 'description', e.target.value)} className={inputClass + ' w-full'} placeholder="Description" />
                                         </td>
-                                        <td className="px-6 py-3">
-                                            <input type="number" step="0.01" min="0" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className={inputClass} />
+                                        <td className="px-3 py-3">
+                                            <input type="number" step="0.01" min="0" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className={inputClass + ' w-full'} />
                                         </td>
-                                        <td className="px-6 py-3">
-                                            <input type="number" step="0.01" min="0" value={item.unit_amount} onChange={(e) => updateItem(index, 'unit_amount', e.target.value)} className={inputClass} />
+                                        <td className="px-3 py-3">
+                                            <input type="number" step="0.01" min="0" value={item.unit_amount} onChange={(e) => updateItem(index, 'unit_amount', e.target.value)} className={inputClass + ' w-full'} />
                                         </td>
-                                        <td className="px-6 py-3 text-right">
-                                            <input type="number" step="0.01" min="0" value={item.amount} onChange={(e) => updateItem(index, 'amount', parseFloat(e.target.value) || 0)} className={inputClass + ' text-right'} />
+                                        <td className="px-3 py-3 text-right">
+                                            <input type="number" step="0.01" min="0" value={item.amount} onChange={(e) => updateItem(index, 'amount', parseFloat(e.target.value) || 0)} className={inputClass + ' w-full text-right'} />
                                         </td>
-                                        <td className="px-6 py-3">
+                                        <td className="px-2 py-3">
                                             <button type="button" onClick={() => removeItem(index)} className="p-2 text-ink-muted hover:text-terracotta rounded-lg" title="Remove line">
                                                 <Icons.Trash />
                                             </button>
@@ -252,19 +260,32 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
                         </table>
                     </div>
                     {errors.items && <p className="text-terracotta text-xs px-6 py-2">{errors.items}</p>}
-                    <div className="px-6 py-4 border-t border-border-warm bg-cream/50 flex justify-end gap-6">
-                        <span className="text-sm font-medium text-ink">Subtotal: RM {subtotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
-                        {tax > 0 && <span className="text-sm font-medium text-ink">Tax: RM {tax.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>}
-                        <span className="text-lg font-display font-medium text-ink">Total: RM {total.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                    <div className="px-4 sm:px-6 py-4 border-t border-border-warm bg-cream/50 flex justify-end">
+                        <div className="w-full max-w-xs space-y-2">
+                            <div className="flex justify-between items-baseline">
+                                <span className="text-eyebrow font-semibold text-ink-muted uppercase">Subtotal</span>
+                                <span className="text-sm font-mono font-tabular text-ink">RM {subtotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            {tax > 0 && (
+                                <div className="flex justify-between items-baseline">
+                                    <span className="text-eyebrow font-semibold text-ink-muted uppercase">Tax</span>
+                                    <span className="text-sm font-mono font-tabular text-ink">RM {tax.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between items-baseline pt-2 border-t border-border-warm">
+                                <span className="text-eyebrow font-semibold text-ink uppercase">Total</span>
+                                <span className="text-base font-mono font-tabular font-semibold text-terracotta">RM {total.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex gap-3">
-                    <Link href={route('bills.index')} className="px-5 py-2.5 rounded-xl font-semibold text-ink border border-border-warm hover:bg-cream">
+                <div className="flex gap-2">
+                    <Link href={route('bills.index')} className="btn-app-secondary">
                         Cancel
                     </Link>
-                    <button type="submit" disabled={processing} className="px-5 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50 shadow-lg ">
-                        {processing ? 'Saving...' : 'Save as draft'}
+                    <button type="submit" disabled={processing} className="btn-app-primary">
+                        {processing ? 'Saving…' : 'Save as draft'}
                     </button>
                 </div>
                 </form>

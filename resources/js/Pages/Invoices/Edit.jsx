@@ -407,35 +407,35 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                             </div>
 
                             <div className="space-y-4">
-                                <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm space-y-4">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="font-display font-medium text-ink-muted uppercase tracking-tighter">Subtotal (Gross)</span>
-                                        <span className="font-mono font-display font-medium text-ink">{curSym} {subtotal.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
+                                <div className="bg-surface p-6 rounded-2xl border border-border-warm shadow-sm space-y-3">
+                                    <div className="flex justify-between items-baseline">
+                                        <span className="text-eyebrow font-semibold text-ink-muted uppercase">Subtotal (Gross)</span>
+                                        <span className="text-sm font-mono font-tabular text-ink">{curSym} {subtotal.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
                                     </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span className="font-bold text-terracotta uppercase tracking-tighter">Line Discounts</span>
-                                        <span className="font-mono font-bold text-terracotta">- {curSym} {totalDiscount.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
+                                    <div className="flex justify-between items-baseline">
+                                        <span className="text-eyebrow font-semibold text-terracotta uppercase">Line Discounts</span>
+                                        <span className="text-sm font-mono font-tabular text-terracotta">- {curSym} {totalDiscount.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
                                     </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span className="font-display font-medium text-ink-muted uppercase tracking-tighter">SST (Tax)</span>
-                                        <span className="font-mono font-display font-medium text-ink">+ {curSym} {totalTax.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
+                                    <div className="flex justify-between items-baseline">
+                                        <span className="text-eyebrow font-semibold text-ink-muted uppercase">SST (Tax)</span>
+                                        <span className="text-sm font-mono font-tabular text-ink">+ {curSym} {totalTax.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
                                     </div>
-                                    <div className="flex justify-between items-center py-2 border-t border-border-warm">
-                                        <span className="font-display font-medium text-ink-muted uppercase tracking-tighter">Shipping</span>
-                                        <input 
-                                            type="number" 
-                                            value={data.shipping_amount} 
+                                    <div className="flex justify-between items-center pt-3 border-t border-border-warm">
+                                        <span className="text-eyebrow font-semibold text-ink-muted uppercase">Shipping</span>
+                                        <input
+                                            type="number"
+                                            value={data.shipping_amount}
                                             onChange={e => setData('shipping_amount', e.target.value)}
-                                            className="w-32 text-right border-border-warm rounded-xl font-mono font-display font-medium text-ink" 
+                                            className="w-28 text-right text-sm border-border-warm rounded-xl font-mono font-tabular text-ink"
                                         />
                                     </div>
                                     <div className="flex justify-between text-xs text-ink-muted">
                                         <span>{roundingLabel(invCur)}</span>
-                                        <span className="font-mono">{roundingAdjustment.toFixed(2)}</span>
+                                        <span className="font-mono font-tabular">{roundingAdjustment.toFixed(2)}</span>
                                     </div>
-                                    <div className="flex justify-between items-center pt-4 border-t-2 border-border-warm">
-                                        <span className="font-display font-medium text-ink uppercase tracking-tighter">Grand Total</span>
-                                        <span className="text-2xl font-bold text-terracotta font-mono tabular-nums">
+                                    <div className="flex justify-between items-baseline pt-3 border-t border-border-warm">
+                                        <span className="text-eyebrow font-semibold text-ink uppercase">Grand Total</span>
+                                        <span className="text-lg font-mono font-tabular font-semibold text-terracotta">
                                             {curSym} {roundedTotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
                                         </span>
                                     </div>

@@ -245,47 +245,55 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                 )}
 
                 <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-border-warm bg-cream/50 flex items-center justify-between">
+                    <div className="px-4 sm:px-6 py-3 border-b border-border-warm bg-cream/50 flex items-center justify-between">
                         <h3 className="text-sm font-display font-medium text-ink">Line items</h3>
                         {isDraft && (
-                            <button type="button" onClick={addItem} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt">
+                            <button type="button" onClick={addItem} className="btn-app-secondary text-terracotta">
                                 <Icons.Plus /> Add line
                             </button>
                         )}
                     </div>
                     <div className="overflow-x-auto">
-                        <table className="w-full">
+                        <table className="w-full table-fixed min-w-[760px]">
+                            <colgroup>
+                                <col className="w-[28%]" />
+                                <col className="w-[32%]" />
+                                <col className="w-[10%]" />
+                                <col className="w-[14%]" />
+                                <col className="w-[14%]" />
+                                {isDraft && <col className="w-[2%]" />}
+                            </colgroup>
                             <thead>
-                                <tr className="text-left text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
-                                    <th className="px-6 py-3">Account</th>
-                                    <th className="px-6 py-3">Description</th>
-                                    <th className="px-6 py-3 w-24">Qty</th>
-                                    <th className="px-6 py-3 w-32">Unit amount</th>
-                                    <th className="px-6 py-3 w-32 text-right">Amount</th>
-                                    {isDraft && <th className="px-6 py-3 w-12" />}
+                                <tr className="text-left text-eyebrow font-semibold text-ink-muted uppercase border-b border-border-warm bg-cream/80">
+                                    <th className="px-3 py-3">Account</th>
+                                    <th className="px-3 py-3">Description</th>
+                                    <th className="px-3 py-3">Qty</th>
+                                    <th className="px-3 py-3">Unit amount</th>
+                                    <th className="px-3 py-3 text-right">Amount</th>
+                                    {isDraft && <th className="px-3 py-3" />}
                                 </tr>
                             </thead>
                             <tbody>
                                 {data.items.map((item, index) => (
                                     <tr key={index} className="border-b border-border-warm last:border-0">
-                                        <td className="px-6 py-3">
+                                        <td className="px-3 py-3">
                                             {isDraft ? (
-                                                <select value={item.account_code} onChange={(e) => updateItem(index, 'account_code', e.target.value)} className={inputClass} required>
+                                                <select value={item.account_code} onChange={(e) => updateItem(index, 'account_code', e.target.value)} className={inputClass + ' w-full'} required>
                                                     <option value="">Select account</option>
                                                     {(expenseAccounts || []).map((a) => (
                                                         <option key={a.value} value={a.value}>{a.label}</option>
                                                     ))}
                                                 </select>
                                             ) : (
-                                                <span className="text-ink">{item.account_code}</span>
+                                                <span className="text-ink text-sm">{item.account_code}</span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-3">{isDraft ? <input type="text" value={item.description} onChange={(e) => updateItem(index, 'description', e.target.value)} className={inputClass} /> : item.description || '—'}</td>
-                                        <td className="px-6 py-3">{isDraft ? <input type="number" step="0.01" min="0" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className={inputClass} /> : item.quantity}</td>
-                                        <td className="px-6 py-3">{isDraft ? <input type="number" step="0.01" min="0" value={item.unit_amount} onChange={(e) => updateItem(index, 'unit_amount', e.target.value)} className={inputClass} /> : formatMoney(item.unit_amount)}</td>
-                                        <td className="px-6 py-3 text-right font-mono">{formatMoney(item.amount)}</td>
+                                        <td className="px-3 py-3">{isDraft ? <input type="text" value={item.description} onChange={(e) => updateItem(index, 'description', e.target.value)} className={inputClass + ' w-full'} /> : <span className="text-sm">{item.description || '—'}</span>}</td>
+                                        <td className="px-3 py-3">{isDraft ? <input type="number" step="0.01" min="0" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className={inputClass + ' w-full'} /> : <span className="text-sm font-mono font-tabular">{item.quantity}</span>}</td>
+                                        <td className="px-3 py-3">{isDraft ? <input type="number" step="0.01" min="0" value={item.unit_amount} onChange={(e) => updateItem(index, 'unit_amount', e.target.value)} className={inputClass + ' w-full'} /> : <span className="text-sm font-mono font-tabular">{formatMoney(item.unit_amount)}</span>}</td>
+                                        <td className="px-3 py-3 text-right text-sm font-mono font-tabular">{formatMoney(item.amount)}</td>
                                         {isDraft && (
-                                            <td className="px-6 py-3">
+                                            <td className="px-2 py-3">
                                                 <button type="button" onClick={() => removeItem(index)} className="p-2 text-ink-muted hover:text-terracotta rounded-lg">
                                                     <Icons.Trash />
                                                 </button>
@@ -296,29 +304,26 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                             </tbody>
                         </table>
                     </div>
-                    <div className="px-6 py-8 border-t border-border-warm bg-cream/50">
-                        <div className="flex flex-col gap-5 text-right items-end">
-                            <div>
-                                <span className="block text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest mb-1">Subtotal</span>
-                                <span className="text-sm font-semibold text-ink font-mono">RM {subtotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                    <div className="px-4 sm:px-6 py-4 border-t border-border-warm bg-cream/50 flex justify-end">
+                        <div className="w-full max-w-xs space-y-2">
+                            <div className="flex justify-between items-baseline">
+                                <span className="text-eyebrow font-semibold text-ink-muted uppercase">Subtotal</span>
+                                <span className="text-sm font-mono font-tabular text-ink">RM {subtotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
                             </div>
-                            
                             {tax > 0 && (
-                                <div>
-                                    <span className="block text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest mb-1">Tax</span>
-                                    <span className="text-sm font-semibold text-ink font-mono">RM {tax.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                                <div className="flex justify-between items-baseline">
+                                    <span className="text-eyebrow font-semibold text-ink-muted uppercase">Tax</span>
+                                    <span className="text-sm font-mono font-tabular text-ink">RM {tax.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
                                 </div>
                             )}
-
-                            <div className="pt-4 border-t border-border-warm w-32">
-                                <span className="block text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest mb-1">Total</span>
-                                <span className="text-xl font-display font-semibold text-ink font-mono underline decoration-blue-500 decoration-4 underline-offset-8">RM {total.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                            <div className="flex justify-between items-baseline pt-2 border-t border-border-warm">
+                                <span className="text-eyebrow font-semibold text-ink uppercase">Total</span>
+                                <span className="text-base font-mono font-tabular font-semibold text-terracotta">RM {total.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
                             </div>
-
                             {!isDraft && balanceDue > 0 && (
-                                <div className="pt-2">
-                                    <span className="block text-[10px] font-bold text-terracotta uppercase tracking-widest mb-1">Balance due</span>
-                                    <span className="text-lg font-bold text-terracotta font-mono">RM {formatMoney(balanceDue)}</span>
+                                <div className="flex justify-between items-baseline pt-2 border-t border-border-warm">
+                                    <span className="text-eyebrow font-semibold text-terracotta uppercase">Balance due</span>
+                                    <span className="text-base font-mono font-tabular font-semibold text-terracotta">RM {formatMoney(balanceDue)}</span>
                                 </div>
                             )}
                         </div>
@@ -326,12 +331,12 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                 </div>
 
                 {isDraft && (
-                    <div className="flex gap-3">
-                        <Link href={route('bills.index')} className="px-5 py-2.5 rounded-xl font-semibold text-ink border border-border-warm hover:bg-cream">
+                    <div className="flex gap-2">
+                        <Link href={route('bills.index')} className="btn-app-secondary">
                             Cancel
                         </Link>
-                        <button type="submit" onClick={handleSubmit} disabled={processing} className="px-5 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50">
-                            {processing ? 'Saving...' : 'Save changes'}
+                        <button type="submit" onClick={handleSubmit} disabled={processing} className="btn-app-primary">
+                            {processing ? 'Saving…' : 'Save changes'}
                         </button>
                     </div>
                 )}

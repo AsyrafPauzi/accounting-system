@@ -3,10 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Cache;
+use Stancl\Tenancy\Database\Concerns\CentralConnection;
 
 class BrandSettings extends Model
 {
+    // Pin queries to the central DB even when a tenant is initialized — this
+    // table lives only in the central database (one row, platform-wide settings).
+    use CentralConnection;
+
     protected $table = 'brand_settings';
 
     protected $fillable = [
@@ -19,22 +23,38 @@ class BrandSettings extends Model
         'color_mustard',
     ];
 
-    public const CACHE_KEY = 'brand_settings.current';
+    /**
+     * Per-request memo. We deliberately don't use the Cache facade because
+     * Stancl Tenancy wraps it with a tag-based store wrapper, and the
+     * database cache driver doesn't support tagging. Reading one row from
+     * the central DB once per request is cheap.
+     */
+    protected static ?self $memo = null;
 
     /**
      * Always returns the single config row, creating it if missing.
-     * Cached forever; flushed via flushCache() on save.
      */
     public static function current(): self
     {
-        return Cache::rememberForever(self::CACHE_KEY, function () {
-            return static::query()->firstOrCreate(['id' => 1]);
-        });
+        if (static::$memo) {
+            return static::$memo;
+        }
+
+        $row = static::query()->find(1);
+        if (! $row) {
+            // Avoid mass-assigning `id` (not in $fillable). Create the row by hand.
+            $row = new self();
+            $row->id = 1;
+            $row->save();
+            $row->refresh();
+        }
+
+        return static::$memo = $row;
     }
 
     public static function flushCache(): void
     {
-        Cache::forget(self::CACHE_KEY);
+        static::$memo = null;
     }
 
     protected static function booted(): void

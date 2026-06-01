@@ -128,21 +128,21 @@ export default function Dashboard({ auth, stats = {} }) {
                             </div>
                             <div className="p-4 sm:p-6">
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                                    <div>
-                                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Invoiced</p>
-                                        <p className="text-base sm:text-lg font-display font-medium text-ink font-mono mt-0.5">{fmt(invoices.total_invoiced, { currency: true })}</p>
+                                    <div className="min-w-0">
+                                        <p className="text-eyebrow font-semibold text-ink-muted uppercase">Invoiced</p>
+                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-ink mt-0.5 whitespace-nowrap" title={fmt(invoices.total_invoiced, { currency: true })}>{fmt(invoices.total_invoiced, { currency: true })}</p>
                                     </div>
-                                    <div>
-                                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Collected</p>
-                                        <p className="text-base sm:text-lg font-bold text-forest font-mono mt-0.5">{fmt(invoices.total_collected, { currency: true })}</p>
+                                    <div className="min-w-0">
+                                        <p className="text-eyebrow font-semibold text-ink-muted uppercase">Collected</p>
+                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-forest dark:text-forest-light mt-0.5 whitespace-nowrap" title={fmt(invoices.total_collected, { currency: true })}>{fmt(invoices.total_collected, { currency: true })}</p>
                                     </div>
-                                    <div>
-                                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Outstanding</p>
-                                        <p className="text-base sm:text-lg font-bold text-terracotta font-mono mt-0.5">{fmt(invoices.total_outstanding, { currency: true })}</p>
+                                    <div className="min-w-0">
+                                        <p className="text-eyebrow font-semibold text-ink-muted uppercase">Outstanding</p>
+                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-terracotta mt-0.5 whitespace-nowrap" title={fmt(invoices.total_outstanding, { currency: true })}>{fmt(invoices.total_outstanding, { currency: true })}</p>
                                     </div>
-                                    <div>
-                                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Overdue</p>
-                                        <p className="text-base sm:text-lg font-display font-medium text-ink mt-0.5">{invoices.overdue_count}</p>
+                                    <div className="min-w-0">
+                                        <p className="text-eyebrow font-semibold text-ink-muted uppercase">Overdue</p>
+                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-ink mt-0.5 whitespace-nowrap">{invoices.overdue_count}</p>
                                     </div>
                                 </div>
                                 {planPermissions['reports.aged-reports'] && (
@@ -165,21 +165,23 @@ export default function Dashboard({ auth, stats = {} }) {
                             </div>
                             <div className="p-4 sm:p-6">
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                                    <div>
-                                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Suppliers</p>
-                                        <p className="text-base sm:text-lg font-display font-medium text-ink mt-0.5">{suppliers.total} <span className="text-xs font-normal text-ink-muted">({suppliers.active} active)</span></p>
+                                    <div className="min-w-0">
+                                        <p className="text-eyebrow font-semibold text-ink-muted uppercase">Suppliers</p>
+                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-ink mt-0.5 whitespace-nowrap">
+                                            {suppliers.total} <span className="text-xs font-normal text-ink-muted">({suppliers.active} active)</span>
+                                        </p>
                                     </div>
-                                    <div>
-                                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Outstanding</p>
-                                        <p className="text-base sm:text-lg font-bold text-terracotta font-mono mt-0.5">{fmt(bills.total_ap, { currency: true })}</p>
+                                    <div className="min-w-0">
+                                        <p className="text-eyebrow font-semibold text-ink-muted uppercase">Outstanding</p>
+                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-terracotta mt-0.5 whitespace-nowrap" title={fmt(bills.total_ap, { currency: true })}>{fmt(bills.total_ap, { currency: true })}</p>
                                     </div>
-                                    <div>
-                                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Unpaid bills</p>
-                                        <p className="text-base sm:text-lg font-display font-medium text-ink mt-0.5">{bills.unpaid_count}</p>
+                                    <div className="min-w-0">
+                                        <p className="text-eyebrow font-semibold text-ink-muted uppercase">Unpaid bills</p>
+                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-ink mt-0.5 whitespace-nowrap">{bills.unpaid_count}</p>
                                     </div>
-                                    <div>
-                                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Overdue</p>
-                                        <p className="text-base sm:text-lg font-display font-medium text-ink mt-0.5">{bills.overdue_count}</p>
+                                    <div className="min-w-0">
+                                        <p className="text-eyebrow font-semibold text-ink-muted uppercase">Overdue</p>
+                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-ink mt-0.5 whitespace-nowrap">{bills.overdue_count}</p>
                                     </div>
                                 </div>
                                 {planPermissions['reports.aged-reports'] && (

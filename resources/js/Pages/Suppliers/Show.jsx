@@ -31,29 +31,29 @@ export default function Show({ auth, supplier, bills = [], balance = 0 }) {
         <AuthenticatedLayout
             user={auth.user}
             header={
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-mustard flex items-center justify-center text-white text-xl font-bold">
+                <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-11 h-11 rounded-xl bg-mustard flex items-center justify-center text-ink text-base font-semibold shrink-0">
                             {(supplier.name || '?').charAt(0)}
                         </div>
-                        <div>
-                            <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">{supplier.name}</h2>
-                            <p className="text-ink-muted font-mono text-sm mt-0.5">{supplier.code}</p>
+                        <div className="min-w-0">
+                            <h1 className="font-display text-lg lg:text-xl font-medium text-ink tracking-tight leading-tight break-words">{supplier.name}</h1>
+                            <p className="text-ink-muted font-mono font-tabular text-xs mt-0.5">{supplier.code}</p>
                             {!supplier.is_active && (
-                                <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-semibold bg-surface-alt text-ink mt-1">Suspended</span>
+                                <span className="inline-flex px-2 py-0.5 rounded-md text-eyebrow font-semibold uppercase bg-surface-alt text-ink-muted mt-1">Suspended</span>
                             )}
                         </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 shrink-0">
                         <Link
                             href={route('suppliers.edit', supplier.id)}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:bg-cream transition-colors"
+                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-ink bg-surface border border-border-warm hover:bg-surface-alt transition-colors"
                         >
                             <Icons.Pencil /> Edit
                         </Link>
                         <Link
                             href={route('bills.create', { supplier_id: supplier.id })}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta shadow-lg  transition-all"
+                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-terracotta hover:bg-terracotta-dark dark:hover:bg-terracotta-light transition-colors"
                         >
                             <Icons.Plus /> Create bill
                         </Link>

@@ -22,6 +22,7 @@ const Icons = {
     ChevronDown: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>,
     ChevronRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
     Audit: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+    Scan: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7V5a1 1 0 011-1h2M4 17v2a1 1 0 001 1h2M20 7V5a1 1 0 00-1-1h-2M20 17v2a1 1 0 01-1 1h-2M4 12h16" /></svg>,
 };
 
 const navConfig = [
@@ -99,7 +100,9 @@ export default function Authenticated({ user: propUser, header, children }) {
             isRouteActive('admin.tenants.index') ||
             isRouteActive('admin.plans.index') ||
             isRouteActive('admin.users.index') ||
-            isRouteActive('admin.audit-logs.index')
+            isRouteActive('admin.audit-logs.index') ||
+            isRouteActive('admin.branding.edit') ||
+            isRouteActive('admin.ocr.edit')
         ) initialOpenGroups['Admin'] = true;
         if (
             isRouteActive('settings.company') ||
@@ -273,6 +276,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                                     { name: 'Plan Catalog', route: 'admin.plans.index', Icon: Icons.Sparkles },
                                     { name: 'Platform Users', route: 'admin.users.index', Icon: Icons.Users },
                                     { name: 'Audit Log', route: 'admin.audit-logs.index', Icon: Icons.Audit },
+                                    { name: 'Receipt OCR', route: 'admin.ocr.edit', Icon: Icons.Scan },
                                     ...(page.props.deployment_mode === 'self_hosted'
                                         ? [{ name: 'Branding', route: 'admin.branding.edit', Icon: Icons.Sparkles }]
                                         : []),

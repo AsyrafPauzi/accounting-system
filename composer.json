@@ -14,10 +14,12 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
         "pragmarx/google2fa-laravel": "*",
+        "smalot/pdfparser": "^2.12",
         "spatie/laravel-permission": "^7.2",
         "stancl/tenancy": "^3.9",
         "symfony/http-client": "^8.0",
         "symfony/mailgun-mailer": "^8.0",
+        "thiagoalessio/tesseract_ocr": "^2.13",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {

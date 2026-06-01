@@ -157,6 +157,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('admin.branding.update');
     });
 
+    // --- Admin: OCR provider settings (super-admin only — applies to all tenants) ---
+    Route::middleware('role:super-admin')->group(function () {
+        Route::get('/admin/ocr', [\App\Http\Controllers\Admin\OcrSettingsController::class, 'edit'])
+            ->name('admin.ocr.edit');
+        Route::post('/admin/ocr', [\App\Http\Controllers\Admin\OcrSettingsController::class, 'update'])
+            ->middleware('throttle:creation')
+            ->name('admin.ocr.update');
+        Route::post('/admin/ocr/test', [\App\Http\Controllers\Admin\OcrSettingsController::class, 'test'])
+            ->middleware('throttle:sensitive')
+            ->name('admin.ocr.test');
+    });
+
     // --- Invoices ---
     Route::middleware('permission:invoices.view')->group(function () {
         Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');

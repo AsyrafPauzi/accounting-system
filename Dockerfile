@@ -10,6 +10,10 @@ RUN npm run build
 FROM php:8.4-fpm-alpine
 
 # Install system dependencies
+# Tesseract: required for the local OCR provider (`/admin/ocr` → Tesseract).
+#   - tesseract-ocr: the binary itself
+#   - tesseract-ocr-data-*: language packs. The defaults `eng` and `msa` cover
+#     English + Bahasa Malaysia; add ind/chi-sim/chi-tra/tha when needed.
 RUN apk add --no-cache \
     nginx \
     supervisor \
@@ -21,7 +25,13 @@ RUN apk add --no-cache \
     unzip \
     git \
     oniguruma-dev \
-    libxml2-dev
+    libxml2-dev \
+    tesseract-ocr \
+    tesseract-ocr-data-eng \
+    tesseract-ocr-data-msa \
+    tesseract-ocr-data-ind \
+    tesseract-ocr-data-chi_sim \
+    poppler-utils
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
