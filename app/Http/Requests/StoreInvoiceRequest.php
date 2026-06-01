@@ -34,7 +34,7 @@ class StoreInvoiceRequest extends FormRequest
             'msic_code'                   => 'required|string',
             'issue_date'                  => 'required|date',
             'due_date'                    => 'nullable|date|after_or_equal:issue_date',
-            'currency'                    => ['required', 'string', 'size:3', Rule::in(['MYR', 'USD', 'JPY'])],
+            'currency'                    => ['required', 'string', 'size:3', Rule::in(['MYR', 'USD', 'SGD', 'EUR', 'GBP', 'JPY'])],
             'exchange_rate'               => [
                 Rule::requiredIf(fn () => strtoupper((string) $this->input('currency')) !== $base),
                 'nullable',

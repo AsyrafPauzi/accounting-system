@@ -1,4 +1,3 @@
-import ApplicationLogo from '@/Components/ApplicationLogo';
 import { Link, usePage } from '@inertiajs/react';
 
 export default function Guest({ children }) {
@@ -12,8 +11,12 @@ export default function Guest({ children }) {
                 <div className="pointer-events-none absolute -bottom-24 -right-10 h-48 w-48 rounded-full bg-indigo-500/15 blur-3xl" />
 
                 <div className="relative flex flex-col items-center">
-                    <Link href="/" className="mb-6">
-                        <ApplicationLogo className="w-14 h-14 fill-current text-white" />
+                    <Link href="/" className="mb-8" aria-label={displayName}>
+                        <img
+                            src="/images/bukucloud-logo.png"
+                            alt={displayName}
+                            className="h-14 w-auto object-contain"
+                        />
                     </Link>
 
                     <div className="w-full px-8 py-10 bg-white/95 backdrop-blur border border-slate-200/80 shadow-xl shadow-slate-900/30 rounded-2xl">

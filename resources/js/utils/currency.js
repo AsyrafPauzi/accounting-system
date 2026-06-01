@@ -6,6 +6,9 @@
 export const SUPPORTED_CURRENCIES = [
     { value: 'MYR', label: 'MYR — Malaysian Ringgit' },
     { value: 'USD', label: 'USD — US Dollar' },
+    { value: 'SGD', label: 'SGD — Singapore Dollar' },
+    { value: 'EUR', label: 'EUR — Euro' },
+    { value: 'GBP', label: 'GBP — British Pound' },
     { value: 'JPY', label: 'JPY — Japanese Yen' },
 ];
 
@@ -21,6 +24,12 @@ export function currencySymbol(currency) {
             return '¥';
         case 'MYR':
             return 'RM';
+        case 'SGD':
+            return 'S$';
+        case 'EUR':
+            return '€';
+        case 'GBP':
+            return '£';
         default:
             return normalizeCurrency(currency);
     }

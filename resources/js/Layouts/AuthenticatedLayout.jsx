@@ -165,8 +165,8 @@ export default function Authenticated({ user: propUser, header, children }) {
                 {/* Brand + mobile close */}
                 <div className="p-4 sm:p-6 flex items-center justify-between gap-3 border-b border-indigo-100/80 bg-white">
                     <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 via-violet-600 to-indigo-700 shadow-lg shadow-indigo-500/35 ring-2 ring-white/80">
-                            <ApplicationLogo className="block h-6 w-6 fill-current text-white" />
+                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-white ring-1 ring-indigo-100 shadow-sm">
+                            <ApplicationLogo className="block h-9 w-9" />
                         </div>
                         <div className="min-w-0">
                             <span className="font-bold text-indigo-950 tracking-tight text-base block truncate">{page.props.product_name}</span>
@@ -433,8 +433,8 @@ export default function Authenticated({ user: propUser, header, children }) {
                 {/* Mobile: top bar with hamburger */}
                 <div className="lg:hidden flex-shrink-0 flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur-lg border-b border-indigo-100/80 z-20 sticky top-0">
                     <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 shadow-sm shadow-indigo-500/20">
-                            <ApplicationLogo className="block h-4 w-4 fill-current text-white" />
+                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white ring-1 ring-indigo-100 shadow-sm">
+                            <ApplicationLogo className="block h-6 w-6" />
                         </div>
                         <div className="min-w-0">
                             <span className="font-bold text-indigo-950 tracking-tight truncate block text-sm">{page.props.product_name}</span>

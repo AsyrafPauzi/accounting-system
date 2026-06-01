@@ -5,7 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml" sizes="any">
+        <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
+        <link rel="apple-touch-icon" href="{{ asset('favicon.png') }}">
 
         <title inertia>{{ config('app.product_name', config('app.name', 'BukuCloud')) }}</title>
 
