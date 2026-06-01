@@ -2,9 +2,9 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 
 const inputClass =
-    'mt-1.5 block w-full rounded-xl border border-slate-200 text-sm font-medium text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:ring-blue-500';
+    'mt-1.5 block w-full rounded-xl border border-border-warm text-sm font-medium text-ink placeholder-ink-muted/60 focus:border-terracotta focus:ring-terracotta';
 const labelClass =
-    'block text-[10px] font-semibold text-slate-400 uppercase tracking-wider';
+    'block text-[10px] font-semibold text-ink-muted uppercase tracking-wider';
 
 const ROLE_LABELS = {
     admin: 'Administrator',
@@ -47,18 +47,18 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
             user={auth.user}
             header={
                 <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-                    <div>
-                        <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">
-                            Team & Roles
-                        </h2>
-                        <p className="text-slate-500 text-sm font-medium mt-1">
-                            Each person signs in with their own account. Roles control what they can do in
-                            this organization.
+                    <div className="flex flex-col gap-1">
+                        <p className="text-eyebrow font-semibold uppercase text-terracotta">Settings</p>
+                        <h1 className="font-display text-2xl lg:text-3xl font-medium text-ink tracking-tight">
+                            Team & roles
+                        </h1>
+                        <p className="text-ink-muted text-sm">
+                            Each person signs in with their own account. Roles set what they can touch.
                         </p>
                     </div>
                     <Link
                         href={route('settings.company')}
-                        className="text-sm font-semibold text-blue-600 hover:text-blue-700"
+                        className="text-sm font-semibold text-terracotta hover:text-terracotta"
                     >
                         ← Company settings
                     </Link>
@@ -69,8 +69,8 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
 
             <div className="max-w-5xl space-y-8">
                 {teamPermissions.create && (
-                    <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-sm">
-                        <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wider mb-4">
+                    <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-border-warm/80 shadow-sm">
+                        <h3 className="text-sm font-semibold text-ink uppercase tracking-wider mb-4">
                             Add team member
                         </h3>
                         <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -84,7 +84,7 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
                                     required
                                 />
                                 {formErrors.name && (
-                                    <p className="text-rose-500 text-xs mt-1">{formErrors.name}</p>
+                                    <p className="text-terracotta text-xs mt-1">{formErrors.name}</p>
                                 )}
                             </div>
                             <div>
@@ -97,7 +97,7 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
                                     required
                                 />
                                 {formErrors.email && (
-                                    <p className="text-rose-500 text-xs mt-1">{formErrors.email}</p>
+                                    <p className="text-terracotta text-xs mt-1">{formErrors.email}</p>
                                 )}
                             </div>
                             <div>
@@ -110,7 +110,7 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
                                     required
                                 />
                                 {formErrors.password && (
-                                    <p className="text-rose-500 text-xs mt-1">{formErrors.password}</p>
+                                    <p className="text-terracotta text-xs mt-1">{formErrors.password}</p>
                                 )}
                             </div>
                             <div>
@@ -137,14 +137,14 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
                                     ))}
                                 </select>
                                 {formErrors.role && (
-                                    <p className="text-rose-500 text-xs mt-1">{formErrors.role}</p>
+                                    <p className="text-terracotta text-xs mt-1">{formErrors.role}</p>
                                 )}
                             </div>
                             <div className="md:col-span-2">
                                 <button
                                     type="submit"
                                     disabled={processing}
-                                    className="inline-flex items-center px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                                    className="inline-flex items-center px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50"
                                 >
                                     {processing ? 'Adding…' : 'Add user'}
                                 </button>
@@ -153,42 +153,42 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
                     </div>
                 )}
 
-                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100">
-                        <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wider">
+                <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-border-warm">
+                        <h3 className="text-sm font-semibold text-ink uppercase tracking-wider">
                             People in this organization
                         </h3>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="min-w-full text-sm">
                             <thead>
-                                <tr className="bg-slate-50 text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                                <tr className="bg-cream text-left text-[10px] font-semibold text-ink-muted uppercase tracking-wider">
                                     <th className="px-6 py-3">Name</th>
                                     <th className="px-6 py-3">Email</th>
                                     <th className="px-6 py-3">Role</th>
                                     <th className="px-6 py-3 w-28" />
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-border-warm">
                                 {users.map((u) => {
                                     const current =
                                         (u.roles || []).find((r) => assignableRoles.includes(r)) ||
                                         assignableRoles[0];
                                     return (
-                                        <tr key={u.id} className="text-slate-800">
+                                        <tr key={u.id} className="text-ink">
                                             <td className="px-6 py-3 font-medium">
                                                 {u.name}
                                                 {u.is_self && (
-                                                    <span className="ml-2 text-[10px] font-semibold text-slate-400 uppercase">
+                                                    <span className="ml-2 text-[10px] font-semibold text-ink-muted uppercase">
                                                         (you)
                                                     </span>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-3 text-slate-600">{u.email}</td>
+                                            <td className="px-6 py-3 text-ink">{u.email}</td>
                                             <td className="px-6 py-3">
                                                 {teamPermissions.edit && assignableRoles.length ? (
                                                     <select
-                                                        className="rounded-lg border border-slate-200 py-1.5 pl-2 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-slate-50 min-w-[140px]"
+                                                        className="rounded-lg border border-border-warm py-1.5 pl-2 pr-10 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta disabled:opacity-50 disabled:bg-cream min-w-[140px]"
                                                         value={current}
                                                         onChange={(e) => updateRole(u.id, e.target.value)}
                                                         disabled={u.is_self}
@@ -200,7 +200,7 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
                                                         ))}
                                                     </select>
                                                 ) : (
-                                                    <span className="font-medium text-slate-700">
+                                                    <span className="font-medium text-ink">
                                                         {ROLE_LABELS[current] || current || '—'}
                                                     </span>
                                                 )}
@@ -211,7 +211,7 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
                                                         href={route('settings.team.destroy', u.id)}
                                                         method="delete"
                                                         as="button"
-                                                        className="text-xs font-semibold text-rose-600 hover:text-rose-700"
+                                                        className="text-xs font-semibold text-terracotta hover:text-terracotta"
                                                         onClick={(e) => {
                                                             if (
                                                                 !confirm(
@@ -233,12 +233,12 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
                         </table>
                     </div>
                     {users.length === 0 && (
-                        <p className="px-6 py-8 text-center text-slate-500 text-sm">No users found.</p>
+                        <p className="px-6 py-8 text-center text-ink-muted text-sm">No users found.</p>
                     )}
                 </div>
 
                 {errors.role && (
-                    <p className="text-rose-600 text-sm">{errors.role}</p>
+                    <p className="text-terracotta text-sm">{errors.role}</p>
                 )}
             </div>
         </AuthenticatedLayout>

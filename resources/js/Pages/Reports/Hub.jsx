@@ -18,8 +18,7 @@ const reportCards = [
         routeName: 'profit-and-loss.index',
         permission: 'reports.profit-loss',
         Icon: Icons.ChartPie,
-        color: 'from-emerald-600 to-teal-600',
-        iconBg: 'bg-white/10',
+        accent: 'forest',
     },
     {
         title: 'Sales Reports',
@@ -27,8 +26,7 @@ const reportCards = [
         routeName: 'reports.sales.index',
         permission: 'reports.sales',
         Icon: Icons.ChartBar,
-        color: 'from-blue-600 to-indigo-600',
-        iconBg: 'bg-white/10',
+        accent: 'terracotta',
     },
     {
         title: 'Balance Sheet',
@@ -36,8 +34,7 @@ const reportCards = [
         routeName: 'balance-sheet.index',
         permission: 'reports.balance-sheet',
         Icon: Icons.Scale,
-        color: 'from-slate-600 to-slate-700',
-        iconBg: 'bg-white/10',
+        accent: 'ink',
     },
     {
         title: 'Cashflow Summary',
@@ -45,26 +42,30 @@ const reportCards = [
         routeName: 'cashflow-summary.index',
         permission: 'reports.cashflow',
         Icon: Icons.ChartBar,
-        color: 'from-amber-500 to-orange-600',
-        iconBg: 'bg-white/10',
+        accent: 'mustard',
     },
     {
         title: 'Aged Reports (AP/AR)',
         description: 'Overdue invoices and bills — 30, 60, or 90+ days.',
-        routeName: 'aged-receivables.index', // Default to AR, can add AP link inside or another card
+        routeName: 'aged-receivables.index',
         permission: 'reports.aged-reports',
         Icon: Icons.Users,
-        color: 'from-indigo-600 to-purple-600',
-        iconBg: 'bg-white/10',
+        accent: 'terracotta',
     },
 ];
+
+const accentClass = {
+    forest:     'bg-forest text-white',
+    terracotta: 'bg-terracotta text-white',
+    ink:        'bg-ink text-cream',
+    mustard:    'bg-mustard text-ink',
+};
 
 export default function Hub({ auth }) {
     const planPermissions = auth?.planPermissions ?? {};
     const isSuperAdmin = auth.user.role_name === 'super-admin';
 
-    // Filter cards based on plan permissions
-    const visibleCards = reportCards.filter(card => 
+    const visibleCards = reportCards.filter(card =>
         planPermissions[card.permission] || isSuperAdmin
     );
 
@@ -72,9 +73,10 @@ export default function Hub({ auth }) {
         <AuthenticatedLayout
             user={auth.user}
             header={
-                <div>
-                    <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Reports Hub</h2>
-                    <p className="text-slate-500 text-sm font-medium mt-1">Choose a report to view or export based on your plan</p>
+                <div className="flex flex-col gap-1">
+                    <p className="text-eyebrow font-semibold uppercase text-terracotta">Reports</p>
+                    <h1 className="font-display text-2xl lg:text-3xl font-medium text-ink tracking-tight">Reports hub</h1>
+                    <p className="text-ink-muted text-sm">Open a report, refine the period, export when you’re done.</p>
                 </div>
             }
         >
@@ -82,21 +84,21 @@ export default function Hub({ auth }) {
 
             {visibleCards.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {visibleCards.map(({ title, description, routeName, Icon, color, iconBg }) => (
+                    {visibleCards.map(({ title, description, routeName, Icon, accent }) => (
                         <Link
                             key={routeName}
                             href={route(routeName)}
-                            className="group block bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-slate-300 transition-all duration-200 overflow-hidden"
+                            className="group block bg-surface rounded-2xl border border-border-warm hover:border-ink-muted/40 transition-colors overflow-hidden"
                         >
-                            <div className={`p-6 bg-gradient-to-br ${color} text-white`}>
-                                <div className={`inline-flex p-3 rounded-xl ${iconBg} mb-4`}>
+                            <div className={`p-6 ${accentClass[accent]}`}>
+                                <div className="inline-flex p-3 rounded-xl bg-white/15 mb-4">
                                     <Icon />
                                 </div>
-                                <h3 className="text-lg font-bold text-white">{title}</h3>
+                                <h3 className="font-display text-lg font-medium">{title}</h3>
                             </div>
-                            <div className="p-5 border-t border-slate-100">
-                                <p className="text-sm text-slate-600 mb-3">{description}</p>
-                                <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 group-hover:text-blue-700">
+                            <div className="p-5 border-t border-border-warm">
+                                <p className="text-sm text-ink-muted mb-3">{description}</p>
+                                <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-terracotta group-hover:text-terracotta-dark dark:group-hover:text-terracotta-light">
                                     Open report <Icons.ChevronRight />
                                 </span>
                             </div>
@@ -104,20 +106,19 @@ export default function Hub({ auth }) {
                     ))}
                 </div>
             ) : (
-                <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-                    <div className="inline-flex p-4 rounded-full bg-slate-100 text-slate-400 mb-4">
+                <div className="bg-surface rounded-2xl border border-border-warm p-12 text-center">
+                    <div className="inline-flex p-4 rounded-full bg-surface-alt text-ink-muted mb-4">
                         <Icons.Document />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-900">No reports available</h3>
-                    <p className="text-slate-500 max-w-sm mx-auto mt-2">
-                        Your current plan does not include access to any financial reports. 
-                        Please upgrade to SME or Corporate to unlock them.
+                    <h3 className="font-display text-lg font-medium text-ink">No reports on this plan</h3>
+                    <p className="text-ink-muted max-w-sm mx-auto mt-2">
+                        Your current plan doesn’t include financial reports yet. Upgrade to SME or Corporate to open them.
                     </p>
-                    <Link 
+                    <Link
                         href={route('subscription.index')}
-                        className="inline-block mt-6 px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors"
+                        className="inline-block mt-6 px-6 py-3 bg-terracotta text-white font-semibold rounded-xl hover:bg-terracotta-dark dark:hover:bg-terracotta-light transition-colors"
                     >
-                        View Plans
+                        View plans
                     </Link>
                 </div>
             )}

@@ -41,6 +41,21 @@ class ProfileController extends Controller
     }
 
     /**
+     * Persist the user's appearance preference. Returns no body — the
+     * preference is re-read by Inertia shared props on the next visit.
+     */
+    public function theme(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'theme_preference' => ['required', 'string', 'in:light,dark,system'],
+        ]);
+
+        $request->user()->forceFill($validated)->save();
+
+        return back();
+    }
+
+    /**
      * Delete the user's account.
      * Only the user record is removed; the tenant and its database are left intact.
      */

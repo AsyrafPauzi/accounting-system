@@ -5,10 +5,10 @@ export default function Guest({ children }) {
     const displayName = productName || 'BukuCloud';
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 px-4">
+        <div className="min-h-screen w-full flex items-center justify-center bg-cream px-4 py-10">
             <div className="relative w-full max-w-md">
-                <div className="pointer-events-none absolute -top-16 -left-10 h-40 w-40 rounded-full bg-blue-500/15 blur-3xl" />
-                <div className="pointer-events-none absolute -bottom-24 -right-10 h-48 w-48 rounded-full bg-indigo-500/15 blur-3xl" />
+                <div className="pointer-events-none absolute -top-16 -left-10 h-40 w-40 rounded-full bg-terracotta/10 blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-24 -right-10 h-48 w-48 rounded-full bg-forest/10 blur-3xl" />
 
                 <div className="relative flex flex-col items-center">
                     <Link href="/" className="mb-8" aria-label={displayName}>
@@ -19,11 +19,11 @@ export default function Guest({ children }) {
                         />
                     </Link>
 
-                    <div className="w-full px-8 py-10 bg-white/95 backdrop-blur border border-slate-200/80 shadow-xl shadow-slate-900/30 rounded-2xl">
+                    <div className="w-full px-8 py-10 bg-surface border border-border-warm shadow-xl shadow-ink/5 rounded-2xl">
                         {children}
                     </div>
-                    
-                    <p className="mt-6 text-slate-400 text-xs">
+
+                    <p className="mt-6 text-ink-muted text-xs font-tabular">
                         &copy; {new Date().getFullYear()} {displayName}. All rights reserved.
                     </p>
                 </div>

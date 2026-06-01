@@ -2,12 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+    :root {
+        /* Light mode — BukuCloud brand defaults (RGB triplets for Tailwind alpha modifiers) */
+        --color-cream:               250 247 242;  /* #FAF7F2 */
+        --color-surface:             255 255 255;  /* #FFFFFF */
+        --color-surface-alt:         242 237 227;  /* #F2EDE3 */
+        --color-ink:                 26 26 26;     /* #1A1A1A */
+        --color-ink-muted:           90 85 76;     /* #5A554C */
+        --color-border-warm:         229 223 210;  /* #E5DFD2 */
+        --color-terracotta:          192 73 46;    /* #C0492E */
+        --color-terracotta-dark:     142 53 34;    /* #8E3522 */
+        --color-terracotta-light:    215 90 60;    /* #D75A3C */
+        --color-forest:              15 76 58;     /* #0F4C3A */
+        --color-forest-dark:         10 53 40;     /* #0A3528 */
+        --color-forest-light:        42 139 111;   /* #2A8B6F */
+        --color-mustard:             212 165 55;   /* #D4A537 */
+    }
+
+    .dark {
+        /* Dark mode overrides — same variable names, different values */
+        --color-cream:               20 17 13;     /* #14110D */
+        --color-surface:             31 27 23;     /* #1F1B17 */
+        --color-surface-alt:         42 38 34;     /* #2A2622 */
+        --color-ink:                 242 237 227;  /* #F2EDE3 */
+        --color-ink-muted:           168 158 146;  /* #A89E92 */
+        --color-border-warm:         61 56 51;     /* #3D3833 */
+        /* terracotta, forest-light, mustard intentionally retain light values */
+    }
+
+    body {
+        background-color: rgb(var(--color-cream));
+        color: rgb(var(--color-ink));
+        font-family: 'Inter', system-ui, sans-serif;
+    }
+}
+
 @layer utilities {
+    /* Tabular numbers for ledger-style figure alignment */
+    .font-tabular { font-variant-numeric: tabular-nums; }
+
     .glass {
-        @apply bg-white/70 backdrop-blur-md border border-indigo-100/50;
+        @apply bg-surface/70 backdrop-blur-md border border-border-warm/50;
     }
     .glass-dark {
-        @apply bg-indigo-950/80 backdrop-blur-md border border-indigo-800/30;
+        @apply bg-surface-alt/80 backdrop-blur-md border border-border-warm/30;
     }
     .pb-safe {
         padding-bottom: env(safe-area-inset-bottom);
@@ -18,16 +57,15 @@
 }
 
 .bottom-nav-active {
-    @apply text-indigo-600;
+    @apply text-terracotta;
 }
 
 .bottom-nav-active::after {
     content: '';
-    @apply absolute -bottom-1 lg:bottom-auto left-1/2 -translate-x-1/2 w-1 h-1 bg-indigo-600 rounded-full;
+    @apply absolute -bottom-1 lg:bottom-auto left-1/2 -translate-x-1/2 w-1 h-1 bg-terracotta rounded-full;
 }
 
 .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: rgba(224, 231, 255, 0.5); border-radius: 10px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #a5b4fc; border-radius: 10px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #818cf8; }
-
+.custom-scrollbar::-webkit-scrollbar-track { background: rgb(var(--color-surface-alt) / 0.5); border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgb(var(--color-ink-muted) / 0.4); border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgb(var(--color-ink-muted) / 0.6); }

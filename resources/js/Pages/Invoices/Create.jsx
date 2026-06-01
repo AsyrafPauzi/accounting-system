@@ -16,9 +16,9 @@ const Icons = {
     Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
 };
 
-const inputClass = "w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors";
-const inputReadonlyClass = "w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-400 bg-slate-50";
-const labelClass = "block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5";
+const inputClass = "w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta focus:border-terracotta transition-colors";
+const inputReadonlyClass = "w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink-muted bg-cream";
+const labelClass = "block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5";
 
 function currencyPrefix(currency) {
     return currencySymbol(currency);
@@ -167,22 +167,22 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
             header={
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                     <div className="flex items-start sm:items-center gap-4">
-                        <Link href={route('invoices.index')} className="p-2.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all duration-200">
+                        <Link href={route('invoices.index')} className="p-2.5 rounded-xl text-ink-muted hover:text-ink hover:bg-surface-alt transition-all duration-200">
                             <Icons.ChevronLeft />
                         </Link>
                         <div className="flex items-center gap-3">
-                            <span className="p-2.5 rounded-xl bg-blue-100 text-blue-600"><Icons.Document /></span>
+                            <span className="p-2.5 rounded-xl bg-surface-alt text-terracotta"><Icons.Document /></span>
                             <div>
-                                <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">New Invoice</h2>
-                                <p className="text-slate-500 text-sm font-medium mt-1">LHDN compliant · {roundingLabel(invCur)} ({invCur})</p>
+                                <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">New Invoice</h2>
+                                <p className="text-ink-muted text-sm font-medium mt-1">LHDN compliant · {roundingLabel(invCur)} ({invCur})</p>
                             </div>
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <Link href={route('invoices.index')} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-slate-600 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all duration-200">
+                        <Link href={route('invoices.index')} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:border-border-warm hover:bg-cream transition-all duration-200">
                             Cancel
                         </Link>
-                        <button type="submit" form="invoice-create-form" disabled={processing} className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-500/25 transition-all duration-200">
+                        <button type="submit" form="invoice-create-form" disabled={processing} className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50 shadow-lg  transition-all duration-200">
                             {processing ? 'Saving...' : 'Create Invoice'}
                         </button>
                     </div>
@@ -193,15 +193,15 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
 
             <form id="invoice-create-form" onSubmit={submit} className="space-y-6 pb-12">
                 {/* Section 1: Core Details */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                     <div className="flex items-center gap-2 mb-6">
-                        <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.Document /></span>
-                        <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Invoice Details</h3>
+                        <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Document /></span>
+                        <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Invoice Details</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div>
                             <label className={labelClass}>Invoice Number</label>
-                            <div className={`${inputReadonlyClass} font-mono text-blue-600`}>{data.invoice_number}</div>
+                            <div className={`${inputReadonlyClass} font-mono text-terracotta`}>{data.invoice_number}</div>
                         </div>
                         <div>
                             <label className={labelClass}>MSIC Code</label>
@@ -214,11 +214,11 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                                     <option value="">Select customer...</option>
                                     {customerOptions.map(c => <option key={c.id} value={c.id}>{c.name}{c.tin ? ` (${c.tin})` : ''}</option>)}
                                 </select>
-                                <button type="button" onClick={() => setShowNewCustomerModal(true)} className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-semibold text-sm text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors">
+                                <button type="button" onClick={() => setShowNewCustomerModal(true)} className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-semibold text-sm text-terracotta bg-surface-alt border border-border-warm hover:bg-surface-alt transition-colors">
                                     <Icons.Plus className="w-4 h-4" /> New customer
                                 </button>
                             </div>
-                            {errors.customer_id && <p className="text-rose-500 text-xs font-medium mt-1">{errors.customer_id}</p>}
+                            {errors.customer_id && <p className="text-terracotta text-xs font-medium mt-1">{errors.customer_id}</p>}
                         </div>
                         <div>
                             <label className={labelClass}>Issue Date</label>
@@ -235,24 +235,24 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                                     <option key={c.value} value={c.value}>{c.label}</option>
                                 ))}
                             </select>
-                            {errors.currency && <p className="text-rose-500 text-xs font-medium mt-1">{errors.currency}</p>}
+                            {errors.currency && <p className="text-terracotta text-xs font-medium mt-1">{errors.currency}</p>}
                         </div>
                         {(data.currency || 'MYR').toUpperCase() !== (base_currency || 'MYR').toUpperCase() && (
                             <div className="md:col-span-2">
                                 <label className={labelClass}>Exchange rate ({(base_currency || 'MYR').toUpperCase()} per 1 {data.currency})</label>
                                 <input type="number" step="0.000001" min="0.000001" value={data.exchange_rate} onChange={e => setData('exchange_rate', e.target.value)} className={inputClass} placeholder="e.g. 4.72" />
-                                <p className="text-xs text-slate-400 mt-1.5">Ledger posting converts line totals into your company base currency using this rate.</p>
-                                {errors.exchange_rate && <p className="text-rose-500 text-xs font-medium mt-1">{errors.exchange_rate}</p>}
+                                <p className="text-xs text-ink-muted mt-1.5">Ledger posting converts line totals into your company base currency using this rate.</p>
+                                {errors.exchange_rate && <p className="text-terracotta text-xs font-medium mt-1">{errors.exchange_rate}</p>}
                             </div>
                         )}
                     </div>
                 </div>
 
                 {/* Section 2: Line Items */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                <div className="bg-surface rounded-2xl shadow-sm border border-border-warm/80 overflow-hidden">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-slate-50/80 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                <tr className="bg-cream/80 border-b border-border-warm text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest">
                                     <th className="p-6">LHDN classification</th>
                                     <th className="p-6">Description</th>
                                     <th className="p-6 text-center w-24">Qty</th>
@@ -263,14 +263,14 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                                     <th className="p-6 w-16"></th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-50">
+                            <tbody className="divide-y divide-border-warm">
                                 {data.items.map((item, index) => (
-                                    <tr key={index} className="group hover:bg-blue-50/20 transition-all duration-200">
+                                    <tr key={index} className="group hover:bg-surface-alt/20 transition-all duration-200">
                                         <td className="p-4">
                                             <select 
                                                 value={item.item_classification} 
                                                 onChange={e => updateItem(index, 'item_classification', e.target.value)}
-                                                className="w-full border-slate-200 rounded-xl text-[10px] font-bold text-slate-500 focus:ring-blue-500 py-2"
+                                                className="w-full border-border-warm rounded-xl text-[10px] font-display font-medium text-ink-muted focus:ring-terracotta py-2"
                                             >
                                                 {lhdn_codes.map(code => (
                                                     <option key={code.id} value={code.id}>{code.id} - {code.name}</option>
@@ -283,21 +283,21 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                                                 value={item.description} 
                                                 onChange={e => updateItem(index, 'description', e.target.value)}
                                                 placeholder="What are you selling?"
-                                                className="w-full border-none focus:ring-0 p-2 text-sm font-bold text-slate-700 bg-transparent placeholder-slate-300"
+                                                className="w-full border-none focus:ring-0 p-2 text-sm font-display font-medium text-ink bg-transparent placeholder-ink-muted/60"
                                                 required
                                             />
                                         </td>
                                         <td className="p-4">
-                                            <input type="number" value={item.quantity} onChange={e => updateItem(index, 'quantity', e.target.value)} className="w-full border-slate-100 rounded-xl text-sm text-center py-2 focus:ring-blue-500 font-bold" />
+                                            <input type="number" value={item.quantity} onChange={e => updateItem(index, 'quantity', e.target.value)} className="w-full border-border-warm rounded-xl text-sm text-center py-2 focus:ring-terracotta font-bold" />
                                         </td>
                                         <td className="p-4">
-                                            <input type="number" value={item.unit_price} onChange={e => updateItem(index, 'unit_price', e.target.value)} className="w-full border-slate-100 rounded-xl text-sm py-2 focus:ring-blue-500 font-mono font-bold" />
+                                            <input type="number" value={item.unit_price} onChange={e => updateItem(index, 'unit_price', e.target.value)} className="w-full border-border-warm rounded-xl text-sm py-2 focus:ring-terracotta font-mono font-bold" />
                                         </td>
                                         <td className="p-4">
-                                            <input type="number" value={item.discount_amount} onChange={e => updateItem(index, 'discount_amount', e.target.value)} className="w-full border-slate-100 rounded-xl text-sm py-2 focus:ring-rose-500 font-mono text-rose-500 font-bold" />
+                                            <input type="number" value={item.discount_amount} onChange={e => updateItem(index, 'discount_amount', e.target.value)} className="w-full border-border-warm rounded-xl text-sm py-2 focus:ring-terracotta font-mono text-terracotta font-bold" />
                                         </td>
                                         <td className="p-4">
-                                            <select value={item.tax_rate} onChange={e => updateItem(index, 'tax_rate', e.target.value)} className="w-full border-slate-100 rounded-xl text-sm font-bold text-slate-700 focus:ring-blue-500 py-2.5">
+                                            <select value={item.tax_rate} onChange={e => updateItem(index, 'tax_rate', e.target.value)} className="w-full border-border-warm rounded-xl text-sm font-display font-medium text-ink focus:ring-terracotta py-2.5">
                                                 <option value="0">0%</option>
                                                 <option value="6">6%</option>
                                                 <option value="8">8%</option>
@@ -305,12 +305,12 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                                             </select>
                                         </td>
                                         <td className="p-4 text-right">
-                                            <div className="text-sm font-black text-slate-900 font-mono">
+                                            <div className="text-sm font-display font-semibold text-ink font-mono">
                                                 {((parseFloat(item.quantity || 0) * parseFloat(item.unit_price || 0)) - (parseFloat(item.discount_amount || 0))).toLocaleString('en-MY', {minimumFractionDigits: 2})}
                                             </div>
                                         </td>
                                         <td className="p-4 text-center">
-                                            <button type="button" onClick={() => removeItem(index)} className="text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100">
+                                            <button type="button" onClick={() => removeItem(index)} className="text-ink-muted hover:text-terracotta transition-colors opacity-0 group-hover:opacity-100">
                                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                             </button>
                                         </td>
@@ -318,8 +318,8 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                                 ))}
                             </tbody>
                         </table>
-                        <div className="p-6 bg-slate-50/80 border-t border-slate-200">
-                            <button type="button" onClick={addItem} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors">
+                        <div className="p-6 bg-cream/80 border-t border-border-warm">
+                            <button type="button" onClick={addItem} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt border border-border-warm transition-colors">
                                 <Icons.Plus /> Add Line Item
                             </button>
                         </div>
@@ -328,13 +328,13 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                 {/* Section 3: Footer & Calculations */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-blue-50 border border-blue-200/80 p-6 rounded-2xl shadow-sm">
-                            <h4 className="font-semibold text-blue-800 text-xs uppercase tracking-wider mb-2">Draft Mode</h4>
-                            <p className="text-blue-700 text-sm leading-relaxed">
+                        <div className="bg-surface-alt border border-border-warm/80 p-6 rounded-2xl shadow-sm">
+                            <h4 className="font-semibold text-ink text-xs uppercase tracking-wider mb-2">Draft Mode</h4>
+                            <p className="text-terracotta text-sm leading-relaxed">
                                 Invoice saves as <strong>Draft</strong>. Ledger entries post only after you validate and post.
                             </p>
                         </div>
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                        <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                             <label className={labelClass}>Customer Notes (on PDF)</label>
                             <textarea 
                                 value={data.customer_notes} 
@@ -342,52 +342,52 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                                 className={`${inputClass} resize-none h-28`}
                                 placeholder="Payment instructions, thank you message..."
                             />
-                            <div className="flex items-start gap-3 mt-4 pt-4 border-t border-slate-100">
+                            <div className="flex items-start gap-3 mt-4 pt-4 border-t border-border-warm">
                                 <input
                                     type="checkbox"
                                     id="invoice-show-signature"
                                     checked={Boolean(data.show_signature)}
                                     onChange={(e) => setData('show_signature', e.target.checked)}
-                                    className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                    className="mt-1 h-4 w-4 rounded border-border-warm text-terracotta focus:ring-terracotta"
                                 />
-                                <label htmlFor="invoice-show-signature" className="text-sm text-slate-700 cursor-pointer select-none">
-                                    <span className="font-semibold text-slate-800">Show signature lines on PDF</span>
-                                    <span className="block text-slate-500 text-xs mt-0.5">When enabled, customer and authorized signature blocks appear at the bottom of the invoice PDF. Turn off for a computer-generated layout only.</span>
+                                <label htmlFor="invoice-show-signature" className="text-sm text-ink cursor-pointer select-none">
+                                    <span className="font-semibold text-ink">Show signature lines on PDF</span>
+                                    <span className="block text-ink-muted text-xs mt-0.5">When enabled, customer and authorized signature blocks appear at the bottom of the invoice PDF. Turn off for a computer-generated layout only.</span>
                                 </label>
                             </div>
                         </div>
                     </div>
 
                     <div className="space-y-4">
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                        <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm space-y-4">
                                 <div className="flex justify-between text-sm">
-                                    <span className="font-bold text-slate-500 uppercase tracking-tighter">Subtotal (Gross)</span>
-                                    <span className="font-mono font-bold text-slate-700">{curSym} {subtotal.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
+                                    <span className="font-display font-medium text-ink-muted uppercase tracking-tighter">Subtotal (Gross)</span>
+                                    <span className="font-mono font-display font-medium text-ink">{curSym} {subtotal.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                    <span className="font-bold text-rose-400 uppercase tracking-tighter">Line Discounts</span>
-                                    <span className="font-mono font-bold text-rose-500">- {curSym} {totalDiscount.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
+                                    <span className="font-bold text-terracotta uppercase tracking-tighter">Line Discounts</span>
+                                    <span className="font-mono font-bold text-terracotta">- {curSym} {totalDiscount.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                    <span className="font-bold text-slate-400 uppercase tracking-tighter">SST (Service Tax)</span>
-                                    <span className="font-mono font-bold text-slate-700">+ {curSym} {totalTax.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
+                                    <span className="font-display font-medium text-ink-muted uppercase tracking-tighter">SST (Service Tax)</span>
+                                    <span className="font-mono font-display font-medium text-ink">+ {curSym} {totalTax.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
                                 </div>
-                                <div className="flex justify-between items-center py-2 border-t border-slate-50">
-                                    <span className="font-bold text-slate-400 uppercase tracking-tighter">Shipping/Handling</span>
+                                <div className="flex justify-between items-center py-2 border-t border-border-warm">
+                                    <span className="font-display font-medium text-ink-muted uppercase tracking-tighter">Shipping/Handling</span>
                                     <input 
                                         type="number" 
                                         value={data.shipping_amount} 
                                         onChange={e => setData('shipping_amount', e.target.value)}
-                                        className="w-32 text-right border-slate-200 rounded-xl font-mono font-bold text-slate-700" 
+                                        className="w-32 text-right border-border-warm rounded-xl font-mono font-display font-medium text-ink" 
                                     />
                                 </div>
-                                <div className="flex justify-between text-xs text-slate-400">
+                                <div className="flex justify-between text-xs text-ink-muted">
                                     <span>{roundingLabel(invCur)}</span>
                                     <span className="font-mono">{roundingAdjustment.toFixed(2)}</span>
                                 </div>
-                                <div className="flex justify-between items-center pt-4 border-t-2 border-slate-100">
-                                    <span className="font-bold text-slate-800 uppercase tracking-tighter">Grand Total</span>
-                                    <span className="text-2xl font-bold text-blue-600 font-mono tabular-nums">
+                                <div className="flex justify-between items-center pt-4 border-t-2 border-border-warm">
+                                    <span className="font-display font-medium text-ink uppercase tracking-tighter">Grand Total</span>
+                                    <span className="text-2xl font-bold text-terracotta font-mono tabular-nums">
                                         {curSym} {roundedTotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
@@ -398,70 +398,70 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
 
             {/* New customer modal (quick-create from invoice) */}
             {showNewCustomerModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={() => !quickSubmitting && setShowNewCustomerModal(false)}>
-                    <div className="bg-white rounded-2xl shadow-xl border border-slate-200/80 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                        <div className="p-6 border-b border-slate-200">
-                            <h3 className="text-lg font-bold text-slate-900">New customer</h3>
-                            <p className="text-sm text-slate-500 mt-0.5">Add a customer to use on this invoice. Name and Email are required.</p>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 backdrop-blur-sm" onClick={() => !quickSubmitting && setShowNewCustomerModal(false)}>
+                    <div className="bg-surface rounded-2xl shadow-xl border border-border-warm/80 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <div className="p-6 border-b border-border-warm">
+                            <h3 className="text-lg font-display font-medium text-ink">New customer</h3>
+                            <p className="text-sm text-ink-muted mt-0.5">Add a customer to use on this invoice. Name and Email are required.</p>
                         </div>
                         <form onSubmit={submitQuickCustomer} className="p-6 space-y-4">
                             {quickCustomerErrors.form && (
-                                <div className="p-3 rounded-xl bg-rose-50 text-rose-700 text-sm">{quickCustomerErrors.form}</div>
+                                <div className="p-3 rounded-xl bg-terracotta/10 text-terracotta text-sm">{quickCustomerErrors.form}</div>
                             )}
                             <div>
                                 <label className={labelClass}>Name *</label>
                                 <input type="text" value={quickCustomer.name} onChange={e => setQuickCustomer(c => ({ ...c, name: e.target.value }))} className={inputClass} required />
-                                {quickCustomerErrors.name && <p className="text-rose-500 text-xs mt-1">{quickCustomerErrors.name[0]}</p>}
+                                {quickCustomerErrors.name && <p className="text-terracotta text-xs mt-1">{quickCustomerErrors.name[0]}</p>}
                             </div>
                             <div>
                                 <label className={labelClass}>Code (optional)</label>
                                 <input type="text" value={quickCustomer.code} onChange={e => setQuickCustomer(c => ({ ...c, code: e.target.value }))} className={inputClass} placeholder="Auto-generated if blank" />
-                                {quickCustomerErrors.code && <p className="text-rose-500 text-xs mt-1">{quickCustomerErrors.code[0]}</p>}
+                                {quickCustomerErrors.code && <p className="text-terracotta text-xs mt-1">{quickCustomerErrors.code[0]}</p>}
                             </div>
                             <div>
                                 <label className={labelClass}>Email *</label>
                                 <input type="email" value={quickCustomer.email} onChange={e => setQuickCustomer(c => ({ ...c, email: e.target.value }))} className={inputClass} required />
-                                {quickCustomerErrors.email && <p className="text-rose-500 text-xs mt-1">{quickCustomerErrors.email[0]}</p>}
+                                {quickCustomerErrors.email && <p className="text-terracotta text-xs mt-1">{quickCustomerErrors.email[0]}</p>}
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className={labelClass}>TIN</label>
                                     <input type="text" value={quickCustomer.tin} onChange={e => setQuickCustomer(c => ({ ...c, tin: e.target.value }))} className={inputClass} />
-                                    {quickCustomerErrors.tin && <p className="text-rose-500 text-xs mt-1">{quickCustomerErrors.tin[0]}</p>}
+                                    {quickCustomerErrors.tin && <p className="text-terracotta text-xs mt-1">{quickCustomerErrors.tin[0]}</p>}
                                 </div>
                                 <div>
                                     <label className={labelClass}>BRN</label>
                                     <input type="text" value={quickCustomer.brn} onChange={e => setQuickCustomer(c => ({ ...c, brn: e.target.value }))} className={inputClass} />
-                                    {quickCustomerErrors.brn && <p className="text-rose-500 text-xs mt-1">{quickCustomerErrors.brn[0]}</p>}
+                                    {quickCustomerErrors.brn && <p className="text-terracotta text-xs mt-1">{quickCustomerErrors.brn[0]}</p>}
                                 </div>
                             </div>
                             <div>
                                 <label className={labelClass}>Billing street (optional)</label>
                                 <input type="text" value={quickCustomer.billing_street} onChange={e => setQuickCustomer(c => ({ ...c, billing_street: e.target.value }))} className={inputClass} />
-                                {quickCustomerErrors.billing_street && <p className="text-rose-500 text-xs mt-1">{quickCustomerErrors.billing_street[0]}</p>}
+                                {quickCustomerErrors.billing_street && <p className="text-terracotta text-xs mt-1">{quickCustomerErrors.billing_street[0]}</p>}
                             </div>
                             <div className="grid grid-cols-3 gap-4">
                                 <div>
                                     <label className={labelClass}>City</label>
                                     <input type="text" value={quickCustomer.billing_city} onChange={e => setQuickCustomer(c => ({ ...c, billing_city: e.target.value }))} className={inputClass} />
-                                    {quickCustomerErrors.billing_city && <p className="text-rose-500 text-xs mt-1">{quickCustomerErrors.billing_city[0]}</p>}
+                                    {quickCustomerErrors.billing_city && <p className="text-terracotta text-xs mt-1">{quickCustomerErrors.billing_city[0]}</p>}
                                 </div>
                                 <div>
                                     <label className={labelClass}>State</label>
                                     <input type="text" value={quickCustomer.billing_state} onChange={e => setQuickCustomer(c => ({ ...c, billing_state: e.target.value }))} className={inputClass} />
-                                    {quickCustomerErrors.billing_state && <p className="text-rose-500 text-xs mt-1">{quickCustomerErrors.billing_state[0]}</p>}
+                                    {quickCustomerErrors.billing_state && <p className="text-terracotta text-xs mt-1">{quickCustomerErrors.billing_state[0]}</p>}
                                 </div>
                                 <div>
                                     <label className={labelClass}>Zip</label>
                                     <input type="text" value={quickCustomer.billing_zip} onChange={e => setQuickCustomer(c => ({ ...c, billing_zip: e.target.value }))} className={inputClass} />
-                                    {quickCustomerErrors.billing_zip && <p className="text-rose-500 text-xs mt-1">{quickCustomerErrors.billing_zip[0]}</p>}
+                                    {quickCustomerErrors.billing_zip && <p className="text-terracotta text-xs mt-1">{quickCustomerErrors.billing_zip[0]}</p>}
                                 </div>
                             </div>
-                            <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
-                                <button type="button" onClick={() => !quickSubmitting && (setShowNewCustomerModal(false), setQuickCustomer(initialQuickCustomer), setQuickCustomerErrors({}))} className="px-4 py-2.5 rounded-xl font-semibold text-slate-600 hover:bg-slate-100">
+                            <div className="flex justify-end gap-2 pt-4 border-t border-border-warm">
+                                <button type="button" onClick={() => !quickSubmitting && (setShowNewCustomerModal(false), setQuickCustomer(initialQuickCustomer), setQuickCustomerErrors({}))} className="px-4 py-2.5 rounded-xl font-semibold text-ink hover:bg-surface-alt">
                                     Cancel
                                 </button>
-                                <button type="submit" disabled={quickSubmitting} className="px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50">
+                                <button type="submit" disabled={quickSubmitting} className="px-5 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50">
                                     {quickSubmitting ? 'Saving...' : 'Save'}
                                 </button>
                             </div>

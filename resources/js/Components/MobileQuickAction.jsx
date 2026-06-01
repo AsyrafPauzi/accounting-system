@@ -17,9 +17,9 @@ export default function MobileQuickAction({ permissions = {} }) {
     if (!permissions.create && !permissions.edit) return null;
 
     const actions = [
-        { name: 'New Invoice', href: 'invoices.create', Icon: Icons.Invoice, color: 'bg-indigo-600' },
-        { name: 'New Bill', href: 'bills.create', Icon: Icons.Bill, color: 'bg-emerald-600' },
-        { name: 'New Customer', href: 'customers.create', Icon: Icons.UserPlus, color: 'bg-blue-600' },
+        { name: 'New Invoice', href: 'invoices.create', Icon: Icons.Invoice, color: 'bg-terracotta' },
+        { name: 'New Bill', href: 'bills.create', Icon: Icons.Bill, color: 'bg-forest' },
+        { name: 'New Customer', href: 'customers.create', Icon: Icons.UserPlus, color: 'bg-terracotta' },
     ];
 
     return (
@@ -27,7 +27,7 @@ export default function MobileQuickAction({ permissions = {} }) {
             {/* Backdrop */}
             {isOpen && (
                 <div 
-                    className="fixed inset-0 z-40 bg-indigo-950/20 backdrop-blur-[2px] transition-opacity duration-300"
+                    className="fixed inset-0 z-40 bg-terracotta-dark/20 backdrop-blur-[2px] transition-opacity duration-300"
                     onClick={() => setIsOpen(false)}
                 />
             )}
@@ -41,10 +41,10 @@ export default function MobileQuickAction({ permissions = {} }) {
                         className="flex items-center gap-3 group"
                         onClick={() => setIsOpen(false)}
                     >
-                        <span className="px-3 py-1.5 rounded-lg bg-white shadow-lg border border-indigo-50 text-xs font-bold text-indigo-950 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="px-3 py-1.5 rounded-lg bg-surface shadow-lg border border-border-warm text-xs font-display font-medium text-ink whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
                             {action.name}
                         </span>
-                        <div className={`w-12 h-12 rounded-2xl ${action.color} text-white flex items-center justify-center shadow-lg shadow-indigo-500/20 transform active:scale-95 transition-transform`}>
+                        <div className={`w-12 h-12 rounded-2xl ${action.color} text-white flex items-center justify-center shadow-lg  transform active:scale-95 transition-transform`}>
                             <action.Icon />
                         </div>
                     </Link>
@@ -55,7 +55,7 @@ export default function MobileQuickAction({ permissions = {} }) {
             <button
                 type="button"
                 onClick={toggle}
-                className={`relative z-50 w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white flex items-center justify-center shadow-xl shadow-indigo-500/40 transform transition-all duration-300 active:scale-90 ${isOpen ? 'rotate-45' : ''}`}
+                className={`relative z-50 w-14 h-14 rounded-2xl bg-terracotta text-white flex items-center justify-center shadow-xl  transform transition-all duration-300 active:scale-90 ${isOpen ? 'rotate-45' : ''}`}
                 aria-label="Quick Actions"
             >
                 <Icons.Plus />

@@ -16,13 +16,13 @@ function formatMoney(n) {
 
 function getAgingBadge(bucket) {
     const styles = {
-        current: 'bg-emerald-100 text-emerald-700',
-        '1-30': 'bg-amber-100 text-amber-700',
-        '31-60': 'bg-orange-100 text-orange-700',
-        '61-90': 'bg-rose-100 text-rose-700',
-        '90+': 'bg-rose-200 text-rose-800',
+        current: 'bg-forest/10 text-forest',
+        '1-30': 'bg-mustard/15 text-mustard',
+        '31-60': 'bg-mustard/15 text-mustard',
+        '61-90': 'bg-terracotta/10 text-terracotta',
+        '90+': 'bg-terracotta/10 text-terracotta',
     };
-    return styles[bucket] || 'bg-slate-100 text-slate-600';
+    return styles[bucket] || 'bg-surface-alt text-ink';
 }
 
 export default function Index({ auth, invoices = [], summary = {}, bankAccounts = [] }) {
@@ -59,12 +59,12 @@ export default function Index({ auth, invoices = [], summary = {}, bankAccounts 
             header={
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                     <div>
-                        <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Aged Receivables</h2>
-                        <p className="text-slate-500 text-sm font-medium mt-1">Who hasn&apos;t paid you — 30, 60, or 90+ days overdue</p>
+                        <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Aged Receivables</h2>
+                        <p className="text-ink-muted text-sm font-medium mt-1">Who hasn&apos;t paid you — 30, 60, or 90+ days overdue</p>
                     </div>
                     <Link
                         href={route('invoices.index')}
-                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 shadow-sm"
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:bg-cream shadow-sm"
                     >
                         View all invoices
                     </Link>
@@ -76,41 +76,41 @@ export default function Index({ auth, invoices = [], summary = {}, bankAccounts 
 
             <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-600 text-white rounded-2xl p-6 shadow-lg">
+                    <div className="relative overflow-hidden bg-terracotta text-white rounded-2xl p-6 shadow-lg">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Total receivables</span>
-                            <span className="p-2 rounded-xl bg-white/10"><Icons.Currency /></span>
+                            <span className="p-2 rounded-xl bg-surface/10"><Icons.Currency /></span>
                         </div>
                         <p className="text-2xl font-bold font-mono tabular-nums">RM {formatMoney(total_receivable)}</p>
-                        <p className="text-xs text-indigo-100 mt-1">Outstanding from customers</p>
+                        <p className="text-xs text-terracotta mt-1">Outstanding from customers</p>
                     </div>
-                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+                    <div className="bg-surface rounded-2xl p-6 border border-border-warm shadow-sm">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Overdue</span>
-                            <span className="p-2 rounded-xl bg-rose-50 text-rose-600"><Icons.Exclamation /></span>
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Overdue</span>
+                            <span className="p-2 rounded-xl bg-terracotta/10 text-terracotta"><Icons.Exclamation /></span>
                         </div>
-                        <p className="text-2xl font-bold text-rose-600 tabular-nums">{overdue_count}</p>
-                        <p className="text-xs text-slate-500 mt-1">Invoices past due date</p>
+                        <p className="text-2xl font-bold text-terracotta tabular-nums">{overdue_count}</p>
+                        <p className="text-xs text-ink-muted mt-1">Invoices past due date</p>
                     </div>
                     {Object.entries(aging_breakdown).map(([key, bucket]) => (
                         (bucket.count > 0 || bucket.amount > 0) && (
-                            <div key={key} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-                                <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">{bucket.label}</div>
-                                <p className="text-xl font-bold text-slate-800 font-mono tabular-nums">RM {formatMoney(bucket.amount)}</p>
-                                <p className="text-xs text-slate-500 mt-0.5">{bucket.count} invoice{bucket.count !== 1 ? 's' : ''}</p>
+                            <div key={key} className="bg-surface rounded-2xl p-6 border border-border-warm shadow-sm">
+                                <div className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">{bucket.label}</div>
+                                <p className="text-xl font-display font-medium text-ink font-mono tabular-nums">RM {formatMoney(bucket.amount)}</p>
+                                <p className="text-xs text-ink-muted mt-0.5">{bucket.count} invoice{bucket.count !== 1 ? 's' : ''}</p>
                             </div>
                         )
                     ))}
                 </div>
 
-                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                        <h3 className="text-sm font-bold text-slate-800">Outstanding invoices</h3>
+                <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-border-warm bg-cream/50">
+                        <h3 className="text-sm font-display font-medium text-ink">Outstanding invoices</h3>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
-                                <tr className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 bg-slate-50/80">
+                                <tr className="text-left text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
                                     <th className="px-6 py-4">Customer</th>
                                     <th className="px-6 py-4">Invoice #</th>
                                     <th className="px-6 py-4">Due date</th>
@@ -123,22 +123,22 @@ export default function Index({ auth, invoices = [], summary = {}, bankAccounts 
                             </thead>
                             <tbody>
                                 {invoices.length > 0 ? invoices.map((inv) => (
-                                    <tr key={inv.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/80">
+                                    <tr key={inv.id} className="border-b border-border-warm last:border-0 hover:bg-cream/80">
                                         <td className="px-6 py-4">
-                                            <div className="font-medium text-slate-700">{inv.customer_name || '—'}</div>
-                                            {inv.customer_email && <p className="text-xs text-slate-400">{inv.customer_email}</p>}
+                                            <div className="font-medium text-ink">{inv.customer_name || '—'}</div>
+                                            {inv.customer_email && <p className="text-xs text-ink-muted">{inv.customer_email}</p>}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <Link href={route('invoices.edit', inv.id)} className="font-semibold text-slate-800 hover:text-blue-600">
+                                            <Link href={route('invoices.edit', inv.id)} className="font-semibold text-ink hover:text-terracotta">
                                                 {inv.invoice_number}
                                             </Link>
                                         </td>
-                                        <td className="px-6 py-4 text-slate-600">
+                                        <td className="px-6 py-4 text-ink">
                                             {inv.due_date ? new Date(inv.due_date).toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                                         </td>
-                                        <td className="px-6 py-4 text-right font-mono text-slate-800">RM {formatMoney(inv.total_amount)}</td>
-                                        <td className="px-6 py-4 text-right font-mono text-slate-600">RM {formatMoney(inv.amount_paid)}</td>
-                                        <td className="px-6 py-4 text-right font-mono font-semibold text-rose-600">RM {formatMoney(inv.balance_due)}</td>
+                                        <td className="px-6 py-4 text-right font-mono text-ink">RM {formatMoney(inv.total_amount)}</td>
+                                        <td className="px-6 py-4 text-right font-mono text-ink">RM {formatMoney(inv.amount_paid)}</td>
+                                        <td className="px-6 py-4 text-right font-mono font-semibold text-terracotta">RM {formatMoney(inv.balance_due)}</td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold ${getAgingBadge(inv.aging_bucket)}`}>
                                                 {inv.aging_label || 'Current'}
@@ -146,12 +146,12 @@ export default function Index({ auth, invoices = [], summary = {}, bankAccounts 
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-2">
-                                                <Link href={route('invoices.edit', inv.id)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                                                <Link href={route('invoices.edit', inv.id)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-ink hover:bg-surface-alt">
                                                     View invoice <Icons.ChevronRight />
                                                 </Link>
                                                 <button
                                                     onClick={() => openPaymentModal(inv)}
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-forest bg-forest/10 hover:bg-forest/10"
                                                 >
                                                     <Icons.Currency /> Record payment
                                                 </button>
@@ -160,7 +160,7 @@ export default function Index({ auth, invoices = [], summary = {}, bankAccounts 
                                     </tr>
                                 )) : (
                                     <tr>
-                                        <td colSpan={8} className="px-6 py-16 text-center text-slate-500 text-sm">
+                                        <td colSpan={8} className="px-6 py-16 text-center text-ink-muted text-sm">
                                             No outstanding receivables. All invoices are paid or no unpaid invoices.
                                         </td>
                                     </tr>
@@ -171,25 +171,25 @@ export default function Index({ auth, invoices = [], summary = {}, bankAccounts 
                 </div>
 
                 {selectedInvoice && (
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border border-slate-100">
+                    <div className="fixed inset-0 bg-ink/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+                        <div className="bg-surface rounded-2xl shadow-2xl max-w-md w-full p-8 border border-border-warm">
                             <div className="flex items-center gap-3 mb-6">
-                                <span className="p-2.5 rounded-xl bg-emerald-100 text-emerald-600"><Icons.Currency /></span>
+                                <span className="p-2.5 rounded-xl bg-forest/10 text-forest"><Icons.Currency /></span>
                                 <div>
-                                    <h3 className="text-xl font-bold text-slate-900">Record receipt</h3>
-                                    <p className="text-sm text-slate-500">Invoice {selectedInvoice.invoice_number}</p>
+                                    <h3 className="text-xl font-display font-medium text-ink">Record receipt</h3>
+                                    <p className="text-sm text-ink-muted">Invoice {selectedInvoice.invoice_number}</p>
                                 </div>
                             </div>
                             <form onSubmit={handlePaymentSubmit} className="space-y-5">
                                 <div>
-                                    <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Amount (RM)</label>
+                                    <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">Amount (RM)</label>
                                     <div className="relative">
-                                        <span className="absolute inset-y-0 left-4 flex items-center text-slate-400 font-medium">RM</span>
+                                        <span className="absolute inset-y-0 left-4 flex items-center text-ink-muted font-medium">RM</span>
                                         <input
                                             type="number"
                                             value={data.amount}
                                             onChange={(e) => setData('amount', e.target.value)}
-                                            className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl font-semibold text-slate-700"
+                                            className="w-full pl-12 pr-4 py-3 border border-border-warm rounded-xl font-semibold text-ink"
                                             step="0.01"
                                             required
                                         />
@@ -197,12 +197,12 @@ export default function Index({ auth, invoices = [], summary = {}, bankAccounts 
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Date</label>
-                                        <input type="date" value={data.payment_date} onChange={(e) => setData('payment_date', e.target.value)} className="w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm" required />
+                                        <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">Date</label>
+                                        <input type="date" value={data.payment_date} onChange={(e) => setData('payment_date', e.target.value)} className="w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm" required />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Bank account</label>
-                                        <select value={data.bank_account_code} onChange={(e) => setData('bank_account_code', e.target.value)} className="w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm">
+                                        <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">Bank account</label>
+                                        <select value={data.bank_account_code} onChange={(e) => setData('bank_account_code', e.target.value)} className="w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm">
                                             {(bankAccounts || []).length === 0 && (
                                                 <option value="">No bank/cash accounts — add one in Chart of Accounts</option>
                                             )}
@@ -213,10 +213,10 @@ export default function Index({ auth, invoices = [], summary = {}, bankAccounts 
                                     </div>
                                 </div>
                                 <div className="flex gap-3 pt-4">
-                                    <button type="button" onClick={() => { setSelectedInvoice(null); reset(); }} className="flex-1 py-3 rounded-xl font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50">
+                                    <button type="button" onClick={() => { setSelectedInvoice(null); reset(); }} className="flex-1 py-3 rounded-xl font-semibold text-ink border border-border-warm hover:bg-cream">
                                         Cancel
                                     </button>
-                                    <button type="submit" disabled={processing} className="flex-[2] py-3 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50">
+                                    <button type="submit" disabled={processing} className="flex-[2] py-3 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50">
                                         {processing ? 'Processing...' : 'Confirm receipt'}
                                     </button>
                                 </div>

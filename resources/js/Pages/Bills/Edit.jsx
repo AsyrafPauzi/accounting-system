@@ -14,9 +14,9 @@ const Icons = {
     ExternalLink: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>,
 };
 
-const inputClass = 'w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors';
-const inputReadonlyClass = 'w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-400 bg-slate-50';
-const labelClass = 'block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5';
+const inputClass = 'w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta focus:border-terracotta transition-colors';
+const inputReadonlyClass = 'w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink-muted bg-cream';
+const labelClass = 'block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5';
 
 function formatMoney(n) {
     return (Number(n) || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -122,39 +122,39 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
             header={
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                     <div className="flex items-center gap-3">
-                        <Link href={route('bills.index')} className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50">
+                        <Link href={route('bills.index')} className="p-2 rounded-xl border border-border-warm text-ink hover:bg-cream">
                             <Icons.ChevronLeft />
                         </Link>
                         <div>
-                            <h2 className="text-2xl font-bold text-slate-900">{bill.bill_number}</h2>
-                            <p className="text-slate-500 text-sm">
+                            <h2 className="text-2xl font-display font-medium text-ink">{bill.bill_number}</h2>
+                            <p className="text-ink-muted text-sm">
                                 {bill.supplier?.name || 'No supplier'} · {bill.status}
                             </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         {isDraft && (
-                            <button type="button" onClick={handlePost} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700">
+                            <button type="button" onClick={handlePost} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta">
                                 <Icons.Check /> Post to ledger
                             </button>
                         )}
                         {!isDraft && bill.status !== 'void' && balanceDue > 0 && (
-                            <button type="button" onClick={() => setShowPaymentModal(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100">
+                            <button type="button" onClick={() => setShowPaymentModal(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-forest bg-forest/10 hover:bg-forest/10">
                                 <Icons.Currency /> Record payment
                             </button>
                         )}
                         {auth.planPermissions['general-ledger.view'] && journal_entry_id && (
-                            <Link href={route('general-ledger.show', journal_entry_id)} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-blue-600 bg-blue-50 border border-blue-100 hover:bg-blue-100">
+                            <Link href={route('general-ledger.show', journal_entry_id)} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-terracotta bg-surface-alt border border-border-warm hover:bg-surface-alt">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
                                 Accounting Entry
                             </Link>
                         )}
                         {!isDraft && bill.status !== 'void' && (
-                            <button type="button" onClick={handleVoid} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50">
+                            <button type="button" onClick={handleVoid} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-ink border border-border-warm hover:bg-cream">
                                 Void
                             </button>
                         )}
-                        <Link href={route('bills.index')} className="px-4 py-2 rounded-xl font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50">
+                        <Link href={route('bills.index')} className="px-4 py-2 rounded-xl font-semibold text-ink border border-border-warm hover:bg-cream">
                             Back to list
                         </Link>
                     </div>
@@ -164,16 +164,16 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
             <Head title={`Bill ${bill.bill_number}`} />
 
             <div className="space-y-8 max-w-4xl mx-auto">
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                        <h3 className="text-sm font-bold text-slate-800">Bill details</h3>
+                <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-border-warm bg-cream/50">
+                        <h3 className="text-sm font-display font-medium text-ink">Bill details</h3>
                     </div>
                     <div className="p-6 space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className={labelClass}>Bill number</label>
                                 <input type="text" value={data.bill_number} onChange={(e) => setData('bill_number', e.target.value)} className={isDraft ? inputClass : inputReadonlyClass} readOnly={!isDraft} required />
-                                {errors.bill_number && <p className="text-rose-500 text-xs mt-1">{errors.bill_number}</p>}
+                                {errors.bill_number && <p className="text-terracotta text-xs mt-1">{errors.bill_number}</p>}
                             </div>
                             <div>
                                 <label className={labelClass}>Supplier</label>
@@ -220,19 +220,19 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
 
                 {/* Receipt Section */}
                 {bill.receipt_url && (
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                            <h3 className="text-sm font-bold text-slate-800">Attached receipt</h3>
+                    <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-border-warm bg-cream/50 flex items-center justify-between">
+                            <h3 className="text-sm font-display font-medium text-ink">Attached receipt</h3>
                             <button 
                                 type="button"
                                 onClick={() => setShowReceiptModal(true)}
-                                className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1"
+                                className="text-xs font-semibold text-terracotta hover:underline flex items-center gap-1"
                             >
                                 View full size <Icons.ExternalLink />
                             </button>
                         </div>
                         <div className="p-6">
-                            <div className="rounded-xl overflow-hidden border border-slate-100 bg-slate-50 max-h-96 flex items-center justify-center relative group">
+                            <div className="rounded-xl overflow-hidden border border-border-warm bg-cream max-h-96 flex items-center justify-center relative group">
                                 <img 
                                     src={bill.receipt_url} 
                                     alt="Receipt" 
@@ -244,11 +244,11 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                     </div>
                 )}
 
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                        <h3 className="text-sm font-bold text-slate-800">Line items</h3>
+                <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-border-warm bg-cream/50 flex items-center justify-between">
+                        <h3 className="text-sm font-display font-medium text-ink">Line items</h3>
                         {isDraft && (
-                            <button type="button" onClick={addItem} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100">
+                            <button type="button" onClick={addItem} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt">
                                 <Icons.Plus /> Add line
                             </button>
                         )}
@@ -256,7 +256,7 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
-                                <tr className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 bg-slate-50/80">
+                                <tr className="text-left text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
                                     <th className="px-6 py-3">Account</th>
                                     <th className="px-6 py-3">Description</th>
                                     <th className="px-6 py-3 w-24">Qty</th>
@@ -267,7 +267,7 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                             </thead>
                             <tbody>
                                 {data.items.map((item, index) => (
-                                    <tr key={index} className="border-b border-slate-50 last:border-0">
+                                    <tr key={index} className="border-b border-border-warm last:border-0">
                                         <td className="px-6 py-3">
                                             {isDraft ? (
                                                 <select value={item.account_code} onChange={(e) => updateItem(index, 'account_code', e.target.value)} className={inputClass} required>
@@ -277,7 +277,7 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                                                     ))}
                                                 </select>
                                             ) : (
-                                                <span className="text-slate-700">{item.account_code}</span>
+                                                <span className="text-ink">{item.account_code}</span>
                                             )}
                                         </td>
                                         <td className="px-6 py-3">{isDraft ? <input type="text" value={item.description} onChange={(e) => updateItem(index, 'description', e.target.value)} className={inputClass} /> : item.description || '—'}</td>
@@ -286,7 +286,7 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                                         <td className="px-6 py-3 text-right font-mono">{formatMoney(item.amount)}</td>
                                         {isDraft && (
                                             <td className="px-6 py-3">
-                                                <button type="button" onClick={() => removeItem(index)} className="p-2 text-slate-400 hover:text-rose-600 rounded-lg">
+                                                <button type="button" onClick={() => removeItem(index)} className="p-2 text-ink-muted hover:text-terracotta rounded-lg">
                                                     <Icons.Trash />
                                                 </button>
                                             </td>
@@ -296,29 +296,29 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                             </tbody>
                         </table>
                     </div>
-                    <div className="px-6 py-8 border-t border-slate-100 bg-slate-50/50">
+                    <div className="px-6 py-8 border-t border-border-warm bg-cream/50">
                         <div className="flex flex-col gap-5 text-right items-end">
                             <div>
-                                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Subtotal</span>
-                                <span className="text-sm font-semibold text-slate-700 font-mono">RM {subtotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                                <span className="block text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest mb-1">Subtotal</span>
+                                <span className="text-sm font-semibold text-ink font-mono">RM {subtotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
                             </div>
                             
                             {tax > 0 && (
                                 <div>
-                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Tax</span>
-                                    <span className="text-sm font-semibold text-slate-700 font-mono">RM {tax.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                                    <span className="block text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest mb-1">Tax</span>
+                                    <span className="text-sm font-semibold text-ink font-mono">RM {tax.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
                                 </div>
                             )}
 
-                            <div className="pt-4 border-t border-slate-200 w-32">
-                                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total</span>
-                                <span className="text-xl font-black text-slate-900 font-mono underline decoration-blue-500 decoration-4 underline-offset-8">RM {total.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                            <div className="pt-4 border-t border-border-warm w-32">
+                                <span className="block text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest mb-1">Total</span>
+                                <span className="text-xl font-display font-semibold text-ink font-mono underline decoration-blue-500 decoration-4 underline-offset-8">RM {total.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
                             </div>
 
                             {!isDraft && balanceDue > 0 && (
                                 <div className="pt-2">
-                                    <span className="block text-[10px] font-bold text-rose-400 uppercase tracking-widest mb-1">Balance due</span>
-                                    <span className="text-lg font-bold text-rose-600 font-mono">RM {formatMoney(balanceDue)}</span>
+                                    <span className="block text-[10px] font-bold text-terracotta uppercase tracking-widest mb-1">Balance due</span>
+                                    <span className="text-lg font-bold text-terracotta font-mono">RM {formatMoney(balanceDue)}</span>
                                 </div>
                             )}
                         </div>
@@ -327,10 +327,10 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
 
                 {isDraft && (
                     <div className="flex gap-3">
-                        <Link href={route('bills.index')} className="px-5 py-2.5 rounded-xl font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50">
+                        <Link href={route('bills.index')} className="px-5 py-2.5 rounded-xl font-semibold text-ink border border-border-warm hover:bg-cream">
                             Cancel
                         </Link>
-                        <button type="submit" onClick={handleSubmit} disabled={processing} className="px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50">
+                        <button type="submit" onClick={handleSubmit} disabled={processing} className="px-5 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50">
                             {processing ? 'Saving...' : 'Save changes'}
                         </button>
                     </div>
@@ -341,12 +341,12 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
             <Modal show={showReceiptModal} onClose={() => setShowReceiptModal(false)} maxWidth="2xl">
                 <div className="p-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-slate-900">Receipt Preview</h3>
-                        <button onClick={() => setShowReceiptModal(false)} className="p-2 text-slate-400 hover:text-slate-600">
+                        <h3 className="text-lg font-display font-medium text-ink">Receipt Preview</h3>
+                        <button onClick={() => setShowReceiptModal(false)} className="p-2 text-ink-muted hover:text-ink">
                             <IconX size={20} />
                         </button>
                     </div>
-                    <div className="bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center h-[70vh] p-4 overflow-hidden">
+                    <div className="bg-surface-alt rounded-xl border border-border-warm flex items-center justify-center h-[70vh] p-4 overflow-hidden">
                         <img 
                             src={bill.receipt_url} 
                             alt="Receipt Full Size" 
@@ -358,7 +358,7 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                             href={bill.receipt_url} 
                             target="_blank" 
                             rel="noopener noreferrer" 
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-700"
+                            className="px-4 py-2 bg-terracotta text-white rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-terracotta"
                         >
                             <Icons.ExternalLink />
                             Open in New Tab
@@ -368,31 +368,31 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
             </Modal>
 
             {showPaymentModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border border-slate-100">
+                <div className="fixed inset-0 bg-ink/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+                    <div className="bg-surface rounded-2xl shadow-2xl max-w-md w-full p-8 border border-border-warm">
                         <div className="flex items-center gap-3 mb-6">
-                            <span className="p-2.5 rounded-xl bg-emerald-100 text-emerald-600"><Icons.Currency /></span>
+                            <span className="p-2.5 rounded-xl bg-forest/10 text-forest"><Icons.Currency /></span>
                             <div>
-                                <h3 className="text-xl font-bold text-slate-900">Record payment</h3>
-                                <p className="text-sm text-slate-500">Bill {bill.bill_number}</p>
+                                <h3 className="text-xl font-display font-medium text-ink">Record payment</h3>
+                                <p className="text-sm text-ink-muted">Bill {bill.bill_number}</p>
                             </div>
                         </div>
                         <form onSubmit={handlePaymentSubmit} className="space-y-5">
                             <div>
-                                <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Amount (RM)</label>
+                                <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">Amount (RM)</label>
                                 <div className="relative">
-                                    <span className="absolute inset-y-0 left-4 flex items-center text-slate-400 font-medium">RM</span>
-                                    <input type="number" value={paymentForm.data.amount} onChange={(e) => paymentForm.setData('amount', e.target.value)} className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl font-semibold text-slate-700" step="0.01" required />
+                                    <span className="absolute inset-y-0 left-4 flex items-center text-ink-muted font-medium">RM</span>
+                                    <input type="number" value={paymentForm.data.amount} onChange={(e) => paymentForm.setData('amount', e.target.value)} className="w-full pl-12 pr-4 py-3 border border-border-warm rounded-xl font-semibold text-ink" step="0.01" required />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Date</label>
-                                    <input type="date" value={paymentForm.data.payment_date} onChange={(e) => paymentForm.setData('payment_date', e.target.value)} className="w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm" required />
+                                    <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">Date</label>
+                                    <input type="date" value={paymentForm.data.payment_date} onChange={(e) => paymentForm.setData('payment_date', e.target.value)} className="w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm" required />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Bank account</label>
-                                    <select value={paymentForm.data.bank_account_code} onChange={(e) => paymentForm.setData('bank_account_code', e.target.value)} className="w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm">
+                                    <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">Bank account</label>
+                                    <select value={paymentForm.data.bank_account_code} onChange={(e) => paymentForm.setData('bank_account_code', e.target.value)} className="w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm">
                                         {(bankAccounts || []).length === 0 && (
                                             <option value="">No bank/cash accounts — add one in Chart of Accounts</option>
                                         )}
@@ -403,10 +403,10 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                                 </div>
                             </div>
                             <div className="flex gap-3 pt-4">
-                                <button type="button" onClick={() => setShowPaymentModal(false)} className="flex-1 py-3 rounded-xl font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50">
+                                <button type="button" onClick={() => setShowPaymentModal(false)} className="flex-1 py-3 rounded-xl font-semibold text-ink border border-border-warm hover:bg-cream">
                                     Cancel
                                 </button>
-                                <button type="submit" disabled={paymentForm.processing} className="flex-[2] py-3 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50">
+                                <button type="submit" disabled={paymentForm.processing} className="flex-[2] py-3 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50">
                                     {paymentForm.processing ? 'Processing...' : 'Confirm payment'}
                                 </button>
                             </div>

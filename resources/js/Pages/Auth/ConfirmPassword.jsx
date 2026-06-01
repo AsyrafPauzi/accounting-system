@@ -23,11 +23,11 @@ export default function ConfirmPassword() {
             <Head title="Confirm Password" />
 
             <div className="mb-8 text-center">
-                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Confirm Password</h1>
-                <p className="text-slate-500 text-sm font-medium mt-1">Secure area — confirm before continuing</p>
+                <h1 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Confirm Password</h1>
+                <p className="text-ink-muted text-sm font-medium mt-1">Secure area — confirm before continuing</p>
             </div>
 
-            <div className="mb-6 text-sm text-slate-600 leading-relaxed">
+            <div className="mb-6 text-sm text-ink leading-relaxed">
                 This is a secure area of the application. Please confirm your
                 password before continuing.
             </div>
@@ -40,7 +40,7 @@ export default function ConfirmPassword() {
                         type="password"
                         name="password"
                         value={data.password}
-                        className="mt-1.5 block w-full rounded-xl border-slate-200 text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1.5 block w-full rounded-xl border-border-warm text-ink placeholder-ink-muted/60 focus:border-terracotta focus:ring-terracotta"
                         isFocused={true}
                         onChange={(e) => setData('password', e.target.value)}
                     />
@@ -48,7 +48,7 @@ export default function ConfirmPassword() {
                 </div>
 
                 <div className="pt-2">
-                    <PrimaryButton className="w-full justify-center py-3 rounded-xl font-semibold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 border-0 uppercase tracking-normal text-sm" disabled={processing}>
+                    <PrimaryButton className="w-full justify-center py-3 rounded-xl font-semibold bg-terracotta hover:bg-terracotta shadow-lg  border-0 uppercase tracking-normal text-sm" disabled={processing}>
                         Confirm
                     </PrimaryButton>
                 </div>

@@ -44,11 +44,12 @@ export default function Dashboard({ auth, stats = {} }) {
             user={auth.user}
             header={
                 <div className="flex flex-col gap-1">
-                    <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                        Welcome back, <span className="text-blue-600">{auth.user?.name?.split(' ')[0] || 'there'}</span>
+                    <p className="text-eyebrow font-semibold uppercase text-terracotta">Dashboard</p>
+                    <h1 className="font-display text-2xl sm:text-3xl font-medium text-ink tracking-tight">
+                        Welcome back, {auth.user?.name?.split(' ')[0] || 'there'}.
                     </h1>
-                    <p className="text-slate-500 text-sm">
-                        {isBasic ? 'Your business at a glance.' : 'Here’s your business analytics.'}
+                    <p className="text-ink-muted text-sm">
+                        {isBasic ? 'Your books at a glance.' : 'Today’s books, today’s decisions.'}
                     </p>
                 </div>
             }
@@ -60,7 +61,7 @@ export default function Dashboard({ auth, stats = {} }) {
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 min-w-0">
                     <Link
                         href={planPermissions['reports.aged-reports'] ? route('aged-receivables.index') : route('invoices.index')}
-                        className="rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-4 sm:p-5 shadow-lg shadow-blue-500/20 flex flex-col min-h-[100px] sm:min-h-[112px] min-w-0 active:opacity-90"
+                        className="rounded-2xl bg-terracotta text-white p-4 sm:p-5 shadow-lg  flex flex-col min-h-[100px] sm:min-h-[112px] min-w-0 active:opacity-90"
                     >
                         <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider opacity-90">Receivables</span>
                         <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-bold font-mono tabular-nums truncate min-w-0" title={fmt(invoices.total_outstanding, { currency: true })}>
@@ -68,7 +69,7 @@ export default function Dashboard({ auth, stats = {} }) {
                         </p>
                         <p className="mt-auto text-[10px] sm:text-xs opacity-90">
                             {invoices.overdue_count > 0 ? (
-                                <span className="text-amber-200">{invoices.overdue_count} overdue</span>
+                                <span className="text-mustard">{invoices.overdue_count} overdue</span>
                             ) : (
                                 'To collect'
                             )}
@@ -77,39 +78,39 @@ export default function Dashboard({ auth, stats = {} }) {
 
                     <Link
                         href={planPermissions['reports.aged-reports'] ? route('accounts-payable.index') : route('bills.index')}
-                        className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-sm flex flex-col min-h-[100px] sm:min-h-[112px] hover:border-slate-300 hover:shadow-md transition-all min-w-0 active:opacity-90"
+                        className="rounded-2xl bg-surface border border-border-warm p-4 sm:p-5 shadow-sm flex flex-col min-h-[100px] sm:min-h-[112px] hover:border-border-warm hover:shadow-md transition-all min-w-0 active:opacity-90"
                     >
-                        <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Payables</span>
-                        <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-bold text-rose-600 font-mono tabular-nums truncate min-w-0">
+                        <span className="text-[10px] sm:text-xs font-semibold text-ink-muted uppercase tracking-wider">Payables</span>
+                        <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-bold text-terracotta font-mono tabular-nums truncate min-w-0">
                             {fmt(bills.total_ap, { currency: true })}
                         </p>
-                        <p className="mt-auto text-[10px] sm:text-xs text-slate-500">
+                        <p className="mt-auto text-[10px] sm:text-xs text-ink-muted">
                             {bills.overdue_count > 0 ? (
-                                <span className="text-rose-600">{bills.overdue_count} overdue</span>
+                                <span className="text-terracotta">{bills.overdue_count} overdue</span>
                             ) : (
                                 'To pay'
                             )}
                         </p>
                     </Link>
 
-                    <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-sm flex flex-col min-h-[100px] sm:min-h-[112px]">
-                        <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">This month</span>
+                    <div className="rounded-2xl bg-surface border border-border-warm p-4 sm:p-5 shadow-sm flex flex-col min-h-[100px] sm:min-h-[112px]">
+                        <span className="text-[10px] sm:text-xs font-semibold text-ink-muted uppercase tracking-wider">This month</span>
                         <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-bold font-mono tabular-nums">
-                            <span className={netMonth >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                            <span className={netMonth >= 0 ? 'text-forest' : 'text-terracotta'}>
                                 {fmt(netMonth, { currency: true })}
                             </span>
                         </p>
-                        <p className="mt-auto text-[10px] sm:text-xs text-slate-500">
+                        <p className="mt-auto text-[10px] sm:text-xs text-ink-muted">
                             Sales − expenses
                         </p>
                     </div>
 
-                    <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-sm flex flex-col min-h-[100px] sm:min-h-[112px]">
-                        <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Collection rate</span>
-                        <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-bold text-emerald-600 tabular-nums">
+                    <div className="rounded-2xl bg-surface border border-border-warm p-4 sm:p-5 shadow-sm flex flex-col min-h-[100px] sm:min-h-[112px]">
+                        <span className="text-[10px] sm:text-xs font-semibold text-ink-muted uppercase tracking-wider">Collection rate</span>
+                        <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-bold text-forest tabular-nums">
                             {collectionRate}%
                         </p>
-                        <p className="mt-auto text-[10px] sm:text-xs text-slate-500">
+                        <p className="mt-auto text-[10px] sm:text-xs text-ink-muted">
                             Invoiced → collected
                         </p>
                     </div>
@@ -118,36 +119,36 @@ export default function Dashboard({ auth, stats = {} }) {
                 {/* Revenue & Payables — Shown for Standard (SME) and Advanced (Corporate) */}
                 {(isStandard || isAdvanced) && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                            <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Revenue Analysis</h2>
-                                <Link href={route('invoices.index')} className="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
+                        <section className="rounded-2xl border border-border-warm bg-surface shadow-sm overflow-hidden">
+                            <div className="px-4 sm:px-6 py-4 border-b border-border-warm flex items-center justify-between">
+                                <h2 className="text-sm font-display font-medium text-ink uppercase tracking-wider">Revenue Analysis</h2>
+                                <Link href={route('invoices.index')} className="text-xs font-semibold text-terracotta hover:text-terracotta inline-flex items-center gap-1">
                                     Invoices <Icons.ChevronRight />
                                 </Link>
                             </div>
                             <div className="p-4 sm:p-6">
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                                     <div>
-                                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Invoiced</p>
-                                        <p className="text-base sm:text-lg font-bold text-slate-900 font-mono mt-0.5">{fmt(invoices.total_invoiced, { currency: true })}</p>
+                                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Invoiced</p>
+                                        <p className="text-base sm:text-lg font-display font-medium text-ink font-mono mt-0.5">{fmt(invoices.total_invoiced, { currency: true })}</p>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Collected</p>
-                                        <p className="text-base sm:text-lg font-bold text-emerald-600 font-mono mt-0.5">{fmt(invoices.total_collected, { currency: true })}</p>
+                                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Collected</p>
+                                        <p className="text-base sm:text-lg font-bold text-forest font-mono mt-0.5">{fmt(invoices.total_collected, { currency: true })}</p>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Outstanding</p>
-                                        <p className="text-base sm:text-lg font-bold text-rose-600 font-mono mt-0.5">{fmt(invoices.total_outstanding, { currency: true })}</p>
+                                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Outstanding</p>
+                                        <p className="text-base sm:text-lg font-bold text-terracotta font-mono mt-0.5">{fmt(invoices.total_outstanding, { currency: true })}</p>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Overdue</p>
-                                        <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{invoices.overdue_count}</p>
+                                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Overdue</p>
+                                        <p className="text-base sm:text-lg font-display font-medium text-ink mt-0.5">{invoices.overdue_count}</p>
                                     </div>
                                 </div>
                                 {planPermissions['reports.aged-reports'] && (
                                     <Link
                                         href={route('aged-receivables.index')}
-                                        className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                                        className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-terracotta hover:text-terracotta"
                                     >
                                         Aged receivables <Icons.ChevronRight />
                                     </Link>
@@ -155,36 +156,36 @@ export default function Dashboard({ auth, stats = {} }) {
                             </div>
                         </section>
 
-                        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                            <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Payables Analysis</h2>
-                                <Link href={route('bills.index')} className="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
+                        <section className="rounded-2xl border border-border-warm bg-surface shadow-sm overflow-hidden">
+                            <div className="px-4 sm:px-6 py-4 border-b border-border-warm flex items-center justify-between">
+                                <h2 className="text-sm font-display font-medium text-ink uppercase tracking-wider">Payables Analysis</h2>
+                                <Link href={route('bills.index')} className="text-xs font-semibold text-terracotta hover:text-terracotta inline-flex items-center gap-1">
                                     Bills <Icons.ChevronRight />
                                 </Link>
                             </div>
                             <div className="p-4 sm:p-6">
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                                     <div>
-                                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Suppliers</p>
-                                        <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{suppliers.total} <span className="text-xs font-normal text-slate-500">({suppliers.active} active)</span></p>
+                                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Suppliers</p>
+                                        <p className="text-base sm:text-lg font-display font-medium text-ink mt-0.5">{suppliers.total} <span className="text-xs font-normal text-ink-muted">({suppliers.active} active)</span></p>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Outstanding</p>
-                                        <p className="text-base sm:text-lg font-bold text-rose-600 font-mono mt-0.5">{fmt(bills.total_ap, { currency: true })}</p>
+                                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Outstanding</p>
+                                        <p className="text-base sm:text-lg font-bold text-terracotta font-mono mt-0.5">{fmt(bills.total_ap, { currency: true })}</p>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Unpaid bills</p>
-                                        <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{bills.unpaid_count}</p>
+                                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Unpaid bills</p>
+                                        <p className="text-base sm:text-lg font-display font-medium text-ink mt-0.5">{bills.unpaid_count}</p>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Overdue</p>
-                                        <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{bills.overdue_count}</p>
+                                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Overdue</p>
+                                        <p className="text-base sm:text-lg font-display font-medium text-ink mt-0.5">{bills.overdue_count}</p>
                                     </div>
                                 </div>
                                 {planPermissions['reports.aged-reports'] && (
                                     <Link
                                         href={route('accounts-payable.index')}
-                                        className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                                        className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-terracotta hover:text-terracotta"
                                     >
                                         Accounts payable <Icons.ChevronRight />
                                     </Link>
@@ -196,15 +197,15 @@ export default function Dashboard({ auth, stats = {} }) {
                 
                 {/* Compliance Analysis — Advanced (Corporate) Only */}
                 {isAdvanced && stats.audit && (
-                    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                        <div className="px-4 sm:px-6 py-4 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
+                    <section className="rounded-2xl border border-border-warm bg-surface shadow-sm overflow-hidden">
+                        <div className="px-4 sm:px-6 py-4 border-b border-border-warm bg-cream/30 flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <div className="p-1 bg-indigo-100 rounded text-indigo-600">
+                                <div className="p-1 bg-surface-alt rounded text-terracotta">
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                 </div>
-                                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Compliance Status</h2>
+                                <h2 className="text-sm font-display font-medium text-ink uppercase tracking-wider">Compliance Status</h2>
                             </div>
-                            <Link href={route('audit.index')} className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+                            <Link href={route('audit.index')} className="text-xs font-bold text-terracotta hover:text-terracotta flex items-center gap-1">
                                 Review Compliance <Icons.ChevronRight />
                             </Link>
                         </div>
@@ -222,28 +223,28 @@ export default function Dashboard({ auth, stats = {} }) {
                                         />
                                     </svg>
                                     <div className="absolute inset-0 flex items-center justify-center">
-                                        <span className="text-sm font-black text-slate-900">
+                                        <span className="text-sm font-display font-semibold text-ink">
                                             {Math.round(((stats.audit.verified + stats.audit.flagged) / (stats.audit.total || 1)) * 100)}%
                                         </span>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 flex-1">
-                                    <div className="p-3 rounded-xl border border-slate-100 bg-slate-50/50">
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Items</p>
-                                        <p className="text-lg font-bold text-slate-900 font-mono">{stats.audit.total}</p>
+                                    <div className="p-3 rounded-xl border border-border-warm bg-cream/50">
+                                        <p className="text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest mb-1">Total Items</p>
+                                        <p className="text-lg font-display font-medium text-ink font-mono">{stats.audit.total}</p>
                                     </div>
-                                    <div className="p-3 rounded-xl border border-emerald-100 bg-emerald-50/30">
-                                        <p className="text-[10px] font-bold text-emerald-600/70 uppercase tracking-widest mb-1">Verified</p>
-                                        <p className="text-lg font-bold text-emerald-600 font-mono">{stats.audit.verified}</p>
+                                    <div className="p-3 rounded-xl border border-forest/30 bg-forest/10/30">
+                                        <p className="text-[10px] font-bold text-forest/70 uppercase tracking-widest mb-1">Verified</p>
+                                        <p className="text-lg font-bold text-forest font-mono">{stats.audit.verified}</p>
                                     </div>
-                                    <div className="p-3 rounded-xl border border-rose-100 bg-rose-50/30">
-                                        <p className="text-[10px] font-bold text-rose-600/70 uppercase tracking-widest mb-1">Unaudited</p>
-                                        <p className="text-lg font-bold text-rose-600 font-mono">{stats.audit.unaudited}</p>
+                                    <div className="p-3 rounded-xl border border-terracotta/30 bg-terracotta/10/30">
+                                        <p className="text-[10px] font-bold text-terracotta/70 uppercase tracking-widest mb-1">Unaudited</p>
+                                        <p className="text-lg font-bold text-terracotta font-mono">{stats.audit.unaudited}</p>
                                     </div>
-                                    <div className="p-3 rounded-xl border border-amber-100 bg-amber-50/30">
-                                        <p className="text-[10px] font-bold text-amber-600/70 uppercase tracking-widest mb-1">Flagged</p>
-                                        <p className="text-lg font-bold text-amber-600 font-mono">{stats.audit.flagged}</p>
+                                    <div className="p-3 rounded-xl border border-mustard/40 bg-mustard/15/30">
+                                        <p className="text-[10px] font-bold text-mustard/70 uppercase tracking-widest mb-1">Flagged</p>
+                                        <p className="text-lg font-bold text-mustard font-mono">{stats.audit.flagged}</p>
                                     </div>
                                 </div>
                             </div>
@@ -257,48 +258,48 @@ export default function Dashboard({ auth, stats = {} }) {
                         {planPermissions['reports.cashflow'] && (
                             <Link
                                 href={route('cashflow-summary.index')}
-                                className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm hover:border-slate-300 hover:shadow-md transition-all flex items-center gap-4"
+                                className="rounded-2xl border border-border-warm bg-surface p-4 sm:p-5 shadow-sm hover:border-border-warm hover:shadow-md transition-all flex items-center gap-4"
                             >
-                                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-mustard/15 text-mustard flex items-center justify-center">
                                     <Icons.ChartBar />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-bold text-slate-800">Cashflow</p>
-                                    <p className="text-xs text-slate-500 mt-0.5">Sales vs expenses</p>
+                                    <p className="text-sm font-display font-medium text-ink">Cashflow</p>
+                                    <p className="text-xs text-ink-muted mt-0.5">Sales vs expenses</p>
                                 </div>
-                                <Icons.ChevronRight className="flex-shrink-0 text-slate-300 w-5 h-5" />
+                                <Icons.ChevronRight className="flex-shrink-0 text-ink-muted w-5 h-5" />
                             </Link>
                         )}
 
                         {planPermissions['reports.view'] && (
                             <Link
                                 href={route('reports.index')}
-                                className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm hover:border-slate-300 hover:shadow-md transition-all flex items-center gap-4"
+                                className="rounded-2xl border border-border-warm bg-surface p-4 sm:p-5 shadow-sm hover:border-border-warm hover:shadow-md transition-all flex items-center gap-4"
                             >
-                                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-surface-alt text-terracotta flex items-center justify-center">
                                     <Icons.Document />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-bold text-slate-800">Reports Hub</p>
-                                    <p className="text-xs text-slate-500 mt-0.5">P&L, Sales & more</p>
+                                    <p className="text-sm font-display font-medium text-ink">Reports Hub</p>
+                                    <p className="text-xs text-ink-muted mt-0.5">P&L, Sales & more</p>
                                 </div>
-                                <Icons.ChevronRight className="flex-shrink-0 text-slate-300 w-5 h-5" />
+                                <Icons.ChevronRight className="flex-shrink-0 text-ink-muted w-5 h-5" />
                             </Link>
                         )}
 
                         {planPermissions['credit-notes.view'] && (
                             <Link
                                 href={route('credit-notes.index')}
-                                className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm hover:border-slate-300 hover:shadow-md transition-all flex items-center gap-4"
+                                className="rounded-2xl border border-border-warm bg-surface p-4 sm:p-5 shadow-sm hover:border-border-warm hover:shadow-md transition-all flex items-center gap-4"
                             >
-                                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
+                                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-surface-alt text-ink flex items-center justify-center">
                                     <Icons.ReceiptRefund />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-bold text-slate-800">Credit notes</p>
-                                    <p className="text-xs text-slate-500 mt-0.5">{creditNotes.count} issued</p>
+                                    <p className="text-sm font-display font-medium text-ink">Credit notes</p>
+                                    <p className="text-xs text-ink-muted mt-0.5">{creditNotes.count} issued</p>
                                 </div>
-                                <Icons.ChevronRight className="flex-shrink-0 text-slate-300 w-5 h-5" />
+                                <Icons.ChevronRight className="flex-shrink-0 text-ink-muted w-5 h-5" />
                             </Link>
                         )}
 
@@ -306,16 +307,16 @@ export default function Dashboard({ auth, stats = {} }) {
                         {isAdvanced && (auth.permissions.includes('audit-logs.view') || auth.user.role_name === 'super-admin') && (
                             <Link 
                                 href={route('audit-logs.index')}
-                                className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm flex items-center gap-4 group hover:border-slate-300 hover:shadow-md transition-all active:scale-[0.98] duration-200"
+                                className="rounded-2xl border border-border-warm bg-surface p-4 sm:p-5 shadow-sm flex items-center gap-4 group hover:border-border-warm hover:shadow-md transition-all active:scale-[0.98] duration-200"
                             >
-                                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
+                                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-forest/10 text-forest flex items-center justify-center group-hover:bg-forest group-hover:text-white transition-all duration-300">
                                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-bold text-slate-800">Audit Logs</p>
-                                    <p className="text-xs text-slate-500 mt-0.5">Track all system changes</p>
+                                    <p className="text-sm font-display font-medium text-ink">Audit Logs</p>
+                                    <p className="text-xs text-ink-muted mt-0.5">Track all system changes</p>
                                 </div>
-                                <Icons.ChevronRight className="text-slate-300 group-hover:text-blue-600 transition-colors flex-shrink-0 w-5 h-5" />
+                                <Icons.ChevronRight className="text-ink-muted group-hover:text-terracotta transition-colors flex-shrink-0 w-5 h-5" />
                             </Link>
                         )}
                     </div>

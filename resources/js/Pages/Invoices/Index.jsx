@@ -30,13 +30,13 @@ const Icons = {
 
 function getStatusBadge(status) {
     const styles = {
-        paid: 'bg-emerald-100 text-emerald-700',
-        unpaid: 'bg-rose-100 text-rose-700',
-        'partially paid': 'bg-blue-100 text-blue-700',
-        draft: 'bg-slate-100 text-slate-600',
-        void: 'bg-slate-200 text-slate-500',
+        paid: 'bg-forest/10 text-forest',
+        unpaid: 'bg-terracotta/10 text-terracotta',
+        'partially paid': 'bg-surface-alt text-terracotta',
+        draft: 'bg-surface-alt text-ink',
+        void: 'bg-surface-alt text-ink-muted',
     };
-    return styles[status] || 'bg-slate-100 text-slate-600';
+    return styles[status] || 'bg-surface-alt text-ink';
 }
 
 function formatInvoiceAmount(invoice) {
@@ -98,21 +98,21 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
         <>
             <td className="px-4 sm:px-6 py-3 sm:py-4">
                 <Link href={route('invoices.edit', invoice.id)} className="block group/link">
-                    <span className="font-semibold text-slate-800 group-hover/link:text-blue-600">{invoice.invoice_number}</span>
-                    <p className="text-xs text-slate-500 mt-0.5">{new Date(invoice.issue_date).toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                    <span className="font-semibold text-ink group-hover/link:text-terracotta">{invoice.invoice_number}</span>
+                    <p className="text-xs text-ink-muted mt-0.5">{new Date(invoice.issue_date).toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                 </Link>
             </td>
             <td className="px-4 sm:px-6 py-3 sm:py-4">
-                <div className="font-medium text-slate-700">{invoice.customer_name || 'Walk-in'}</div>
-                <p className="text-xs text-slate-400 truncate max-w-[140px] sm:max-w-none">{invoice.customer_email || 'No email'}</p>
+                <div className="font-medium text-ink">{invoice.customer_name || 'Walk-in'}</div>
+                <p className="text-xs text-ink-muted truncate max-w-[140px] sm:max-w-none">{invoice.customer_email || 'No email'}</p>
             </td>
             <td className="px-4 sm:px-6 py-3 sm:py-4">
                 <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${getStatusBadge(invoice.status)}`}>{invoice.status}</span>
             </td>
             <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
-                <div className="font-mono text-sm font-semibold text-slate-800">{formatInvoiceAmount(invoice)}</div>
+                <div className="font-mono text-sm font-semibold text-ink">{formatInvoiceAmount(invoice)}</div>
                 {parseFloat(invoice.amount_paid) > 0 && invoice.status !== 'paid' && (
-                    <p className="text-xs text-rose-600 tabular-nums">Bal: {formatInvoiceBalance(invoice)}</p>
+                    <p className="text-xs text-terracotta tabular-nums">Bal: {formatInvoiceBalance(invoice)}</p>
                 )}
             </td>
             <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
@@ -125,11 +125,11 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
         <AuthenticatedLayout user={auth.user} header={
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                 <div>
-                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Sales Invoices</h2>
-                    <p className="text-slate-500 text-sm font-medium mt-1">Create, manage and track revenue documents</p>
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Sales Invoices</h2>
+                    <p className="text-ink-muted text-sm font-medium mt-1">Create, manage and track revenue documents</p>
                 </div>
                 {auth.permissions.includes('invoices.create') && (
-                    <Link href={route('invoices.create')} className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all duration-200">
+                    <Link href={route('invoices.create')} className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta shadow-lg  transition-all duration-200">
                         <Icons.Plus /> Create Invoice
                     </Link>
                 )}
@@ -139,39 +139,39 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
 
             <div className="space-y-4 sm:space-y-6 min-w-0">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                    <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl p-4 sm:p-6 shadow-lg">
+                    <div className="relative overflow-hidden bg-terracotta text-white rounded-2xl p-4 sm:p-6 shadow-lg">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Total Invoices</span>
-                            <span className="p-2 rounded-xl bg-white/10"><Icons.Document /></span>
+                            <span className="p-2 rounded-xl bg-surface/10"><Icons.Document /></span>
                         </div>
                         <p className="text-xl sm:text-2xl font-bold tabular-nums">{totalCount}</p>
-                        <p className="text-xs text-blue-100 mt-1">Draft · Unpaid · Paid</p>
+                        <p className="text-xs text-terracotta mt-1">Draft · Unpaid · Paid</p>
                     </div>
-                    <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-100 shadow-sm">
+                    <div className="bg-surface rounded-2xl p-4 sm:p-6 border border-border-warm shadow-sm">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Outstanding (AR)</span>
-                            <span className="p-2 rounded-xl bg-rose-50 text-rose-600"><Icons.Exclamation /></span>
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Outstanding (AR)</span>
+                            <span className="p-2 rounded-xl bg-terracotta/10 text-terracotta"><Icons.Exclamation /></span>
                         </div>
-                        <p className="text-lg sm:text-xl font-bold text-rose-600 font-mono tabular-nums">RM {totalOutstanding.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
-                        <p className="text-xs text-slate-500 mt-1">Awaiting collection</p>
+                        <p className="text-lg sm:text-xl font-bold text-terracotta font-mono tabular-nums">RM {totalOutstanding.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
+                        <p className="text-xs text-ink-muted mt-1">Awaiting collection</p>
                     </div>
-                    <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-100 shadow-sm">
+                    <div className="bg-surface rounded-2xl p-4 sm:p-6 border border-border-warm shadow-sm">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Collected</span>
-                            <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600"><Icons.Check /></span>
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Collected</span>
+                            <span className="p-2 rounded-xl bg-forest/10 text-forest"><Icons.Check /></span>
                         </div>
-                        <p className="text-lg sm:text-xl font-bold text-emerald-600 font-mono tabular-nums">RM {totalCollected.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
-                        <p className="text-xs text-slate-500 mt-1">Cash received</p>
+                        <p className="text-lg sm:text-xl font-bold text-forest font-mono tabular-nums">RM {totalCollected.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
+                        <p className="text-xs text-ink-muted mt-1">Cash received</p>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-                    <form onSubmit={(e) => { e.preventDefault(); applyFilters({ page: 1 }); }} className="px-4 sm:px-6 py-4 border-b border-slate-100 flex flex-wrap items-center gap-3 bg-slate-50/50">
+                <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
+                    <form onSubmit={(e) => { e.preventDefault(); applyFilters({ page: 1 }); }} className="px-4 sm:px-6 py-4 border-b border-border-warm flex flex-wrap items-center gap-3 bg-cream/50">
                         <div className="relative flex-1 min-w-0 max-w-full sm:max-w-xs">
-                            <span className="absolute inset-y-0 left-3 flex items-center text-slate-400"><Icons.MagnifyingGlass /></span>
-                            <input type="text" placeholder="Search by invoice # or customer..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onBlur={() => applyFilters({ page: 1 })} className="pl-9 w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500" />
+                            <span className="absolute inset-y-0 left-3 flex items-center text-ink-muted"><Icons.MagnifyingGlass /></span>
+                            <input type="text" placeholder="Search by invoice # or customer..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onBlur={() => applyFilters({ page: 1 })} className="pl-9 w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta" />
                         </div>
-                        <select value={statusFilter} onChange={(e) => applyFilters({ status: e.target.value, page: 1 })} className="border border-slate-200 rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 min-w-[140px]">
+                        <select value={statusFilter} onChange={(e) => applyFilters({ status: e.target.value, page: 1 })} className="border border-border-warm rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta min-w-[140px]">
                             <option value="">All statuses</option>
                             <option value="draft">Draft</option>
                             <option value="unpaid">Unpaid</option>
@@ -179,14 +179,14 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
                             <option value="paid">Paid</option>
                             <option value="void">Void</option>
                         </select>
-                        <select value={perPageFilter} onChange={(e) => applyFilters({ per_page: Number(e.target.value), page: 1 })} className="border border-slate-200 rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 min-w-[140px]">
+                        <select value={perPageFilter} onChange={(e) => applyFilters({ per_page: Number(e.target.value), page: 1 })} className="border border-border-warm rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta min-w-[140px]">
                             <option value={10}>10 per page</option>
                             <option value={25}>25 per page</option>
                             <option value={50}>50 per page</option>
                             <option value={100}>100 per page</option>
                         </select>
-                        <button type="submit" className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700">Apply</button>
-                        <span className="text-slate-500 text-sm font-medium ml-auto whitespace-nowrap">
+                        <button type="submit" className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta">Apply</button>
+                        <span className="text-ink-muted text-sm font-medium ml-auto whitespace-nowrap">
                             {total > 0 ? `${from}–${to} of ${total}` : '0 of 0'}
                         </span>
                     </form>
@@ -195,7 +195,7 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
                     <div className="hidden md:block overflow-x-auto">
                         <table className="w-full min-w-0">
                             <thead>
-                                <tr className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 bg-slate-50/80">
+                                <tr className="text-left text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
                                     <th className="px-4 sm:px-6 py-3">Invoice</th>
                                     <th className="px-4 sm:px-6 py-3">Customer</th>
                                     <th className="px-4 sm:px-6 py-3">Status</th>
@@ -205,44 +205,44 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
                             </thead>
                             <tbody>
                                 {invoices.length > 0 ? invoices.map((invoice) => (
-                                    <tr key={invoice.id} className={`border-b border-slate-50 last:border-0 hover:bg-slate-50/80 transition-colors ${invoice.status === 'void' ? 'opacity-60' : ''}`}>
+                                    <tr key={invoice.id} className={`border-b border-border-warm last:border-0 hover:bg-cream/80 transition-colors ${invoice.status === 'void' ? 'opacity-60' : ''}`}>
                                         <InvoiceRow invoice={invoice} />
                                     </tr>
                                 )) : (
-                                    <tr><td colSpan={5} className="px-6 py-16 text-center text-slate-400 text-sm">{totalCount === 0 ? 'No invoices yet. Create your first invoice to get started.' : 'No invoices match your filters.'}</td></tr>
+                                    <tr><td colSpan={5} className="px-6 py-16 text-center text-ink-muted text-sm">{totalCount === 0 ? 'No invoices yet. Create your first invoice to get started.' : 'No invoices match your filters.'}</td></tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
 
                     {/* Mobile cards */}
-                    <div className="md:hidden divide-y divide-slate-100">
+                    <div className="md:hidden divide-y divide-border-warm">
                         {invoices.length > 0 ? invoices.map((invoice) => (
                             <div key={invoice.id} className={`p-4 ${invoice.status === 'void' ? 'opacity-60' : ''}`}>
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="min-w-0 flex-1">
-                                        <Link href={route('invoices.edit', invoice.id)} className="font-semibold text-slate-800 hover:text-blue-600">{invoice.invoice_number}</Link>
-                                        <p className="text-xs text-slate-500 mt-0.5">{invoice.customer_name || 'Walk-in'}</p>
-                                        <p className="text-sm font-mono font-semibold text-slate-800 mt-1">{formatInvoiceAmount(invoice)}</p>
+                                        <Link href={route('invoices.edit', invoice.id)} className="font-semibold text-ink hover:text-terracotta">{invoice.invoice_number}</Link>
+                                        <p className="text-xs text-ink-muted mt-0.5">{invoice.customer_name || 'Walk-in'}</p>
+                                        <p className="text-sm font-mono font-semibold text-ink mt-1">{formatInvoiceAmount(invoice)}</p>
                                         <span className={`inline-flex mt-2 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${getStatusBadge(invoice.status)}`}>{invoice.status}</span>
                                     </div>
                                     <ActionsCell auth={auth} invoice={invoice} setSelectedInvoice={setSelectedInvoice} setData={setData} defaultBankCode={defaultBankCode} handlePostToLedger={handlePostToLedger} handleVoid={handleVoid} handleDelete={handleDelete} handleEmailInvoice={handleEmailInvoice} emailingId={emailingId} />
                                 </div>
                             </div>
                         )) : (
-                            <div className="px-4 py-16 text-center text-slate-400 text-sm">{totalCount === 0 ? 'No invoices yet. Create your first invoice to get started.' : 'No invoices match your filters.'}</div>
+                            <div className="px-4 py-16 text-center text-ink-muted text-sm">{totalCount === 0 ? 'No invoices yet. Create your first invoice to get started.' : 'No invoices match your filters.'}</div>
                         )}
                     </div>
 
                     {/* Pagination */}
                     {last_page > 1 && (
-                        <div className="px-4 sm:px-6 py-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50/30">
-                            <p className="text-sm text-slate-600">Page {current_page} of {last_page}</p>
+                        <div className="px-4 sm:px-6 py-4 border-t border-border-warm flex flex-wrap items-center justify-between gap-3 bg-cream/30">
+                            <p className="text-sm text-ink">Page {current_page} of {last_page}</p>
                             <div className="flex items-center gap-2">
-                                <Link href={route('invoices.index', { search: searchInput || undefined, status: statusFilter || undefined, per_page: perPageFilter, page: Math.max(1, current_page - 1) })} className={`inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold border ${current_page <= 1 ? 'pointer-events-none text-slate-300 border-slate-200' : 'text-slate-700 border-slate-200 hover:bg-slate-50'}`}>
+                                <Link href={route('invoices.index', { search: searchInput || undefined, status: statusFilter || undefined, per_page: perPageFilter, page: Math.max(1, current_page - 1) })} className={`inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold border ${current_page <= 1 ? 'pointer-events-none text-ink-muted border-border-warm' : 'text-ink border-border-warm hover:bg-cream'}`}>
                                     <Icons.ChevronLeft /> Previous
                                 </Link>
-                                <Link href={route('invoices.index', { search: searchInput || undefined, status: statusFilter || undefined, per_page: perPageFilter, page: Math.min(last_page, current_page + 1) })} className={`inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold border ${current_page >= last_page ? 'pointer-events-none text-slate-300 border-slate-200' : 'text-slate-700 border-slate-200 hover:bg-slate-50'}`}>
+                                <Link href={route('invoices.index', { search: searchInput || undefined, status: statusFilter || undefined, per_page: perPageFilter, page: Math.min(last_page, current_page + 1) })} className={`inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold border ${current_page >= last_page ? 'pointer-events-none text-ink-muted border-border-warm' : 'text-ink border-border-warm hover:bg-cream'}`}>
                                     Next <Icons.ChevronRight />
                                 </Link>
                             </div>
@@ -251,33 +251,33 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
                 </div>
 
                 {selectedInvoice && (
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 border border-slate-100">
+                    <div className="fixed inset-0 bg-ink/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+                        <div className="bg-surface rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 border border-border-warm">
                             <div className="flex items-center gap-3 mb-6">
-                                <span className="p-2.5 rounded-xl bg-emerald-100 text-emerald-600"><Icons.Currency /></span>
+                                <span className="p-2.5 rounded-xl bg-forest/10 text-forest"><Icons.Currency /></span>
                                 <div>
-                                    <h3 className="text-xl font-bold text-slate-900">Record Receipt</h3>
-                                    <p className="text-sm text-slate-500">Payment for {selectedInvoice.invoice_number}</p>
+                                    <h3 className="text-xl font-display font-medium text-ink">Record Receipt</h3>
+                                    <p className="text-sm text-ink-muted">Payment for {selectedInvoice.invoice_number}</p>
                                 </div>
                             </div>
                             <form onSubmit={handlePaymentSubmit} className="space-y-5">
                                 <div>
-                                    <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Amount ({normalizeCurrency(selectedInvoice.currency)})</label>
+                                    <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">Amount ({normalizeCurrency(selectedInvoice.currency)})</label>
                                     <div className="relative">
-                                        <span className="absolute inset-y-0 left-4 flex items-center text-slate-400 font-medium">{currencySymbol(selectedInvoice.currency)}</span>
-                                        <input type="number" value={data.amount} onChange={e => setData('amount', e.target.value)} className={`w-full pl-12 pr-4 py-3 border rounded-xl font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 ${errors.amount ? 'border-rose-500 ring-1 ring-rose-500' : 'border-slate-200'}`} step={currencyInputStep(selectedInvoice.currency)} required />
+                                        <span className="absolute inset-y-0 left-4 flex items-center text-ink-muted font-medium">{currencySymbol(selectedInvoice.currency)}</span>
+                                        <input type="number" value={data.amount} onChange={e => setData('amount', e.target.value)} className={`w-full pl-12 pr-4 py-3 border rounded-xl font-semibold text-ink focus:ring-2 focus:ring-terracotta ${errors.amount ? 'border-terracotta ring-1 ring-terracotta' : 'border-border-warm'}`} step={currencyInputStep(selectedInvoice.currency)} required />
                                     </div>
-                                    {errors.amount && <p className="text-rose-500 text-[10px] mt-1.5 font-bold uppercase tracking-tight">{errors.amount}</p>}
+                                    {errors.amount && <p className="text-terracotta text-[10px] mt-1.5 font-bold uppercase tracking-tight">{errors.amount}</p>}
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Date</label>
-                                        <input type="date" value={data.payment_date} onChange={e => setData('payment_date', e.target.value)} className={`w-full border rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-blue-500 ${errors.payment_date ? 'border-rose-500' : 'border-slate-200'}`} required />
-                                        {errors.payment_date && <p className="text-rose-500 text-[10px] mt-1.5 font-bold uppercase tracking-tight">{errors.payment_date}</p>}
+                                        <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">Date</label>
+                                        <input type="date" value={data.payment_date} onChange={e => setData('payment_date', e.target.value)} className={`w-full border rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-terracotta ${errors.payment_date ? 'border-terracotta' : 'border-border-warm'}`} required />
+                                        {errors.payment_date && <p className="text-terracotta text-[10px] mt-1.5 font-bold uppercase tracking-tight">{errors.payment_date}</p>}
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Account</label>
-                                        <select value={data.bank_account_code} onChange={e => setData('bank_account_code', e.target.value)} className={`w-full border rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-blue-500 ${errors.bank_account_code ? 'border-rose-500' : 'border-slate-200'}`}>
+                                        <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">Account</label>
+                                        <select value={data.bank_account_code} onChange={e => setData('bank_account_code', e.target.value)} className={`w-full border rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-terracotta ${errors.bank_account_code ? 'border-terracotta' : 'border-border-warm'}`}>
                                             {(bankAccounts || []).length === 0 && (
                                                 <option value="">No bank/cash accounts — add one in Chart of Accounts</option>
                                             )}
@@ -285,12 +285,12 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
                                                 <option key={a.value} value={a.value}>{a.label}</option>
                                             ))}
                                         </select>
-                                        {errors.bank_account_code && <p className="text-rose-500 text-[10px] mt-1.5 font-bold uppercase tracking-tight">{errors.bank_account_code}</p>}
+                                        {errors.bank_account_code && <p className="text-terracotta text-[10px] mt-1.5 font-bold uppercase tracking-tight">{errors.bank_account_code}</p>}
                                     </div>
                                 </div>
                                 <div className="flex gap-3 pt-4">
-                                    <button type="button" onClick={() => { setSelectedInvoice(null); reset(); }} className="flex-1 py-3 rounded-xl font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50">Cancel</button>
-                                    <button type="submit" disabled={processing} className="flex-[2] py-3 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"> {processing ? 'Processing...' : 'Confirm Receipt'}</button>
+                                    <button type="button" onClick={() => { setSelectedInvoice(null); reset(); }} className="flex-1 py-3 rounded-xl font-semibold text-ink border border-border-warm hover:bg-cream">Cancel</button>
+                                    <button type="submit" disabled={processing} className="flex-[2] py-3 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50"> {processing ? 'Processing...' : 'Confirm Receipt'}</button>
                                 </div>
                             </form>
                         </div>
@@ -307,21 +307,21 @@ function ActionsCell({ auth, invoice, setSelectedInvoice, setData, defaultBankCo
 
     return (
         <Menu as="div" className="relative inline-block text-left">
-            <MenuButton className="inline-flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors">
+            <MenuButton className="inline-flex items-center justify-center w-9 h-9 rounded-xl border border-border-warm bg-surface text-ink hover:bg-cream hover:border-border-warm transition-colors">
                 <Icons.EllipsisVertical />
             </MenuButton>
             <MenuItems
                 anchor="bottom end"
                 transition
-                className="z-[100] mt-2 w-52 origin-top-right rounded-xl bg-white shadow-xl ring-1 ring-black/5 focus:outline-none py-1 transition duration-100 ease-out data-[closed]:scale-95 data-[closed]:opacity-0"
+                className="z-[100] mt-2 w-52 origin-top-right rounded-xl bg-surface shadow-xl ring-1 ring-black/5 focus:outline-none py-1 transition duration-100 ease-out data-[closed]:scale-95 data-[closed]:opacity-0"
             >
                 <MenuItem>
-                    <Link href={route('invoices.edit', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+                    <Link href={route('invoices.edit', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-cream">
                         <Icons.ChevronRight className="w-4 h-4" /> View
                     </Link>
                 </MenuItem>
                 <MenuItem>
-                    <a href={route('invoices.pdf', invoice.id)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+                    <a href={route('invoices.pdf', invoice.id)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-cream">
                         <Icons.ArrowDownTray /> Download PDF
                     </a>
                 </MenuItem>
@@ -329,21 +329,21 @@ function ActionsCell({ auth, invoice, setSelectedInvoice, setData, defaultBankCo
                     <>
                         {auth.permissions.includes('invoices.post') && (
                             <MenuItem>
-                                <button type="button" onClick={() => handlePostToLedger(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-blue-600 hover:bg-blue-50">
+                                <button type="button" onClick={() => handlePostToLedger(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-terracotta hover:bg-surface-alt">
                                     <Icons.Check /> Post to ledger
                                 </button>
                             </MenuItem>
                         )}
                         {auth.permissions.includes('invoices.edit') && (
                             <MenuItem>
-                                <Link href={route('invoices.edit', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+                                <Link href={route('invoices.edit', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-cream">
                                     <Icons.Pencil /> Edit
                                 </Link>
                             </MenuItem>
                         )}
                         {auth.permissions.includes('invoices.delete') && (
                             <MenuItem>
-                                <button type="button" onClick={() => handleDelete(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50">
+                                <button type="button" onClick={() => handleDelete(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-terracotta hover:bg-terracotta/10">
                                     Delete draft
                                 </button>
                             </MenuItem>
@@ -354,28 +354,28 @@ function ActionsCell({ auth, invoice, setSelectedInvoice, setData, defaultBankCo
                     <>
                         {invoice.status !== 'paid' && auth.planPermissions['invoices.record-payment'] && auth.permissions.includes('invoices.record-payment') && (
                             <MenuItem>
-                                <button type="button" onClick={() => { setSelectedInvoice(invoice); setData('amount', (parseFloat(invoice.total_amount) - parseFloat(invoice.amount_paid)).toFixed(currencyDecimals(invoice.currency))); setData('bank_account_code', defaultBankCode); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-emerald-600 hover:bg-emerald-50">
+                                <button type="button" onClick={() => { setSelectedInvoice(invoice); setData('amount', (parseFloat(invoice.total_amount) - parseFloat(invoice.amount_paid)).toFixed(currencyDecimals(invoice.currency))); setData('bank_account_code', defaultBankCode); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-forest hover:bg-forest/10">
                                     <Icons.Currency /> Record payment
                                 </button>
                             </MenuItem>
                         )}
                         {auth.planPermissions['credit-notes.view'] && auth.permissions.includes('credit-notes.create') && (
                             <MenuItem>
-                                <Link href={route('credit-notes.create', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+                                <Link href={route('credit-notes.create', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-cream">
                                     <Icons.ReceiptRefund /> Credit note
                                 </Link>
                             </MenuItem>
                         )}
                         {invoice.customer_email && auth.planPermissions['invoices.email'] && auth.permissions.includes('invoices.email') && (
                             <MenuItem>
-                                <button type="button" onClick={() => handleEmailInvoice(invoice.id)} disabled={emailingId === invoice.id} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                                <button type="button" onClick={() => handleEmailInvoice(invoice.id)} disabled={emailingId === invoice.id} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-cream disabled:opacity-50">
                                     <Icons.PaperAirplane /> {emailingId === invoice.id ? 'Emailing…' : 'Email'}
                                 </button>
                             </MenuItem>
                         )}
                         {auth.permissions.includes('invoices.void') && (
                             <MenuItem>
-                                <button type="button" onClick={() => handleVoid(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50">
+                                <button type="button" onClick={() => handleVoid(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-terracotta hover:bg-terracotta/10">
                                     Void invoice
                                 </button>
                             </MenuItem>

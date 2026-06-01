@@ -28,8 +28,8 @@ export default function ProfitAndLoss({ auth, revenue_accounts = [], expense_acc
             header={
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                     <div>
-                        <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Profit &amp; Loss</h2>
-                        <p className="text-slate-500 text-sm font-medium mt-1">
+                        <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Profit &amp; Loss</h2>
+                        <p className="text-ink-muted text-sm font-medium mt-1">
                             Real-time report of Income vs Expenses from your general ledger.
                         </p>
                     </div>
@@ -40,36 +40,36 @@ export default function ProfitAndLoss({ auth, revenue_accounts = [], expense_acc
 
 
             <div className="space-y-6">
-                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100 flex flex-wrap items-end gap-3 bg-slate-50/50">
+                <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-border-warm flex flex-wrap items-end gap-3 bg-cream/50">
                         <form method="get" action={route('profit-and-loss.index')} className="flex flex-wrap items-end gap-3">
                             <div>
-                                <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">From</label>
+                                <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">From</label>
                                 <input
                                     type="date"
                                     name="date_from"
                                     defaultValue={date_from}
-                                    className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
+                                    className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
                                 />
                             </div>
                             <div>
-                                <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">To</label>
+                                <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">To</label>
                                 <input
                                     type="date"
                                     name="date_to"
                                     defaultValue={date_to}
-                                    className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
+                                    className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
                                 />
                             </div>
                             <button
                                 type="submit"
-                                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta transition-colors"
                             >
                                 Update report
                             </button>
                             <a
                                 href={`${route('profit-and-loss.export.csv')}?${new URLSearchParams({ date_from: date_from || '', date_to: date_to || '' })}`}
-                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream transition-colors"
                             >
                                 <Icons.ArrowDownTray /> Download CSV
                             </a>
@@ -83,13 +83,13 @@ export default function ProfitAndLoss({ auth, revenue_accounts = [], expense_acc
                                 }}
                                 className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
                                     auth.planPermissions?.['reports.export.full']
-                                        ? 'text-slate-600 bg-white border border-slate-200 hover:bg-slate-50'
-                                        : 'text-slate-400 bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100'
+                                        ? 'text-ink bg-surface border border-border-warm hover:bg-cream'
+                                        : 'text-ink-muted bg-cream border border-border-warm cursor-pointer hover:bg-surface-alt'
                                 }`}
                             >
                                 <Icons.DocumentArrowDown /> Download PDF
                                 {!auth.planPermissions?.['reports.export.full'] && (
-                                    <svg className="w-3 h-3 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                                    <svg className="w-3 h-3 text-mustard" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                                 )}
                             </a>
                         </form>
@@ -97,43 +97,43 @@ export default function ProfitAndLoss({ auth, revenue_accounts = [], expense_acc
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-600 text-white rounded-2xl p-6 shadow-lg">
+                    <div className="relative overflow-hidden bg-forest text-white rounded-2xl p-6 shadow-lg">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Total revenue</span>
-                            <span className="p-2 rounded-xl bg-white/10"><Icons.ArrowUp /></span>
+                            <span className="p-2 rounded-xl bg-surface/10"><Icons.ArrowUp /></span>
                         </div>
                         <p className="text-2xl font-bold tabular-nums">RM {formatMoney(total_revenue)}</p>
-                        <p className="text-xs text-emerald-100 mt-1">Income accounts</p>
+                        <p className="text-xs text-forest mt-1">Income accounts</p>
                     </div>
-                    <div className="relative overflow-hidden bg-gradient-to-br from-rose-600 to-red-600 text-white rounded-2xl p-6 shadow-lg">
+                    <div className="relative overflow-hidden bg-terracotta text-white rounded-2xl p-6 shadow-lg">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Total expenses</span>
-                            <span className="p-2 rounded-xl bg-white/10"><Icons.ArrowDown /></span>
+                            <span className="p-2 rounded-xl bg-surface/10"><Icons.ArrowDown /></span>
                         </div>
                         <p className="text-2xl font-bold tabular-nums">RM {formatMoney(total_expenses)}</p>
-                        <p className="text-xs text-rose-100 mt-1">Expense accounts</p>
+                        <p className="text-xs text-terracotta mt-1">Expense accounts</p>
                     </div>
-                    <div className={`rounded-2xl p-6 shadow-lg border-2 ${isProfit ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
+                    <div className={`rounded-2xl p-6 shadow-lg border-2 ${isProfit ? 'bg-forest/10 border-forest/30' : 'bg-terracotta/10 border-terracotta/30'}`}>
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">Net {isProfit ? 'profit' : 'loss'}</span>
-                            <span className={`p-2 rounded-xl ${isProfit ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}><Icons.Scale /></span>
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-ink">Net {isProfit ? 'profit' : 'loss'}</span>
+                            <span className={`p-2 rounded-xl ${isProfit ? 'bg-forest/10 text-forest' : 'bg-terracotta/10 text-terracotta'}`}><Icons.Scale /></span>
                         </div>
-                        <p className={`text-2xl font-bold tabular-nums ${isProfit ? 'text-emerald-700' : 'text-rose-700'}`}>
+                        <p className={`text-2xl font-bold tabular-nums ${isProfit ? 'text-forest' : 'text-terracotta'}`}>
                             {isProfit ? '' : '-'}RM {formatMoney(Math.abs(net_profit))}
                         </p>
-                        <p className="text-xs text-slate-500 mt-1">Revenue − Expenses</p>
+                        <p className="text-xs text-ink-muted mt-1">Revenue − Expenses</p>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/80">
-                            <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Revenue (Income)</h3>
+                    <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-border-warm bg-cream/80">
+                            <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Revenue (Income)</h3>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
                                 <thead>
-                                    <tr className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 bg-slate-50/80">
+                                    <tr className="text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
                                         <th className="px-6 py-4">Account</th>
                                         <th className="px-6 py-4 text-right">Amount</th>
                                     </tr>
@@ -141,42 +141,42 @@ export default function ProfitAndLoss({ auth, revenue_accounts = [], expense_acc
                                 <tbody>
                                     {revenue_accounts.length > 0 ? (
                                         revenue_accounts.map((acc) => (
-                                            <tr key={acc.code} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/80">
+                                            <tr key={acc.code} className="border-b border-border-warm last:border-0 hover:bg-cream/80">
                                                 <td className="px-6 py-4">
-                                                    <span className="font-mono text-slate-600 text-xs">{acc.code}</span>
-                                                    <span className="block font-medium text-slate-800">{acc.name}</span>
+                                                    <span className="font-mono text-ink text-xs">{acc.code}</span>
+                                                    <span className="block font-medium text-ink">{acc.name}</span>
                                                 </td>
-                                                <td className="px-6 py-4 text-right font-mono tabular-nums text-emerald-700 font-semibold">
+                                                <td className="px-6 py-4 text-right font-mono tabular-nums text-forest font-semibold">
                                                     RM {formatMoney(acc.amount)}
                                                 </td>
                                             </tr>
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={2} className="px-6 py-8 text-center text-slate-400 text-sm">
+                                            <td colSpan={2} className="px-6 py-8 text-center text-ink-muted text-sm">
                                                 No revenue in this period.
                                             </td>
                                         </tr>
                                     )}
                                 </tbody>
                                 <tfoot>
-                                    <tr className="border-t-2 border-slate-200 bg-slate-50/80 font-semibold">
+                                    <tr className="border-t-2 border-border-warm bg-cream/80 font-semibold">
                                         <td className="px-6 py-4">Total revenue</td>
-                                        <td className="px-6 py-4 text-right font-mono tabular-nums text-emerald-700">RM {formatMoney(total_revenue)}</td>
+                                        <td className="px-6 py-4 text-right font-mono tabular-nums text-forest">RM {formatMoney(total_revenue)}</td>
                                     </tr>
                                 </tfoot>
                             </table>
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/80">
-                            <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Expenses</h3>
+                    <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-border-warm bg-cream/80">
+                            <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Expenses</h3>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
                                 <thead>
-                                    <tr className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 bg-slate-50/80">
+                                    <tr className="text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
                                         <th className="px-6 py-4">Account</th>
                                         <th className="px-6 py-4 text-right">Amount</th>
                                     </tr>
@@ -184,28 +184,28 @@ export default function ProfitAndLoss({ auth, revenue_accounts = [], expense_acc
                                 <tbody>
                                     {expense_accounts.length > 0 ? (
                                         expense_accounts.map((acc) => (
-                                            <tr key={acc.code} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/80">
+                                            <tr key={acc.code} className="border-b border-border-warm last:border-0 hover:bg-cream/80">
                                                 <td className="px-6 py-4">
-                                                    <span className="font-mono text-slate-600 text-xs">{acc.code}</span>
-                                                    <span className="block font-medium text-slate-800">{acc.name}</span>
+                                                    <span className="font-mono text-ink text-xs">{acc.code}</span>
+                                                    <span className="block font-medium text-ink">{acc.name}</span>
                                                 </td>
-                                                <td className="px-6 py-4 text-right font-mono tabular-nums text-rose-700 font-semibold">
+                                                <td className="px-6 py-4 text-right font-mono tabular-nums text-terracotta font-semibold">
                                                     RM {formatMoney(acc.amount)}
                                                 </td>
                                             </tr>
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={2} className="px-6 py-8 text-center text-slate-400 text-sm">
+                                            <td colSpan={2} className="px-6 py-8 text-center text-ink-muted text-sm">
                                                 No expenses in this period.
                                             </td>
                                         </tr>
                                     )}
                                 </tbody>
                                 <tfoot>
-                                    <tr className="border-t-2 border-slate-200 bg-slate-50/80 font-semibold">
+                                    <tr className="border-t-2 border-border-warm bg-cream/80 font-semibold">
                                         <td className="px-6 py-4">Total expenses</td>
-                                        <td className="px-6 py-4 text-right font-mono tabular-nums text-rose-700">RM {formatMoney(total_expenses)}</td>
+                                        <td className="px-6 py-4 text-right font-mono tabular-nums text-terracotta">RM {formatMoney(total_expenses)}</td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -213,10 +213,10 @@ export default function ProfitAndLoss({ auth, revenue_accounts = [], expense_acc
                     </div>
                 </div>
 
-                <div className="bg-white rounded-2xl border-2 border-slate-200/80 shadow-sm overflow-hidden">
+                <div className="bg-surface rounded-2xl border-2 border-border-warm/80 shadow-sm overflow-hidden">
                     <div className="px-6 py-5 flex items-center justify-between">
-                        <span className="text-lg font-bold text-slate-800">Net {isProfit ? 'profit' : 'loss'}</span>
-                        <span className={`text-2xl font-bold tabular-nums font-mono ${isProfit ? 'text-emerald-700' : 'text-rose-700'}`}>
+                        <span className="text-lg font-display font-medium text-ink">Net {isProfit ? 'profit' : 'loss'}</span>
+                        <span className={`text-2xl font-bold tabular-nums font-mono ${isProfit ? 'text-forest' : 'text-terracotta'}`}>
                             {isProfit ? '' : '−'}RM {formatMoney(Math.abs(net_profit))}
                         </span>
                     </div>

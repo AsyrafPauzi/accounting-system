@@ -44,12 +44,12 @@ export default function Index({ auth, summary = {}, chartData = [], filters = {}
             header={
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                     <div>
-                        <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Cashflow Summary</h2>
-                        <p className="text-slate-500 text-sm font-medium mt-1">Total Sales vs Total Expenses — see how money moves</p>
+                        <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Cashflow Summary</h2>
+                        <p className="text-ink-muted text-sm font-medium mt-1">Total Sales vs Total Expenses — see how money moves</p>
                     </div>
                     <Link
                         href={route('invoices.index')}
-                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 shadow-sm"
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:bg-cream shadow-sm"
                     >
                         View invoices
                     </Link>
@@ -60,29 +60,29 @@ export default function Index({ auth, summary = {}, chartData = [], filters = {}
 
             <div className="space-y-6">
                 {/* Date filter */}
-                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4">
+                <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm p-4">
                     <form onSubmit={handleFilterSubmit} className="flex flex-wrap items-end gap-4">
                         <div>
-                            <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">From</label>
+                            <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5">From</label>
                             <input
                                 type="date"
                                 name="date_from"
                                 defaultValue={date_from}
-                                className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
+                                className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
                             />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">To</label>
+                            <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5">To</label>
                             <input
                                 type="date"
                                 name="date_to"
                                 defaultValue={date_to}
-                                className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
+                                className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
                             />
                         </div>
                         <button
                             type="submit"
-                            className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                            className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta transition-colors"
                         >
                             Update period
                         </button>
@@ -91,39 +91,39 @@ export default function Index({ auth, summary = {}, chartData = [], filters = {}
 
                 {/* KPI cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl p-6 shadow-lg">
+                    <div className="relative overflow-hidden bg-terracotta text-white rounded-2xl p-6 shadow-lg">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Total Sales</span>
-                            <span className="p-2 rounded-xl bg-white/10"><Icons.ArrowTrendingUp /></span>
+                            <span className="p-2 rounded-xl bg-surface/10"><Icons.ArrowTrendingUp /></span>
                         </div>
                         <p className="text-2xl font-bold font-mono tabular-nums">RM {formatMoney(total_sales)}</p>
-                        <p className="text-xs text-blue-100 mt-1">Posted invoices in period</p>
+                        <p className="text-xs text-terracotta mt-1">Posted invoices in period</p>
                     </div>
-                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+                    <div className="bg-surface rounded-2xl p-6 border border-border-warm shadow-sm">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total Expenses</span>
-                            <span className="p-2 rounded-xl bg-rose-50 text-rose-600"><Icons.ArrowTrendingDown /></span>
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Total Expenses</span>
+                            <span className="p-2 rounded-xl bg-terracotta/10 text-terracotta"><Icons.ArrowTrendingDown /></span>
                         </div>
-                        <p className="text-2xl font-bold text-rose-600 font-mono tabular-nums">RM {formatMoney(total_expenses)}</p>
-                        <p className="text-xs text-slate-500 mt-1">Posted bills in period</p>
+                        <p className="text-2xl font-bold text-terracotta font-mono tabular-nums">RM {formatMoney(total_expenses)}</p>
+                        <p className="text-xs text-ink-muted mt-1">Posted bills in period</p>
                     </div>
-                    <div className={`rounded-2xl p-6 border shadow-sm ${net_cashflow >= 0 ? 'bg-white border-slate-100' : 'bg-rose-50/50 border-rose-100'}`}>
+                    <div className={`rounded-2xl p-6 border shadow-sm ${net_cashflow >= 0 ? 'bg-surface border-border-warm' : 'bg-terracotta/10/50 border-terracotta/30'}`}>
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Net Cashflow</span>
-                            <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.Banknotes /></span>
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Net Cashflow</span>
+                            <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Banknotes /></span>
                         </div>
-                        <p className={`text-2xl font-bold font-mono tabular-nums ${net_cashflow >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        <p className={`text-2xl font-bold font-mono tabular-nums ${net_cashflow >= 0 ? 'text-forest' : 'text-terracotta'}`}>
                             RM {formatMoney(net_cashflow)}
                         </p>
-                        <p className="text-xs text-slate-500 mt-1">Sales minus expenses</p>
+                        <p className="text-xs text-ink-muted mt-1">Sales minus expenses</p>
                     </div>
                 </div>
 
                 {/* Chart */}
-                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden p-6">
+                <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden p-6">
                     <div className="flex items-center gap-2 mb-4">
                         <Icons.ChartBar />
-                        <h3 className="text-sm font-bold text-slate-800">Sales vs Expenses by month</h3>
+                        <h3 className="text-sm font-display font-medium text-ink">Sales vs Expenses by month</h3>
                     </div>
                     {chartData.length > 0 ? (
                         <div className="h-[380px] w-full">
@@ -155,7 +155,7 @@ export default function Index({ auth, summary = {}, chartData = [], filters = {}
                             </ResponsiveContainer>
                         </div>
                     ) : (
-                        <div className="h-[280px] flex items-center justify-center text-slate-400 text-sm font-medium">
+                        <div className="h-[280px] flex items-center justify-center text-ink-muted text-sm font-medium">
                             No data in this period. Post invoices and bills to see sales and expenses.
                         </div>
                     )}

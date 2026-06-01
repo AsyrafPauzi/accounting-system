@@ -10,8 +10,8 @@ const Icons = {
     Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
 };
 
-const inputClass = 'w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors';
-const labelClass = 'block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5';
+const inputClass = 'w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta focus:border-terracotta transition-colors';
+const labelClass = 'block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5';
 
 export default function Create({ auth, suppliers = [], expenseAccounts = [], nextBillNumber = 'BILL-1', preselectedSupplierId = null }) {
     const today = new Date().toISOString().split('T')[0];
@@ -128,12 +128,12 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
             header={
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                     <div className="flex items-center gap-3">
-                        <Link href={route('bills.index')} className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50">
+                        <Link href={route('bills.index')} className="p-2 rounded-xl border border-border-warm text-ink hover:bg-cream">
                             <Icons.ChevronLeft />
                         </Link>
                         <div>
-                            <h2 className="text-2xl font-bold text-slate-900">Create bill</h2>
-                            <p className="text-slate-500 text-sm">Add a new bill or expense</p>
+                            <h2 className="text-2xl font-display font-medium text-ink">Create bill</h2>
+                            <p className="text-ink-muted text-sm">Add a new bill or expense</p>
                         </div>
                     </div>
                 </div>
@@ -145,16 +145,16 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
                 <form onSubmit={submit} className="space-y-8">
                 <ReceiptUpload onOcrComplete={handleOcrComplete} />
 
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                        <h3 className="text-sm font-bold text-slate-800">Bill details</h3>
+                <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-border-warm bg-cream/50">
+                        <h3 className="text-sm font-display font-medium text-ink">Bill details</h3>
                     </div>
                     <div className="p-6 space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className={labelClass}>Bill number</label>
                                 <input type="text" value={data.bill_number} onChange={(e) => setData('bill_number', e.target.value)} className={inputClass} required />
-                                {errors.bill_number && <p className="text-rose-500 text-xs mt-1">{errors.bill_number}</p>}
+                                {errors.bill_number && <p className="text-terracotta text-xs mt-1">{errors.bill_number}</p>}
                             </div>
                             <div>
                                 <label className={labelClass}>Supplier (optional)</label>
@@ -170,7 +170,7 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
                             <div>
                                 <label className={labelClass}>Bill date</label>
                                 <input type="date" value={data.bill_date} onChange={(e) => setData('bill_date', e.target.value)} className={inputClass} required />
-                                {errors.bill_date && <p className="text-rose-500 text-xs mt-1">{errors.bill_date}</p>}
+                                {errors.bill_date && <p className="text-terracotta text-xs mt-1">{errors.bill_date}</p>}
                             </div>
                             <div>
                                 <label className={labelClass}>Due date</label>
@@ -194,17 +194,17 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
                     </div>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                        <h3 className="text-sm font-bold text-slate-800">Line items</h3>
-                        <button type="button" onClick={addItem} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100">
+                <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-border-warm bg-cream/50 flex items-center justify-between">
+                        <h3 className="text-sm font-display font-medium text-ink">Line items</h3>
+                        <button type="button" onClick={addItem} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt">
                             <Icons.Plus /> Add line
                         </button>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
-                                <tr className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 bg-slate-50/80">
+                                <tr className="text-left text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
                                     <th className="px-6 py-3">Account</th>
                                     <th className="px-6 py-3">Description</th>
                                     <th className="px-6 py-3 w-32">Qty</th>
@@ -215,7 +215,7 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
                             </thead>
                             <tbody>
                                 {data.items.map((item, index) => (
-                                    <tr key={index} className="border-b border-slate-50 last:border-0">
+                                    <tr key={index} className="border-b border-border-warm last:border-0">
                                         <td className="px-6 py-3">
                                             <select
                                                 value={item.account_code}
@@ -242,7 +242,7 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
                                             <input type="number" step="0.01" min="0" value={item.amount} onChange={(e) => updateItem(index, 'amount', parseFloat(e.target.value) || 0)} className={inputClass + ' text-right'} />
                                         </td>
                                         <td className="px-6 py-3">
-                                            <button type="button" onClick={() => removeItem(index)} className="p-2 text-slate-400 hover:text-rose-600 rounded-lg" title="Remove line">
+                                            <button type="button" onClick={() => removeItem(index)} className="p-2 text-ink-muted hover:text-terracotta rounded-lg" title="Remove line">
                                                 <Icons.Trash />
                                             </button>
                                         </td>
@@ -251,19 +251,19 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
                             </tbody>
                         </table>
                     </div>
-                    {errors.items && <p className="text-rose-500 text-xs px-6 py-2">{errors.items}</p>}
-                    <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-6">
-                        <span className="text-sm font-medium text-slate-600">Subtotal: RM {subtotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
-                        {tax > 0 && <span className="text-sm font-medium text-slate-600">Tax: RM {tax.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>}
-                        <span className="text-lg font-bold text-slate-800">Total: RM {total.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                    {errors.items && <p className="text-terracotta text-xs px-6 py-2">{errors.items}</p>}
+                    <div className="px-6 py-4 border-t border-border-warm bg-cream/50 flex justify-end gap-6">
+                        <span className="text-sm font-medium text-ink">Subtotal: RM {subtotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                        {tax > 0 && <span className="text-sm font-medium text-ink">Tax: RM {tax.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>}
+                        <span className="text-lg font-display font-medium text-ink">Total: RM {total.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
                     </div>
                 </div>
 
                 <div className="flex gap-3">
-                    <Link href={route('bills.index')} className="px-5 py-2.5 rounded-xl font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50">
+                    <Link href={route('bills.index')} className="px-5 py-2.5 rounded-xl font-semibold text-ink border border-border-warm hover:bg-cream">
                         Cancel
                     </Link>
-                    <button type="submit" disabled={processing} className="px-5 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-500/25">
+                    <button type="submit" disabled={processing} className="px-5 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50 shadow-lg ">
                         {processing ? 'Saving...' : 'Save as draft'}
                     </button>
                 </div>

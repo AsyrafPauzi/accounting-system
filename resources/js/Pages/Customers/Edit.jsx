@@ -23,9 +23,9 @@ const Icons = {
     Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
 };
 
-const inputClass = "w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors";
-const inputReadonlyClass = "w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-400 bg-slate-50";
-const labelClass = "block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5";
+const inputClass = "w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink placeholder-ink-muted/60 focus:ring-2 focus:ring-terracotta focus:border-terracotta transition-colors";
+const inputReadonlyClass = "w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink-muted bg-cream";
+const labelClass = "block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5";
 
 export default function Edit({ auth, customer, users = [], can_delete_customer = false, delete_blocked_reason = null }) {
     const indState = deriveIndustryState(customer.industry || '');
@@ -156,24 +156,24 @@ export default function Edit({ auth, customer, users = [], can_delete_customer =
                     <div className="flex items-start sm:items-center gap-4">
                         <Link 
                             href={route('customers.show', customer.id)} 
-                            className="p-2.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all duration-200"
+                            className="p-2.5 rounded-xl text-ink-muted hover:text-ink hover:bg-surface-alt transition-all duration-200"
                         >
                             <Icons.ChevronLeft />
                         </Link>
                         <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-blue-500/25">
+                            <div className="w-14 h-14 rounded-2xl bg-terracotta flex items-center justify-center text-white text-xl font-bold shadow-lg ">
                                 {data.name?.charAt(0) || customer.name?.charAt(0) || '?'}
                             </div>
                             <div>
                                 <div className="flex items-center gap-2 flex-wrap">
-                                    <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Edit Profile</h2>
+                                    <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Edit Profile</h2>
                                     <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider ${
-                                        data.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
+                                        data.is_active ? 'bg-forest/10 text-forest' : 'bg-surface-alt text-ink'
                                     }`}>
                                         {data.is_active ? 'Active' : 'Suspended'}
                                     </span>
                                 </div>
-                                <p className="text-slate-500 text-sm font-medium mt-1">
+                                <p className="text-ink-muted text-sm font-medium mt-1">
                                     {customer.code} ·{' '}
                                     {data.industry_key === 'Others'
                                         ? (data.industry_other?.trim() ? `Other: ${data.industry_other}` : 'Other')
@@ -185,7 +185,7 @@ export default function Edit({ auth, customer, users = [], can_delete_customer =
                     <div className="flex gap-2">
                         <Link 
                             href={route('customers.show', customer.id)} 
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-slate-600 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all duration-200"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:border-border-warm hover:bg-cream transition-all duration-200"
                         >
                             Cancel
                         </Link>
@@ -193,7 +193,7 @@ export default function Edit({ auth, customer, users = [], can_delete_customer =
                             type="submit" 
                             form="customer-edit-form"
                             disabled={processing}
-                            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-500/25 transition-all duration-200"
+                            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50 shadow-lg  transition-all duration-200"
                         >
                             {processing ? 'Saving...' : 'Save Changes'}
                         </button>
@@ -207,7 +207,7 @@ export default function Edit({ auth, customer, users = [], can_delete_customer =
             <form id="customer-edit-form" onSubmit={submit} className="space-y-6">
                 {/* Validation error summary */}
                 {Object.keys(errors).length > 0 && (
-                    <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 text-rose-800 text-sm">
+                    <div className="bg-terracotta/10 border border-terracotta/30 rounded-xl p-4 text-terracotta text-sm">
                         <p className="font-semibold mb-2">Please fix the following errors:</p>
                         <ul className="list-disc list-inside space-y-0.5">
                             {Object.entries(errors).map(([field, message]) => (
@@ -218,16 +218,16 @@ export default function Edit({ auth, customer, users = [], can_delete_customer =
                 )}
 
                 {/* Section 1: Identity & Compliance */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                     <div className="flex items-center gap-2 mb-6">
-                        <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.Building /></span>
-                        <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Identity & Compliance</h3>
+                        <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Building /></span>
+                        <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Identity & Compliance</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
                         <div className="md:col-span-2">
                             <label className={labelClass}>Legal Company Name</label>
                             <input type="text" value={data.name} onChange={e => setData('name', e.target.value)} className={inputClass} required />
-                            {errors.name && <p className="text-rose-500 text-xs font-medium mt-1">{errors.name}</p>}
+                            {errors.name && <p className="text-terracotta text-xs font-medium mt-1">{errors.name}</p>}
                         </div>
                         <div>
                             <label className={labelClass}>Customer Code</label>
@@ -269,22 +269,22 @@ export default function Edit({ auth, customer, users = [], can_delete_customer =
                         <div>
                             <label className={labelClass}>LHDN TIN</label>
                             <input type="text" value={data.tin} onChange={e => setData('tin', e.target.value)} className={inputClass} />
-                            {errors.tin && <p className="text-rose-500 text-xs font-medium mt-1">{errors.tin}</p>}
+                            {errors.tin && <p className="text-terracotta text-xs font-medium mt-1">{errors.tin}</p>}
                         </div>
                         <div>
                             <label className={labelClass}>SSM BRN</label>
                             <input type="text" value={data.brn} onChange={e => setData('brn', e.target.value)} className={inputClass} />
-                            {errors.brn && <p className="text-rose-500 text-xs font-medium mt-1">{errors.brn}</p>}
+                            {errors.brn && <p className="text-terracotta text-xs font-medium mt-1">{errors.brn}</p>}
                         </div>
                     </div>
                 </div>
 
                 {/* Section 2: Financial & Contact */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                         <div className="flex items-center gap-2 mb-6">
-                            <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600"><Icons.CreditCard /></span>
-                            <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Financial</h3>
+                            <span className="p-2 rounded-xl bg-forest/10 text-forest"><Icons.CreditCard /></span>
+                            <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Financial</h3>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -358,10 +358,10 @@ export default function Edit({ auth, customer, users = [], can_delete_customer =
                         </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                         <div className="flex items-center gap-2 mb-6">
-                            <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.Phone /></span>
-                            <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Primary Contact</h3>
+                            <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Phone /></span>
+                            <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Primary Contact</h3>
                         </div>
                         <div className="space-y-4">
                             <div>
@@ -372,7 +372,7 @@ export default function Edit({ auth, customer, users = [], can_delete_customer =
                                 <div>
                                     <label className={labelClass}>Email</label>
                                     <input type="email" placeholder="billing@company.com" value={data.email} onChange={e => setData('email', e.target.value)} className={inputClass} required />
-                                    {errors.email && <p className="text-rose-500 text-xs font-medium mt-1">{errors.email}</p>}
+                                    {errors.email && <p className="text-terracotta text-xs font-medium mt-1">{errors.email}</p>}
                                 </div>
                                 <div>
                                     <label className={labelClass}>Phone</label>
@@ -384,16 +384,16 @@ export default function Edit({ auth, customer, users = [], can_delete_customer =
                 </div>
 
                 {/* Section 2a: Additional contacts */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Additional contacts</h3>
-                        <button type="button" onClick={addContact} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100">
+                        <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Additional contacts</h3>
+                        <button type="button" onClick={addContact} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt">
                             + Add contact
                         </button>
                     </div>
                     <div className="space-y-3">
                         {(data.contacts || []).map((contact, index) => (
-                            <div key={index} className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-3 p-3 border border-slate-100 rounded-xl bg-slate-50/50">
+                            <div key={index} className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-3 p-3 border border-border-warm rounded-xl bg-cream/50">
                                 <div className="md:col-span-2">
                                     <label className={labelClass}>Name</label>
                                     <input type="text" value={contact.name} onChange={e => updateContact(index, 'name', e.target.value)} className={inputClass} placeholder="Name" />
@@ -416,26 +416,26 @@ export default function Edit({ auth, customer, users = [], can_delete_customer =
                                 </div>
                                 <div className="md:col-span-2 flex items-center gap-2 min-h-[42px]">
                                     <label className="flex items-center gap-2 cursor-pointer">
-                                        <input type="checkbox" checked={!!contact.is_primary} onChange={e => updateContact(index, 'is_primary', e.target.checked)} className="rounded border-slate-300" />
-                                        <span className="text-xs font-medium text-slate-600">Primary</span>
+                                        <input type="checkbox" checked={!!contact.is_primary} onChange={e => updateContact(index, 'is_primary', e.target.checked)} className="rounded border-border-warm" />
+                                        <span className="text-xs font-medium text-ink">Primary</span>
                                     </label>
                                 </div>
                                 <div className="md:col-span-2 flex items-center min-h-[42px]">
-                                    <button type="button" onClick={() => removeContact(index)} className="text-slate-400 hover:text-rose-600 text-xs font-medium">Remove</button>
+                                    <button type="button" onClick={() => removeContact(index)} className="text-ink-muted hover:text-terracotta text-xs font-medium">Remove</button>
                                 </div>
                             </div>
                         ))}
                         {(data.contacts || []).length === 0 && (
-                            <p className="text-slate-400 text-sm">No additional contacts. Use “Add contact” for billing, finance, or operations.</p>
+                            <p className="text-ink-muted text-sm">No additional contacts. Use “Add contact” for billing, finance, or operations.</p>
                         )}
                     </div>
                 </div>
 
                 {/* Section 2b: Invoice delivery */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                     <div className="flex items-center gap-2 mb-4">
-                        <span className="p-2 rounded-xl bg-indigo-50 text-indigo-600"><Icons.DocumentText /></span>
-                        <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Invoice delivery</h3>
+                        <span className="p-2 rounded-xl bg-surface-alt text-terracotta"><Icons.DocumentText /></span>
+                        <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Invoice delivery</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -457,10 +457,10 @@ export default function Edit({ auth, customer, users = [], can_delete_customer =
 
                 {/* Section 3: Addresses */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                         <div className="flex items-center gap-2 mb-6">
-                            <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.Location /></span>
-                            <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Billing Address</h3>
+                            <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Location /></span>
+                            <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Billing Address</h3>
                         </div>
                         <div className="space-y-4">
                             <div>
@@ -491,16 +491,16 @@ export default function Edit({ auth, customer, users = [], can_delete_customer =
                         </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-2">
-                                <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.Truck /></span>
-                                <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Shipping Address</h3>
+                                <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Truck /></span>
+                                <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Shipping Address</h3>
                             </div>
                             <button 
                                 type="button" 
                                 onClick={copyBillingToShipping} 
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt transition-colors"
                             >
                                 <Icons.ArrowPath /> Same as billing
                             </button>
@@ -536,27 +536,27 @@ export default function Edit({ auth, customer, users = [], can_delete_customer =
                 </div>
 
                 {/* Section 4: Internal Notes */}
-                <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl relative overflow-hidden shadow-lg">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+                <div className="bg-cream p-6 rounded-2xl relative overflow-hidden shadow-lg">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-terracotta/10 rounded-full -translate-y-1/2 translate-x-1/2" />
                     <div className="relative">
                         <div className="flex items-center gap-2 mb-4">
-                            <span className="p-2 rounded-xl bg-blue-500/20 text-blue-400"><Icons.DocumentText /></span>
-                            <h3 className="font-semibold text-blue-400 text-sm uppercase tracking-wider">Internal Notes</h3>
+                            <span className="p-2 rounded-xl bg-terracotta/20 text-terracotta"><Icons.DocumentText /></span>
+                            <h3 className="font-semibold text-terracotta text-sm uppercase tracking-wider">Internal Notes</h3>
                         </div>
                         <textarea 
                             placeholder="Private notes about this customer..." 
                             value={data.internal_notes} 
                             onChange={e => setData('internal_notes', e.target.value)} 
-                            className="w-full bg-slate-800/80 border border-slate-700 rounded-xl p-4 text-slate-200 text-sm placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent h-28 resize-none"
+                            className="w-full bg-ink/80 border border-ink rounded-xl p-4 text-ink-muted text-sm placeholder-ink-muted/60 focus:ring-2 focus:ring-terracotta focus:border-transparent h-28 resize-none"
                         />
                     </div>
                 </div>
             </form>
             {auth.permissions.includes('customers.delete') && (
-                <div className="mt-8 p-6 rounded-2xl border border-rose-100 bg-rose-50/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="mt-8 p-6 rounded-2xl border border-terracotta/30 bg-terracotta/10/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                        <h3 className="font-semibold text-rose-900 text-sm">Delete customer</h3>
-                        <p className="text-xs text-rose-700/90 mt-1 max-w-xl">
+                        <h3 className="font-semibold text-terracotta text-sm">Delete customer</h3>
+                        <p className="text-xs text-terracotta/90 mt-1 max-w-xl">
                             {can_delete_customer
                                 ? 'Permanently removes this record from your directory. Invoices and credit notes must be cleared first.'
                                 : (delete_blocked_reason || 'This customer cannot be deleted yet.')}
@@ -568,8 +568,8 @@ export default function Edit({ auth, customer, users = [], can_delete_customer =
                         onClick={handleDelete}
                         className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold shrink-0 ${
                             can_delete_customer
-                                ? 'text-white bg-rose-600 hover:bg-rose-700 shadow-sm'
-                                : 'text-rose-300 bg-rose-100 cursor-not-allowed'
+                                ? 'text-white bg-terracotta hover:bg-terracotta shadow-sm'
+                                : 'text-terracotta bg-terracotta/10 cursor-not-allowed'
                         }`}
                     >
                         <Icons.Trash /> Delete customer

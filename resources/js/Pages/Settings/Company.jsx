@@ -1,12 +1,13 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 
 const inputClass =
-    'mt-1.5 block w-full rounded-xl border-slate-200 text-sm font-medium text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:ring-blue-500';
+    'mt-1.5 block w-full rounded-xl border-border-warm bg-surface text-sm font-medium text-ink placeholder-ink-muted/60 focus:border-terracotta focus:ring-terracotta disabled:bg-surface-alt disabled:text-ink-muted';
 const labelClass =
-    'block text-[10px] font-semibold text-slate-400 uppercase tracking-wider';
+    'block text-eyebrow font-semibold text-ink-muted uppercase';
 
 export default function Company({ auth, company }) {
+    const { available_locales = [] } = usePage().props;
     const planPermissions = auth?.planPermissions ?? {};
     const canViewTeam = auth?.teamPermissions?.view && planPermissions['users.view'];
     const { data, setData, patch, processing, errors } = useForm({
@@ -24,6 +25,7 @@ export default function Company({ auth, company }) {
         website: company.website || '',
         base_currency: company.base_currency || 'MYR',
         financial_year_start_month: company.financial_year_start_month || 1,
+        language: company.language || 'en',
     });
 
     const isAdmin = auth.user.role_name === 'admin' || auth.user.role_name === 'super-admin';
@@ -39,18 +41,19 @@ export default function Company({ auth, company }) {
             user={auth.user}
             header={
                 <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-                    <div>
-                        <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">
-                            Company settings
-                        </h2>
-                        <p className="text-slate-500 text-sm font-medium mt-1">
-                            Maintain legal, contact and accounting information for this tenant.
+                    <div className="flex flex-col gap-1">
+                        <p className="text-eyebrow font-semibold uppercase text-terracotta">Settings</p>
+                        <h1 className="font-display text-2xl lg:text-3xl font-medium text-ink tracking-tight">
+                            Company
+                        </h1>
+                        <p className="text-ink-muted text-sm">
+                            Legal, contact and accounting details that flow through your books.
                         </p>
                     </div>
                     {canViewTeam && (
                         <Link
                             href={route('settings.team.index')}
-                            className="text-sm font-semibold text-blue-600 hover:text-blue-700 whitespace-nowrap"
+                            className="text-sm font-semibold text-terracotta hover:text-terracotta whitespace-nowrap"
                         >
                             Team & Roles →
                         </Link>
@@ -61,15 +64,15 @@ export default function Company({ auth, company }) {
             <Head title="Company Settings" />
 
             {!isAdmin && (
-                <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 text-amber-700">
+                <div className="mb-6 bg-mustard/15 border border-mustard/40 rounded-2xl p-4 flex items-center gap-3 text-mustard">
                     <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                     <p className="text-sm font-medium">Read-only: Only administrators can modify company settings.</p>
                 </div>
             )}
 
             <form onSubmit={submit} className="max-w-4xl space-y-6">
-                <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-                    <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wider">
+                <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-border-warm/80 shadow-sm space-y-4">
+                    <h3 className="text-sm font-semibold text-ink uppercase tracking-wider">
                         Identity
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -84,7 +87,7 @@ export default function Company({ auth, company }) {
                                 disabled={!isAdmin}
                             />
                             {errors.legal_name && (
-                                <p className="text-rose-500 text-xs mt-1">{errors.legal_name}</p>
+                                <p className="text-terracotta text-xs mt-1">{errors.legal_name}</p>
                             )}
                         </div>
                         <div>
@@ -97,7 +100,7 @@ export default function Company({ auth, company }) {
                                 disabled={!isAdmin}
                             />
                             {errors.display_name && (
-                                <p className="text-rose-500 text-xs mt-1">{errors.display_name}</p>
+                                <p className="text-terracotta text-xs mt-1">{errors.display_name}</p>
                             )}
                         </div>
                         <div>
@@ -110,7 +113,7 @@ export default function Company({ auth, company }) {
                                 disabled={!isAdmin}
                             />
                             {errors.tin && (
-                                <p className="text-rose-500 text-xs mt-1">{errors.tin}</p>
+                                <p className="text-terracotta text-xs mt-1">{errors.tin}</p>
                             )}
                         </div>
                         <div>
@@ -123,14 +126,14 @@ export default function Company({ auth, company }) {
                                 disabled={!isAdmin}
                             />
                             {errors.brn && (
-                                <p className="text-rose-500 text-xs mt-1">{errors.brn}</p>
+                                <p className="text-terracotta text-xs mt-1">{errors.brn}</p>
                             )}
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-                    <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wider">
+                <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-border-warm/80 shadow-sm space-y-4">
+                    <h3 className="text-sm font-semibold text-ink uppercase tracking-wider">
                         Address & contact
                     </h3>
                     <div className="space-y-4">
@@ -143,7 +146,7 @@ export default function Company({ auth, company }) {
                                 disabled={!isAdmin}
                             />
                             {errors.street && (
-                                <p className="text-rose-500 text-xs mt-1">{errors.street}</p>
+                                <p className="text-terracotta text-xs mt-1">{errors.street}</p>
                             )}
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -209,7 +212,7 @@ export default function Company({ auth, company }) {
                                     disabled={!isAdmin}
                                 />
                                 {errors.email && (
-                                    <p className="text-rose-500 text-xs mt-1">{errors.email}</p>
+                                    <p className="text-terracotta text-xs mt-1">{errors.email}</p>
                                 )}
                             </div>
                             <div>
@@ -226,8 +229,8 @@ export default function Company({ auth, company }) {
                     </div>
                 </div>
 
-                <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-                    <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wider">
+                <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-border-warm/80 shadow-sm space-y-4">
+                    <h3 className="text-sm font-semibold text-ink uppercase tracking-wider">
                         Accounting
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -241,7 +244,7 @@ export default function Company({ auth, company }) {
                                 disabled={!isAdmin}
                             />
                             {errors.base_currency && (
-                                <p className="text-rose-500 text-xs mt-1">{errors.base_currency}</p>
+                                <p className="text-terracotta text-xs mt-1">{errors.base_currency}</p>
                             )}
                         </div>
                         <div>
@@ -261,11 +264,34 @@ export default function Company({ auth, company }) {
                                 ))}
                             </select>
                             {errors.financial_year_start_month && (
-                                <p className="text-rose-500 text-xs mt-1">
+                                <p className="text-terracotta text-xs mt-1">
                                     {errors.financial_year_start_month}
                                 </p>
                             )}
                         </div>
+                    </div>
+                </div>
+
+                <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-border-warm space-y-4">
+                    <h3 className="text-eyebrow font-semibold text-ink uppercase">Language</h3>
+                    <p className="text-sm text-ink-muted">
+                        Used across the app interface. Emails, invoices and PDFs stay in English so external recipients see consistent wording.
+                    </p>
+                    <div className="max-w-sm">
+                        <label className={labelClass}>Display language</label>
+                        <select
+                            className={inputClass}
+                            value={data.language}
+                            onChange={(e) => setData('language', e.target.value)}
+                            disabled={!isAdmin}
+                        >
+                            {available_locales.map((loc) => (
+                                <option key={loc.code} value={loc.code}>{loc.label}</option>
+                            ))}
+                        </select>
+                        {errors.language && (
+                            <p className="text-terracotta text-xs mt-1">{errors.language}</p>
+                        )}
                     </div>
                 </div>
 
@@ -274,9 +300,9 @@ export default function Company({ auth, company }) {
                         <button
                             type="submit"
                             disabled={processing}
-                            className="inline-flex items-center px-6 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-500/25 transition-all duration-200 active:scale-95"
+                            className="inline-flex items-center px-6 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta-dark dark:hover:bg-terracotta-light disabled:opacity-50 transition-colors"
                         >
-                            {processing ? 'Saving...' : 'Save company settings'}
+                            {processing ? 'Saving…' : 'Save company settings'}
                         </button>
                     </div>
                 )}

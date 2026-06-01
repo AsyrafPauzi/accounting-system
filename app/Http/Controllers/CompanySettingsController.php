@@ -31,6 +31,7 @@ class CompanySettingsController extends Controller
             'website' => $tenant->website ?? '',
             'base_currency' => $tenant->base_currency ?? 'MYR',
             'financial_year_start_month' => $tenant->financial_year_start_month ?? 1,
+            'language' => $tenant->language ?? 'en',
         ];
 
         return Inertia::render('Settings/Company', [
@@ -63,10 +64,15 @@ class CompanySettingsController extends Controller
             'website' => ['nullable', 'string', 'max:255'],
             'base_currency' => ['required', 'string', 'max:10'],
             'financial_year_start_month' => ['required', 'integer', 'min:1', 'max:12'],
+            'language' => ['nullable', 'string', 'in:en,ms'],
         ]);
 
         $tenant->fill($validated);
         $tenant->save();
+
+        // Bust the cached translations so the new locale is reflected immediately.
+        \Illuminate\Support\Facades\Cache::forget('translations.en');
+        \Illuminate\Support\Facades\Cache::forget('translations.ms');
 
         return redirect()->route('settings.company')->with('success', 'Company settings updated.');
     }

@@ -26,14 +26,14 @@ export default function Show({ auth, entry = {}, items = [], accountsMap = {} })
             header={
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                        <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Journal entry</h2>
-                        <p className="text-slate-500 text-sm font-medium mt-1">
+                        <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Journal entry</h2>
+                        <p className="text-ink-muted text-sm font-medium mt-1">
                             {entry.date} — {entry.description}
                         </p>
                     </div>
                     <Link
                         href={route('general-ledger.index')}
-                        className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
+                        className="px-5 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream transition-colors"
                     >
                         Back to General Ledger
                     </Link>
@@ -43,20 +43,20 @@ export default function Show({ auth, entry = {}, items = [], accountsMap = {} })
             <Head title={`Ledger entry ${entry.date}`} />
 
             <div className="space-y-6">
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-                    <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wider mb-4">Summary</h3>
+                <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
+                    <h3 className="text-sm font-semibold text-ink uppercase tracking-wider mb-4">Summary</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div>
-                            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Date</p>
-                            <p className="font-mono text-slate-800">{entry.date}</p>
+                            <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Date</p>
+                            <p className="font-mono text-ink">{entry.date}</p>
                         </div>
                         <div>
-                            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Reference</p>
-                            <p className="text-slate-800">{entry.reference_type}</p>
+                            <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Reference</p>
+                            <p className="text-ink">{entry.reference_type}</p>
                         </div>
                         <div>
-                            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Balanced</p>
-                            <p className={entry.balanced ? 'text-emerald-600 font-semibold' : 'text-slate-600'}>
+                            <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Balanced</p>
+                            <p className={entry.balanced ? 'text-forest font-semibold' : 'text-ink'}>
                                 {entry.balanced ? (
                                     <span className="inline-flex items-center gap-1"><Icons.Check /> Yes</span>
                                 ) : (
@@ -65,26 +65,26 @@ export default function Show({ auth, entry = {}, items = [], accountsMap = {} })
                             </p>
                         </div>
                         <div>
-                            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Source document</p>
+                            <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Source document</p>
                             {entry.source_route ? (
-                                <a href={entry.source_route} className="text-blue-600 hover:text-blue-700 font-semibold text-sm">
+                                <a href={entry.source_route} className="text-terracotta hover:text-terracotta font-semibold text-sm">
                                     {getSourceLabel()}
                                 </a>
                             ) : (
-                                <span className="text-slate-400">—</span>
+                                <span className="text-ink-muted">—</span>
                             )}
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/80">
-                        <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Line items</h3>
+                <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-border-warm bg-cream/80">
+                        <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Line items</h3>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead>
-                                <tr className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 bg-slate-50/80">
+                                <tr className="text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
                                     <th className="px-6 py-4">Account code</th>
                                     <th className="px-6 py-4">Account name</th>
                                     <th className="px-6 py-4 text-right">Debit</th>
@@ -93,23 +93,23 @@ export default function Show({ auth, entry = {}, items = [], accountsMap = {} })
                             </thead>
                             <tbody>
                                 {items.map((line) => (
-                                    <tr key={line.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/80">
-                                        <td className="px-6 py-4 font-mono font-semibold text-slate-800">{line.account_code}</td>
-                                        <td className="px-6 py-4 text-slate-600">{accountsMap[line.account_code] || '—'}</td>
-                                        <td className="px-6 py-4 text-right font-mono tabular-nums text-slate-800">
+                                    <tr key={line.id} className="border-b border-border-warm last:border-0 hover:bg-cream/80">
+                                        <td className="px-6 py-4 font-mono font-semibold text-ink">{line.account_code}</td>
+                                        <td className="px-6 py-4 text-ink">{accountsMap[line.account_code] || '—'}</td>
+                                        <td className="px-6 py-4 text-right font-mono tabular-nums text-ink">
                                             {line.debit > 0 ? `RM ${formatMoney(line.debit)}` : '—'}
                                         </td>
-                                        <td className="px-6 py-4 text-right font-mono tabular-nums text-slate-800">
+                                        <td className="px-6 py-4 text-right font-mono tabular-nums text-ink">
                                             {line.credit > 0 ? `RM ${formatMoney(line.credit)}` : '—'}
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                             <tfoot>
-                                <tr className="border-t-2 border-slate-200 bg-slate-50/80 font-semibold">
+                                <tr className="border-t-2 border-border-warm bg-cream/80 font-semibold">
                                     <td className="px-6 py-4" colSpan={2}>Total</td>
-                                    <td className="px-6 py-4 text-right font-mono tabular-nums text-slate-800">RM {formatMoney(entry.total_debit)}</td>
-                                    <td className="px-6 py-4 text-right font-mono tabular-nums text-slate-800">RM {formatMoney(entry.total_credit)}</td>
+                                    <td className="px-6 py-4 text-right font-mono tabular-nums text-ink">RM {formatMoney(entry.total_debit)}</td>
+                                    <td className="px-6 py-4 text-right font-mono tabular-nums text-ink">RM {formatMoney(entry.total_credit)}</td>
                                 </tr>
                             </tfoot>
                         </table>

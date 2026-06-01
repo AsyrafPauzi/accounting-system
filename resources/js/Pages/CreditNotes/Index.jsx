@@ -25,8 +25,8 @@ export default function Index({ auth, creditNotes = [] }) {
             header={
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                     <div>
-                        <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Credit Notes</h2>
-                        <p className="text-slate-500 text-sm font-medium mt-1">Refunds and invoice adjustments</p>
+                        <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Credit Notes</h2>
+                        <p className="text-ink-muted text-sm font-medium mt-1">Refunds and invoice adjustments</p>
                     </div>
                 </div>
             }
@@ -36,31 +36,31 @@ export default function Index({ auth, creditNotes = [] }) {
             <div className="space-y-6">
                 {/* KPI row */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="relative overflow-hidden bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-2xl p-6 shadow-lg">
+                    <div className="relative overflow-hidden bg-mustard text-white rounded-2xl p-6 shadow-lg">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Total Credit Notes</span>
-                            <span className="p-2 rounded-xl bg-white/10"><Icons.Document /></span>
+                            <span className="p-2 rounded-xl bg-surface/10"><Icons.Document /></span>
                         </div>
                         <p className="text-2xl font-bold tabular-nums">{creditNotes.length} issued</p>
-                        <p className="text-xs text-amber-100 mt-1">Adjustments and refunds</p>
+                        <p className="text-xs text-mustard mt-1">Adjustments and refunds</p>
                     </div>
-                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+                    <div className="bg-surface rounded-2xl p-6 border border-border-warm shadow-sm">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total Value Credited</span>
-                            <span className="p-2 rounded-xl bg-rose-50 text-rose-600"><Icons.Currency /></span>
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Total Value Credited</span>
+                            <span className="p-2 rounded-xl bg-terracotta/10 text-terracotta"><Icons.Currency /></span>
                         </div>
-                        <p className="text-xl font-bold text-rose-600 font-mono tabular-nums">
+                        <p className="text-xl font-bold text-terracotta font-mono tabular-nums">
                             RM {totalValue.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
                         </p>
-                        <p className="text-xs text-slate-500 mt-1">Net credit issued</p>
+                        <p className="text-xs text-ink-muted mt-1">Net credit issued</p>
                     </div>
                 </div>
 
                 {/* Table Card */}
-                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3 bg-slate-50/50">
+                <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-border-warm flex items-center gap-3 bg-cream/50">
                         <div className="relative flex-1 max-w-sm">
-                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-ink-muted">
                                 <Icons.MagnifyingGlass />
                             </span>
                             <input 
@@ -68,10 +68,10 @@ export default function Index({ auth, creditNotes = [] }) {
                                 placeholder="Search by CN # or customer..." 
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
-                                className="pl-10 w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                className="pl-10 w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink placeholder-ink-muted/60 focus:ring-2 focus:ring-terracotta focus:border-terracotta transition-colors"
                             />
                         </div>
-                        <span className="text-slate-500 text-sm font-medium">
+                        <span className="text-ink-muted text-sm font-medium">
                             {filteredNotes.length} of {creditNotes.length}
                         </span>
                     </div>
@@ -79,7 +79,7 @@ export default function Index({ auth, creditNotes = [] }) {
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
-                                <tr className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 bg-slate-50/80">
+                                <tr className="text-left text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
                                     <th className="px-6 py-4">Credit Note</th>
                                     <th className="px-6 py-4">Customer</th>
                                     <th className="px-6 py-4 hidden md:table-cell">Reason</th>
@@ -90,22 +90,22 @@ export default function Index({ auth, creditNotes = [] }) {
                             </thead>
                             <tbody>
                                 {filteredNotes.length > 0 ? filteredNotes.map((cn) => (
-                                    <tr key={cn.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/80 transition-colors group">
+                                    <tr key={cn.id} className="border-b border-border-warm last:border-0 hover:bg-cream/80 transition-colors group">
                                         <td className="px-6 py-4">
-                                            <div className="font-semibold text-slate-800">{cn.cn_number}</div>
-                                            <p className="text-xs text-slate-500 mt-0.5">
+                                            <div className="font-semibold text-ink">{cn.cn_number}</div>
+                                            <p className="text-xs text-ink-muted mt-0.5">
                                                 {cn.issue_date ? new Date(cn.issue_date).toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                                             </p>
                                         </td>
-                                        <td className="px-6 py-4 text-sm font-medium text-slate-700">{cn.customer_name || '—'}</td>
-                                        <td className="px-6 py-4 hidden md:table-cell text-xs text-slate-500">{cn.reason_code || '—'}</td>
+                                        <td className="px-6 py-4 text-sm font-medium text-ink">{cn.customer_name || '—'}</td>
+                                        <td className="px-6 py-4 hidden md:table-cell text-xs text-ink-muted">{cn.reason_code || '—'}</td>
                                         <td className="px-6 py-4 text-right">
-                                            <span className="font-mono text-sm font-semibold text-rose-600 tabular-nums">
+                                            <span className="font-mono text-sm font-semibold text-terracotta tabular-nums">
                                                 - RM {parseFloat(cn.total_amount).toLocaleString('en-MY', { minimumFractionDigits: 2 })}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-700">
+                                            <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold bg-mustard/15 text-mustard">
                                                 {cn.status || 'posted'}
                                             </span>
                                         </td>
@@ -113,7 +113,7 @@ export default function Index({ auth, creditNotes = [] }) {
                                             {cn.invoice_id && (
                                                 <Link 
                                                     href={route('invoices.edit', cn.invoice_id)} 
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt transition-colors"
                                                 >
                                                     View Invoice <Icons.ChevronRight />
                                                 </Link>
@@ -123,7 +123,7 @@ export default function Index({ auth, creditNotes = [] }) {
                                 )) : (
                                     <tr>
                                         <td colSpan={6} className="px-6 py-16 text-center">
-                                            <p className="text-slate-400 text-sm font-medium">
+                                            <p className="text-ink-muted text-sm font-medium">
                                                 {search ? 'No credit notes match your search.' : 'No credit notes issued yet. Create one from an invoice.'}
                                             </p>
                                         </td>

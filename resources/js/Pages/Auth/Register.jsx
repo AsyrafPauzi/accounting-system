@@ -30,8 +30,8 @@ export default function Register() {
             <Head title="Register" />
             
             <div className="mb-8 text-center">
-                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Create Account</h1>
-                <p className="text-slate-500 text-sm font-medium mt-1">Start managing your business today</p>
+                <h1 className="font-display text-3xl lg:text-4xl font-medium text-ink tracking-tight">Create your account</h1>
+                <p className="text-ink-muted text-sm mt-2">Books made for the way you actually work.</p>
             </div>
 
             <form onSubmit={submit} className="space-y-5">
@@ -41,7 +41,7 @@ export default function Register() {
                         id="name"
                         name="name"
                         value={data.name}
-                        className="mt-1.5 block w-full rounded-xl border-slate-200 text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1.5 block w-full rounded-xl border-border-warm text-ink placeholder-ink-muted/60 focus:border-terracotta focus:ring-terracotta"
                         autoComplete="name"
                         isFocused={true}
                         onChange={(e) => setData('name', e.target.value)}
@@ -57,7 +57,7 @@ export default function Register() {
                         type="email"
                         name="email"
                         value={data.email}
-                        className="mt-1.5 block w-full rounded-xl border-slate-200 text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1.5 block w-full rounded-xl border-border-warm text-ink placeholder-ink-muted/60 focus:border-terracotta focus:ring-terracotta"
                         autoComplete="username"
                         onChange={(e) => setData('email', e.target.value)}
                         required
@@ -72,7 +72,7 @@ export default function Register() {
                         type="password"
                         name="password"
                         value={data.password}
-                        className="mt-1.5 block w-full rounded-xl border-slate-200 text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1.5 block w-full rounded-xl border-border-warm text-ink placeholder-ink-muted/60 focus:border-terracotta focus:ring-terracotta"
                         autoComplete="new-password"
                         onChange={(e) => setData('password', e.target.value)}
                         required
@@ -87,7 +87,7 @@ export default function Register() {
                         type="password"
                         name="password_confirmation"
                         value={data.password_confirmation}
-                        className="mt-1.5 block w-full rounded-xl border-slate-200 text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1.5 block w-full rounded-xl border-border-warm text-ink placeholder-ink-muted/60 focus:border-terracotta focus:ring-terracotta"
                         autoComplete="new-password"
                         onChange={(e) => setData('password_confirmation', e.target.value)}
                         required
@@ -96,16 +96,16 @@ export default function Register() {
                 </div>
 
                 <div className="pt-2">
-                    <PrimaryButton className="w-full justify-center py-3 rounded-xl font-semibold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 border-0 uppercase tracking-normal text-sm" disabled={processing}>
-                        Register Business
+                    <PrimaryButton className="w-full justify-center py-3 rounded-xl" disabled={processing}>
+                        Create account
                     </PrimaryButton>
                 </div>
 
-                <div className="text-center border-t border-slate-100 pt-6">
-                    <p className="text-slate-600 text-sm">
+                <div className="text-center border-t border-border-warm pt-6">
+                    <p className="text-ink-muted text-sm">
                         Already have an account?{' '}
-                        <Link href={route('login')} className="text-blue-600 hover:text-blue-500 font-bold">
-                            Sign in instead
+                        <Link href={route('login')} className="text-terracotta hover:text-terracotta-dark dark:hover:text-terracotta-light font-semibold">
+                            Sign in
                         </Link>
                     </p>
                 </div>

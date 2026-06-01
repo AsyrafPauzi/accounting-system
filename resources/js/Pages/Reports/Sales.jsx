@@ -19,8 +19,8 @@ export default function Sales({ auth, sales = [], total_sales = 0, filters = {} 
             user={auth.user}
             header={
                 <div>
-                    <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Sales Reports</h2>
-                    <p className="text-slate-500 text-sm font-medium mt-1">
+                    <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Sales Reports</h2>
+                    <p className="text-ink-muted text-sm font-medium mt-1">
                         Summary of sales revenue by customer for the selected period.
                     </p>
                 </div>
@@ -29,30 +29,30 @@ export default function Sales({ auth, sales = [], total_sales = 0, filters = {} 
             <Head title="Sales Reports" />
 
             <div className="space-y-6">
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100 flex flex-wrap items-end gap-3 bg-slate-50/50">
+                <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-border-warm flex flex-wrap items-end gap-3 bg-cream/50">
                         <form method="get" action={route('reports.sales.index')} className="flex flex-wrap items-end gap-3">
                             <div>
-                                <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">From</label>
+                                <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">From</label>
                                 <input
                                     type="date"
                                     name="start_date"
                                     defaultValue={start_date}
-                                    className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
+                                    className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
                                 />
                             </div>
                             <div>
-                                <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">To</label>
+                                <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">To</label>
                                 <input
                                     type="date"
                                     name="end_date"
                                     defaultValue={end_date}
-                                    className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
+                                    className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
                                 />
                             </div>
                             <button
                                 type="submit"
-                                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta transition-colors"
                             >
                                 Update report
                             </button>
@@ -61,30 +61,30 @@ export default function Sales({ auth, sales = [], total_sales = 0, filters = {} 
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl p-6 shadow-lg">
+                    <div className="bg-terracotta text-white rounded-2xl p-6 shadow-lg">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Total sales</span>
-                            <span className="p-2 rounded-xl bg-white/10"><Icons.ChartBar /></span>
+                            <span className="p-2 rounded-xl bg-surface/10"><Icons.ChartBar /></span>
                         </div>
                         <p className="text-2xl font-bold tabular-nums">RM {formatMoney(total_sales)}</p>
                     </div>
-                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                    <div className="bg-surface border border-border-warm rounded-2xl p-6 shadow-sm">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Active customers</span>
-                            <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.Users /></span>
+                            <span className="text-[10px] font-semibold uppercase tracking-widest text-ink-muted">Active customers</span>
+                            <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Users /></span>
                         </div>
-                        <p className="text-2xl font-bold tabular-nums text-slate-900">{sales.length}</p>
+                        <p className="text-2xl font-bold tabular-nums text-ink">{sales.length}</p>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/80">
-                        <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Sales by Customer</h3>
+                <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-border-warm bg-cream/80">
+                        <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Sales by Customer</h3>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead>
-                                <tr className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 bg-slate-50/80">
+                                <tr className="text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
                                     <th className="px-6 py-4">Customer</th>
                                     <th className="px-6 py-4 text-center">Invoices</th>
                                     <th className="px-6 py-4 text-right">Total sales</th>
@@ -93,24 +93,24 @@ export default function Sales({ auth, sales = [], total_sales = 0, filters = {} 
                             <tbody>
                                 {sales.length > 0 ? (
                                     sales.map((item, idx) => (
-                                        <tr key={idx} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/80">
-                                            <td className="px-6 py-4 font-medium text-slate-800">{item.customer_name}</td>
-                                            <td className="px-6 py-4 text-center text-slate-600">{item.invoice_count}</td>
-                                            <td className="px-6 py-4 text-right font-mono tabular-nums text-blue-700 font-semibold">
+                                        <tr key={idx} className="border-b border-border-warm last:border-0 hover:bg-cream/80">
+                                            <td className="px-6 py-4 font-medium text-ink">{item.customer_name}</td>
+                                            <td className="px-6 py-4 text-center text-ink">{item.invoice_count}</td>
+                                            <td className="px-6 py-4 text-right font-mono tabular-nums text-terracotta font-semibold">
                                                 RM {formatMoney(item.total_sales)}
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={3} className="px-6 py-8 text-center text-slate-400 text-sm">
+                                        <td colSpan={3} className="px-6 py-8 text-center text-ink-muted text-sm">
                                             No sales recorded for this period.
                                         </td>
                                     </tr>
                                 )}
                             </tbody>
                             <tfoot>
-                                <tr className="border-t-2 border-slate-200 bg-slate-50/80 font-semibold text-slate-900">
+                                <tr className="border-t-2 border-border-warm bg-cream/80 font-semibold text-ink">
                                     <td colSpan={2} className="px-6 py-4">Total</td>
                                     <td className="px-6 py-4 text-right font-mono tabular-nums">RM {formatMoney(total_sales)}</td>
                                 </tr>

@@ -65,4 +65,11 @@ class Tenant extends BaseTenant implements TenantWithDatabase
             'currency' => $this->base_currency ?: config('invoice.company.currency', 'MYR'),
         ];
     }
+
 }
+
+/*
+ * UI display language is stored as `language` in the JSON data column —
+ * Stancl Tenancy automatically maps `$tenant->language` to/from `data->language`.
+ * Allowed values: 'en' | 'ms'. Read via `$tenant->language ?? 'en'`.
+ */

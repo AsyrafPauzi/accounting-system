@@ -20,13 +20,13 @@ export default function ForgotPassword({ status }) {
             <Head title="Forgot Password" />
 
             <div className="mb-8 text-center">
-                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Reset Password</h1>
-                <p className="text-slate-500 text-sm font-medium mt-1">
+                <h1 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Reset Password</h1>
+                <p className="text-ink-muted text-sm font-medium mt-1">
                     No problem. Enter your email and we&apos;ll send you a link to choose a new one.
                 </p>
             </div>
 
-            {status && <div className="mb-4 font-medium text-sm text-emerald-600 text-center">{status}</div>}
+            {status && <div className="mb-4 font-medium text-sm text-forest text-center">{status}</div>}
 
             <form onSubmit={submit} className="space-y-5">
                 <div>
@@ -36,7 +36,7 @@ export default function ForgotPassword({ status }) {
                         type="email"
                         name="email"
                         value={data.email}
-                        className="mt-1.5 block w-full rounded-xl border-slate-200 text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1.5 block w-full rounded-xl border-border-warm text-ink placeholder-ink-muted/60 focus:border-terracotta focus:ring-terracotta"
                         isFocused={true}
                         placeholder="Enter your email address"
                         onChange={(e) => setData('email', e.target.value)}
@@ -45,13 +45,13 @@ export default function ForgotPassword({ status }) {
                 </div>
 
                 <div className="pt-2">
-                    <PrimaryButton className="w-full justify-center py-3 rounded-xl font-semibold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 border-0 uppercase tracking-normal text-sm" disabled={processing}>
+                    <PrimaryButton className="w-full justify-center py-3 rounded-xl font-semibold bg-terracotta hover:bg-terracotta shadow-lg  border-0 uppercase tracking-normal text-sm" disabled={processing}>
                         Send Reset Link
                     </PrimaryButton>
                 </div>
 
                 <div className="text-center pt-2">
-                    <Link href={route('login')} className="text-sm text-slate-500 hover:text-slate-700 font-medium">
+                    <Link href={route('login')} className="text-sm text-ink-muted hover:text-ink font-medium">
                         &larr; Back to login
                     </Link>
                 </div>

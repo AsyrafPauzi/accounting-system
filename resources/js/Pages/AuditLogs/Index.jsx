@@ -14,27 +14,27 @@ export default function Index({ auth, logs }) {
 
     const getEventStyles = (event) => {
         switch (event.toLowerCase()) {
-            case 'created': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-            case 'updated': return 'bg-amber-50 text-amber-700 border-amber-100';
-            case 'deleted': return 'bg-rose-50 text-rose-700 border-rose-100';
-            case 'soft_deleted': return 'bg-rose-50 text-rose-700 border-rose-100 opacity-75';
-            case 'restored': return 'bg-indigo-50 text-indigo-700 border-indigo-100';
-            case 'voided': return 'bg-slate-100 text-slate-700 border-slate-200';
-            case 'posted': return 'bg-blue-50 text-blue-700 border-blue-100';
-            default: return 'bg-gray-50 text-gray-700 border-gray-100';
+            case 'created': return 'bg-forest/10 text-forest border-forest/30';
+            case 'updated': return 'bg-mustard/15 text-mustard border-mustard/40';
+            case 'deleted': return 'bg-terracotta/10 text-terracotta border-terracotta/30';
+            case 'soft_deleted': return 'bg-terracotta/10 text-terracotta border-terracotta/30 opacity-75';
+            case 'restored': return 'bg-surface-alt text-terracotta border-border-warm';
+            case 'voided': return 'bg-surface-alt text-ink border-border-warm';
+            case 'posted': return 'bg-surface-alt text-terracotta border-border-warm';
+            default: return 'bg-cream text-ink border-border-warm';
         }
     };
 
     const formatValue = (val) => {
-        if (val === null) return <span className="text-slate-400 italic">null</span>;
-        if (typeof val === 'boolean') return <span className={val ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>{val ? 'TRUE' : 'FALSE'}</span>;
+        if (val === null) return <span className="text-ink-muted italic">null</span>;
+        if (typeof val === 'boolean') return <span className={val ? 'text-forest font-bold' : 'text-terracotta font-bold'}>{val ? 'TRUE' : 'FALSE'}</span>;
         
         // Detect and format date strings (ISO or space-separated)
         if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}/.test(val)) {
             const date = new Date(val.replace(' ', 'T')); // Ensure T for reliable parsing
             if (!isNaN(date.getTime())) {
                 return (
-                    <span className="text-blue-600 font-semibold tracking-tight">
+                    <span className="text-terracotta font-semibold tracking-tight">
                         {date.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                 );
@@ -51,10 +51,9 @@ export default function Index({ auth, logs }) {
             header={
                 <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-1">
-                        <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Audit Logs</h2>
-                        <div className="flex items-center gap-2">
-                            <p className="text-slate-500 text-sm font-medium">Comprehensive system activity tracking</p>
-                        </div>
+                        <p className="text-eyebrow font-semibold uppercase text-terracotta">Audit</p>
+                        <h1 className="font-display text-2xl lg:text-3xl font-medium text-ink tracking-tight">Activity log</h1>
+                        <p className="text-ink-muted text-sm">Every change in your books, who made it and when.</p>
                     </div>
                 </div>
             }
@@ -62,11 +61,11 @@ export default function Index({ auth, logs }) {
             <Head title="Audit Logs" />
 
             <div className="max-w-7xl mx-auto space-y-6 pb-20 mt-6">
-                <div className="bg-white/80 backdrop-blur-md rounded-3xl border border-slate-200/60 shadow-xl shadow-slate-200/40 overflow-hidden">
+                <div className="bg-surface/80 backdrop-blur-md rounded-3xl border border-border-warm/60 shadow-xl  overflow-hidden">
                     <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-slate-100/60">
+                        <table className="min-w-full divide-y divide-border-warm/60">
                             <thead>
-                                <tr className="bg-slate-50/80 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                                <tr className="bg-cream/80 text-left text-[11px] font-display font-medium text-ink-muted uppercase tracking-widest">
                                     <th className="px-8 py-5">Timestamp</th>
                                     <th className="px-8 py-5">User</th>
                                     <th className="px-8 py-5">Action</th>
@@ -74,27 +73,27 @@ export default function Index({ auth, logs }) {
                                     <th className="px-8 py-5 text-right">Activity Details</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100/60 bg-white">
+                            <tbody className="divide-y divide-border-warm/60 bg-surface">
                                 {logs.data.map((log) => (
-                                    <tr key={log.id} className="hover:bg-blue-50/30 transition-all duration-200 group">
+                                    <tr key={log.id} className="hover:bg-surface-alt/30 transition-all duration-200 group">
                                         <td className="px-8 py-5 whitespace-nowrap">
                                             <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-slate-800">
+                                                <span className="text-sm font-display font-medium text-ink">
                                                     {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                                                <span className="text-[10px] font-display font-medium text-ink-muted uppercase tracking-tighter">
                                                     {new Date(log.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
                                                 </span>
                                             </div>
                                         </td>
                                         <td className="px-8 py-5 whitespace-nowrap">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-200/50">
+                                                <div className="w-8 h-8 rounded-xl bg-terracotta text-white flex items-center justify-center shadow-lg ">
                                                     <Icons.User />
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-slate-700">{log.user_name}</span>
-                                                    <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">{log.user_role}</span>
+                                                    <span className="text-sm font-display font-medium text-ink">{log.user_name}</span>
+                                                    <span className="text-[10px] text-ink-muted font-semibold uppercase tracking-wider">{log.user_role}</span>
                                                 </div>
                                             </div>
                                         </td>
@@ -105,19 +104,19 @@ export default function Index({ auth, logs }) {
                                         </td>
                                         <td className="px-8 py-5 whitespace-nowrap">
                                             <div className="flex items-center gap-3">
-                                                <div className="p-2 rounded-lg bg-slate-100 text-slate-500">
+                                                <div className="p-2 rounded-lg bg-surface-alt text-ink-muted">
                                                     <Icons.Tag />
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="text-xs font-bold text-slate-600 uppercase tracking-tight">{log.auditable_type}</span>
-                                                    <span className="text-[10px] text-slate-400 font-mono bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">UUID: {log.auditable_id}</span>
+                                                    <span className="text-xs font-display font-medium text-ink uppercase tracking-tight">{log.auditable_type}</span>
+                                                    <span className="text-[10px] text-ink-muted font-mono bg-cream px-1.5 py-0.5 rounded border border-border-warm">UUID: {log.auditable_id}</span>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-8 py-5 whitespace-nowrap text-right">
                                             <button 
                                                 onClick={() => setSelectedLog(log)}
-                                                className="inline-flex items-center gap-2 text-xs font-black text-blue-600 hover:text-white px-5 py-2.5 rounded-2xl bg-blue-50 hover:bg-blue-600 transition-all duration-300 border border-blue-100 active:scale-95"
+                                                className="inline-flex items-center gap-2 text-xs font-black text-terracotta hover:text-white px-5 py-2.5 rounded-2xl bg-surface-alt hover:bg-terracotta transition-all duration-300 border border-border-warm active:scale-95"
                                             >
                                                 <Icons.Activity />
                                                 Inspect Changes
@@ -131,11 +130,11 @@ export default function Index({ auth, logs }) {
                     {/* Empty State */}
                     {logs.data.length === 0 && (
                         <div className="py-20 text-center flex flex-col items-center justify-center">
-                            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
+                            <div className="w-16 h-16 bg-cream rounded-full flex items-center justify-center text-ink-muted mb-4">
                                 <Icons.History />
                             </div>
-                            <h3 className="text-slate-900 font-bold">No logs found</h3>
-                            <p className="text-slate-500 text-sm">System activity will appear here as updates occur.</p>
+                            <h3 className="text-ink font-bold">No logs found</h3>
+                            <p className="text-ink-muted text-sm">System activity will appear here as updates occur.</p>
                         </div>
                     )}
                 </div>
@@ -150,8 +149,8 @@ export default function Index({ auth, logs }) {
                                 onClick={() => link.url && (window.location.href = link.url)}
                                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                                     link.active 
-                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' 
-                                    : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                                    ? 'bg-terracotta text-white shadow-lg ' 
+                                    : 'bg-surface text-ink hover:bg-cream border border-border-warm'
                                 } ${!link.url ? 'opacity-30 cursor-not-allowed' : ''}`}
                                 dangerouslySetInnerHTML={{ __html: link.label }}
                             />
@@ -162,19 +161,19 @@ export default function Index({ auth, logs }) {
 
             {/* Change Detail Modal */}
             {selectedLog && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-white rounded-[2.5rem] w-full max-w-4xl shadow-[0_0_100px_rgba(0,0,0,0.2)] overflow-hidden animate-in slide-in-from-bottom-8 duration-500 ease-out">
-                        <div className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 to-white">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-surface rounded-[2.5rem] w-full max-w-4xl shadow-[0_0_100px_rgba(0,0,0,0.2)] overflow-hidden animate-in slide-in-from-bottom-8 duration-500 ease-out">
+                        <div className="px-10 py-8 border-b border-border-warm flex items-center justify-between bg-gradient-to-r from-slate-50 to-white">
                             <div>
                                 <div className="flex items-center gap-3 mb-1">
-                                    <span className="px-3 py-1 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-tighter">Activity Detail</span>
-                                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">System Inspection</h3>
+                                    <span className="px-3 py-1 rounded-full bg-terracotta text-white text-[10px] font-black uppercase tracking-tighter">Activity Detail</span>
+                                    <h3 className="text-xl font-display font-semibold text-ink uppercase tracking-tight">System Inspection</h3>
                                 </div>
-                                <p className="text-xs text-slate-500 font-medium">
-                                    {selectedLog.auditable_type} <span className="font-mono text-blue-600">#{selectedLog.auditable_id}</span> &bull; Actioned by <span className="font-bold text-slate-700">{selectedLog.user_name}</span>
+                                <p className="text-xs text-ink-muted font-medium">
+                                    {selectedLog.auditable_type} <span className="font-mono text-terracotta">#{selectedLog.auditable_id}</span> &bull; Actioned by <span className="font-display font-medium text-ink">{selectedLog.user_name}</span>
                                 </p>
                             </div>
-                            <button onClick={() => setSelectedLog(null)} className="p-3 bg-slate-100 hover:bg-rose-50 rounded-2xl transition-all duration-300 text-slate-400 hover:text-rose-600 group">
+                            <button onClick={() => setSelectedLog(null)} className="p-3 bg-surface-alt hover:bg-terracotta/10 rounded-2xl transition-all duration-300 text-ink-muted hover:text-terracotta group">
                                 <svg className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
                         </div>
@@ -182,33 +181,33 @@ export default function Index({ auth, logs }) {
                         <div className="p-10 max-h-[65vh] overflow-y-auto custom-scrollbar">
                             {(!selectedLog.old_values && !selectedLog.new_values) ? (
                                 <div className="text-center py-10">
-                                    <p className="text-slate-400 italic">No specific property changes recorded for this event.</p>
+                                    <p className="text-ink-muted italic">No specific property changes recorded for this event.</p>
                                 </div>
                             ) : (
                                 <div className="space-y-8">
                                     {/* Diff View */}
-                                    <div className="bg-slate-50 rounded-[2rem] border border-slate-100 overflow-hidden">
+                                    <div className="bg-cream rounded-[2rem] border border-border-warm overflow-hidden">
                                         <table className="w-full text-left border-collapse">
                                             <thead>
-                                                <tr className="bg-slate-100/50">
-                                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-1/3">Property</th>
-                                                    <th className="px-6 py-4 text-[10px] font-black text-rose-400 uppercase tracking-widest w-1/3">Previous State</th>
-                                                    <th className="px-6 py-4 text-[10px] font-black text-emerald-500 uppercase tracking-widest w-1/3">New State</th>
+                                                <tr className="bg-surface-alt/50">
+                                                    <th className="px-6 py-4 text-[10px] font-display font-semibold text-ink-muted uppercase tracking-widest w-1/3">Property</th>
+                                                    <th className="px-6 py-4 text-[10px] font-black text-terracotta uppercase tracking-widest w-1/3">Previous State</th>
+                                                    <th className="px-6 py-4 text-[10px] font-black text-forest uppercase tracking-widest w-1/3">New State</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-slate-100">
+                                            <tbody className="divide-y divide-border-warm">
                                                 {Object.keys({...(selectedLog.old_values || {}), ...(selectedLog.new_values || {})}).map(key => (
-                                                    <tr key={key} className="group hover:bg-white transition-colors">
+                                                    <tr key={key} className="group hover:bg-surface transition-colors">
                                                         <td className="px-6 py-4">
-                                                            <span className="text-xs font-bold text-slate-600 uppercase tracking-tighter bg-slate-200/50 group-hover:bg-blue-50 px-2 py-1 rounded-md transition-colors">{key.replace('_', ' ')}</span>
+                                                            <span className="text-xs font-display font-medium text-ink uppercase tracking-tighter bg-surface-alt/50 group-hover:bg-surface-alt px-2 py-1 rounded-md transition-colors">{key.replace('_', ' ')}</span>
                                                         </td>
                                                         <td className="px-6 py-4">
-                                                            <div className="text-xs font-mono text-rose-500 break-all leading-relaxed line-through decoration-rose-200">
+                                                            <div className="text-xs font-mono text-terracotta break-all leading-relaxed line-through decoration-rose-200">
                                                                 {formatValue(selectedLog.old_values?.[key])}
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-4 bg-emerald-50/20 group-hover:bg-emerald-50/40">
-                                                            <div className="text-xs font-mono text-emerald-700 font-bold break-all leading-relaxed">
+                                                        <td className="px-6 py-4 bg-forest/10/20 group-hover:bg-forest/10/40">
+                                                            <div className="text-xs font-mono text-forest font-bold break-all leading-relaxed">
                                                                 {formatValue(selectedLog.new_values?.[key])}
                                                             </div>
                                                         </td>
@@ -221,14 +220,14 @@ export default function Index({ auth, logs }) {
                             )}
                         </div>
 
-                        <div className="px-10 py-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-slate-400">
+                        <div className="px-10 py-8 bg-cream border-t border-border-warm flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-ink-muted">
                                 <Icons.History />
                                 <span className="text-[10px] font-bold uppercase tracking-widest">Logged on {selectedLog.created_at_human}</span>
                             </div>
                             <button 
                                 onClick={() => setSelectedLog(null)}
-                                className="px-10 py-4 bg-slate-900 text-white text-xs font-black rounded-2xl hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200"
+                                className="px-10 py-4 bg-ink text-white text-xs font-black rounded-2xl hover:bg-ink transition-all active:scale-95 shadow-lg "
                             >
                                 CLOSE INSPECTION
                             </button>

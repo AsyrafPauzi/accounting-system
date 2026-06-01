@@ -37,6 +37,7 @@ class User extends Authenticatable
         'is_active',
         'two_factor_secret',
         'two_factor_confirmed_at',
+        'theme_preference',
     ];
 
     /**

@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Tenant;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -14,6 +15,16 @@ class HandleInertiaRequests extends Middleware
      * @var string
      */
     protected $rootView = 'app';
+
+    /**
+     * Per-request memo. We deliberately don't use the Cache facade because
+     * Stancl Tenancy wraps it with a tag-based store wrapper, and the
+     * database cache driver doesn't support tagging. Reading the JSON
+     * file once per request is cheap (~1ms) so a static memo is enough.
+     *
+     * @var array<string, array>
+     */
+    protected static array $translationsMemo = [];
 
     /**
      * Determine the current asset version.
@@ -76,6 +87,14 @@ class HandleInertiaRequests extends Middleware
             ],
             'product_name' => config('app.product_name'),
             'product_tagline' => config('app.product_tagline'),
+            'locale' => fn () => App::getLocale(),
+            'translations' => fn () => $this->loadTranslations(App::getLocale()),
+            'available_locales' => [
+                ['code' => 'en', 'label' => 'English'],
+                ['code' => 'ms', 'label' => 'Bahasa Malaysia'],
+            ],
+            'theme' => fn () => $request->user()?->theme_preference ?? 'light',
+            'deployment_mode' => config('deployment.mode', 'saas'),
             'app_name' => function () use ($request) {
                 $user = $request->user();
                 if ($user && $user->tenant_id) {
@@ -87,5 +106,32 @@ class HandleInertiaRequests extends Middleware
                 return config('app.name');
             },
         ];
+    }
+
+    /**
+     * Load and merge translation JSON for the active locale, falling back to en
+     * for any keys not yet translated. Cached per locale for performance.
+     */
+    protected function loadTranslations(string $locale): array
+    {
+        return Cache::remember("translations.{$locale}", 60 * 5, function () use ($locale) {
+            $en = $this->readLangFile('en');
+            if ($locale === 'en') {
+                return $en;
+            }
+            $other = $this->readLangFile($locale);
+            return array_replace_recursive($en, $other);
+        });
+    }
+
+    protected function readLangFile(string $code): array
+    {
+        $path = lang_path("{$code}.json");
+        if (! is_file($path)) {
+            return [];
+        }
+        $contents = file_get_contents($path);
+        $data = json_decode($contents, true);
+        return is_array($data) ? $data : [];
     }
 }

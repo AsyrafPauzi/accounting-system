@@ -1,0 +1,246 @@
+{
+    "_meta": {
+        "language_code": "en",
+        "language_name": "English",
+        "_note": "BukuCloud UI strings — English (source of truth). Numbers and money formatting are locale-aware via toLocaleString. Currency code remains MYR/USD/SGD/etc. unless tenant changes base_currency."
+    },
+
+    "common": {
+        "actions": {
+            "save": "Save",
+            "save_changes": "Save changes",
+            "cancel": "Cancel",
+            "delete": "Delete",
+            "edit": "Edit",
+            "view": "View",
+            "create": "Create",
+            "add": "Add",
+            "back": "Back",
+            "continue": "Continue",
+            "confirm": "Confirm",
+            "close": "Close",
+            "search": "Search",
+            "filter": "Filter",
+            "export": "Export",
+            "download": "Download",
+            "print": "Print",
+            "upload": "Upload",
+            "submit": "Submit",
+            "next": "Next",
+            "previous": "Previous",
+            "more": "More",
+            "less": "Less",
+            "duplicate": "Duplicate",
+            "send": "Send",
+            "approve": "Approve",
+            "reject": "Reject",
+            "upgrade": "Upgrade"
+        },
+        "labels": {
+            "name": "Name",
+            "email": "Email",
+            "phone": "Phone",
+            "address": "Address",
+            "date": "Date",
+            "amount": "Amount",
+            "status": "Status",
+            "currency": "Currency",
+            "notes": "Notes",
+            "description": "Description",
+            "quantity": "Quantity",
+            "price": "Price",
+            "subtotal": "Subtotal",
+            "tax": "Tax",
+            "discount": "Discount",
+            "total": "Total",
+            "balance": "Balance",
+            "due_date": "Due date",
+            "issue_date": "Issue date",
+            "reference": "Reference",
+            "category": "Category",
+            "type": "Type",
+            "actions": "Actions",
+            "language": "Language",
+            "theme": "Theme"
+        },
+        "placeholders": {
+            "search": "Search…",
+            "select": "Select…",
+            "no_results": "No results found.",
+            "loading": "Loading…",
+            "empty": "Nothing here yet."
+        },
+        "messages": {
+            "saved": "Saved.",
+            "deleted": "Deleted.",
+            "created": "Created.",
+            "updated": "Updated.",
+            "error_generic": "Something didn\u2019t go through. Try again.",
+            "confirm_delete": "Delete this? This can\u2019t be undone."
+        },
+        "tenant_label": "BukuCloud"
+    },
+
+    "auth": {
+        "login": {
+            "title": "Welcome back",
+            "subtitle": "Sign in to keep the books moving.",
+            "email": "Email address",
+            "password": "Password",
+            "remember": "Remember me",
+            "forgot": "Forgot password?",
+            "submit": "Sign in",
+            "no_account": "New to BukuCloud?",
+            "create_account": "Create an account"
+        },
+        "register": {
+            "title": "Create your account",
+            "subtitle": "Books made for the way you actually work.",
+            "name": "Full name",
+            "email": "Email address",
+            "password": "Password",
+            "confirm_password": "Confirm password",
+            "submit": "Create account",
+            "have_account": "Already have an account?",
+            "sign_in": "Sign in"
+        },
+        "forgot": {
+            "title": "Reset password",
+            "subtitle": "Enter your email and we\u2019ll send you a link to choose a new one.",
+            "submit": "Send reset link",
+            "back": "Back to sign in"
+        },
+        "reset": {
+            "title": "Set a new password",
+            "subtitle": "Enter your new password below. Sign in with it once saved.",
+            "new_password": "New password",
+            "confirm_password": "Confirm password",
+            "submit": "Reset password"
+        },
+        "verify": {
+            "title": "Verify your email",
+            "subtitle": "Check your inbox for the verification link.",
+            "body": "Thanks for signing up. Before you get started, please verify your email by clicking the link we just sent. Didn\u2019t see it? We\u2019ll resend a fresh one.",
+            "sent": "A new verification link has been sent to the email you registered with.",
+            "submit": "Resend verification email",
+            "logout": "Log out"
+        },
+        "confirm": {
+            "title": "Confirm password",
+            "subtitle": "Secure area \u2014 confirm before continuing.",
+            "body": "This is a secure area. Please confirm your password to continue.",
+            "submit": "Confirm"
+        }
+    },
+
+    "navigation": {
+        "groups": {
+            "main": "Main",
+            "sales": "Sales (Revenue)",
+            "purchases": "Purchases (Expenses)",
+            "accounting": "Accounting",
+            "reports": "Reports",
+            "admin": "Admin",
+            "company": "Company"
+        },
+        "links": {
+            "dashboard": "Dashboard",
+            "invoices": "Invoices",
+            "credit_notes": "Credit Notes",
+            "customers": "Customers",
+            "suppliers": "Suppliers",
+            "bills": "Bills / Purchases",
+            "accounts_payable": "Accounts Payable",
+            "chart_of_accounts": "Chart of Accounts",
+            "general_ledger": "General Ledger",
+            "manual_journal": "Manual Journal Entry",
+            "trial_balance": "Trial Balance",
+            "reports": "Reports",
+            "tenants": "Tenants",
+            "plan_catalog": "Plan Catalog",
+            "platform_users": "Platform Users",
+            "audit_log": "Audit Log",
+            "company_settings": "Company settings",
+            "audit_compliance": "Audit Compliance",
+            "team_roles": "Team & Roles",
+            "audit_logs": "Audit Logs",
+            "plan_usage": "Plan & Usage",
+            "settings": "Settings",
+            "logout": "Logout"
+        },
+        "free_tier_banner": "You\u2019re on the Free tier."
+    },
+
+    "dashboard": {
+        "eyebrow": "Dashboard",
+        "welcome": "Welcome back, :name.",
+        "subtitle_basic": "Your books at a glance.",
+        "subtitle_full": "Today\u2019s books, today\u2019s decisions.",
+        "kpi": {
+            "receivables": "Receivables",
+            "payables": "Payables",
+            "this_month": "This month",
+            "collection_rate": "Collection rate",
+            "to_collect": "To collect",
+            "to_pay": "To pay",
+            "overdue": ":count overdue",
+            "sales_minus_expenses": "Sales \u2212 expenses",
+            "invoiced_collected": "Invoiced \u2192 collected"
+        },
+        "sections": {
+            "revenue_analysis": "Revenue analysis",
+            "payables_analysis": "Payables analysis",
+            "compliance_status": "Compliance status"
+        },
+        "labels": {
+            "invoiced": "Invoiced",
+            "collected": "Collected",
+            "outstanding": "Outstanding",
+            "overdue": "Overdue",
+            "suppliers": "Suppliers",
+            "active_count": ":count active",
+            "unpaid_bills": "Unpaid bills",
+            "total_items": "Total items",
+            "verified": "Verified",
+            "unaudited": "Unaudited",
+            "flagged": "Flagged"
+        },
+        "links": {
+            "invoices": "Invoices",
+            "bills": "Bills",
+            "review": "Review",
+            "aged_receivables": "Aged receivables",
+            "accounts_payable": "Accounts payable",
+            "cashflow": "Cashflow",
+            "cashflow_desc": "Sales vs expenses",
+            "reports_hub": "Reports hub",
+            "reports_hub_desc": "P&L, sales & more",
+            "credit_notes": "Credit notes",
+            "credit_notes_desc": ":count issued",
+            "audit_logs": "Audit logs",
+            "audit_logs_desc": "Track every change"
+        }
+    },
+
+    "settings": {
+        "company": {
+            "title": "Company settings",
+            "language_label": "Display language",
+            "language_help": "Used across the app interface. Emails, invoices and PDFs remain in English.",
+            "save": "Save settings"
+        },
+        "profile": {
+            "title": "Profile",
+            "theme_label": "Appearance",
+            "theme_help": "Choose how the interface looks for you.",
+            "theme_light": "Light",
+            "theme_dark": "Dark",
+            "theme_system": "Match system"
+        }
+    },
+
+    "subscription": {
+        "free_tier": "You\u2019re on the Free tier.",
+        "upgrade": "Upgrade"
+    }
+}

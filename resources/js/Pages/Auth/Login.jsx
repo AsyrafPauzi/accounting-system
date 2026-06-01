@@ -30,11 +30,11 @@ export default function Login({ status, canResetPassword }) {
             <Head title="Log in" />
 
             <div className="mb-8 text-center">
-                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Welcome Back</h1>
-                <p className="text-slate-500 text-sm font-medium mt-1">Please enter your details to sign in</p>
+                <h1 className="font-display text-3xl lg:text-4xl font-medium text-ink tracking-tight">Welcome back</h1>
+                <p className="text-ink-muted text-sm mt-2">Sign in to keep the books moving.</p>
             </div>
 
-            {status && <div className="mb-4 font-medium text-sm text-emerald-600 text-center">{status}</div>}
+            {status && <div className="mb-4 font-medium text-sm text-forest text-center">{status}</div>}
 
             <form onSubmit={submit} className="space-y-5">
                 <div>
@@ -44,7 +44,7 @@ export default function Login({ status, canResetPassword }) {
                         type="email"
                         name="email"
                         value={data.email}
-                        className="mt-1.5 block w-full rounded-xl border-slate-200 text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1.5 block w-full rounded-xl border-border-warm text-ink placeholder-ink-muted/60 focus:border-terracotta focus:ring-terracotta"
                         autoComplete="username"
                         isFocused={true}
                         onChange={(e) => setData('email', e.target.value)}
@@ -56,7 +56,7 @@ export default function Login({ status, canResetPassword }) {
                     <div className="flex justify-between items-center">
                         <InputLabel htmlFor="password" value="Password" />
                         {canResetPassword && (
-                            <Link href={route('password.request')} className="text-sm text-blue-600 hover:text-blue-500 font-medium">
+                            <Link href={route('password.request')} className="text-sm text-terracotta hover:text-terracotta font-medium">
                                 Forgot password?
                             </Link>
                         )}
@@ -66,7 +66,7 @@ export default function Login({ status, canResetPassword }) {
                         type="password"
                         name="password"
                         value={data.password}
-                        className="mt-1.5 block w-full rounded-xl border-slate-200 text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1.5 block w-full rounded-xl border-border-warm text-ink placeholder-ink-muted/60 focus:border-terracotta focus:ring-terracotta"
                         autoComplete="current-password"
                         onChange={(e) => setData('password', e.target.value)}
                     />
@@ -76,21 +76,21 @@ export default function Login({ status, canResetPassword }) {
                 <div className="block">
                     <label className="flex items-center">
                         <Checkbox name="remember" checked={data.remember} onChange={(e) => setData('remember', e.target.checked)} />
-                        <span className="ms-2 text-sm text-slate-600">Remember me</span>
+                        <span className="ms-2 text-sm text-ink">Remember me</span>
                     </label>
                 </div>
 
                 <div className="pt-2">
-                    <PrimaryButton className="w-full justify-center py-3 rounded-xl font-semibold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 border-0 uppercase tracking-normal text-sm" disabled={processing}>
-                        Sign In
+                    <PrimaryButton className="w-full justify-center py-3 rounded-xl" disabled={processing}>
+                        Sign in
                     </PrimaryButton>
                 </div>
 
-                <div className="text-center border-t border-slate-100 pt-6">
-                    <p className="text-slate-600 text-sm">
-                        Don't have an account?{' '}
-                        <Link href={route('register')} className="text-blue-600 hover:text-blue-500 font-bold">
-                            Create a free account
+                <div className="text-center border-t border-border-warm pt-6">
+                    <p className="text-ink-muted text-sm">
+                        New to BukuCloud?{' '}
+                        <Link href={route('register')} className="text-terracotta hover:text-terracotta-dark dark:hover:text-terracotta-light font-semibold">
+                            Create an account
                         </Link>
                     </p>
                 </div>

@@ -19,9 +19,9 @@ const Icons = {
     ArrowPath: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>,
 };
 
-const inputClass = "w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors";
-const inputReadonlyClass = "w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-400 bg-slate-50";
-const labelClass = "block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5";
+const inputClass = "w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink placeholder-ink-muted/60 focus:ring-2 focus:ring-terracotta focus:border-terracotta transition-colors";
+const inputReadonlyClass = "w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink-muted bg-cream";
+const labelClass = "block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5";
 
 export default function Create({ auth, users = [] }) {
     // 1. All fields required for Enterprise-Level Customer Management
@@ -118,19 +118,19 @@ export default function Create({ auth, users = [] }) {
                     <div className="flex items-start sm:items-center gap-4">
                         <Link 
                             href={route('customers.index')} 
-                            className="p-2.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all duration-200"
+                            className="p-2.5 rounded-xl text-ink-muted hover:text-ink hover:bg-surface-alt transition-all duration-200"
                         >
                             <Icons.ChevronLeft />
                         </Link>
                         <div>
-                            <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Onboard Customer</h2>
-                            <p className="text-slate-500 text-sm font-medium mt-1">New enterprise account</p>
+                            <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Onboard Customer</h2>
+                            <p className="text-ink-muted text-sm font-medium mt-1">New enterprise account</p>
                         </div>
                     </div>
                     <div className="flex gap-2">
                         <Link 
                             href={route('customers.index')} 
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-slate-600 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all duration-200"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:border-border-warm hover:bg-cream transition-all duration-200"
                         >
                             Cancel
                         </Link>
@@ -138,7 +138,7 @@ export default function Create({ auth, users = [] }) {
                             type="submit" 
                             form="customer-create-form"
                             disabled={processing}
-                            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-500/25 transition-all duration-200"
+                            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50 shadow-lg  transition-all duration-200"
                         >
                             {processing ? 'Creating...' : 'Create Customer'}
                         </button>
@@ -151,16 +151,16 @@ export default function Create({ auth, users = [] }) {
             <form id="customer-create-form" onSubmit={submit} className="space-y-6">
                 
                 {/* Section 1: Identity & Compliance */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                     <div className="flex items-center gap-2 mb-6">
-                        <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.Building /></span>
-                        <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Identity & Compliance</h3>
+                        <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Building /></span>
+                        <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Identity & Compliance</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
                         <div className="md:col-span-2">
                             <label className={labelClass}>Legal Company Name</label>
                             <input type="text" value={data.name} onChange={e => setData('name', e.target.value)} className={inputClass} required />
-                            {errors.name && <p className="text-rose-500 text-xs font-medium mt-1">{errors.name}</p>}
+                            {errors.name && <p className="text-terracotta text-xs font-medium mt-1">{errors.name}</p>}
                         </div>
                         <div>
                             <label className={labelClass}>Customer Code</label>
@@ -195,22 +195,22 @@ export default function Create({ auth, users = [] }) {
                         <div>
                             <label className={labelClass}>LHDN TIN</label>
                             <input type="text" value={data.tin} onChange={e => setData('tin', e.target.value)} className={inputClass} placeholder="C1234567890" />
-                            {errors.tin && <p className="text-rose-500 text-xs font-medium mt-1">{errors.tin}</p>}
+                            {errors.tin && <p className="text-terracotta text-xs font-medium mt-1">{errors.tin}</p>}
                         </div>
                         <div>
                             <label className={labelClass}>SSM BRN</label>
                             <input type="text" value={data.brn} onChange={e => setData('brn', e.target.value)} className={inputClass} placeholder="202401021234" />
-                            {errors.brn && <p className="text-rose-500 text-xs font-medium mt-1">{errors.brn}</p>}
+                            {errors.brn && <p className="text-terracotta text-xs font-medium mt-1">{errors.brn}</p>}
                         </div>
                     </div>
                 </div>
 
                 {/* Section 2: Financial & Contact */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                         <div className="flex items-center gap-2 mb-6">
-                            <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600"><Icons.CreditCard /></span>
-                            <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Financial</h3>
+                            <span className="p-2 rounded-xl bg-forest/10 text-forest"><Icons.CreditCard /></span>
+                            <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Financial</h3>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -261,10 +261,10 @@ export default function Create({ auth, users = [] }) {
                         </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                         <div className="flex items-center gap-2 mb-6">
-                            <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.Phone /></span>
-                            <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Primary Contact</h3>
+                            <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Phone /></span>
+                            <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Primary Contact</h3>
                         </div>
                         <div className="space-y-4">
                             <div>
@@ -275,7 +275,7 @@ export default function Create({ auth, users = [] }) {
                                 <div>
                                     <label className={labelClass}>Email</label>
                                     <input type="email" placeholder="billing@company.com" value={data.email} onChange={e => setData('email', e.target.value)} className={inputClass} required />
-                                    {errors.email && <p className="text-rose-500 text-xs font-medium mt-1">{errors.email}</p>}
+                                    {errors.email && <p className="text-terracotta text-xs font-medium mt-1">{errors.email}</p>}
                                 </div>
                                 <div>
                                     <label className={labelClass}>Phone</label>
@@ -287,16 +287,16 @@ export default function Create({ auth, users = [] }) {
                 </div>
 
                 {/* Additional contacts */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Additional contacts</h3>
-                        <button type="button" onClick={addContact} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100">
+                        <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Additional contacts</h3>
+                        <button type="button" onClick={addContact} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt">
                             + Add contact
                         </button>
                     </div>
                     <div className="space-y-3">
                         {(data.contacts || []).map((contact, index) => (
-                            <div key={index} className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-3 p-3 border border-slate-100 rounded-xl bg-slate-50/50">
+                            <div key={index} className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-3 p-3 border border-border-warm rounded-xl bg-cream/50">
                                 <div className="md:col-span-2">
                                     <label className={labelClass}>Name</label>
                                     <input type="text" value={contact.name} onChange={e => updateContact(index, 'name', e.target.value)} className={inputClass} placeholder="Name" />
@@ -319,27 +319,27 @@ export default function Create({ auth, users = [] }) {
                                 </div>
                                 <div className="md:col-span-2 flex items-center gap-2 min-h-[42px]">
                                     <label className="flex items-center gap-2 cursor-pointer">
-                                        <input type="checkbox" checked={!!contact.is_primary} onChange={e => updateContact(index, 'is_primary', e.target.checked)} className="rounded border-slate-300" />
-                                        <span className="text-xs font-medium text-slate-600">Primary</span>
+                                        <input type="checkbox" checked={!!contact.is_primary} onChange={e => updateContact(index, 'is_primary', e.target.checked)} className="rounded border-border-warm" />
+                                        <span className="text-xs font-medium text-ink">Primary</span>
                                     </label>
                                 </div>
                                 <div className="md:col-span-2 flex items-center min-h-[42px]">
-                                    <button type="button" onClick={() => removeContact(index)} className="text-slate-400 hover:text-rose-600 text-xs font-medium">Remove</button>
+                                    <button type="button" onClick={() => removeContact(index)} className="text-ink-muted hover:text-terracotta text-xs font-medium">Remove</button>
                                 </div>
                             </div>
                         ))}
                         {(data.contacts || []).length === 0 && (
-                            <p className="text-slate-400 text-sm">Optional. Add billing, finance, or operations contacts later in Edit.</p>
+                            <p className="text-ink-muted text-sm">Optional. Add billing, finance, or operations contacts later in Edit.</p>
                         )}
                     </div>
                 </div>
 
                 {/* Section 3: Addresses */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                         <div className="flex items-center gap-2 mb-6">
-                            <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.Location /></span>
-                            <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Billing Address</h3>
+                            <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Location /></span>
+                            <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Billing Address</h3>
                         </div>
                         <div className="space-y-4">
                             <div>
@@ -370,16 +370,16 @@ export default function Create({ auth, users = [] }) {
                         </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-2">
-                                <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.Truck /></span>
-                                <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Shipping Address</h3>
+                                <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Truck /></span>
+                                <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Shipping Address</h3>
                             </div>
                             <button 
                                 type="button" 
                                 onClick={copyBillingToShipping} 
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt transition-colors"
                             >
                                 <Icons.ArrowPath /> Same as billing
                             </button>
@@ -415,18 +415,18 @@ export default function Create({ auth, users = [] }) {
                 </div>
 
                 {/* Section 4: Internal Notes */}
-                <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl relative overflow-hidden shadow-lg">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+                <div className="bg-cream p-6 rounded-2xl relative overflow-hidden shadow-lg">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-terracotta/10 rounded-full -translate-y-1/2 translate-x-1/2" />
                     <div className="relative">
                         <div className="flex items-center gap-2 mb-4">
-                            <span className="p-2 rounded-xl bg-blue-500/20 text-blue-400"><Icons.DocumentText /></span>
-                            <h3 className="font-semibold text-blue-400 text-sm uppercase tracking-wider">Internal Notes</h3>
+                            <span className="p-2 rounded-xl bg-terracotta/20 text-terracotta"><Icons.DocumentText /></span>
+                            <h3 className="font-semibold text-terracotta text-sm uppercase tracking-wider">Internal Notes</h3>
                         </div>
                         <textarea 
                             placeholder="Private notes about this customer..." 
                             value={data.internal_notes} 
                             onChange={e => setData('internal_notes', e.target.value)} 
-                            className="w-full bg-slate-800/80 border border-slate-700 rounded-xl p-4 text-slate-200 text-sm placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent h-28 resize-none"
+                            className="w-full bg-ink/80 border border-ink rounded-xl p-4 text-ink-muted text-sm placeholder-ink-muted/60 focus:ring-2 focus:ring-terracotta focus:border-transparent h-28 resize-none"
                         />
                     </div>
                 </div>

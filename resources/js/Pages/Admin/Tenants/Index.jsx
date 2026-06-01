@@ -3,11 +3,11 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router, useForm } from '@inertiajs/react';
 
 const statusColors = {
-    active:   'bg-emerald-100 text-emerald-700',
-    trialing: 'bg-blue-100 text-blue-700',
-    expired:  'bg-rose-100 text-rose-700',
-    canceled: 'bg-slate-100 text-slate-600',
-    pending:  'bg-amber-100 text-amber-700',
+    active:   'bg-forest/10 text-forest',
+    trialing: 'bg-surface-alt text-terracotta',
+    expired:  'bg-terracotta/10 text-terracotta',
+    canceled: 'bg-surface-alt text-ink',
+    pending:  'bg-mustard/15 text-mustard',
 };
 
 const gatewayLabel = { admin: 'Admin', system: 'System', toyyibpay: 'ToyyibPay' };
@@ -50,14 +50,14 @@ function ManagePlanModal({ tenant, plans, onClose }) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
-            <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4" role="dialog" aria-modal="true">
+            <div className="w-full max-w-lg rounded-2xl bg-surface shadow-2xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-border-warm flex items-center justify-between">
                     <div>
-                        <h3 className="text-base font-bold text-slate-900">Manage Plan</h3>
-                        <p className="text-xs text-slate-500 mt-0.5">Tenant: <span className="font-mono">{tenant.id}</span></p>
+                        <h3 className="text-base font-display font-medium text-ink">Manage Plan</h3>
+                        <p className="text-xs text-ink-muted mt-0.5">Tenant: <span className="font-mono">{tenant.id}</span></p>
                     </div>
-                    <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500">
+                    <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-alt text-ink-muted">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
@@ -65,16 +65,16 @@ function ManagePlanModal({ tenant, plans, onClose }) {
                 <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
                     {/* Current status */}
                     {tenant.subscription && (
-                        <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 text-sm">
-                            <p className="font-semibold text-slate-700 mb-2">Current Subscription</p>
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600">
-                                <span className="text-slate-400">Plan</span>
+                        <div className="rounded-xl bg-cream border border-border-warm p-4 text-sm">
+                            <p className="font-semibold text-ink mb-2">Current Subscription</p>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-ink">
+                                <span className="text-ink-muted">Plan</span>
                                 <span className="font-semibold">{tenant.subscription.plan_name}</span>
-                                <span className="text-slate-400">Status</span>
+                                <span className="text-ink-muted">Status</span>
                                 <StatusBadge status={tenant.subscription.status} isActive={tenant.subscription.is_active} />
-                                <span className="text-slate-400">Expires</span>
+                                <span className="text-ink-muted">Expires</span>
                                 <span className="font-mono">{tenant.subscription.current_period_ends_at ?? 'Never (lifetime)'}</span>
-                                <span className="text-slate-400">Gateway</span>
+                                <span className="text-ink-muted">Gateway</span>
                                 <span>{gatewayLabel[tenant.subscription.gateway] ?? tenant.subscription.gateway}</span>
                             </div>
                         </div>
@@ -82,12 +82,12 @@ function ManagePlanModal({ tenant, plans, onClose }) {
 
                     {/* Assign plan form */}
                     <form onSubmit={handleAssign} className="space-y-4">
-                        <p className="text-sm font-semibold text-slate-800">Assign / Change Plan</p>
+                        <p className="text-sm font-semibold text-ink">Assign / Change Plan</p>
 
                         <div>
-                            <label className="block text-xs font-semibold text-slate-600 mb-1">Plan</label>
+                            <label className="block text-xs font-semibold text-ink mb-1">Plan</label>
                             <select
-                                className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                className="w-full border border-border-warm rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta"
                                 value={assignForm.data.plan_id}
                                 onChange={(e) => assignForm.setData('plan_id', e.target.value)}
                             >
@@ -95,11 +95,11 @@ function ManagePlanModal({ tenant, plans, onClose }) {
                                     <option key={p.id} value={p.id}>{p.name} (RM {p.price_monthly}/mo)</option>
                                 ))}
                             </select>
-                            {assignForm.errors.plan_id && <p className="text-xs text-rose-600 mt-1">{assignForm.errors.plan_id}</p>}
+                            {assignForm.errors.plan_id && <p className="text-xs text-terracotta mt-1">{assignForm.errors.plan_id}</p>}
                         </div>
 
                         <div>
-                            <label className="block text-xs font-semibold text-slate-600 mb-1">Duration</label>
+                            <label className="block text-xs font-semibold text-ink mb-1">Duration</label>
                             <div className="grid grid-cols-2 gap-2">
                                 {[
                                     { value: '1_month',  label: '1 Month' },
@@ -109,8 +109,8 @@ function ManagePlanModal({ tenant, plans, onClose }) {
                                 ].map((opt) => (
                                     <label key={opt.value} className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer text-sm font-medium transition-colors ${
                                         assignForm.data.duration === opt.value
-                                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                                            : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                                            ? 'border-terracotta bg-surface-alt text-terracotta'
+                                            : 'border-border-warm hover:bg-cream text-ink'
                                     }`}>
                                         <input
                                             type="radio"
@@ -128,48 +128,48 @@ function ManagePlanModal({ tenant, plans, onClose }) {
 
                         {assignForm.data.duration === 'custom' && (
                             <div>
-                                <label className="block text-xs font-semibold text-slate-600 mb-1">End Date</label>
+                                <label className="block text-xs font-semibold text-ink mb-1">End Date</label>
                                 <input
                                     type="date"
-                                    className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                    className="w-full border border-border-warm rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta"
                                     value={assignForm.data.ends_at}
                                     onChange={(e) => assignForm.setData('ends_at', e.target.value)}
                                 />
-                                {assignForm.errors.ends_at && <p className="text-xs text-rose-600 mt-1">{assignForm.errors.ends_at}</p>}
+                                {assignForm.errors.ends_at && <p className="text-xs text-terracotta mt-1">{assignForm.errors.ends_at}</p>}
                             </div>
                         )}
 
                         <button
                             type="submit"
                             disabled={assignForm.processing}
-                            className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors disabled:opacity-60"
+                            className="w-full py-2.5 rounded-xl bg-terracotta hover:bg-terracotta text-white text-sm font-semibold transition-colors disabled:opacity-60"
                         >
                             {assignForm.processing ? 'Saving…' : 'Assign Plan'}
                         </button>
                     </form>
 
                     {/* Quick actions */}
-                    <div className="border-t border-slate-200 pt-4 space-y-3">
-                        <p className="text-sm font-semibold text-slate-800">Quick Actions</p>
+                    <div className="border-t border-border-warm pt-4 space-y-3">
+                        <p className="text-sm font-semibold text-ink">Quick Actions</p>
                         <div className="flex flex-wrap gap-2">
                             <button
                                 type="button"
                                 onClick={() => handleExtend(30)}
-                                className="px-3 py-1.5 rounded-xl text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors"
+                                className="px-3 py-1.5 rounded-xl text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt border border-border-warm transition-colors"
                             >
                                 + 30 days
                             </button>
                             <button
                                 type="button"
                                 onClick={() => handleExtend(90)}
-                                className="px-3 py-1.5 rounded-xl text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors"
+                                className="px-3 py-1.5 rounded-xl text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt border border-border-warm transition-colors"
                             >
                                 + 90 days
                             </button>
                             <button
                                 type="button"
                                 onClick={() => handleExtend(365)}
-                                className="px-3 py-1.5 rounded-xl text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors"
+                                className="px-3 py-1.5 rounded-xl text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt border border-border-warm transition-colors"
                             >
                                 + 365 days
                             </button>
@@ -177,7 +177,7 @@ function ManagePlanModal({ tenant, plans, onClose }) {
                         <button
                             type="button"
                             onClick={handleCancel}
-                            className="w-full py-2 rounded-xl text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors"
+                            className="w-full py-2 rounded-xl text-xs font-semibold text-terracotta bg-terracotta/10 hover:bg-terracotta/10 border border-terracotta/30 transition-colors"
                         >
                             Cancel Subscription
                         </button>
@@ -223,10 +223,11 @@ export default function TenantAdminIndex({ auth, tenants = [], plans = [], flash
             user={auth.user}
             header={
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                    <div>
-                        <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Tenants</h2>
-                        <p className="text-slate-500 text-sm font-medium mt-1">
-                            Manage tenants, subscriptions, databases, and impersonation.
+                    <div className="flex flex-col gap-1">
+                        <p className="text-eyebrow font-semibold uppercase text-terracotta">Admin</p>
+                        <h1 className="font-display text-2xl lg:text-3xl font-medium text-ink tracking-tight">Tenants</h1>
+                        <p className="text-ink-muted text-sm">
+                            Subscriptions, databases and impersonation in one place.
                         </p>
                     </div>
                     <div className="flex gap-3">
@@ -234,7 +235,7 @@ export default function TenantAdminIndex({ auth, tenants = [], plans = [], flash
                             <button
                                 type="button"
                                 onClick={handleStopImpersonating}
-                                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 transition-colors"
+                                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta transition-colors"
                             >
                                 Stop impersonating
                             </button>
@@ -245,16 +246,16 @@ export default function TenantAdminIndex({ auth, tenants = [], plans = [], flash
         >
             <Head title="Tenants" />
 
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between">
-                    <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">
-                        Tenants <span className="ml-2 text-slate-400 font-normal normal-case">({tenants.length})</span>
+            <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-border-warm bg-cream/80 flex items-center justify-between">
+                    <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">
+                        Tenants <span className="ml-2 text-ink-muted font-normal normal-case">({tenants.length})</span>
                     </h3>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                         <thead>
-                            <tr className="border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-50/80">
+                            <tr className="border-b border-border-warm text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest bg-cream/80">
                                 <th className="px-6 py-4">Tenant ID</th>
                                 <th className="px-6 py-4">Owner</th>
                                 <th className="px-6 py-4">Plan</th>
@@ -266,38 +267,38 @@ export default function TenantAdminIndex({ auth, tenants = [], plans = [], flash
                         </thead>
                         <tbody>
                             {tenants.length === 0 && (
-                                <tr><td colSpan={7} className="px-6 py-8 text-center text-slate-400 text-sm">No tenants found.</td></tr>
+                                <tr><td colSpan={7} className="px-6 py-8 text-center text-ink-muted text-sm">No tenants found.</td></tr>
                             )}
                             {tenants.map((tenant) => (
-                                <tr key={tenant.id} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
+                                <tr key={tenant.id} className="border-b border-border-warm hover:bg-cream/80 transition-colors">
                                     <td className="px-6 py-4">
-                                        <span className="font-mono text-xs text-slate-700">{tenant.id}</span>
-                                        <span className="block font-mono text-[10px] text-slate-400">{tenant.database || '—'}</span>
+                                        <span className="font-mono text-xs text-ink">{tenant.id}</span>
+                                        <span className="block font-mono text-[10px] text-ink-muted">{tenant.database || '—'}</span>
                                     </td>
                                     <td className="px-6 py-4">
                                         {tenant.owner ? (
                                             <div>
-                                                <span className="font-medium text-slate-800 text-xs block">{tenant.owner.name}</span>
-                                                <span className="text-slate-500 text-xs">{tenant.owner.email}</span>
+                                                <span className="font-medium text-ink text-xs block">{tenant.owner.name}</span>
+                                                <span className="text-ink-muted text-xs">{tenant.owner.email}</span>
                                             </div>
                                         ) : (
-                                            <span className="text-slate-400 text-xs">No user</span>
+                                            <span className="text-ink-muted text-xs">No user</span>
                                         )}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className="text-xs font-semibold text-slate-700">{tenant.subscription?.plan_name ?? '—'}</span>
+                                        <span className="text-xs font-semibold text-ink">{tenant.subscription?.plan_name ?? '—'}</span>
                                         {tenant.subscription?.interval && (
-                                            <span className="block text-[10px] text-slate-400 capitalize">{tenant.subscription.interval}</span>
+                                            <span className="block text-[10px] text-ink-muted capitalize">{tenant.subscription.interval}</span>
                                         )}
                                     </td>
                                     <td className="px-6 py-4">
                                         {tenant.subscription
                                             ? <StatusBadge status={tenant.subscription.status} isActive={tenant.subscription.is_active} />
-                                            : <span className="text-slate-400 text-xs">—</span>
+                                            : <span className="text-ink-muted text-xs">—</span>
                                         }
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className="font-mono text-xs text-slate-600">
+                                        <span className="font-mono text-xs text-ink">
                                             {tenant.subscription?.current_period_ends_at
                                                 ? tenant.subscription.current_period_ends_at
                                                 : tenant.subscription?.interval === 'lifetime'
@@ -306,7 +307,7 @@ export default function TenantAdminIndex({ auth, tenants = [], plans = [], flash
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className="text-xs text-slate-500 capitalize">
+                                        <span className="text-xs text-ink-muted capitalize">
                                             {gatewayLabel[tenant.subscription?.gateway] ?? tenant.subscription?.gateway ?? '—'}
                                         </span>
                                     </td>
@@ -315,14 +316,14 @@ export default function TenantAdminIndex({ auth, tenants = [], plans = [], flash
                                             <button
                                                 type="button"
                                                 onClick={() => setManagingTenant(tenant)}
-                                                className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors"
+                                                className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt border border-border-warm transition-colors"
                                             >
                                                 Manage Plan
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => handleBackup(tenant.id)}
-                                                className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+                                                className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-ink bg-surface-alt hover:bg-surface-alt transition-colors"
                                             >
                                                 Backup
                                             </button>
@@ -330,7 +331,7 @@ export default function TenantAdminIndex({ auth, tenants = [], plans = [], flash
                                                 <button
                                                     type="button"
                                                     onClick={() => handleImpersonate(tenant.owner.id)}
-                                                    className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                                                    className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-terracotta hover:bg-terracotta transition-colors"
                                                 >
                                                     Impersonate
                                                 </button>
@@ -338,7 +339,7 @@ export default function TenantAdminIndex({ auth, tenants = [], plans = [], flash
                                             <button
                                                 type="button"
                                                 onClick={() => handleDeleteClick(tenant.id)}
-                                                className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 transition-colors"
+                                                className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-terracotta hover:bg-terracotta transition-colors"
                                             >
                                                 Delete
                                             </button>
@@ -353,17 +354,17 @@ export default function TenantAdminIndex({ auth, tenants = [], plans = [], flash
 
             {/* Delete confirmation */}
             {deletingId && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
-                    <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-                        <h3 className="text-lg font-semibold text-slate-900">Delete tenant and database?</h3>
-                        <p className="mt-2 text-sm text-slate-600">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4" role="dialog" aria-modal="true">
+                    <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl">
+                        <h3 className="text-lg font-semibold text-ink">Delete tenant and database?</h3>
+                        <p className="mt-2 text-sm text-ink">
                             This will remove the tenant and drop its database. This cannot be undone. Back up the tenant first if you need to keep data.
                         </p>
                         <div className="mt-6 flex justify-end gap-3">
-                            <button type="button" onClick={handleDeleteCancel} className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200">
+                            <button type="button" onClick={handleDeleteCancel} className="px-4 py-2 rounded-xl text-sm font-semibold text-ink bg-surface-alt hover:bg-surface-alt">
                                 Cancel
                             </button>
-                            <button type="button" onClick={handleDeleteConfirm} className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700">
+                            <button type="button" onClick={handleDeleteConfirm} className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta">
                                 Delete tenant
                             </button>
                         </div>

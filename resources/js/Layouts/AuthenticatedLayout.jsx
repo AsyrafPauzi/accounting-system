@@ -47,6 +47,17 @@ const navConfig = [
     ]},
 ];
 
+// Shared classNames for nav links — terracotta active state, ink-muted resting
+const linkClasses = (active, disabled) =>
+    `flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-150 ${
+        active
+            ? 'bg-terracotta text-white shadow-sm'
+            : disabled
+                ? 'text-ink-muted/50 hover:text-ink-muted'
+                : 'text-ink hover:bg-surface-alt hover:text-ink'
+    }`;
+
+const iconWrapClasses = (active) => (active ? 'text-white' : 'text-terracotta/80');
 
 export default function Authenticated({ user: propUser, header, children }) {
     const page = usePage();
@@ -64,7 +75,6 @@ export default function Authenticated({ user: propUser, header, children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [openGroups, setOpenGroups] = useState({});
 
-    // Toggle group open/close
     const toggleGroup = (groupName) => {
         setOpenGroups(prev => ({
             ...prev,
@@ -72,12 +82,11 @@ export default function Authenticated({ user: propUser, header, children }) {
         }));
     };
 
-    // Auto-expand active group on load
     useEffect(() => {
         const initialOpenGroups = {};
         navConfig.forEach(section => {
-            const hasActive = section.links.some(link => 
-                link.activeRoutes 
+            const hasActive = section.links.some(link =>
+                link.activeRoutes
                     ? link.activeRoutes.some(r => isRouteActive(r))
                     : isRouteActive(link.route)
             );
@@ -85,8 +94,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                 initialOpenGroups[section.group] = true;
             }
         });
-        
-        // Also check Admin and Company groups
+
         if (
             isRouteActive('admin.tenants.index') ||
             isRouteActive('admin.plans.index') ||
@@ -107,12 +115,10 @@ export default function Authenticated({ user: propUser, header, children }) {
         setOpenGroups(initialOpenGroups);
     }, [url]);
 
-    // Close mobile sidebar on route change (e.g. after clicking a link)
     useEffect(() => {
         setSidebarOpen(false);
     }, [url]);
 
-    // Prevent body scroll when mobile sidebar is open
     useEffect(() => {
         if (sidebarOpen) {
             document.body.style.overflow = 'hidden';
@@ -122,7 +128,6 @@ export default function Authenticated({ user: propUser, header, children }) {
         return () => { document.body.style.overflow = ''; };
     }, [sidebarOpen]);
 
-    // Helper to check if route exists and is active
     const isRouteActive = (routeName) => {
         try {
             return route().current(routeName);
@@ -131,75 +136,67 @@ export default function Authenticated({ user: propUser, header, children }) {
         }
     };
 
-    // Helper to get safe URL
     const getSafeRoute = (routeName) => {
         try {
             return route(routeName);
         } catch (e) {
-            return '#'; 
+            return '#';
         }
     };
 
-    // Flash messages are now handled via static banners in the main content area.
     useEffect(() => {
         if (flash?.success || flash?.error || flash?.info) {
-            // Scroll to top to ensure the user sees the persistent banner
             const mainContent = document.querySelector('main');
             if (mainContent) mainContent.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }, [flash]);
 
     return (
-        <div className="flex h-screen bg-gradient-to-br from-slate-100 via-indigo-50/70 to-violet-100/80 overflow-hidden font-sans">
-            {/* Mobile overlay when sidebar is open */}
+        <div className="flex h-screen bg-cream overflow-hidden font-sans">
             <div
                 aria-hidden="true"
-                className={`fixed inset-0 z-30 bg-indigo-950/40 backdrop-blur-sm transition-opacity duration-200 lg:hidden ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                className={`fixed inset-0 z-30 bg-ink/40 backdrop-blur-sm transition-opacity duration-200 lg:hidden ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 onClick={() => setSidebarOpen(false)}
             />
 
-            {/* LEFT COLUMN: SIDEBAR — drawer on mobile, static on lg */}
             <aside
-                className={`fixed inset-y-0 left-0 z-50 w-72 flex flex-col border-r border-indigo-200 bg-white shadow-xl shadow-indigo-200/30 custom-scrollbar transform transition-transform duration-200 ease-out lg:relative lg:z-auto lg:translate-x-0 lg:flex-shrink-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+                className={`fixed inset-y-0 left-0 z-50 w-72 flex flex-col border-r border-border-warm bg-surface custom-scrollbar transform transition-transform duration-200 ease-out lg:relative lg:z-auto lg:translate-x-0 lg:flex-shrink-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
             >
-                {/* Brand + mobile close */}
-                <div className="p-4 sm:p-6 flex items-center justify-between gap-3 border-b border-indigo-100/80 bg-white">
+                <div className="p-4 sm:p-6 flex items-center justify-between gap-3 border-b border-border-warm bg-surface">
                     <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-white ring-1 ring-indigo-100 shadow-sm">
+                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-cream">
                             <ApplicationLogo className="block h-9 w-9" />
                         </div>
                         <div className="min-w-0">
-                            <span className="font-bold text-indigo-950 tracking-tight text-base block truncate">{page.props.product_name}</span>
+                            <span className="font-display font-medium text-ink tracking-tight text-base block truncate">{page.props.product_name}</span>
                             {String(page.props.product_tagline ?? '').trim() !== '' && (
-                                <span className="block text-[10px] font-semibold text-indigo-600/80 uppercase tracking-wider truncate">{page.props.product_tagline}</span>
+                                <span className="block text-eyebrow text-ink-muted uppercase truncate">{page.props.product_tagline}</span>
                             )}
                         </div>
                     </div>
                     <button
                         type="button"
                         onClick={() => setSidebarOpen(false)}
-                        className="lg:hidden p-2 -m-2 rounded-xl text-indigo-600 hover:text-indigo-900 hover:bg-indigo-100/80 transition-colors"
+                        className="lg:hidden p-2 -m-2 rounded-xl text-ink-muted hover:text-ink hover:bg-surface-alt transition-colors"
                         aria-label="Close menu"
                     >
                         <Icons.X />
                     </button>
                 </div>
 
-                {/* Navigation */}
-                <nav className="flex-1 py-5 overflow-y-auto px-3 bg-white">
+                <nav className="flex-1 py-5 overflow-y-auto px-3 bg-surface">
                     {!hasActiveSubscription && !isAdmin && (
-                        <div className="mb-4 mx-1 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 text-amber-900 text-[11px] font-medium flex items-center justify-between shadow-sm shadow-amber-100/50">
-                            <span>You&apos;re on Free tier.</span>
+                        <div className="mb-4 mx-1 px-3 py-2 rounded-xl bg-mustard/15 border border-mustard/40 text-ink text-[11px] font-medium flex items-center justify-between">
+                            <span>You&apos;re on the Free tier.</span>
                             <Link
                                 href={getSafeRoute('subscription.index')}
-                                className="ml-2 text-[10px] font-bold uppercase tracking-widest text-amber-800 underline-offset-2 hover:underline"
+                                className="ml-2 text-eyebrow font-semibold uppercase text-terracotta hover:text-terracotta-dark dark:hover:text-terracotta-light underline-offset-2 hover:underline"
                             >
                                 Upgrade
                             </Link>
                         </div>
                     )}
                     {navConfig.map((section, idx) => {
-                        // Hide all standard groups for Super Admin (Main, Sales, etc.)
                         if (isAdmin && section.group !== 'Admin') return null;
 
                         const visibleLinks = section.links.filter(link => {
@@ -207,22 +204,22 @@ export default function Authenticated({ user: propUser, header, children }) {
                             const userOk = !link.userPermission || hasPermission(link.userPermission);
                             return planOk && userOk;
                         });
-                        
+
                         if (visibleLinks.length === 0) return null;
                         const isOpen = openGroups[section.group];
 
                         return (
                             <div key={idx} className="mb-2">
-                                <button 
+                                <button
                                     onClick={() => toggleGroup(section.group)}
-                                    className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-bold text-indigo-600/90 uppercase tracking-widest hover:bg-indigo-50/50 rounded-lg transition-colors group"
+                                    className="w-full flex items-center justify-between px-3 py-2 text-eyebrow font-semibold text-ink-muted uppercase hover:bg-surface-alt rounded-lg transition-colors"
                                 >
                                     <span>{section.group}</span>
-                                    <span className={`transition-transform duration-200 ${isOpen ? 'rotate-0' : '-rotate-90 text-indigo-300'}`}>
+                                    <span className={`transition-transform duration-200 ${isOpen ? 'rotate-0' : '-rotate-90 text-ink-muted/60'}`}>
                                         <Icons.ChevronDown />
                                     </span>
                                 </button>
-                                
+
                                 <div className={`mt-1 space-y-0.5 overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                     {visibleLinks.map((link) => {
                                         const Icon = link.Icon;
@@ -235,27 +232,21 @@ export default function Authenticated({ user: propUser, header, children }) {
                                             <Link
                                                 key={link.name}
                                                 href={disabled ? route('subscription.index') : getSafeRoute(link.route)}
-                                                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                                    active
-                                                        ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
-                                                        : disabled
-                                                            ? 'text-slate-400 hover:text-slate-600 hover:bg-white/60'
-                                                            : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
-                                                }`}
+                                                className={linkClasses(active, disabled)}
                                             >
-                                                <span className={active ? 'text-white' : 'text-indigo-500/80'}>
+                                                <span className={iconWrapClasses(active)}>
                                                     <Icon />
                                                 </span>
                                                 <span className="flex-1 min-w-0">
                                                     <span className="block truncate">{link.name}</span>
                                                     {link.subtitle && (
-                                                        <span className={`block text-[10px] font-normal mt-0.5 truncate ${active ? 'text-indigo-100' : 'text-slate-500'}`}>
+                                                        <span className={`block text-[10px] font-normal mt-0.5 truncate ${active ? 'text-white/80' : 'text-ink-muted'}`}>
                                                             {link.subtitle}
                                                         </span>
                                                     )}
                                                 </span>
                                                 {active && (
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-white/90 flex-shrink-0 shadow-sm" />
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-white/90 flex-shrink-0" />
                                                 )}
                                             </Link>
                                         );
@@ -267,12 +258,12 @@ export default function Authenticated({ user: propUser, header, children }) {
 
                     {isAdmin && (
                         <div className="mb-2">
-                            <button 
+                            <button
                                 onClick={() => toggleGroup('Admin')}
-                                className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-bold text-indigo-600/90 uppercase tracking-widest hover:bg-indigo-50/50 rounded-lg transition-colors group"
+                                className="w-full flex items-center justify-between px-3 py-2 text-eyebrow font-semibold text-ink-muted uppercase hover:bg-surface-alt rounded-lg transition-colors"
                             >
                                 <span>Admin</span>
-                                <span className={`transition-transform duration-200 ${openGroups['Admin'] ? 'rotate-0' : '-rotate-90 text-indigo-300'}`}>
+                                <span className={`transition-transform duration-200 ${openGroups['Admin'] ? 'rotate-0' : '-rotate-90 text-ink-muted/60'}`}>
                                     <Icons.ChevronDown />
                                 </span>
                             </button>
@@ -282,49 +273,46 @@ export default function Authenticated({ user: propUser, header, children }) {
                                     { name: 'Plan Catalog', route: 'admin.plans.index', Icon: Icons.Sparkles },
                                     { name: 'Platform Users', route: 'admin.users.index', Icon: Icons.Users },
                                     { name: 'Audit Log', route: 'admin.audit-logs.index', Icon: Icons.Audit },
-                                ].map((link) => (
-                                    <Link
-                                        key={link.name}
-                                        href={getSafeRoute(link.route)}
-                                        className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                            isRouteActive(link.route)
-                                                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
-                                                : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
-                                        }`}
-                                    >
-                                        <span className={isRouteActive(link.route) ? 'text-white' : 'text-indigo-500/80'}>
-                                            <link.Icon />
-                                        </span>
-                                        <span className="flex-1">{link.name}</span>
-                                        {isRouteActive(link.route) && <span className="w-1.5 h-1.5 rounded-full bg-white/90" />}
-                                    </Link>
-                                ))}
+                                    ...(page.props.deployment_mode === 'self_hosted'
+                                        ? [{ name: 'Branding', route: 'admin.branding.edit', Icon: Icons.Sparkles }]
+                                        : []),
+                                ].map((link) => {
+                                    const active = isRouteActive(link.route);
+                                    return (
+                                        <Link
+                                            key={link.name}
+                                            href={getSafeRoute(link.route)}
+                                            className={linkClasses(active, false)}
+                                        >
+                                            <span className={iconWrapClasses(active)}>
+                                                <link.Icon />
+                                            </span>
+                                            <span className="flex-1">{link.name}</span>
+                                            {active && <span className="w-1.5 h-1.5 rounded-full bg-white/90" />}
+                                        </Link>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
 
-                    {/* Only show Company settings group if NOT a super-admin */}
                     {!isAdmin && (
                         <div className="mb-2">
-                            <button 
+                            <button
                                 onClick={() => toggleGroup('Company')}
-                                className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-bold text-indigo-600/90 uppercase tracking-widest hover:bg-indigo-50/50 rounded-lg transition-colors group"
+                                className="w-full flex items-center justify-between px-3 py-2 text-eyebrow font-semibold text-ink-muted uppercase hover:bg-surface-alt rounded-lg transition-colors"
                             >
                                 <span>Company</span>
-                                <span className={`transition-transform duration-200 ${openGroups['Company'] ? 'rotate-0' : '-rotate-90 text-indigo-300'}`}>
+                                <span className={`transition-transform duration-200 ${openGroups['Company'] ? 'rotate-0' : '-rotate-90 text-ink-muted/60'}`}>
                                     <Icons.ChevronDown />
                                 </span>
                             </button>
                             <div className={`mt-1 space-y-0.5 overflow-hidden transition-all duration-300 ${openGroups['Company'] ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                 <Link
                                     href={getSafeRoute('settings.company')}
-                                    className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                        isRouteActive('settings.company')
-                                            ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
-                                            : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
-                                    }`}
+                                    className={linkClasses(isRouteActive('settings.company'), false)}
                                 >
-                                    <span className={isRouteActive('settings.company') ? 'text-white' : 'text-indigo-500/80'}>
+                                    <span className={iconWrapClasses(isRouteActive('settings.company'))}>
                                         <Icons.BuildingOffice />
                                     </span>
                                     <span className="flex-1">Company settings</span>
@@ -332,13 +320,9 @@ export default function Authenticated({ user: propUser, header, children }) {
                                 {hasPermission('audit.view') && planPermissions['audit-logs.view'] && (
                                     <Link
                                         href={getSafeRoute('audit.index')}
-                                        className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                            isRouteActive('audit.index')
-                                                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
-                                                : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
-                                        }`}
+                                        className={linkClasses(isRouteActive('audit.index'), false)}
                                     >
-                                        <span className={isRouteActive('audit.index') ? 'text-white' : 'text-indigo-500/80'}>
+                                        <span className={iconWrapClasses(isRouteActive('audit.index'))}>
                                             <Icons.Audit />
                                         </span>
                                         <span className="flex-1">Audit Compliance</span>
@@ -347,13 +331,9 @@ export default function Authenticated({ user: propUser, header, children }) {
                                 {hasPermission('users.view') && planPermissions['users.view'] && (
                                     <Link
                                         href={getSafeRoute('settings.team.index')}
-                                        className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                            isRouteActive('settings.team.index')
-                                                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
-                                                : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
-                                        }`}
+                                        className={linkClasses(isRouteActive('settings.team.index'), false)}
                                     >
-                                        <span className={isRouteActive('settings.team.index') ? 'text-white' : 'text-indigo-500/80'}>
+                                        <span className={iconWrapClasses(isRouteActive('settings.team.index'))}>
                                             <Icons.Users />
                                         </span>
                                         <span className="flex-1">Team & Roles</span>
@@ -362,13 +342,9 @@ export default function Authenticated({ user: propUser, header, children }) {
                                 {hasPermission('audit-logs.view') && planPermissions['audit-logs.view'] && (
                                     <Link
                                         href={getSafeRoute('audit-logs.index')}
-                                        className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                            isRouteActive('audit-logs.index')
-                                                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
-                                                : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
-                                        }`}
+                                        className={linkClasses(isRouteActive('audit-logs.index'), false)}
                                     >
-                                        <span className={isRouteActive('audit-logs.index') ? 'text-white' : 'text-indigo-500/80'}>
+                                        <span className={iconWrapClasses(isRouteActive('audit-logs.index'))}>
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                             </svg>
@@ -379,13 +355,9 @@ export default function Authenticated({ user: propUser, header, children }) {
                                 {(user.role_name === 'admin' || user.role_name === 'super-admin') && (
                                     <Link
                                         href={getSafeRoute('settings.plan.index')}
-                                        className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                            isRouteActive('settings.plan.index')
-                                                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30'
-                                                : 'text-slate-700 hover:bg-indigo-100/70 hover:text-indigo-950'
-                                        }`}
+                                        className={linkClasses(isRouteActive('settings.plan.index'), false)}
                                     >
-                                        <span className={isRouteActive('settings.plan.index') ? 'text-white' : 'text-indigo-500/80'}>
+                                        <span className={iconWrapClasses(isRouteActive('settings.plan.index'))}>
                                             <Icons.Sparkles />
                                         </span>
                                         <span className="flex-1">Plan & Usage</span>
@@ -396,15 +368,14 @@ export default function Authenticated({ user: propUser, header, children }) {
                     )}
                 </nav>
 
-                {/* User block */}
-                <div className="p-4 pb-15 lg:pb-4 border-t border-indigo-100/90 bg-white">
+                <div className="p-4 pb-15 lg:pb-4 border-t border-border-warm bg-surface">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-indigo-400/40 ring-2 ring-white/90">
+                        <div className="h-10 w-10 rounded-xl bg-terracotta flex items-center justify-center text-white text-sm font-semibold">
                             {(user.name || 'U').charAt(0)}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-indigo-950 truncate">{user.name || 'User'}</p>
-                            <p className="text-[10px] font-semibold text-indigo-600/75 uppercase tracking-wider truncate">
+                            <p className="text-sm font-medium text-ink truncate">{user.name || 'User'}</p>
+                            <p className="text-eyebrow font-semibold text-ink-muted uppercase truncate">
                                 {isImpersonating ? 'Impersonating' : (user.role_name?.replace('-', ' ') || 'User')}
                             </p>
                         </div>
@@ -412,7 +383,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                     <div className="grid grid-cols-2 gap-2">
                         <Link
                             href={route('profile.edit')}
-                            className="py-2 rounded-lg text-center text-xs font-bold text-indigo-900 bg-white border border-indigo-200/80 hover:bg-indigo-50 hover:border-indigo-300 transition-colors shadow-sm"
+                            className="py-2 rounded-lg text-center text-xs font-semibold text-ink bg-cream border border-border-warm hover:bg-surface-alt transition-colors"
                         >
                             Settings
                         </Link>
@@ -420,7 +391,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                             href={route('logout')}
                             method="post"
                             as="button"
-                            className="py-2 rounded-lg text-center text-xs font-bold text-rose-700 bg-gradient-to-br from-rose-50 to-orange-50 border border-rose-200/90 hover:from-rose-100 hover:to-orange-50 transition-colors"
+                            className="py-2 rounded-lg text-center text-xs font-semibold text-terracotta bg-cream border border-border-warm hover:bg-terracotta/10 transition-colors"
                         >
                             Logout
                         </Link>
@@ -428,25 +399,23 @@ export default function Authenticated({ user: propUser, header, children }) {
                 </div>
             </aside>
 
-            {/* RIGHT COLUMN: MAIN CONTENT */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-transparent pb-20 lg:pb-0">
-                {/* Mobile: top bar with hamburger */}
-                <div className="lg:hidden flex-shrink-0 flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur-lg border-b border-indigo-100/80 z-20 sticky top-0">
+                <div className="lg:hidden flex-shrink-0 flex items-center justify-between px-4 py-3 bg-surface/90 backdrop-blur-lg border-b border-border-warm z-20 sticky top-0">
                     <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white ring-1 ring-indigo-100 shadow-sm">
+                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-cream">
                             <ApplicationLogo className="block h-6 w-6" />
                         </div>
                         <div className="min-w-0">
-                            <span className="font-bold text-indigo-950 tracking-tight truncate block text-sm">{page.props.product_name}</span>
+                            <span className="font-display font-medium text-ink tracking-tight truncate block text-sm">{page.props.product_name}</span>
                             {String(page.props.product_tagline ?? '').trim() !== '' && (
-                                <span className="text-[10px] font-semibold text-indigo-600/70 uppercase tracking-wider truncate block">{page.props.product_tagline}</span>
+                                <span className="text-eyebrow font-semibold text-ink-muted uppercase truncate block">{page.props.product_tagline}</span>
                             )}
                         </div>
                     </div>
                 </div>
 
                 {header && (
-                    <header className="flex-shrink-0 bg-white/80 backdrop-blur-md border-b border-indigo-100/90 shadow-sm shadow-indigo-100/30 z-10">
+                    <header className="flex-shrink-0 bg-surface/90 backdrop-blur-md border-b border-border-warm z-10">
                         <div className="max-w-full mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-10">
                             {header}
                         </div>
@@ -454,17 +423,16 @@ export default function Authenticated({ user: propUser, header, children }) {
                 )}
 
                 <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 relative">
-                    {/* Flash messages */}
                     {isImpersonating && (
-                        <div className="max-w-7xl mx-auto mb-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium flex items-center justify-between">
+                        <div className="max-w-7xl mx-auto mb-4 px-4 py-3 rounded-xl bg-mustard/15 border border-mustard/40 text-ink text-sm font-medium flex items-center justify-between">
                             <span>
-                                You are impersonating another user. Actions you take affect that tenant only.
+                                You&apos;re impersonating another user. Actions affect that tenant only.
                             </span>
                             <Link
                                 href={route('admin.tenants.stop-impersonating')}
                                 method="post"
                                 as="button"
-                                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-900 bg-amber-200 hover:bg-amber-300"
+                                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-ink bg-mustard/30 hover:bg-mustard/50"
                             >
                                 Return to admin
                             </Link>
@@ -473,29 +441,29 @@ export default function Authenticated({ user: propUser, header, children }) {
 
                     <div className="max-w-7xl mx-auto min-w-0">
                         {flash?.success && (
-                            <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center gap-3 text-emerald-800 animate-in fade-in slide-in-from-top-4 duration-300 shadow-sm shadow-emerald-100">
-                                <div className="p-1.5 bg-emerald-100 rounded-lg text-emerald-600">
+                            <div className="mb-6 p-4 rounded-2xl bg-forest/10 border border-forest/30 flex items-center gap-3 text-forest dark:text-forest-light animate-in fade-in slide-in-from-top-4 duration-300">
+                                <div className="p-1.5 bg-forest/15 rounded-lg text-forest dark:text-forest-light">
                                     <Icons.DocumentCheck />
                                 </div>
-                                <p className="text-sm font-bold">{flash.success}</p>
+                                <p className="text-sm font-medium">{flash.success}</p>
                             </div>
                         )}
 
                         {flash?.error && (
-                            <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-center gap-3 text-rose-800 animate-in fade-in slide-in-from-top-4 duration-300 shadow-sm shadow-rose-100">
-                                <div className="p-1.5 bg-rose-100 rounded-lg text-rose-600">
+                            <div className="mb-6 p-4 rounded-2xl bg-terracotta/10 border border-terracotta/30 flex items-center gap-3 text-terracotta animate-in fade-in slide-in-from-top-4 duration-300">
+                                <div className="p-1.5 bg-terracotta/15 rounded-lg text-terracotta">
                                     <Icons.Exclamation />
                                 </div>
-                                <p className="text-sm font-bold">{flash.error}</p>
+                                <p className="text-sm font-medium">{flash.error}</p>
                             </div>
                         )}
 
                         {flash?.info && (
-                            <div className="mb-6 p-4 rounded-2xl bg-blue-50 border border-blue-200 flex items-center gap-3 text-blue-800 animate-in fade-in slide-in-from-top-4 duration-300 shadow-sm shadow-blue-100">
-                                <div className="p-1.5 bg-blue-100 rounded-lg text-blue-600">
+                            <div className="mb-6 p-4 rounded-2xl bg-mustard/15 border border-mustard/40 flex items-center gap-3 text-ink animate-in fade-in slide-in-from-top-4 duration-300">
+                                <div className="p-1.5 bg-mustard/30 rounded-lg text-ink">
                                     <Icons.Sparkles />
                                 </div>
-                                <p className="text-sm font-bold">{flash.info}</p>
+                                <p className="text-sm font-medium">{flash.info}</p>
                             </div>
                         )}
 
@@ -504,30 +472,22 @@ export default function Authenticated({ user: propUser, header, children }) {
                 </main>
             </div>
 
-            <style dangerouslySetInnerHTML={{ __html: `
-                .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: rgba(224, 231, 255, 0.5); border-radius: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: #a5b4fc; border-radius: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #818cf8; }
-            `}} />
-
-            {/* MOBILE BOTTOM NAVIGATION */}
             <div className={`lg:hidden fixed bottom-6 left-4 right-4 z-40 transition-transform duration-200 ${sidebarOpen ? 'translate-y-32' : 'translate-y-0'}`}>
-                <nav className="glass rounded-[2rem] shadow-2xl shadow-indigo-500/15 p-2 flex items-center justify-between gap-1 border border-white/50 ring-1 ring-indigo-950/5">
+                <nav className="bg-surface/90 backdrop-blur-md border border-border-warm rounded-[2rem] shadow-xl shadow-ink/10 p-2 flex items-center justify-between gap-1">
                     <Link
                         href={route('dashboard')}
-                        className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-2xl transition-all duration-200 ${isRouteActive('dashboard') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 active:bg-slate-50'}`}
+                        className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-2xl transition-all duration-200 ${isRouteActive('dashboard') ? 'bg-terracotta/10 text-terracotta' : 'text-ink-muted active:bg-surface-alt'}`}
                     >
                         <Icons.ChartBar />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">Home</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider">Home</span>
                     </Link>
 
                     <Link
                         href={route('invoices.index')}
-                        className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-2xl transition-all duration-200 ${isRouteActive('invoices.index') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 active:bg-slate-50'}`}
+                        className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-2xl transition-all duration-200 ${isRouteActive('invoices.index') ? 'bg-terracotta/10 text-terracotta' : 'text-ink-muted active:bg-surface-alt'}`}
                     >
                         <Icons.Document />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">Sales</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider">Sales</span>
                     </Link>
 
                     <div className="flex-shrink-0 -mt-8 px-1">
@@ -536,18 +496,18 @@ export default function Authenticated({ user: propUser, header, children }) {
 
                     <Link
                         href={route('bills.index')}
-                        className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-2xl transition-all duration-200 ${isRouteActive('bills.index') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 active:bg-slate-50'}`}
+                        className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-2xl transition-all duration-200 ${isRouteActive('bills.index') ? 'bg-terracotta/10 text-terracotta' : 'text-ink-muted active:bg-surface-alt'}`}
                     >
                         <Icons.ShoppingCart />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">Bills</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider">Bills</span>
                     </Link>
 
                     <button
                         onClick={() => setSidebarOpen(true)}
-                        className="flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-2xl text-slate-500 active:bg-slate-50 transition-all duration-200"
+                        className="flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-2xl text-ink-muted active:bg-surface-alt transition-all duration-200"
                     >
                         <Icons.Menu />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">Menu</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider">Menu</span>
                     </button>
                 </nav>
             </div>

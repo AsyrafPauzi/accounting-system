@@ -48,18 +48,18 @@ export default function Index({ auth, entries = [], filters = {}, stats = {}, pa
             header={
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                     <div>
-                        <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">General Ledger</h2>
-                        <p className="text-slate-500 text-sm font-medium mt-1">
+                        <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">General Ledger</h2>
+                        <p className="text-ink-muted text-sm font-medium mt-1">
                             Double-entry journal created automatically from invoices, payments, and credit notes.
                         </p>
-                        <p className="text-slate-400 text-xs mt-0.5">
+                        <p className="text-ink-muted text-xs mt-0.5">
                             One row per journal entry (invoice, payment, or credit note).
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                         <a
                             href={`${route('general-ledger.export.csv')}?${new URLSearchParams(Object.fromEntries(Object.entries({ date_from, date_to, reference_type }).filter(([, v]) => v != null && v !== '')))}`}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
+                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream transition-colors"
                         >
                             <Icons.ArrowDownTray /> CSV
                         </a>
@@ -73,18 +73,18 @@ export default function Index({ auth, entries = [], filters = {}, stats = {}, pa
                             }}
                             className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
                                 auth.planPermissions['reports.export.full']
-                                    ? 'text-slate-600 bg-white border border-slate-200 hover:bg-slate-50'
-                                    : 'text-slate-400 bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100'
+                                    ? 'text-ink bg-surface border border-border-warm hover:bg-cream'
+                                    : 'text-ink-muted bg-cream border border-border-warm cursor-pointer hover:bg-surface-alt'
                             }`}
                         >
                             <Icons.DocumentArrowDown /> PDF
                             {!auth.planPermissions['reports.export.full'] && (
-                                <svg className="w-3 h-3 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                                <svg className="w-3 h-3 text-mustard" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                             )}
                         </a>
                         <Link
                             href={route('general-ledger.report')}
-                            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
+                            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream transition-colors"
                         >
                             View transaction report
                         </Link>
@@ -97,67 +97,67 @@ export default function Index({ auth, entries = [], filters = {}, stats = {}, pa
 
             <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl p-6 shadow-lg transition-all hover:shadow-xl hover:-translate-y-0.5">
+                    <div className="relative overflow-hidden bg-terracotta text-white rounded-2xl p-6 shadow-lg transition-all hover:shadow-xl hover:-translate-y-0.5">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Journal entries</span>
-                            <span className="p-2 rounded-xl bg-white/10"><Icons.BookOpen /></span>
+                            <span className="p-2 rounded-xl bg-surface/10"><Icons.BookOpen /></span>
                         </div>
                         <p className="text-2xl font-bold tabular-nums">{entries_count}</p>
-                        <p className="text-xs text-blue-100 mt-1">Filtered period</p>
+                        <p className="text-xs text-terracotta mt-1">Filtered period</p>
                     </div>
-                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm transition-all hover:shadow-md">
+                    <div className="bg-surface rounded-2xl p-6 border border-border-warm shadow-sm transition-all hover:shadow-md">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total debits</span>
-                            <span className="p-2 rounded-xl bg-blue-50 text-blue-600"><Icons.TrendingUp /></span>
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Total debits</span>
+                            <span className="p-2 rounded-xl bg-surface-alt text-terracotta"><Icons.TrendingUp /></span>
                         </div>
-                        <p className="text-xl font-bold text-slate-800 font-mono tabular-nums">RM {formatMoney(total_debits)}</p>
-                        <p className="text-xs text-slate-500 mt-1">Filtered period</p>
+                        <p className="text-xl font-display font-medium text-ink font-mono tabular-nums">RM {formatMoney(total_debits)}</p>
+                        <p className="text-xs text-ink-muted mt-1">Filtered period</p>
                     </div>
-                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm transition-all hover:shadow-md">
+                    <div className="bg-surface rounded-2xl p-6 border border-border-warm shadow-sm transition-all hover:shadow-md">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total credits</span>
-                            <span className="p-2 rounded-xl bg-indigo-50 text-indigo-600"><Icons.TrendingDown /></span>
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Total credits</span>
+                            <span className="p-2 rounded-xl bg-surface-alt text-terracotta"><Icons.TrendingDown /></span>
                         </div>
-                        <p className="text-xl font-bold text-slate-800 font-mono tabular-nums">RM {formatMoney(total_credits)}</p>
-                        <p className="text-xs text-slate-500 mt-1">Filtered period</p>
+                        <p className="text-xl font-display font-medium text-ink font-mono tabular-nums">RM {formatMoney(total_credits)}</p>
+                        <p className="text-xs text-ink-muted mt-1">Filtered period</p>
                     </div>
-                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm transition-all hover:shadow-md">
+                    <div className="bg-surface rounded-2xl p-6 border border-border-warm shadow-sm transition-all hover:shadow-md">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Balanced</span>
-                            <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600"><Icons.Scale /></span>
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Balanced</span>
+                            <span className="p-2 rounded-xl bg-forest/10 text-forest"><Icons.Scale /></span>
                         </div>
-                        <p className="text-xl font-bold text-emerald-700 font-mono tabular-nums">{balanced_count}</p>
-                        <p className="text-xs text-slate-500 mt-1">Entries with debit = credit</p>
+                        <p className="text-xl font-bold text-forest font-mono tabular-nums">{balanced_count}</p>
+                        <p className="text-xs text-ink-muted mt-1">Entries with debit = credit</p>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100 flex flex-wrap items-end gap-3 bg-slate-50/50">
+                <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-border-warm flex flex-wrap items-end gap-3 bg-cream/50">
                         <form method="get" action={route('general-ledger.index')} className="flex flex-wrap items-end gap-3">
                             <div>
-                                <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Date from</label>
+                                <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">Date from</label>
                                 <input
                                     type="date"
                                     name="date_from"
                                     defaultValue={date_from}
-                                    className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
+                                    className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
                                 />
                             </div>
                             <div>
-                                <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Date to</label>
+                                <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">Date to</label>
                                 <input
                                     type="date"
                                     name="date_to"
                                     defaultValue={date_to}
-                                    className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
+                                    className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
                                 />
                             </div>
                             <div>
-                                <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Reference type</label>
+                                <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">Reference type</label>
                                 <select
                                     name="reference_type"
                                     defaultValue={reference_type}
-                                    className="border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
+                                    className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
                                 >
                                     {REFERENCE_OPTIONS.map((opt) => (
                                         <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>
@@ -166,7 +166,7 @@ export default function Index({ auth, entries = [], filters = {}, stats = {}, pa
                             </div>
                             <button
                                 type="submit"
-                                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta transition-colors"
                             >
                                 Apply filters
                             </button>
@@ -174,12 +174,12 @@ export default function Index({ auth, entries = [], filters = {}, stats = {}, pa
                         {(date_from || date_to || reference_type) && (
                             <Link
                                 href={route('general-ledger.index')}
-                                className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                                className="text-xs font-semibold text-terracotta hover:text-terracotta"
                             >
                                 Clear filters
                             </Link>
                         )}
-                        <span className="text-slate-500 text-sm font-medium ml-auto">
+                        <span className="text-ink-muted text-sm font-medium ml-auto">
                             Page {current_page} of {last_page} ({total} entries)
                         </span>
                     </div>
@@ -187,7 +187,7 @@ export default function Index({ auth, entries = [], filters = {}, stats = {}, pa
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead>
-                                <tr className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 bg-slate-50/80">
+                                <tr className="text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
                                     <th className="px-6 py-4">Date</th>
                                     <th className="px-6 py-4">Description</th>
                                     <th className="px-6 py-4">Reference</th>
@@ -201,11 +201,11 @@ export default function Index({ auth, entries = [], filters = {}, stats = {}, pa
                             <tbody>
                                 {entries.length > 0 ? (
                                     entries.map((entry) => (
-                                        <tr key={entry.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/80 transition-colors">
-                                            <td className="px-6 py-4 font-mono text-slate-800 text-xs">{entry.date}</td>
-                                            <td className="px-6 py-4 text-slate-800 max-w-xs truncate" title={entry.description}>{entry.description}</td>
+                                        <tr key={entry.id} className="border-b border-border-warm last:border-0 hover:bg-cream/80 transition-colors">
+                                            <td className="px-6 py-4 font-mono text-ink text-xs">{entry.date}</td>
+                                            <td className="px-6 py-4 text-ink max-w-xs truncate" title={entry.description}>{entry.description}</td>
                                             <td className="px-6 py-4">
-                                                <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-600">
+                                                <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold bg-surface-alt text-ink">
                                                     {entry.reference_type}
                                                 </span>
                                             </td>
@@ -213,27 +213,27 @@ export default function Index({ auth, entries = [], filters = {}, stats = {}, pa
                                                 {entry.source_route ? (
                                                     <a
                                                         href={entry.source_route}
-                                                        className="text-blue-600 hover:text-blue-700 text-xs font-semibold"
+                                                        className="text-terracotta hover:text-terracotta text-xs font-semibold"
                                                     >
                                                         {getSourceLabel(entry.reference_type)}
                                                     </a>
                                                 ) : (
-                                                    <span className="text-slate-400 text-xs">—</span>
+                                                    <span className="text-ink-muted text-xs">—</span>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4 text-right font-mono text-slate-800 tabular-nums">RM {formatMoney(entry.total_debit)}</td>
-                                            <td className="px-6 py-4 text-right font-mono text-slate-800 tabular-nums">RM {formatMoney(entry.total_credit)}</td>
+                                            <td className="px-6 py-4 text-right font-mono text-ink tabular-nums">RM {formatMoney(entry.total_debit)}</td>
+                                            <td className="px-6 py-4 text-right font-mono text-ink tabular-nums">RM {formatMoney(entry.total_credit)}</td>
                                             <td className="px-6 py-4 text-right">
                                                 {entry.balanced ? (
-                                                    <span className="inline-flex items-center gap-1 text-emerald-600 text-xs font-semibold justify-end w-full"><Icons.Check /> Yes</span>
+                                                    <span className="inline-flex items-center gap-1 text-forest text-xs font-semibold justify-end w-full"><Icons.Check /> Yes</span>
                                                 ) : (
-                                                    <span className="text-slate-400 text-xs">—</span>
+                                                    <span className="text-ink-muted text-xs">—</span>
                                                 )}
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <Link
                                                     href={route('general-ledger.show', entry.id)}
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt transition-colors"
                                                 >
                                                     View <Icons.ChevronRight />
                                                 </Link>
@@ -243,10 +243,10 @@ export default function Index({ auth, entries = [], filters = {}, stats = {}, pa
                                 ) : (
                                     <tr>
                                         <td colSpan={8} className="px-6 py-16 text-center">
-                                            <p className="text-slate-600 font-semibold mb-1">
+                                            <p className="text-ink font-semibold mb-1">
                                                 No entries in this period.
                                             </p>
-                                            <p className="text-slate-400 text-sm">
+                                            <p className="text-ink-muted text-sm">
                                                 {(date_from || date_to || reference_type)
                                                     ? 'Try a different date range or clear filters.'
                                                     : 'Post an invoice or record a payment to create ledger entries.'}
@@ -259,16 +259,16 @@ export default function Index({ auth, entries = [], filters = {}, stats = {}, pa
                     </div>
 
                     {last_page > 1 && (
-                        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-                            <span className="text-slate-500 text-sm">Page {current_page} of {last_page}</span>
+                        <div className="px-6 py-4 border-t border-border-warm flex items-center justify-between bg-cream/50">
+                            <span className="text-ink-muted text-sm">Page {current_page} of {last_page}</span>
                             <div className="flex gap-2">
                                 {prev_url && (
-                                    <Link href={prev_url} className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50">
+                                    <Link href={prev_url} className="px-4 py-2 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">
                                         Previous
                                     </Link>
                                 )}
                                 {next_url && (
-                                    <Link href={next_url} className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50">
+                                    <Link href={next_url} className="px-4 py-2 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">
                                         Next
                                     </Link>
                                 )}

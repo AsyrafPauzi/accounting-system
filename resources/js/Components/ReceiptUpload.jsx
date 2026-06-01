@@ -81,11 +81,11 @@ export default function ReceiptUpload({ onOcrComplete, billId = null }) {
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
                 className={`relative border-2 border-dashed rounded-xl p-8 transition-all duration-300 cursor-pointer overflow-hidden
-                    ${dragActive ? 'border-indigo-600 bg-indigo-50/50 scale-[1.02]' : 
-                      uploading ? 'border-indigo-400 bg-indigo-50/30' : 
-                      success ? 'border-emerald-400 bg-emerald-50/30' : 
-                      error ? 'border-rose-400 bg-rose-50/30' : 
-                      'border-slate-300 hover:border-indigo-400 hover:bg-slate-50'}`}
+                    ${dragActive ? 'border-terracotta bg-surface-alt/50 scale-[1.02]' : 
+                      uploading ? 'border-terracotta bg-surface-alt/30' : 
+                      success ? 'border-forest bg-forest/10/30' : 
+                      error ? 'border-terracotta bg-terracotta/10/30' : 
+                      'border-border-warm hover:border-terracotta hover:bg-cream'}`}
             >
                 <input 
                     type="file" 
@@ -99,48 +99,48 @@ export default function ReceiptUpload({ onOcrComplete, billId = null }) {
                     {uploading ? (
                         <>
                             <div className="relative mb-4">
-                                <IconLoader2 className="w-12 h-12 text-indigo-600 animate-spin" />
-                                <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-indigo-600">
+                                <IconLoader2 className="w-12 h-12 text-terracotta animate-spin" />
+                                <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-terracotta">
                                     {progress}%
                                 </div>
                             </div>
-                            <h4 className="text-lg font-semibold text-slate-800">Scanning Receipt...</h4>
-                            <p className="text-sm text-slate-500 mt-1">Our AI is extracting data from your receipt</p>
+                            <h4 className="text-lg font-semibold text-ink">Scanning Receipt...</h4>
+                            <p className="text-sm text-ink-muted mt-1">Our AI is extracting data from your receipt</p>
                             
                             {/* Scanning Animation Line */}
                             <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent animate-scan" />
                         </>
                     ) : success ? (
                         <>
-                            <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
-                                <IconCheck className="w-6 h-6 text-emerald-600" />
+                            <div className="w-12 h-12 bg-forest/10 rounded-full flex items-center justify-center mb-4">
+                                <IconCheck className="w-6 h-6 text-forest" />
                             </div>
-                            <h4 className="text-lg font-semibold text-slate-800">Scan Complete!</h4>
-                            <p className="text-sm text-slate-500 mt-1">Fields have been auto-populated</p>
+                            <h4 className="text-lg font-semibold text-ink">Scan Complete!</h4>
+                            <p className="text-sm text-ink-muted mt-1">Fields have been auto-populated</p>
                             <button 
                                 onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                                className="mt-4 text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                                className="mt-4 text-xs font-medium text-terracotta hover:text-terracotta"
                             >
                                 Upload another
                             </button>
                         </>
                     ) : error ? (
                         <>
-                            <div className="w-12 h-12 bg-rose-100 rounded-full flex items-center justify-center mb-4">
-                                <IconX className="w-6 h-6 text-rose-600" />
+                            <div className="w-12 h-12 bg-terracotta/10 rounded-full flex items-center justify-center mb-4">
+                                <IconX className="w-6 h-6 text-terracotta" />
                             </div>
-                            <h4 className="text-lg font-semibold text-rose-800">Upload Failed</h4>
-                            <p className="text-sm text-rose-500 mt-1">{error}</p>
-                            <button className="mt-4 px-4 py-2 bg-slate-800 text-white text-xs font-medium rounded-lg">Try Again</button>
+                            <h4 className="text-lg font-semibold text-terracotta">Upload Failed</h4>
+                            <p className="text-sm text-terracotta mt-1">{error}</p>
+                            <button className="mt-4 px-4 py-2 bg-ink text-white text-xs font-medium rounded-lg">Try Again</button>
                         </>
                     ) : (
                         <>
-                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-indigo-100 transition-colors">
-                                <IconUpload className="w-6 h-6 text-slate-600 group-hover:text-indigo-600" />
+                            <div className="w-12 h-12 bg-surface-alt rounded-full flex items-center justify-center mb-4 group-hover:bg-surface-alt transition-colors">
+                                <IconUpload className="w-6 h-6 text-ink group-hover:text-terracotta" />
                             </div>
-                            <h4 className="text-lg font-semibold text-slate-800">Upload Physical Receipt</h4>
-                            <p className="text-sm text-slate-500 mt-1">Drop your receipt here or click to browse</p>
-                            <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
+                            <h4 className="text-lg font-semibold text-ink">Upload Physical Receipt</h4>
+                            <p className="text-sm text-ink-muted mt-1">Drop your receipt here or click to browse</p>
+                            <div className="mt-4 flex items-center gap-2 text-xs text-ink-muted">
                                 <IconPhoto size={14} />
                                 <span>Supports JPG, PNG (Max 10MB)</span>
                             </div>

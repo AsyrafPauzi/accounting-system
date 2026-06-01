@@ -12,8 +12,8 @@ export default function SubscriptionSuccess({ auth, subscription = null }) {
             header={
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div>
-                        <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Subscription activated</h2>
-                        <p className="text-slate-500 text-sm font-medium mt-1">
+                        <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Subscription activated</h2>
+                        <p className="text-ink-muted text-sm font-medium mt-1">
                             Your plan is now active. You have full access to all modules.
                         </p>
                     </div>
@@ -23,7 +23,7 @@ export default function SubscriptionSuccess({ auth, subscription = null }) {
             <Head title="Subscription Success" />
 
             <div className="max-w-xl space-y-6">
-                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-6 py-5 text-sm text-emerald-800">
+                <div className="bg-forest/10 border border-forest/30 rounded-2xl px-6 py-5 text-sm text-forest-dark">
                     <p className="font-semibold">
                         You&apos;re on <span className="underline">{planName}</span> ({interval}) plan.
                     </p>
@@ -45,13 +45,13 @@ export default function SubscriptionSuccess({ auth, subscription = null }) {
                 <div className="flex gap-3">
                     <Link
                         href={route('dashboard')}
-                        className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25"
+                        className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta shadow-lg "
                     >
                         Go to dashboard
                     </Link>
                     <Link
                         href={route('subscription.index')}
-                        className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50"
+                        className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream"
                     >
                         View subscription
                     </Link>

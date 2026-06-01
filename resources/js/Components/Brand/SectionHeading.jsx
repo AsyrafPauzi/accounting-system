@@ -1,0 +1,4 @@
+import EyebrowLabel from './EyebrowLabel'; /** * Three-part section heading: optional eyebrow, Fraunces title, ink-muted lede. * Used as the page header below the sidebar and as in-page section headers. */
+export default function SectionHeading({ eyebrow, title, description, align = 'left', size = 'lg', className = '',
+}) { const sizes = { sm: 'text-xl sm:text-2xl', md: 'text-2xl sm:text-3xl', lg: 'text-2xl sm:text-3xl lg:text-4xl', xl: 'text-3xl sm:text-4xl lg:text-5xl', }; const alignClass = align === 'center' ? 'text-center items-center' : 'items-start'; return ( <div className={`flex flex-col gap-1 ${alignClass} ${className}`}> {eyebrow && <EyebrowLabel>{eyebrow}</EyebrowLabel>} <h1 className={`font-display font-medium text-ink tracking-tight ${sizes[size] || sizes.lg}`}> {title} </h1> {description && ( <p className="text-sm text-ink-muted max-w-2xl">{description}</p> )} </div> );
+}

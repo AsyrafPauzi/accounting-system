@@ -54,6 +54,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::patch('/profile/theme', [ProfileController::class, 'theme'])->name('profile.theme');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Company settings (tenant-level)
@@ -145,6 +146,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // --- Admin: Platform audit log ---
     Route::middleware('permission:admin.audit')->group(function () {
         Route::get('/admin/audit-logs', [AdminAuditLogController::class, 'index'])->name('admin.audit-logs.index');
+    });
+
+    // --- Admin: Branding (self-hosted only — controller short-circuits in SaaS) ---
+    Route::middleware('role:super-admin')->group(function () {
+        Route::get('/admin/branding', [\App\Http\Controllers\Admin\BrandingController::class, 'edit'])
+            ->name('admin.branding.edit');
+        Route::post('/admin/branding', [\App\Http\Controllers\Admin\BrandingController::class, 'update'])
+            ->middleware('throttle:creation')
+            ->name('admin.branding.update');
     });
 
     // --- Invoices ---

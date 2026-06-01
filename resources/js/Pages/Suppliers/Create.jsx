@@ -10,8 +10,8 @@ const Icons = {
     Location: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /></svg>,
 };
 
-const inputClass = 'w-full border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-700 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors';
-const labelClass = 'block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5';
+const inputClass = 'w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink placeholder-ink-muted/60 focus:ring-2 focus:ring-terracotta focus:border-terracotta transition-colors';
+const labelClass = 'block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5';
 
 export default function Create({ auth }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -47,19 +47,19 @@ export default function Create({ auth }) {
             header={
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                     <div className="flex items-start sm:items-center gap-4">
-                        <Link href={route('suppliers.index')} className="p-2.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all duration-200">
+                        <Link href={route('suppliers.index')} className="p-2.5 rounded-xl text-ink-muted hover:text-ink hover:bg-surface-alt transition-all duration-200">
                             <Icons.ChevronLeft />
                         </Link>
                         <div>
-                            <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Add supplier</h2>
-                            <p className="text-slate-500 text-sm font-medium mt-1">New vendor for bills and purchases</p>
+                            <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Add supplier</h2>
+                            <p className="text-ink-muted text-sm font-medium mt-1">New vendor for bills and purchases</p>
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <Link href={route('suppliers.index')} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors">
+                        <Link href={route('suppliers.index')} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:bg-cream transition-colors">
                             Cancel
                         </Link>
-                        <button type="submit" form="supplier-create-form" disabled={processing} className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-500/25 transition-all duration-200">
+                        <button type="submit" form="supplier-create-form" disabled={processing} className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50 shadow-lg  transition-all duration-200">
                             {processing ? 'Creating...' : 'Create supplier'}
                         </button>
                     </div>
@@ -69,26 +69,26 @@ export default function Create({ auth }) {
             <Head title="Add supplier" />
 
             <form id="supplier-create-form" onSubmit={submit} className="space-y-6">
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                     <div className="flex items-center gap-2 mb-6">
-                        <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.BuildingOffice /></span>
-                        <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Identity & compliance</h3>
+                        <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.BuildingOffice /></span>
+                        <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Identity & compliance</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
                         <div className="md:col-span-2">
                             <label className={labelClass}>Supplier name</label>
                             <input type="text" value={data.name} onChange={e => setData('name', e.target.value)} className={inputClass} placeholder="Company or vendor name" required />
-                            {errors.name && <p className="text-rose-500 text-xs font-medium mt-1">{errors.name}</p>}
+                            {errors.name && <p className="text-terracotta text-xs font-medium mt-1">{errors.name}</p>}
                         </div>
                         <div>
                             <label className={labelClass}>Supplier code</label>
                             <input type="text" value={data.code} onChange={e => setData('code', e.target.value)} className={inputClass + ' font-mono'} placeholder="SUP-1001" required />
-                            {errors.code && <p className="text-rose-500 text-xs font-medium mt-1">{errors.code}</p>}
+                            {errors.code && <p className="text-terracotta text-xs font-medium mt-1">{errors.code}</p>}
                         </div>
                         <div>
                             <label className={labelClass}>Payment terms (days)</label>
                             <input type="number" min="0" max="365" value={data.payment_terms} onChange={e => setData('payment_terms', parseInt(e.target.value, 10) || 0)} className={inputClass} required />
-                            {errors.payment_terms && <p className="text-rose-500 text-xs font-medium mt-1">{errors.payment_terms}</p>}
+                            {errors.payment_terms && <p className="text-terracotta text-xs font-medium mt-1">{errors.payment_terms}</p>}
                         </div>
                         <div>
                             <label className={labelClass}>TIN</label>
@@ -117,10 +117,10 @@ export default function Create({ auth }) {
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                     <div className="flex items-center gap-2 mb-6">
-                        <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.Phone /></span>
-                        <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Contact</h3>
+                        <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Phone /></span>
+                        <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Contact</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                         <div>
@@ -130,7 +130,7 @@ export default function Create({ auth }) {
                         <div>
                             <label className={labelClass}>Email</label>
                             <input type="email" value={data.email} onChange={e => setData('email', e.target.value)} className={inputClass} />
-                            {errors.email && <p className="text-rose-500 text-xs font-medium mt-1">{errors.email}</p>}
+                            {errors.email && <p className="text-terracotta text-xs font-medium mt-1">{errors.email}</p>}
                         </div>
                         <div>
                             <label className={labelClass}>Phone</label>
@@ -139,10 +139,10 @@ export default function Create({ auth }) {
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                     <div className="flex items-center gap-2 mb-6">
-                        <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.Location /></span>
-                        <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Billing address</h3>
+                        <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Location /></span>
+                        <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Billing address</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
                         <div className="md:col-span-4">
@@ -168,10 +168,10 @@ export default function Create({ auth }) {
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                     <div className="flex items-center gap-2 mb-6">
-                        <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.DocumentText /></span>
-                        <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Other</h3>
+                        <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.DocumentText /></span>
+                        <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Other</h3>
                     </div>
                     <div className="space-y-4">
                         <div>
@@ -179,8 +179,8 @@ export default function Create({ auth }) {
                             <textarea value={data.internal_notes} onChange={e => setData('internal_notes', e.target.value)} className={inputClass} rows={3} />
                         </div>
                         <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" checked={data.is_active} onChange={e => setData('is_active', e.target.checked)} className="rounded border-slate-300" />
-                            <span className="text-sm font-medium text-slate-700">Active (can be used on new bills)</span>
+                            <input type="checkbox" checked={data.is_active} onChange={e => setData('is_active', e.target.checked)} className="rounded border-border-warm" />
+                            <span className="text-sm font-medium text-ink">Active (can be used on new bills)</span>
                         </label>
                     </div>
                 </div>

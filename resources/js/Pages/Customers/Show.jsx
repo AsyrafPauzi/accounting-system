@@ -57,9 +57,9 @@ const Icons = {
 
 export default function Show({ auth, customer, invoices = [], stats, auditLogs = [], can_delete_customer = false, delete_blocked_reason = null }) {
     const formatAddress = (street, city, state, zip, country) => {
-        if (!street && !city) return <span className="text-slate-400 italic">No address provided</span>;
+        if (!street && !city) return <span className="text-ink-muted italic">No address provided</span>;
         return (
-            <div className="text-sm text-slate-600 leading-relaxed space-y-0.5">
+            <div className="text-sm text-ink leading-relaxed space-y-0.5">
                 {street && <p>{street}</p>}
                 <p>{(zip ? zip + ' ' : '')}{city}{state ? `, ${state}` : ''}{country ? ` ${country}` : ''}</p>
             </div>
@@ -90,28 +90,28 @@ export default function Show({ auth, customer, invoices = [], stats, auditLogs =
                     <div className="flex items-start sm:items-center gap-4">
                         <Link 
                             href={route('customers.index')} 
-                            className="p-2.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all duration-200"
+                            className="p-2.5 rounded-xl text-ink-muted hover:text-ink hover:bg-surface-alt transition-all duration-200"
                         >
                             <Icons.ChevronLeft />
                         </Link>
                         <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xl font-black shadow-lg shadow-blue-500/25">
+                            <div className="w-14 h-14 rounded-2xl bg-terracotta flex items-center justify-center text-white text-xl font-black shadow-lg ">
                                 {customer.name.charAt(0)}
                             </div>
                             <div>
                                 <div className="flex items-center gap-2 flex-wrap">
-                                    <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">{customer.name}</h2>
+                                    <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">{customer.name}</h2>
                                     <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider ${
-                                        customer.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
+                                        customer.is_active ? 'bg-forest/10 text-forest' : 'bg-surface-alt text-ink'
                                     }`}>
                                         {customer.is_active ? 'Active' : 'Suspended'}
                                     </span>
-                                    {customer.credit_hold && <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-amber-100 text-amber-700">Credit hold</span>}
+                                    {customer.credit_hold && <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-mustard/15 text-mustard">Credit hold</span>}
                                     {customer.risk_rating && <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-semibold ${
-                                        customer.risk_rating === 'high' ? 'bg-rose-100 text-rose-700' : customer.risk_rating === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
+                                        customer.risk_rating === 'high' ? 'bg-terracotta/10 text-terracotta' : customer.risk_rating === 'medium' ? 'bg-mustard/15 text-mustard' : 'bg-surface-alt text-ink'
                                     }`}>{customer.risk_rating} risk</span>}
                                 </div>
-                                <p className="text-slate-500 text-sm font-medium mt-1">
+                                <p className="text-ink-muted text-sm font-medium mt-1">
                                     {customer.code} · {customer.industry || 'General'}
                                 </p>
                             </div>
@@ -120,7 +120,7 @@ export default function Show({ auth, customer, invoices = [], stats, auditLogs =
                     <div className="flex flex-wrap gap-2">
                         <Link 
                             href={route('customers.edit', customer.id)} 
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-slate-600 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all duration-200"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:border-border-warm hover:bg-cream transition-all duration-200"
                         >
                             <Icons.Pencil /> Edit
                         </Link>
@@ -132,8 +132,8 @@ export default function Show({ auth, customer, invoices = [], stats, auditLogs =
                                 onClick={handleDelete}
                                 className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold border transition-all duration-200 ${
                                     can_delete_customer
-                                        ? 'text-rose-700 bg-white border-rose-200 hover:bg-rose-50'
-                                        : 'text-slate-300 bg-slate-50 border-slate-200 cursor-not-allowed'
+                                        ? 'text-terracotta bg-surface border-terracotta/30 hover:bg-terracotta/10'
+                                        : 'text-ink-muted bg-cream border-border-warm cursor-not-allowed'
                                 }`}
                             >
                                 <Icons.Trash /> Delete
@@ -141,13 +141,13 @@ export default function Show({ auth, customer, invoices = [], stats, auditLogs =
                         )}
                         <Link 
                             href={route('invoices.create', { customer_id: customer.id })} 
-                            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all duration-200"
+                            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta shadow-lg  transition-all duration-200"
                         >
                             <Icons.Plus /> New Invoice
                         </Link>
                         <Link 
                             href={route('invoices.index')} 
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-slate-600 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all duration-200"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:border-border-warm hover:bg-cream transition-all duration-200"
                         >
                             <Icons.Document /> View All Invoices
                         </Link>
@@ -160,70 +160,70 @@ export default function Show({ auth, customer, invoices = [], stats, auditLogs =
             <div className="space-y-8">
                 {/* KPI row */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl p-6 shadow-lg">
+                    <div className="relative overflow-hidden bg-terracotta text-white rounded-2xl p-6 shadow-lg">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Lifetime Value</span>
-                            <span className="p-2 rounded-xl bg-white/10"><Icons.Currency /></span>
+                            <span className="p-2 rounded-xl bg-surface/10"><Icons.Currency /></span>
                         </div>
                         <p className="text-xl font-bold font-mono tabular-nums">
                             RM {parseFloat(stats.total_invoiced).toLocaleString('en-MY', { minimumFractionDigits: 2 })}
                         </p>
-                        <p className="text-xs text-blue-100 mt-1">Total invoiced</p>
+                        <p className="text-xs text-terracotta mt-1">Total invoiced</p>
                     </div>
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total Collected</span>
-                            <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600"><Icons.Check /></span>
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Total Collected</span>
+                            <span className="p-2 rounded-xl bg-forest/10 text-forest"><Icons.Check /></span>
                         </div>
-                        <p className="text-xl font-bold text-emerald-600 font-mono tabular-nums">
+                        <p className="text-xl font-bold text-forest font-mono tabular-nums">
                             RM {parseFloat(stats.total_paid).toLocaleString('en-MY', { minimumFractionDigits: 2 })}
                         </p>
-                        <p className="text-xs text-slate-500 mt-1">Cash received</p>
+                        <p className="text-xs text-ink-muted mt-1">Cash received</p>
                     </div>
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Outstanding</span>
-                            <span className="p-2 rounded-xl bg-rose-50 text-rose-600"><Icons.Exclamation /></span>
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Outstanding</span>
+                            <span className="p-2 rounded-xl bg-terracotta/10 text-terracotta"><Icons.Exclamation /></span>
                         </div>
-                        <p className="text-xl font-bold text-rose-600 font-mono tabular-nums">
+                        <p className="text-xl font-bold text-terracotta font-mono tabular-nums">
                             RM {parseFloat(stats.balance).toLocaleString('en-MY', { minimumFractionDigits: 2 })}
                         </p>
-                        <p className="text-xs text-slate-500 mt-1">AR balance</p>
+                        <p className="text-xs text-ink-muted mt-1">AR balance</p>
                     </div>
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Credit Limit</span>
-                            <span className="p-2 rounded-xl bg-blue-50 text-blue-600"><Icons.CreditCard /></span>
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Credit Limit</span>
+                            <span className="p-2 rounded-xl bg-surface-alt text-terracotta"><Icons.CreditCard /></span>
                         </div>
-                        <p className="text-xl font-bold text-slate-900 font-mono tabular-nums">
+                        <p className="text-xl font-display font-medium text-ink font-mono tabular-nums">
                             RM {parseFloat(customer.credit_limit || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 })}
                         </p>
                         {stats.remaining_limit != null && (
-                            <p className="text-xs text-slate-500 mt-1">Remaining: RM {parseFloat(stats.remaining_limit).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
+                            <p className="text-xs text-ink-muted mt-1">Remaining: RM {parseFloat(stats.remaining_limit).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
                         )}
                     </div>
                 </div>
 
                 {/* Aging summary */}
                 {(stats.aging && (stats.aging['0_30'] > 0 || stats.aging['31_60'] > 0 || stats.aging['61_90'] > 0 || stats.aging['90_plus'] > 0)) && (
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-                        <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider mb-4">Aging (open balance)</h3>
+                    <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
+                        <h3 className="font-semibold text-ink text-sm uppercase tracking-wider mb-4">Aging (open balance)</h3>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div>
-                                <p className="text-[10px] font-semibold text-slate-400 uppercase">Current / 0–30</p>
-                                <p className="font-mono font-semibold text-slate-800">RM {parseFloat(stats.aging['0_30'] || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
+                                <p className="text-[10px] font-semibold text-ink-muted uppercase">Current / 0–30</p>
+                                <p className="font-mono font-semibold text-ink">RM {parseFloat(stats.aging['0_30'] || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
                             </div>
                             <div>
-                                <p className="text-[10px] font-semibold text-slate-400 uppercase">31–60 days</p>
-                                <p className="font-mono font-semibold text-amber-600">RM {parseFloat(stats.aging['31_60'] || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
+                                <p className="text-[10px] font-semibold text-ink-muted uppercase">31–60 days</p>
+                                <p className="font-mono font-semibold text-mustard">RM {parseFloat(stats.aging['31_60'] || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
                             </div>
                             <div>
-                                <p className="text-[10px] font-semibold text-slate-400 uppercase">61–90 days</p>
-                                <p className="font-mono font-semibold text-rose-600">RM {parseFloat(stats.aging['61_90'] || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
+                                <p className="text-[10px] font-semibold text-ink-muted uppercase">61–90 days</p>
+                                <p className="font-mono font-semibold text-terracotta">RM {parseFloat(stats.aging['61_90'] || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
                             </div>
                             <div>
-                                <p className="text-[10px] font-semibold text-slate-400 uppercase">90+ days</p>
-                                <p className="font-mono font-semibold text-rose-700">RM {parseFloat(stats.aging['90_plus'] || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
+                                <p className="text-[10px] font-semibold text-ink-muted uppercase">90+ days</p>
+                                <p className="font-mono font-semibold text-terracotta">RM {parseFloat(stats.aging['90_plus'] || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
                             </div>
                         </div>
                     </div>
@@ -232,67 +232,67 @@ export default function Show({ auth, customer, invoices = [], stats, auditLogs =
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left Column */}
                     <div className="space-y-6">
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                        <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                             <div className="flex items-center gap-2 mb-5">
-                                <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.Shield /></span>
-                                <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Legal & Compliance</h3>
+                                <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Shield /></span>
+                                <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Legal & Compliance</h3>
                             </div>
                             <div className="space-y-4">
                                 <div>
-                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">LHDN TIN</p>
-                                    <p className="text-sm font-medium text-slate-700">{customer.tin || '—'}</p>
+                                    <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-0.5">LHDN TIN</p>
+                                    <p className="text-sm font-medium text-ink">{customer.tin || '—'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">SSM BRN</p>
-                                    <p className="text-sm font-medium text-slate-700">{customer.brn || '—'}</p>
+                                    <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-0.5">SSM BRN</p>
+                                    <p className="text-sm font-medium text-ink">{customer.brn || '—'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Payment Terms</p>
-                                    <p className="text-sm font-semibold text-blue-600">Net {customer.payment_terms} Days</p>
+                                    <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-0.5">Payment Terms</p>
+                                    <p className="text-sm font-semibold text-terracotta">Net {customer.payment_terms} Days</p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                        <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                             <div className="flex items-center gap-2 mb-5">
-                                <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.Phone /></span>
-                                <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Contact</h3>
+                                <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Phone /></span>
+                                <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Contact</h3>
                             </div>
                             <div className="space-y-4">
                                 <div>
-                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Primary Contact</p>
-                                    <p className="text-sm font-medium text-slate-700">{customer.contact_person || '—'}</p>
+                                    <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-0.5">Primary Contact</p>
+                                    <p className="text-sm font-medium text-ink">{customer.contact_person || '—'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Email</p>
-                                    <a href={`mailto:${customer.email}`} className="text-sm font-medium text-blue-600 hover:underline break-all">
+                                    <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-0.5">Email</p>
+                                    <a href={`mailto:${customer.email}`} className="text-sm font-medium text-terracotta hover:underline break-all">
                                         {customer.email}
                                     </a>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Phone</p>
-                                    <a href={customer.phone ? `tel:${customer.phone}` : '#'} className={`text-sm font-medium ${customer.phone ? 'text-slate-700 hover:text-blue-600' : 'text-slate-400'}`}>
+                                    <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-0.5">Phone</p>
+                                    <a href={customer.phone ? `tel:${customer.phone}` : '#'} className={`text-sm font-medium ${customer.phone ? 'text-ink hover:text-terracotta' : 'text-ink-muted'}`}>
                                         {customer.phone || '—'}
                                     </a>
                                 </div>
                                 {websiteUrl && (
                                     <div>
-                                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Website</p>
-                                        <a href={websiteUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-sm font-medium text-blue-600 hover:underline truncate max-w-full">
+                                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-0.5">Website</p>
+                                        <a href={websiteUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-sm font-medium text-terracotta hover:underline truncate max-w-full">
                                             {customer.website.replace(/^https?:\/\//, '')}
                                             <Icons.ExternalLink />
                                         </a>
                                     </div>
                                 )}
                                 {(customer.contacts && customer.contacts.length > 0) && (
-                                    <div className="pt-3 border-t border-slate-100">
-                                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Additional contacts</p>
+                                    <div className="pt-3 border-t border-border-warm">
+                                        <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">Additional contacts</p>
                                         <div className="space-y-2">
                                             {customer.contacts.map(c => (
                                                 <div key={c.id} className="text-sm">
-                                                    <span className="font-medium text-slate-700">{c.name || '—'}</span>
-                                                    <span className="text-slate-400 text-xs ml-1">({c.type})</span>
-                                                    {c.email && <a href={`mailto:${c.email}`} className="block text-blue-600 hover:underline text-xs">{c.email}</a>}
+                                                    <span className="font-medium text-ink">{c.name || '—'}</span>
+                                                    <span className="text-ink-muted text-xs ml-1">({c.type})</span>
+                                                    {c.email && <a href={`mailto:${c.email}`} className="block text-terracotta hover:underline text-xs">{c.email}</a>}
                                                 </div>
                                             ))}
                                         </div>
@@ -305,63 +305,63 @@ export default function Show({ auth, customer, invoices = [], stats, auditLogs =
                     {/* Right Column */}
                     <div className="lg:col-span-2 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                            <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                                 <div className="flex items-center gap-2 mb-4">
-                                    <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.Location /></span>
-                                    <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Billing Address</h3>
+                                    <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Location /></span>
+                                    <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Billing Address</h3>
                                 </div>
                                 <div className="text-sm">{formatAddress(customer.billing_street, customer.billing_city, customer.billing_state, customer.billing_zip, customer.billing_country)}</div>
                             </div>
-                            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                            <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
                                 <div className="flex items-center gap-2 mb-4">
-                                    <span className="p-2 rounded-xl bg-slate-100 text-slate-600"><Icons.Location /></span>
-                                    <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Shipping Address</h3>
+                                    <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Location /></span>
+                                    <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Shipping Address</h3>
                                 </div>
                                 <div className="text-sm">{formatAddress(customer.shipping_street, customer.shipping_city, customer.shipping_state, customer.shipping_zip, customer.shipping_country)}</div>
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl relative overflow-hidden shadow-lg">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+                        <div className="bg-cream p-6 rounded-2xl relative overflow-hidden shadow-lg">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-terracotta/10 rounded-full -translate-y-1/2 translate-x-1/2" />
                             <div className="relative">
-                                <h3 className="font-semibold text-blue-400 text-sm uppercase tracking-wider mb-3">Internal Notes</h3>
-                                <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-line">
+                                <h3 className="font-semibold text-terracotta text-sm uppercase tracking-wider mb-3">Internal Notes</h3>
+                                <p className="text-ink-muted text-sm leading-relaxed whitespace-pre-line">
                                     {customer.internal_notes || 'No notes recorded.'}
                                 </p>
                             </div>
                         </div>
 
                         {auditLogs.length > 0 && (
-                            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-                                <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider mb-4">History (audit)</h3>
+                            <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
+                                <h3 className="font-semibold text-ink text-sm uppercase tracking-wider mb-4">History (audit)</h3>
                                 <ul className="space-y-3">
                                     {auditLogs.map(log => (
-                                        <li key={log.id} className="text-sm text-slate-600 border-l-2 border-slate-200 pl-4 py-1">
-                                            <span className="font-medium text-slate-800">{log.field.replace(/_/g, ' ')}</span>
-                                            {' '}changed from <span className="font-mono text-slate-500">{log.old_value || '—'}</span>
-                                            {' '}to <span className="font-mono text-slate-700">{log.new_value || '—'}</span>
-                                            {log.user && <span className="text-slate-400 text-xs ml-1">by {log.user.name}</span>}
-                                            <span className="text-slate-400 text-xs ml-1">{new Date(log.created_at).toLocaleString('en-MY', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                        <li key={log.id} className="text-sm text-ink border-l-2 border-border-warm pl-4 py-1">
+                                            <span className="font-medium text-ink">{log.field.replace(/_/g, ' ')}</span>
+                                            {' '}changed from <span className="font-mono text-ink-muted">{log.old_value || '—'}</span>
+                                            {' '}to <span className="font-mono text-ink">{log.new_value || '—'}</span>
+                                            {log.user && <span className="text-ink-muted text-xs ml-1">by {log.user.name}</span>}
+                                            <span className="text-ink-muted text-xs ml-1">{new Date(log.created_at).toLocaleString('en-MY', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                                         </li>
                                     ))}
                                 </ul>
                             </div>
                         )}
 
-                        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-                            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
+                        <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
+                            <div className="px-6 py-4 border-b border-border-warm flex items-center justify-between bg-cream/80">
                                 <div className="flex items-center gap-2">
-                                    <Icons.Document className="text-slate-500" />
-                                    <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Transaction History</h3>
+                                    <Icons.Document className="text-ink-muted" />
+                                    <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Transaction History</h3>
                                 </div>
-                                <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-500 text-xs font-medium">
+                                <span className="px-3 py-1 rounded-xl bg-surface-alt text-ink-muted text-xs font-medium">
                                     {invoices.length} invoice{invoices.length !== 1 ? 's' : ''}
                                 </span>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
-                                        <tr className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 bg-slate-50/80">
+                                        <tr className="text-left text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
                                             <th className="px-6 py-4">Date</th>
                                             <th className="px-6 py-4">Invoice #</th>
                                             <th className="px-6 py-4">Status</th>
@@ -370,31 +370,31 @@ export default function Show({ auth, customer, invoices = [], stats, auditLogs =
                                     </thead>
                                     <tbody>
                                         {invoices.length > 0 ? invoices.map(inv => (
-                                            <tr key={inv.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/80 transition-colors group">
-                                                <td className="px-6 py-4 text-sm text-slate-500">
+                                            <tr key={inv.id} className="border-b border-border-warm last:border-0 hover:bg-cream/80 transition-colors group">
+                                                <td className="px-6 py-4 text-sm text-ink-muted">
                                                     {new Date(inv.issue_date).toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' })}
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <Link href={route('invoices.edit', inv.id)} className="font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">
+                                                    <Link href={route('invoices.edit', inv.id)} className="font-semibold text-ink group-hover:text-terracotta transition-colors">
                                                         {inv.invoice_number}
                                                     </Link>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${
-                                                        inv.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 
-                                                        inv.status === 'unpaid' ? 'bg-rose-100 text-rose-700' : 
-                                                        'bg-blue-100 text-blue-700'
+                                                        inv.status === 'paid' ? 'bg-forest/10 text-forest' : 
+                                                        inv.status === 'unpaid' ? 'bg-terracotta/10 text-terracotta' : 
+                                                        'bg-surface-alt text-terracotta'
                                                     }`}>
                                                         {inv.status}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-right font-mono text-sm font-semibold text-slate-700">
+                                                <td className="px-6 py-4 text-right font-mono text-sm font-semibold text-ink">
                                                     RM {parseFloat(inv.total_amount).toLocaleString('en-MY', { minimumFractionDigits: 2 })}
                                                 </td>
                                             </tr>
                                         )) : (
                                             <tr>
-                                                <td colSpan={4} className="px-6 py-16 text-center text-slate-400 text-sm">
+                                                <td colSpan={4} className="px-6 py-16 text-center text-ink-muted text-sm">
                                                     No invoices yet. Create one to get started.
                                                 </td>
                                             </tr>
