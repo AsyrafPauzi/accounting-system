@@ -101,6 +101,21 @@ class TesseractProvider implements OcrProviderInterface
                 'path' => $absolutePath,
                 'error' => $lastError,
             ]);
+
+            // Fast path: one PSM, text-only — avoids doubling wall time on small Fargate tasks.
+            $attempt = $this->attemptOcrOnTarget($absolutePath, $languages, $absolutePath, fast: true);
+            if ($cleanup) {
+                $cleanup();
+            }
+
+            if ($attempt['result'] !== null) {
+                return $this->validator->validate($attempt['result']);
+            }
+
+            return OcrResult::failed(
+                provider: $this->name(),
+                error: $attempt['lastError'] ?? $lastError ?? 'Tesseract produced no readable text on any page-segmentation mode. The image may be too blurry, dark, or low-contrast.',
+            );
         }
 
         $attempt = $this->attemptOcrOnTarget($absolutePath, $languages, $absolutePath);
@@ -123,20 +138,25 @@ class TesseractProvider implements OcrProviderInterface
      *
      * @return array{result: ?OcrResult, lastError: ?string}
      */
-    private function attemptOcrOnTarget(string $ocrTarget, string $languages, string $logPath): array
+    private function attemptOcrOnTarget(string $ocrTarget, string $languages, string $logPath, bool $fast = false): array
     {
         $bestResult = null;
         $bestScore = -1;
         $lastError = null;
+        $psmCandidates = $fast ? [6] : self::PSM_CANDIDATES;
 
-        foreach (self::PSM_CANDIDATES as $psm) {
+        foreach ($psmCandidates as $psm) {
             try {
-                $ocrOutput = $this->runOcrAttempt($ocrTarget, $languages, $psm);
+                $ocrOutput = $this->runOcrAttempt($ocrTarget, $languages, $psm, includeTsv: ! $fast);
             } catch (TesseractOcrException $e) {
                 $lastError = 'Tesseract OCR engine failed. Check that the tesseract binary and the requested language packs are installed on the server. Error: '.$e->getMessage();
                 Log::error('[OCR/Tesseract] Engine error', [
                     'path' => $logPath, 'ocr_target' => $ocrTarget, 'psm' => $psm, 'error' => $e->getMessage(),
                 ]);
+                // Unreadable preprocessed PNG — skip remaining PSMs on this target.
+                if (str_contains($e->getMessage(), 'did not produce any output')) {
+                    break;
+                }
                 continue;
             } catch (\Throwable $e) {
                 $lastError = 'Unexpected error while running Tesseract: '.$e->getMessage();
@@ -174,7 +194,7 @@ class TesseractProvider implements OcrProviderInterface
      *
      * @return array{text: string, tsv: string}
      */
-    private function runOcrAttempt(string $ocrTarget, string $languages, int $psm): array
+    private function runOcrAttempt(string $ocrTarget, string $languages, int $psm, bool $includeTsv = true): array
     {
         $textRunner = (new TesseractOCR($ocrTarget))
             ->lang(...explode('+', $languages))
@@ -183,14 +203,16 @@ class TesseractProvider implements OcrProviderInterface
 
         // TSV mode failure is non-fatal — text-only is still useful.
         $tsv = '';
-        try {
-            $tsvRunner = (new TesseractOCR($ocrTarget))
-                ->lang(...explode('+', $languages))
-                ->psm($psm)
-                ->configFile('tsv');
-            $tsv = $tsvRunner->run();
-        } catch (\Throwable $e) {
-            Log::info('[OCR/Tesseract] TSV mode unavailable, continuing text-only', ['psm' => $psm, 'error' => $e->getMessage()]);
+        if ($includeTsv) {
+            try {
+                $tsvRunner = (new TesseractOCR($ocrTarget))
+                    ->lang(...explode('+', $languages))
+                    ->psm($psm)
+                    ->configFile('tsv');
+                $tsv = $tsvRunner->run();
+            } catch (\Throwable $e) {
+                Log::info('[OCR/Tesseract] TSV mode unavailable, continuing text-only', ['psm' => $psm, 'error' => $e->getMessage()]);
+            }
         }
 
         return ['text' => $text, 'tsv' => $tsv];
