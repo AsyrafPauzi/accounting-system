@@ -6,6 +6,7 @@ storage/logs/*.log
 storage/framework/sessions/*
 storage/framework/views/*.php
 storage/framework/cache/data/*
+storage/tenant*
 public/build
 Dockerfile
 docker-compose.yml

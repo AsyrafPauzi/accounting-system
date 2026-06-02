@@ -123,20 +123,19 @@ export default function OcrSettingsEdit({ settings, providerOptions, modelOption
         const formData = new FormData();
         if (testFile) formData.append('receipt', testFile);
 
-        // Plain fetch — admin.ocr.test returns JSON, not Inertia.
-        fetch(route('admin.ocr.test'), {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-                Accept: 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-            credentials: 'same-origin',
-            body: formData,
-        })
-            .then((r) => r.json().then((body) => ({ ok: r.ok, body })))
-            .then(({ ok, body }) => setTestResult({ ok, body }))
-            .catch((err) => setTestResult({ ok: false, body: { error: err.message } }))
+        // Use window.axios (not raw fetch) — axios reads the XSRF-TOKEN cookie
+        // and sends it as X-XSRF-TOKEN automatically, so the token is always in
+        // sync with the current session. Raw fetch with X-CSRF-TOKEN from the
+        // meta tag would go stale after session regeneration and cause 419s.
+        window.axios
+            .post(route('admin.ocr.test'), formData, {
+                headers: { Accept: 'application/json' },
+            })
+            .then((r) => setTestResult({ ok: r.data.ok, body: r.data }))
+            .catch((err) => {
+                const body = err.response?.data ?? { error: err.message };
+                setTestResult({ ok: false, body });
+            })
             .finally(() => setTestRunning(false));
     };
 

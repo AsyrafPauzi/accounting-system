@@ -5,6 +5,12 @@ set -e
 
 echo "Running Entrypoint Tasks..."
 
+# The storage volume is mounted at runtime, potentially over the image's
+# storage directory. Ensure www-data can write to it and that the
+# public/storage symlink exists (it lives in public/, outside the volume).
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+php artisan storage:link --force
+
 # Clear and cache configurations
 php artisan view:clear
 php artisan config:cache

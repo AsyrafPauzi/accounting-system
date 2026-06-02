@@ -52,7 +52,13 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        // Always send the user back to the login screen after logout
-        return redirect()->route('login');
+        // Expire any stale session/XSRF cookies already in the browser before
+        // the session middleware writes the fresh ones. Without this, a browser
+        // can hold two same-name cookies (e.g. one from before logout that still
+        // has time left) and PHP non-deterministically picks the stale one on
+        // the next POST, producing a CSRF token mismatch (419).
+        return redirect()->route('login')
+            ->withCookie(cookie()->forget(config('session.cookie')))
+            ->withCookie(cookie()->forget('XSRF-TOKEN'));
     }
 }

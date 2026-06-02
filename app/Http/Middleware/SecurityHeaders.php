@@ -71,6 +71,14 @@ class SecurityHeaders
 
         $response->headers->set('Content-Security-Policy', $csp);
 
+        // Prevent CDNs/proxies from caching authenticated Inertia pages —
+        // each response contains user-specific page props. Also prevents the
+        // browser back-button from showing stale authenticated content after
+        // logout. Static /build/* assets are served by nginx directly and
+        // never reach this middleware, so their cacheability is unaffected.
+        $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        $response->headers->set('Pragma', 'no-cache');
+
         // Remove information disclosure headers
         $response->headers->remove('X-Powered-By');
 
