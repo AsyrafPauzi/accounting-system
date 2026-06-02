@@ -80,17 +80,51 @@ class TesseractProvider implements OcrProviderInterface
         $languages = $settings->tesseract_languages ?: 'eng+msa';
 
         // Layer 1: clean up the image (deskew, binarize, denoise) before OCR.
+        // yields an unreadable PNG, fall back to the original upload.
         $preprocessed = $this->imagePreprocessor->process($absolutePath);
-        if ($preprocessed !== $absolutePath) {
-            $previousCleanup = $cleanup;
-            $cleanup = function () use ($preprocessed, $previousCleanup) {
-                @unlink($preprocessed);
-                if ($previousCleanup) $previousCleanup();
-            };
-        }
-        $ocrTarget = $preprocessed;
+        $lastError = null;
 
-        // Layer 4: try multiple page-segmentation modes; pick the highest-scoring.
+        if ($preprocessed !== $absolutePath) {
+            $attempt = $this->attemptOcrOnTarget($preprocessed, $languages, $absolutePath);
+            @unlink($preprocessed);
+
+            if ($attempt['result'] !== null) {
+                if ($cleanup) {
+                    $cleanup();
+                }
+
+                return $this->validator->validate($attempt['result']);
+            }
+
+            $lastError = $attempt['lastError'];
+            Log::info('[OCR/Tesseract] Preprocessed image yielded no text, retrying original', [
+                'path' => $absolutePath,
+                'error' => $lastError,
+            ]);
+        }
+
+        $attempt = $this->attemptOcrOnTarget($absolutePath, $languages, $absolutePath);
+        if ($cleanup) {
+            $cleanup();
+        }
+
+        if ($attempt['result'] === null) {
+            return OcrResult::failed(
+                provider: $this->name(),
+                error: $attempt['lastError'] ?? $lastError ?? 'Tesseract produced no readable text on any page-segmentation mode. The image may be too blurry, dark, or low-contrast.',
+            );
+        }
+
+        return $this->validator->validate($attempt['result']);
+    }
+
+    /**
+     * Try each PSM mode against one image path; return the best-scoring parse.
+     *
+     * @return array{result: ?OcrResult, lastError: ?string}
+     */
+    private function attemptOcrOnTarget(string $ocrTarget, string $languages, string $logPath): array
+    {
         $bestResult = null;
         $bestScore = -1;
         $lastError = null;
@@ -101,44 +135,37 @@ class TesseractProvider implements OcrProviderInterface
             } catch (TesseractOcrException $e) {
                 $lastError = 'Tesseract OCR engine failed. Check that the tesseract binary and the requested language packs are installed on the server. Error: '.$e->getMessage();
                 Log::error('[OCR/Tesseract] Engine error', [
-                    'path' => $absolutePath, 'ocr_target' => $ocrTarget, 'psm' => $psm, 'error' => $e->getMessage(),
+                    'path' => $logPath, 'ocr_target' => $ocrTarget, 'psm' => $psm, 'error' => $e->getMessage(),
                 ]);
                 continue;
             } catch (\Throwable $e) {
                 $lastError = 'Unexpected error while running Tesseract: '.$e->getMessage();
                 Log::error('[OCR/Tesseract] Unexpected error', [
-                    'path' => $absolutePath, 'ocr_target' => $ocrTarget, 'psm' => $psm, 'error' => $e->getMessage(),
+                    'path' => $logPath, 'ocr_target' => $ocrTarget, 'psm' => $psm, 'error' => $e->getMessage(),
                 ]);
                 continue;
             }
 
-            if (trim($ocrOutput['text']) === '') continue;
+            if (trim($ocrOutput['text']) === '') {
+                continue;
+            }
 
             $candidate = $this->buildResultFromOcrOutput($ocrOutput);
             $score = $this->scoreFields($candidate->toLegacyArray()['data'] ?? []);
 
-            Log::debug('[OCR/Tesseract] PSM attempt', ['psm' => $psm, 'score' => $score]);
+            Log::debug('[OCR/Tesseract] PSM attempt', ['psm' => $psm, 'score' => $score, 'ocr_target' => $ocrTarget]);
 
             if ($score > $bestScore) {
                 $bestScore = $score;
                 $bestResult = $candidate;
             }
 
-            // Latency guard: stop trying more PSMs if we already have a strong result.
-            if ($score >= self::PSM_EARLY_EXIT_SCORE) break;
+            if ($score >= self::PSM_EARLY_EXIT_SCORE) {
+                break;
+            }
         }
 
-        if ($cleanup) $cleanup();
-
-        if ($bestResult === null) {
-            return OcrResult::failed(
-                provider: $this->name(),
-                error: $lastError ?? 'Tesseract produced no readable text on any page-segmentation mode. The image may be too blurry, dark, or low-contrast.',
-            );
-        }
-
-        // Layer 5: cross-validate the math; boosts/lowers confidence + attaches warnings.
-        return $this->validator->validate($bestResult);
+        return ['result' => $bestResult, 'lastError' => $lastError];
     }
 
     /**
