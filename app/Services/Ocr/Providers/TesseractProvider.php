@@ -74,63 +74,90 @@ class TesseractProvider implements OcrProviderInterface
      *  3 line items (3) = 11. */
     private const PSM_EARLY_EXIT_SCORE = 11;
 
+    /** Minimum parse score to accept the fast original-only pass and skip preprocess. */
+    private const FAST_ORIGINAL_MIN_SCORE = 5;
+
     private function extractFromImage(string $absolutePath, ?callable $cleanup = null): OcrResult
     {
         $settings = OcrSettings::current();
         $languages = $settings->tesseract_languages ?: 'eng+msa';
-
-        // Layer 1: clean up the image (deskew, binarize, denoise) before OCR.
-        // yields an unreadable PNG, fall back to the original upload.
-        $preprocessed = $this->imagePreprocessor->process($absolutePath);
         $lastError = null;
 
+        // Try the raw upload first (PSM 6, text-only). On Fargate this is ~10–20s and
+        // matches local Laragon where ImageMagick is absent. Skip slow preprocess when
+        // the original already yields a usable total / vendor parse.
+        $fastOriginal = $this->attemptOcrOnTarget($absolutePath, $languages, $absolutePath, fast: true);
+        if ($fastOriginal['result'] !== null) {
+            $fastScore = $this->scoreFields($fastOriginal['result']->toLegacyArray()['data'] ?? []);
+            if ($fastScore >= self::FAST_ORIGINAL_MIN_SCORE) {
+                if ($cleanup) {
+                    $cleanup();
+                }
+                Log::debug('[OCR/Tesseract] Fast original pass sufficient', ['score' => $fastScore]);
+
+                return $this->validator->validate($fastOriginal['result']);
+            }
+        }
+        $lastError = $fastOriginal['lastError'];
+
+        $bestResult = $fastOriginal['result'];
+        $bestScore = $bestResult !== null
+            ? $this->scoreFields($bestResult->toLegacyArray()['data'] ?? [])
+            : -1;
+
+        // Harder receipts: ImageMagick preprocess + full Tesseract (with TSV).
+        $preprocessed = $this->imagePreprocessor->process($absolutePath);
         if ($preprocessed !== $absolutePath) {
             $attempt = $this->attemptOcrOnTarget($preprocessed, $languages, $absolutePath);
             @unlink($preprocessed);
 
             if ($attempt['result'] !== null) {
-                if ($cleanup) {
-                    $cleanup();
+                $score = $this->scoreFields($attempt['result']->toLegacyArray()['data'] ?? []);
+                if ($score > $bestScore) {
+                    $bestScore = $score;
+                    $bestResult = $attempt['result'];
                 }
+                if ($score >= self::PSM_EARLY_EXIT_SCORE) {
+                    if ($cleanup) {
+                        $cleanup();
+                    }
 
-                return $this->validator->validate($attempt['result']);
+                    return $this->validator->validate($attempt['result']);
+                }
             }
 
-            $lastError = $attempt['lastError'];
-            Log::info('[OCR/Tesseract] Preprocessed image yielded no text, retrying original', [
+            $lastError = $attempt['lastError'] ?? $lastError;
+            Log::info('[OCR/Tesseract] Preprocessed pass insufficient, keeping best candidate', [
                 'path' => $absolutePath,
-                'error' => $lastError,
+                'best_score' => $bestScore,
             ]);
-
-            // Fast path: one PSM, text-only — avoids doubling wall time on small Fargate tasks.
-            $attempt = $this->attemptOcrOnTarget($absolutePath, $languages, $absolutePath, fast: true);
-            if ($cleanup) {
-                $cleanup();
-            }
-
-            if ($attempt['result'] !== null) {
-                return $this->validator->validate($attempt['result']);
-            }
-
-            return OcrResult::failed(
-                provider: $this->name(),
-                error: $attempt['lastError'] ?? $lastError ?? 'Tesseract produced no readable text on any page-segmentation mode. The image may be too blurry, dark, or low-contrast.',
-            );
         }
 
-        $attempt = $this->attemptOcrOnTarget($absolutePath, $languages, $absolutePath);
+        // Last resort: full OCR on the original (PSM 4+6 + TSV) if fast pass was weak.
+        if ($bestScore < self::PSM_EARLY_EXIT_SCORE) {
+            $fullOriginal = $this->attemptOcrOnTarget($absolutePath, $languages, $absolutePath);
+            if ($fullOriginal['result'] !== null) {
+                $score = $this->scoreFields($fullOriginal['result']->toLegacyArray()['data'] ?? []);
+                if ($score > $bestScore) {
+                    $bestScore = $score;
+                    $bestResult = $fullOriginal['result'];
+                }
+            }
+            $lastError = $fullOriginal['lastError'] ?? $lastError;
+        }
+
         if ($cleanup) {
             $cleanup();
         }
 
-        if ($attempt['result'] === null) {
+        if ($bestResult === null) {
             return OcrResult::failed(
                 provider: $this->name(),
-                error: $attempt['lastError'] ?? $lastError ?? 'Tesseract produced no readable text on any page-segmentation mode. The image may be too blurry, dark, or low-contrast.',
+                error: $lastError ?? 'Tesseract produced no readable text on any page-segmentation mode. The image may be too blurry, dark, or low-contrast.',
             );
         }
 
-        return $this->validator->validate($attempt['result']);
+        return $this->validator->validate($bestResult);
     }
 
     /**
