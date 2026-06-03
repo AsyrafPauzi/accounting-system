@@ -63,7 +63,7 @@ export default function TrialBalance({ auth, trialBalance, totals, filters }) {
                         </div>
                     </div>
                     <div className="text-right hidden sm:block">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted mb-1">Total Turnover</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted mb-1">Total of each side</p>
                         <p className="text-xl font-mono font-display font-medium text-ink">RM {totals.debit.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
                     </div>
                 </div>
@@ -124,10 +124,9 @@ export default function TrialBalance({ auth, trialBalance, totals, filters }) {
                 </div>
 
                 <div className="bg-surface-alt border border-border-warm p-6 rounded-2xl">
-                    <h4 className="text-sm font-display font-medium text-ink mb-2 uppercase tracking-wide">About Trial Balance</h4>
-                    <p className="text-sm text-terracotta leading-relaxed">
-                        The Trial Balance is a report that lists the balances of all general ledger accounts of a business at a specific point in time. 
-                        In a double-entry accounting system, the total of all debit balances should always equal the total of all credit balances.
+                    <h4 className="text-sm font-display font-medium text-ink mb-2 uppercase tracking-wide">About this report</h4>
+                    <p className="text-sm text-ink leading-relaxed">
+                        Each account shows its <strong>net balance</strong> on the side it normally lives on — assets and expenses on the left (Debit), liabilities, equity, and income on the right (Credit). Accounts that have been fully cleared (e.g. invoices paid off, statutory remittances settled) are hidden because their balance is zero. In a balanced ledger, the grand total of debits always equals the grand total of credits.
                     </p>
                 </div>
             </div>

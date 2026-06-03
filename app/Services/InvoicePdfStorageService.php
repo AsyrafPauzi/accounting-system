@@ -22,7 +22,7 @@ class InvoicePdfStorageService
         }
     }
 
-    public function downloadResponse(Invoice $invoice, array $company): Response
+    public function downloadResponse(Invoice $invoice, array $company, bool $attachment = true): Response
     {
         $path = $this->storagePath($invoice);
         $filename = "Invoice-{$invoice->invoice_number}.pdf";
@@ -31,9 +31,11 @@ class InvoicePdfStorageService
             $this->write($invoice, $company);
         }
 
+        $disposition = $attachment ? 'attachment' : 'inline';
+
         return UploadDisk::disk()->response($path, $filename, [
             'Content-Type' => 'application/pdf',
-        ]);
+        ], $disposition);
     }
 
     public function write(Invoice $invoice, array $company): void

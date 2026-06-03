@@ -174,6 +174,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
         Route::get('/invoices/{id}/edit', [InvoiceController::class, 'edit'])->name('invoices.edit');
         Route::get('/invoices/{id}/pdf', [InvoiceController::class, 'downloadPdf'])->name('invoices.pdf');
+        Route::get('/invoices/{id}/preview', [InvoiceController::class, 'previewPdf'])->name('invoices.preview');
     });
     Route::middleware('permission:invoices.create')->group(function () {
         Route::get('/invoices/create', [InvoiceController::class, 'create'])->name('invoices.create');
@@ -330,6 +331,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::middleware(['permission:journal.delete', 'plan.permission:journal.create'])->group(function () {
         Route::delete('/journal/manual/{journal}', [JournalController::class, 'destroy'])->name('journal.destroy');
+    });
+
+    // --- Payroll ---
+    // Re-uses the journal.create permission (any staff member who can post a
+    // manual journal can also record a payroll run).
+    Route::middleware(['permission:journal.create', 'plan.permission:journal.create'])->group(function () {
+        Route::get('/payroll', [\App\Http\Controllers\PayrollController::class, 'create'])->name('payroll.create');
+        Route::post('/payroll', [\App\Http\Controllers\PayrollController::class, 'store'])
+            ->middleware('throttle:creation')
+            ->name('payroll.store');
     });
 
     // --- Reports Hub ---

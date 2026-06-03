@@ -35,32 +35,41 @@ class TrialBalanceController extends Controller
 
         $accounts = Account::orderBy('code')->get();
 
+        // Standard Trial Balance presentation: each account shows ONE balance,
+        // not the cumulative debit and credit movements. Net = total debits –
+        // total credits across the lifetime of the account up to `as_of_date`.
+        //
+        //   net > 0  → Debit column (typical for Assets & Expenses)
+        //   net < 0  → Credit column (typical for Liabilities, Equity, Income)
+        //   net = 0  → account is fully cleared and is hidden from the report
+        //
+        // Showing both Dr and Cr movements per account (the previous behaviour)
+        // was confusing — readers couldn't tell at a glance who owed who. The
+        // grand totals still tie out because Σ(net debits) = Σ(net credits) in
+        // a balanced ledger.
         $trialBalance = $accounts->map(function ($account) use ($balances) {
             $balance = $balances->get($account->code);
-            
-            $debit = $balance ? (float) $balance->total_debit : 0;
-            $credit = $balance ? (float) $balance->total_credit : 0;
-            
-            // Net balance calculation based on account type
-            // Assets & Expenses usually have debit balances
-            // Liabilities, Equity & Revenue usually have credit balances
-            $netBalance = $debit - $credit;
+
+            $totalDebit  = $balance ? (float) $balance->total_debit  : 0.0;
+            $totalCredit = $balance ? (float) $balance->total_credit : 0.0;
+
+            $net = round($totalDebit - $totalCredit, 2);
 
             return [
-                'id' => $account->id,
-                'code' => $account->code,
-                'name' => $account->name,
-                'type' => $account->type,
-                'debit' => $debit,
-                'credit' => $credit,
-                'net_balance' => $netBalance,
+                'id'     => $account->id,
+                'code'   => $account->code,
+                'name'   => $account->name,
+                'type'   => $account->type,
+                'debit'  => $net > 0 ? $net      : 0.0,
+                'credit' => $net < 0 ? abs($net) : 0.0,
             ];
         })->filter(function ($item) {
-            // Only show accounts with activity
-            return $item['debit'] != 0 || $item['credit'] != 0;
+            // Hide cleared accounts (a paid-off Accounts Receivable, a fully
+            // remitted EPF Payable, etc.) — they add nothing to the report.
+            return $item['debit'] > 0 || $item['credit'] > 0;
         })->values();
 
-        $totalDebit = $trialBalance->sum('debit');
+        $totalDebit  = $trialBalance->sum('debit');
         $totalCredit = $trialBalance->sum('credit');
 
         return Inertia::render('Reports/TrialBalance', [
