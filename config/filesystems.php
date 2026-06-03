@@ -13,7 +13,9 @@ $s3Connection = [
     'report' => false,
 ];
 
-$usesS3ForUploads = env('FILESYSTEM_PUBLIC_DRIVER', 'local') === 's3';
+// Require a bucket so half-configured S3 (common locally) does not break OCR/uploads.
+$usesS3ForUploads = env('FILESYSTEM_PUBLIC_DRIVER', 'local') === 's3'
+    && filled(env('AWS_BUCKET'));
 
 return [
 
@@ -30,7 +32,7 @@ return [
         ],
 
         /*
-         * Tenant uploads: receipts, invoice PDFs, branding (Storage::disk('public')).
+         * Bill receipts (and branding) use Storage::disk('public'). Admin OCR tests use disk('local').
          * Production: FILESYSTEM_PUBLIC_DRIVER=s3 + AWS_BUCKET on ECS task role.
          * Alternative: local driver + EFS mounted on storage/.
          */

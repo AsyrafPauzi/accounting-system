@@ -46,6 +46,14 @@ class TesseractProvider implements OcrProviderInterface
 
     public function extract(string $imagePath): OcrResult
     {
+        $imagePath = trim($imagePath);
+        if ($imagePath === '') {
+            return OcrResult::failed(
+                provider: $this->name(),
+                error: 'Receipt path is empty. Storage may have failed — check FILESYSTEM_PUBLIC_DRIVER and AWS settings.',
+            );
+        }
+
         $absolutePath = $this->resolveAbsolutePath($imagePath);
 
         if (! $absolutePath) {
@@ -328,19 +336,28 @@ class TesseractProvider implements OcrProviderInterface
      */
     private function resolveAbsolutePath(string $imagePath): ?string
     {
-        // 1. Storage 'public' disk (local path or S3 temp copy for OCR binaries)
+        // 1. Bill receipts on the public disk (local or S3)
         $fromUploads = \App\Support\UploadDisk::absolutePathOrTemp($imagePath);
         if ($fromUploads !== null) {
             return $fromUploads;
         }
 
-        // 2. Sample assets shipped under public/ (used by the test button)
+        // 2. Admin OCR test uploads (local disk only — not stored in S3)
+        try {
+            if (Storage::disk('local')->exists($imagePath)) {
+                return Storage::disk('local')->path($imagePath);
+            }
+        } catch (\Throwable) {
+            // fall through
+        }
+
+        // 3. Sample assets shipped under public/ (used by the test button)
         $publicSample = public_path($imagePath);
         if (file_exists($publicSample)) {
             return $publicSample;
         }
 
-        // 3. Already an absolute path
+        // 4. Already an absolute path
         if (str_starts_with($imagePath, '/') && file_exists($imagePath)) {
             return $imagePath;
         }

@@ -186,8 +186,20 @@ class GeminiProvider implements OcrProviderInterface
 
     private function readImageBytes(string $imagePath): ?string
     {
-        if (Storage::disk('public')->exists($imagePath)) {
-            return Storage::disk('public')->get($imagePath);
+        $imagePath = trim($imagePath);
+        if ($imagePath === '') {
+            return null;
+        }
+
+        try {
+            if (\App\Support\UploadDisk::disk()->exists($imagePath)) {
+                return \App\Support\UploadDisk::disk()->get($imagePath);
+            }
+            if (Storage::disk('local')->exists($imagePath)) {
+                return Storage::disk('local')->get($imagePath);
+            }
+        } catch (\Throwable) {
+            return null;
         }
         $publicSample = public_path($imagePath);
         if (file_exists($publicSample)) {

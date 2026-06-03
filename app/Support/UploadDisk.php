@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Storage;
 use League\Flysystem\Local\LocalFilesystemAdapter;
 
 /**
- * Tenant uploads (bill receipts, stored invoice PDFs) use the "public" disk.
+ * Bill receipt uploads use the "public" disk (S3 in production). Admin OCR tests use the "local" disk.
  * On ECS, point FILESYSTEM_PUBLIC_DRIVER=s3 or mount EFS on storage/ (local driver).
  */
 class UploadDisk
@@ -31,9 +31,18 @@ class UploadDisk
      */
     public static function absolutePathOrTemp(string $relativePath): ?string
     {
+        $relativePath = trim($relativePath);
+        if ($relativePath === '') {
+            return null;
+        }
+
         $disk = self::disk();
 
-        if (! $disk->exists($relativePath)) {
+        try {
+            if (! $disk->exists($relativePath)) {
+                return null;
+            }
+        } catch (\Throwable) {
             return null;
         }
 

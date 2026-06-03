@@ -110,9 +110,14 @@ class OcrSettingsController extends Controller
         $cleanupPath = null;
 
         if ($request->hasFile('receipt')) {
-            // Store on the public disk under a tmp prefix so the existing
-            // resolveAbsolutePath() logic in providers can find it.
-            $imagePath = $request->file('receipt')->store('ocr-tests', 'public');
+            // Ephemeral admin test only — local disk (never S3). Bill receipts use public/S3.
+            $imagePath = $request->file('receipt')->store('ocr-tests', 'local');
+            if (! is_string($imagePath) || $imagePath === '') {
+                return response()->json([
+                    'ok' => false,
+                    'error' => 'Could not save the test file to temporary storage.',
+                ], 500);
+            }
             $cleanupPath = $imagePath;
         } elseif (file_exists(public_path('samples/receipt-sample.jpg'))) {
             $imagePath = 'samples/receipt-sample.jpg';
@@ -139,7 +144,7 @@ class OcrSettingsController extends Controller
             ], 500);
         } finally {
             if ($cleanupPath) {
-                Storage::disk('public')->delete($cleanupPath);
+                Storage::disk('local')->delete($cleanupPath);
             }
         }
     }

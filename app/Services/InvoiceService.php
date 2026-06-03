@@ -7,9 +7,6 @@ use Illuminate\Support\Facades\DB;
 
 class InvoiceService
 {
-    public function __construct(
-        protected InvoicePdfStorageService $invoicePdfStorage,
-    ) {}
     /**
      * Smallest currency unit for invoice total rounding.
      *   MYR — 5 sen (0.05)
@@ -143,7 +140,6 @@ class InvoiceService
                 $this->syncJournalEntry($invoice, $totals);
             }
 
-            $this->invoicePdfStorage->forget($invoice);
         });
     }
 
@@ -204,7 +200,6 @@ class InvoiceService
 
             DB::table('journal_items')->insert($journalItems);
             $invoice->update(['status' => 'unpaid']);
-            $this->invoicePdfStorage->forget($invoice);
         });
     }
 
@@ -248,7 +243,6 @@ class InvoiceService
 
             DB::table('journal_items')->insert($reversals);
             $invoice->update(['status' => 'void', 'amount_paid' => 0]);
-            $this->invoicePdfStorage->forget($invoice);
         });
     }
 
@@ -289,7 +283,6 @@ class InvoiceService
                 ['journal_entry_id' => $journalId, 'account_id' => $accountMap['1100'] ?? null, 'account_code' => '1100', 'debit' => 0, 'credit' => $amountBase, 'created_at' => now(), 'updated_at' => now()],
             ]);
 
-            $this->invoicePdfStorage->forget($invoice);
         });
     }
 

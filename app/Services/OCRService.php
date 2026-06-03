@@ -30,6 +30,14 @@ class OCRService
      */
     public function process(string $filePath): array
     {
+        $filePath = trim($filePath);
+        if ($filePath === '') {
+            return OcrResult::failed(
+                provider: 'unknown',
+                error: 'Receipt path is empty. Storage may have failed — check FILESYSTEM_PUBLIC_DRIVER and AWS settings.',
+            )->toLegacyArray();
+        }
+
         try {
             $provider = $this->resolver->resolve();
             $result = $provider->extract($filePath);

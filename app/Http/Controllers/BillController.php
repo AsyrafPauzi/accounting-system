@@ -182,6 +182,13 @@ class BillController extends Controller
         $file = $request->file('receipt');
         $path = $file->store('receipts', 'public');
 
+        if (! is_string($path) || $path === '') {
+            return response()->json([
+                'success' => false,
+                'error' => 'Could not save the receipt. If using S3, check AWS_BUCKET and credentials; locally use FILESYSTEM_PUBLIC_DRIVER=local.',
+            ], 500);
+        }
+
         // Process OCR
         $ocrResult = $this->ocrService->process($path);
 
