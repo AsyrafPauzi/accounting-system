@@ -333,6 +333,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/journal/manual/{journal}', [JournalController::class, 'destroy'])->name('journal.destroy');
     });
 
+    // --- Payroll ---
+    // Re-uses the journal.create permission (any staff member who can post a
+    // manual journal can also record a payroll run).
+    Route::middleware(['permission:journal.create', 'plan.permission:journal.create'])->group(function () {
+        Route::get('/payroll', [\App\Http\Controllers\PayrollController::class, 'create'])->name('payroll.create');
+        Route::post('/payroll', [\App\Http\Controllers\PayrollController::class, 'store'])
+            ->middleware('throttle:creation')
+            ->name('payroll.store');
+    });
+
     // --- Reports Hub ---
     Route::middleware(['permission:reports.view', 'plan.permission:reports.view'])->group(function () {
         Route::get('/reports', [ReportsHubController::class, 'index'])->name('reports.index');
