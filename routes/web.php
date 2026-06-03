@@ -174,6 +174,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
         Route::get('/invoices/{id}/edit', [InvoiceController::class, 'edit'])->name('invoices.edit');
         Route::get('/invoices/{id}/pdf', [InvoiceController::class, 'downloadPdf'])->name('invoices.pdf');
+        Route::get('/invoices/{id}/preview', [InvoiceController::class, 'previewPdf'])->name('invoices.preview');
     });
     Route::middleware('permission:invoices.create')->group(function () {
         Route::get('/invoices/create', [InvoiceController::class, 'create'])->name('invoices.create');

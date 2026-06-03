@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreAccountRequest;
 use App\Http\Requests\UpdateAccountRequest;
 use App\Models\Account;
+use App\Support\DefaultChartOfAccounts;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -126,26 +127,19 @@ class ChartOfAccountsController extends Controller
     }
 
     /**
-     * Seed default chart of accounts (e.g. 1000, 1100, 1200, 2000, 2100, 3000, 4000, 5000) when empty or add missing.
+     * Backfill the default chart of accounts. Tenants get this list on
+     * signup automatically (see the tenant migration
+     * `..._seed_default_chart_of_accounts.php`); this admin button is for
+     * tenants who deleted some defaults and want them back.
+     *
+     * Skips any code the tenant already has so we never clobber renamed
+     * or customised accounts.
      */
     public function seedDefault(Request $request): RedirectResponse
     {
-        $defaults = [
-            ['code' => '1000', 'name' => 'Assets', 'type' => 'asset', 'display_order' => 1],
-            ['code' => '1100', 'name' => 'Accounts Receivable', 'type' => 'asset', 'display_order' => 2],
-            ['code' => '1200', 'name' => 'Bank', 'type' => 'asset', 'sub_type' => 'bank', 'display_order' => 3],
-            ['code' => '1210', 'name' => 'Petty Cash', 'type' => 'asset', 'sub_type' => 'cash', 'display_order' => 4],
-            ['code' => '2000', 'name' => 'Liabilities', 'type' => 'liability', 'display_order' => 5],
-            ['code' => '2100', 'name' => 'Tax Payable', 'type' => 'liability', 'display_order' => 6],
-            ['code' => '2110', 'name' => 'Accounts Payable', 'type' => 'liability', 'display_order' => 7],
-            ['code' => '3000', 'name' => 'Equity', 'type' => 'equity', 'display_order' => 8],
-            ['code' => '4000', 'name' => 'Revenue', 'type' => 'income', 'display_order' => 9],
-            ['code' => '5000', 'name' => 'Expenses', 'type' => 'expense', 'display_order' => 10],
-        ];
-
         $existingCodes = Account::pluck('code')->toArray();
         $created = 0;
-        foreach ($defaults as $row) {
+        foreach (DefaultChartOfAccounts::rows() as $row) {
             if (in_array($row['code'], $existingCodes, true)) {
                 continue;
             }

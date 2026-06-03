@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { confirm } from '@/utils/swal';
 import Modal from '@/Components/Modal';
+import ReceiptUpload from '@/Components/ReceiptUpload';
 
 const Icons = {
     ChevronLeft: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>,
@@ -27,6 +28,8 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
     const balanceDue = isDraft || bill.status === 'void' ? 0 : Math.max(0, (parseFloat(bill.total_amount) || 0) - (parseFloat(bill.amount_paid) || 0));
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [showReceiptModal, setShowReceiptModal] = useState(false);
+
+    const receiptIsPdf = !!bill.receipt_path && /\.pdf($|\?)/i.test(bill.receipt_path);
 
     const initialItems = (bill.items && bill.items.length > 0)
         ? bill.items.map((item) => ({
@@ -218,31 +221,66 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                     </div>
                 </div>
 
-                {/* Receipt Section */}
-                {bill.receipt_url && (
-                    <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-border-warm bg-cream/50 flex items-center justify-between">
-                            <h3 className="text-sm font-display font-medium text-ink">Attached receipt</h3>
-                            <button 
+                {/* Receipt Section — always shown so users can attach OR replace
+                    a missing receipt without leaving the bill detail page. */}
+                <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-border-warm bg-cream/50 flex items-center justify-between">
+                        <h3 className="text-sm font-display font-medium text-ink">
+                            {bill.receipt_url ? 'Attached receipt' : 'No receipt attached'}
+                        </h3>
+                        {bill.receipt_url && (
+                            <button
                                 type="button"
                                 onClick={() => setShowReceiptModal(true)}
                                 className="text-xs font-semibold text-terracotta hover:underline flex items-center gap-1"
                             >
                                 View full size <Icons.ExternalLink />
                             </button>
-                        </div>
-                        <div className="p-6">
-                            <div className="rounded-xl overflow-hidden border border-border-warm bg-cream max-h-96 flex items-center justify-center relative group">
-                                <img 
-                                    src={bill.receipt_url} 
-                                    alt="Receipt" 
-                                    className="max-w-full max-h-96 object-contain cursor-zoom-in transition-transform"
-                                    onClick={() => setShowReceiptModal(true)}
-                                />
-                            </div>
+                        )}
+                    </div>
+                    <div className="p-6 space-y-4">
+                        {bill.receipt_url && (
+                            receiptIsPdf ? (
+                                <div className="rounded-xl overflow-hidden border border-border-warm bg-cream relative group">
+                                    <iframe
+                                        src={`${bill.receipt_url}#view=FitH&toolbar=1`}
+                                        title="Receipt PDF"
+                                        className="w-full h-[600px] bg-cream"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowReceiptModal(true)}
+                                        className="absolute top-3 right-3 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface/95 border border-border-warm text-xs font-semibold text-ink hover:bg-cream shadow-sm"
+                                    >
+                                        Expand <Icons.ExternalLink />
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="rounded-xl overflow-hidden border border-border-warm bg-cream max-h-96 flex items-center justify-center relative group">
+                                    <img
+                                        src={bill.receipt_url}
+                                        alt="Receipt"
+                                        className="max-w-full max-h-96 object-contain cursor-zoom-in transition-transform"
+                                        onClick={() => setShowReceiptModal(true)}
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    />
+                                </div>
+                            )
+                        )}
+
+                        <div>
+                            <p className="text-xs text-ink-muted mb-3">
+                                {bill.receipt_url
+                                    ? 'Replace the attached receipt by uploading a new file. The old one will be overwritten.'
+                                    : 'Upload a JPG, PNG, WebP or PDF up to 10 MB. The file is stored against this bill and visible only to your tenant.'}
+                            </p>
+                            <ReceiptUpload
+                                billId={bill.id}
+                                onOcrComplete={() => router.reload({ only: ['bill'] })}
+                            />
                         </div>
                     </div>
-                )}
+                </div>
 
                 <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
                     <div className="px-4 sm:px-6 py-3 border-b border-border-warm bg-cream/50 flex items-center justify-between">
@@ -254,14 +292,14 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                         )}
                     </div>
                     <div className="overflow-x-auto">
-                        <table className="w-full table-fixed min-w-[760px]">
+                        <table className="w-full table-fixed min-w-[820px]">
                             <colgroup>
-                                <col className="w-[28%]" />
-                                <col className="w-[32%]" />
+                                <col className={isDraft ? "w-[24%]" : "w-[28%]"} />
+                                <col className={isDraft ? "w-[28%]" : "w-[32%]"} />
                                 <col className="w-[10%]" />
                                 <col className="w-[14%]" />
                                 <col className="w-[14%]" />
-                                {isDraft && <col className="w-[2%]" />}
+                                {isDraft && <col className="w-[10%]" />}
                             </colgroup>
                             <thead>
                                 <tr className="text-left text-eyebrow font-semibold text-ink-muted uppercase border-b border-border-warm bg-cream/80">
@@ -270,7 +308,7 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                                     <th className="px-3 py-3">Qty</th>
                                     <th className="px-3 py-3">Unit amount</th>
                                     <th className="px-3 py-3 text-right">Amount</th>
-                                    {isDraft && <th className="px-3 py-3" />}
+                                    {isDraft && <th className="px-3 py-3 text-center">Remove</th>}
                                 </tr>
                             </thead>
                             <tbody>
@@ -293,8 +331,15 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                                         <td className="px-3 py-3">{isDraft ? <input type="number" step="0.01" min="0" value={item.unit_amount} onChange={(e) => updateItem(index, 'unit_amount', e.target.value)} className={inputClass + ' w-full'} /> : <span className="text-sm font-mono font-tabular">{formatMoney(item.unit_amount)}</span>}</td>
                                         <td className="px-3 py-3 text-right text-sm font-mono font-tabular">{formatMoney(item.amount)}</td>
                                         {isDraft && (
-                                            <td className="px-2 py-3">
-                                                <button type="button" onClick={() => removeItem(index)} className="p-2 text-ink-muted hover:text-terracotta rounded-lg">
+                                            <td className="px-3 py-3 text-center">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeItem(index)}
+                                                    disabled={data.items.length <= 1}
+                                                    title={data.items.length <= 1 ? 'A bill must have at least one line item' : 'Remove this line'}
+                                                    aria-label="Remove line"
+                                                    className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-ink-muted hover:text-terracotta hover:bg-terracotta/10 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-ink-muted transition-colors"
+                                                >
                                                     <Icons.Trash />
                                                 </button>
                                             </td>
@@ -351,12 +396,20 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                             <IconX size={20} />
                         </button>
                     </div>
-                    <div className="bg-surface-alt rounded-xl border border-border-warm flex items-center justify-center h-[70vh] p-4 overflow-hidden">
-                        <img 
-                            src={bill.receipt_url} 
-                            alt="Receipt Full Size" 
-                            className="max-w-full max-h-full object-contain shadow-2xl transition-transform duration-300" 
-                        />
+                    <div className="bg-surface-alt rounded-xl border border-border-warm flex items-center justify-center h-[70vh] overflow-hidden">
+                        {receiptIsPdf ? (
+                            <iframe
+                                src={`${bill.receipt_url}#view=FitH&toolbar=1`}
+                                title="Receipt PDF Full Size"
+                                className="w-full h-full bg-cream"
+                            />
+                        ) : (
+                            <img
+                                src={bill.receipt_url}
+                                alt="Receipt Full Size"
+                                className="max-w-full max-h-full object-contain shadow-2xl transition-transform duration-300 p-4"
+                            />
+                        )}
                     </div>
                     <div className="mt-4 flex justify-end">
                         <a 

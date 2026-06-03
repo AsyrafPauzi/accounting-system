@@ -60,8 +60,16 @@ class InvoiceController extends Controller
         $search = $request->input('search', '');
         $statusFilter = $request->input('status', '');
 
+        // NOTE: We use the raw query builder here for performance (large lists,
+        // joined customer columns, KPI clones). That bypasses Eloquent's
+        // SoftDeletingScope so we MUST filter `deleted_at IS NULL` ourselves on
+        // every soft-deletable table in the query — both `invoices` and the
+        // joined `customers`. Without this, soft-deleted invoices reappear in
+        // the list while their /edit URL 404s.
         $baseQuery = DB::table('invoices')
             ->join('customers', 'invoices.customer_id', '=', 'customers.id')
+            ->whereNull('invoices.deleted_at')
+            ->whereNull('customers.deleted_at')
             ->select(
                 'invoices.*',
                 'customers.name as customer_name',
@@ -251,8 +259,28 @@ class InvoiceController extends Controller
      */
     public function downloadPdf($id)
     {
+        return $this->renderInvoicePdf($id, attachment: true);
+    }
+
+    /**
+     * Read-only inline PDF preview. Same content as `downloadPdf` but with
+     * `Content-Disposition: inline` so the browser renders it in the tab
+     * instead of forcing a download. Lets users review an invoice without
+     * editing or saving anything to disk.
+     */
+    public function previewPdf($id)
+    {
+        return $this->renderInvoicePdf($id, attachment: false);
+    }
+
+    /**
+     * Shared invoice → PDF rendering. The only difference between download
+     * and preview is the Content-Disposition header.
+     */
+    private function renderInvoicePdf(int|string $id, bool $attachment): \Symfony\Component\HttpFoundation\Response
+    {
         $invoice = Invoice::with(['items', 'customer'])->findOrFail($id);
-        
+
         $company = config('invoice.company');
         if (function_exists('tenant') && tenant()) {
             $company = tenant()->getCompanyDetails();
@@ -263,7 +291,23 @@ class InvoiceController extends Controller
             }
         }
 
-        return $this->generatePdf($invoice, $company);
+        try {
+            $pdf = Pdf::loadView('pdf.invoice', [
+                'invoice'  => $invoice,
+                'customer' => $invoice->customer,
+                'company'  => $company,
+            ])->setPaper('a4', 'portrait');
+
+            $disposition = $attachment ? 'attachment' : 'inline';
+            return response($pdf->output(), 200, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => "{$disposition}; filename=\"Invoice-{$invoice->invoice_number}.pdf\"",
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Could not generate PDF. Please contact support.',
+            ], 500);
+        }
     }
 
     /**
