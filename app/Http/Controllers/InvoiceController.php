@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Http\Requests\UpdateInvoiceRequest;
+use App\Services\InvoicePdfStorageService;
 use App\Services\InvoiceService;
-use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Account;
 use App\Models\Invoice;
 use App\Models\Customer;
@@ -16,7 +16,10 @@ use Inertia\Inertia;
 
 class InvoiceController extends Controller
 {
-    public function __construct(protected InvoiceService $invoiceService) {}
+    public function __construct(
+        protected InvoiceService $invoiceService,
+        protected InvoicePdfStorageService $invoicePdfStorage,
+    ) {}
 
     /**
      * Company books base currency (for FX hint on invoices).
@@ -241,6 +244,7 @@ class InvoiceController extends Controller
     public function destroy($id)
     {
         $invoice = Invoice::findOrFail($id);
+        $this->invoicePdfStorage->forget($invoice);
         $invoice->items()->delete();
         $invoice->delete();
         return redirect()->route('invoices.index')->with('success', 'Invoice deleted.');
@@ -263,7 +267,7 @@ class InvoiceController extends Controller
             }
         }
 
-        return $this->generatePdf($invoice, $company);
+        return $this->respondWithPdf($invoice, $company);
     }
 
     /**
@@ -278,21 +282,13 @@ class InvoiceController extends Controller
             $company = tenant()->getCompanyDetails();
         }
 
-        return $this->generatePdf($invoice, $company);
+        return $this->respondWithPdf($invoice, $company);
     }
 
-    private function generatePdf($invoice, $company)
+    private function respondWithPdf(Invoice $invoice, array $company)
     {
         try {
-            $invoice->loadMissing(['items', 'customer']);
-            
-            $pdf = Pdf::loadView('pdf.invoice', [
-                'invoice'  => $invoice,
-                'customer' => $invoice->customer,
-                'company'  => $company,
-            ])->setPaper('a4', 'portrait');
-
-            return $pdf->stream("Invoice-{$invoice->invoice_number}.pdf");
+            return $this->invoicePdfStorage->downloadResponse($invoice, $company);
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Could not generate PDF. Please contact support.',

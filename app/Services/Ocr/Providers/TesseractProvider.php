@@ -328,9 +328,10 @@ class TesseractProvider implements OcrProviderInterface
      */
     private function resolveAbsolutePath(string $imagePath): ?string
     {
-        // 1. Storage 'public' disk (where BillController::uploadReceipt writes today)
-        if (Storage::disk('public')->exists($imagePath)) {
-            return Storage::disk('public')->path($imagePath);
+        // 1. Storage 'public' disk (local path or S3 temp copy for OCR binaries)
+        $fromUploads = \App\Support\UploadDisk::absolutePathOrTemp($imagePath);
+        if ($fromUploads !== null) {
+            return $fromUploads;
         }
 
         // 2. Sample assets shipped under public/ (used by the test button)

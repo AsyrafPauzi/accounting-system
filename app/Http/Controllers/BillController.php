@@ -224,10 +224,10 @@ class BillController extends Controller
             $path = substr($path, 8);
         }
 
-        if (!Storage::disk('public')->exists($path)) {
+        if (! Storage::disk('public')->exists($path)) {
             abort(404);
         }
 
-        return response()->file(Storage::disk('public')->path($path));
+        return Storage::disk('public')->response($path);
     }
 }
