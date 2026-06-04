@@ -14,9 +14,29 @@ const Icons = {
     ChartBar: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" /></svg>,
 };
 
+/**
+ * Money formatter for the dashboard.
+ *
+ * `compact: true` switches to a short label once the value reaches RM 1M
+ * so it fits inside narrow KPI cells without overflowing. The exact value
+ * is always shown via the `title` attribute on the hosting element so
+ * hovering still reveals the full precision.
+ *
+ *   999,999.99       → "RM 999,999.99"
+ *   1,234,567.89     → "RM 1.23M"     (compact)
+ *   1,234,567,890    → "RM 1.23B"     (compact)
+ */
 function fmt(n, opts = {}) {
-    const { currency = false } = opts;
+    const { currency = false, compact = false } = opts;
     const num = Number(n) || 0;
+
+    if (compact && currency) {
+        const abs = Math.abs(num);
+        if (abs >= 1_000_000_000) return 'RM ' + (num / 1_000_000_000).toFixed(2) + 'B';
+        if (abs >= 1_000_000)     return 'RM ' + (num / 1_000_000).toFixed(2) + 'M';
+        // Below 1M the full number still fits comfortably; keep full digits.
+    }
+
     if (currency) return 'RM ' + num.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return num.toLocaleString('en-MY', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
@@ -65,7 +85,7 @@ export default function Dashboard({ auth, stats = {} }) {
                     >
                         <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider opacity-90">Receivables</span>
                         <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-bold font-mono tabular-nums truncate min-w-0" title={fmt(invoices.total_outstanding, { currency: true })}>
-                            {fmt(invoices.total_outstanding, { currency: true })}
+                            {fmt(invoices.total_outstanding, { currency: true, compact: true })}
                         </p>
                         <p className="mt-auto text-[10px] sm:text-xs opacity-90">
                             {invoices.overdue_count > 0 ? (
@@ -81,8 +101,8 @@ export default function Dashboard({ auth, stats = {} }) {
                         className="rounded-2xl bg-surface border border-border-warm p-4 sm:p-5 shadow-sm flex flex-col min-h-[100px] sm:min-h-[112px] hover:border-border-warm hover:shadow-md transition-all min-w-0 active:opacity-90"
                     >
                         <span className="text-[10px] sm:text-xs font-semibold text-ink-muted uppercase tracking-wider">Payables</span>
-                        <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-bold text-terracotta font-mono tabular-nums truncate min-w-0">
-                            {fmt(bills.total_ap, { currency: true })}
+                        <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-bold text-terracotta font-mono tabular-nums truncate min-w-0" title={fmt(bills.total_ap, { currency: true })}>
+                            {fmt(bills.total_ap, { currency: true, compact: true })}
                         </p>
                         <p className="mt-auto text-[10px] sm:text-xs text-ink-muted">
                             {bills.overdue_count > 0 ? (
@@ -93,11 +113,11 @@ export default function Dashboard({ auth, stats = {} }) {
                         </p>
                     </Link>
 
-                    <div className="rounded-2xl bg-surface border border-border-warm p-4 sm:p-5 shadow-sm flex flex-col min-h-[100px] sm:min-h-[112px]">
+                    <div className="rounded-2xl bg-surface border border-border-warm p-4 sm:p-5 shadow-sm flex flex-col min-h-[100px] sm:min-h-[112px] min-w-0">
                         <span className="text-[10px] sm:text-xs font-semibold text-ink-muted uppercase tracking-wider">This month</span>
-                        <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-bold font-mono tabular-nums">
+                        <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-bold font-mono tabular-nums truncate" title={fmt(netMonth, { currency: true })}>
                             <span className={netMonth >= 0 ? 'text-forest' : 'text-terracotta'}>
-                                {fmt(netMonth, { currency: true })}
+                                {fmt(netMonth, { currency: true, compact: true })}
                             </span>
                         </p>
                         <p className="mt-auto text-[10px] sm:text-xs text-ink-muted">
@@ -130,19 +150,19 @@ export default function Dashboard({ auth, stats = {} }) {
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                                     <div className="min-w-0">
                                         <p className="text-eyebrow font-semibold text-ink-muted uppercase">Invoiced</p>
-                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-ink mt-0.5 whitespace-nowrap" title={fmt(invoices.total_invoiced, { currency: true })}>{fmt(invoices.total_invoiced, { currency: true })}</p>
+                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-ink mt-0.5 truncate" title={fmt(invoices.total_invoiced, { currency: true })}>{fmt(invoices.total_invoiced, { currency: true, compact: true })}</p>
                                     </div>
                                     <div className="min-w-0">
                                         <p className="text-eyebrow font-semibold text-ink-muted uppercase">Collected</p>
-                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-forest dark:text-forest-light mt-0.5 whitespace-nowrap" title={fmt(invoices.total_collected, { currency: true })}>{fmt(invoices.total_collected, { currency: true })}</p>
+                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-forest dark:text-forest-light mt-0.5 truncate" title={fmt(invoices.total_collected, { currency: true })}>{fmt(invoices.total_collected, { currency: true, compact: true })}</p>
                                     </div>
                                     <div className="min-w-0">
                                         <p className="text-eyebrow font-semibold text-ink-muted uppercase">Outstanding</p>
-                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-terracotta mt-0.5 whitespace-nowrap" title={fmt(invoices.total_outstanding, { currency: true })}>{fmt(invoices.total_outstanding, { currency: true })}</p>
+                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-terracotta mt-0.5 truncate" title={fmt(invoices.total_outstanding, { currency: true })}>{fmt(invoices.total_outstanding, { currency: true, compact: true })}</p>
                                     </div>
                                     <div className="min-w-0">
                                         <p className="text-eyebrow font-semibold text-ink-muted uppercase">Overdue</p>
-                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-ink mt-0.5 whitespace-nowrap">{invoices.overdue_count}</p>
+                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-ink mt-0.5 truncate">{invoices.overdue_count}</p>
                                     </div>
                                 </div>
                                 {planPermissions['reports.aged-reports'] && (
@@ -167,21 +187,21 @@ export default function Dashboard({ auth, stats = {} }) {
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                                     <div className="min-w-0">
                                         <p className="text-eyebrow font-semibold text-ink-muted uppercase">Suppliers</p>
-                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-ink mt-0.5 whitespace-nowrap">
+                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-ink mt-0.5 truncate">
                                             {suppliers.total} <span className="text-xs font-normal text-ink-muted">({suppliers.active} active)</span>
                                         </p>
                                     </div>
                                     <div className="min-w-0">
                                         <p className="text-eyebrow font-semibold text-ink-muted uppercase">Outstanding</p>
-                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-terracotta mt-0.5 whitespace-nowrap" title={fmt(bills.total_ap, { currency: true })}>{fmt(bills.total_ap, { currency: true })}</p>
+                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-terracotta mt-0.5 truncate" title={fmt(bills.total_ap, { currency: true })}>{fmt(bills.total_ap, { currency: true, compact: true })}</p>
                                     </div>
                                     <div className="min-w-0">
                                         <p className="text-eyebrow font-semibold text-ink-muted uppercase">Unpaid bills</p>
-                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-ink mt-0.5 whitespace-nowrap">{bills.unpaid_count}</p>
+                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-ink mt-0.5 truncate">{bills.unpaid_count}</p>
                                     </div>
                                     <div className="min-w-0">
                                         <p className="text-eyebrow font-semibold text-ink-muted uppercase">Overdue</p>
-                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-ink mt-0.5 whitespace-nowrap">{bills.overdue_count}</p>
+                                        <p className="text-sm sm:text-base font-mono font-tabular font-semibold text-ink mt-0.5 truncate">{bills.overdue_count}</p>
                                     </div>
                                 </div>
                                 {planPermissions['reports.aged-reports'] && (

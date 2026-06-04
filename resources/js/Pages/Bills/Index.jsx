@@ -324,12 +324,26 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                                 <IconX size={20} />
                             </button>
                         </div>
-                        <div className="bg-surface-alt rounded-xl border border-border-warm flex items-center justify-center h-[70vh] p-4 overflow-hidden">
-                            <img 
-                                src={selectedBillForReceipt?.receipt_url} 
-                                alt="Receipt Full Size" 
-                                className="max-w-full max-h-full object-contain shadow-2xl transition-transform duration-300" 
-                            />
+                        <div className="bg-surface-alt rounded-xl border border-border-warm flex items-center justify-center h-[70vh] overflow-hidden">
+                            {(() => {
+                                const path = selectedBillForReceipt?.receipt_path || '';
+                                const url = selectedBillForReceipt?.receipt_url;
+                                const isPdf = /\.pdf($|\?)/i.test(path);
+                                if (!url) return null;
+                                return isPdf ? (
+                                    <iframe
+                                        src={`${url}#view=FitH&toolbar=1`}
+                                        title="Receipt PDF"
+                                        className="w-full h-full bg-cream"
+                                    />
+                                ) : (
+                                    <img
+                                        src={url}
+                                        alt="Receipt Full Size"
+                                        className="max-w-full max-h-full object-contain shadow-2xl transition-transform duration-300 p-4"
+                                    />
+                                );
+                            })()}
                         </div>
                         <div className="mt-4 flex justify-end gap-3">
                             <a 
