@@ -9,6 +9,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Account;
 use App\Models\Invoice;
 use App\Models\Customer;
+use App\Models\Product;
 use App\Jobs\SendInvoiceEmail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -152,7 +153,22 @@ class InvoiceController extends Controller
             'customer_id' => $request->query('customer_id'),
             'next_invoice_number' => $nextNumber,
             'base_currency' => $this->tenantBaseCurrency(),
+            'products' => $this->productOptions(),
         ]);
+    }
+
+    /**
+     * Active products served to the invoice editor for the line-item picker.
+     * Only the columns the picker uses, not the whole row.
+     */
+    protected function productOptions(): \Illuminate\Support\Collection
+    {
+        return Product::query()
+            ->active()
+            ->select(['id', 'code', 'name', 'description', 'unit_price', 'account_code', 'tax_rate'])
+            ->orderBy('display_order')
+            ->orderBy('name')
+            ->get();
     }
 
     /**
@@ -227,6 +243,7 @@ class InvoiceController extends Controller
             'lhdn_codes' => $this->getLhdnCodes(),
             'journal_entry_id' => $journalEntryId,
             'base_currency' => $this->tenantBaseCurrency(),
+            'products' => $this->productOptions(),
         ]);
     }
 

@@ -26,7 +26,7 @@ function currencyPrefix(currency) {
     return currencySymbol(currency);
 }
 
-export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], journal_entry_id = null, base_currency = 'MYR' }) {
+export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], journal_entry_id = null, base_currency = 'MYR', products = [] }) {
     // Initialize form with existing invoice data and its nested items
     const { data, setData, put, processing, errors } = useForm({
         customer_id: invoice.customer_id || '',
@@ -94,6 +94,26 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
     const updateItem = (index, field, value) => {
         const newItems = [...data.items];
         newItems[index][field] = value;
+        setData('items', newItems);
+    };
+
+    /**
+     * Apply a saved product to a line on the edit page. Same behaviour as
+     * Create.jsx — replaces description, unit price and tax rate while
+     * preserving quantity and discount.
+     */
+    const applyProduct = (index, productId) => {
+        if (!productId) return;
+        const product = products.find(p => String(p.id) === String(productId));
+        if (!product) return;
+        const newItems = [...data.items];
+        newItems[index] = {
+            ...newItems[index],
+            description: product.description ? `${product.name} — ${product.description}` : product.name,
+            unit_price: parseFloat(product.unit_price) || 0,
+            tax_rate: parseFloat(product.tax_rate) || 0,
+            product_id: product.id,
+        };
         setData('items', newItems);
     };
 
@@ -337,6 +357,19 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                                                 </select>
                                             </td>
                                             <td className="p-4">
+                                                {products.length > 0 && (
+                                                    <select
+                                                        value=""
+                                                        onChange={e => { applyProduct(index, e.target.value); e.target.value = ''; }}
+                                                        className="mb-1.5 w-full border border-border-warm rounded-lg text-[10px] font-semibold text-ink-muted bg-cream/50 hover:bg-cream py-1 px-2 focus:ring-1 focus:ring-terracotta uppercase tracking-wider cursor-pointer"
+                                                        title="Pick a saved product to auto-fill this line"
+                                                    >
+                                                        <option value="">+ Pick from catalogue</option>
+                                                        {products.map(p => (
+                                                            <option key={p.id} value={p.id}>{p.name}{p.code ? ` (${p.code})` : ''}</option>
+                                                        ))}
+                                                    </select>
+                                                )}
                                                 <input 
                                                     type="text" 
                                                     value={item.description} 

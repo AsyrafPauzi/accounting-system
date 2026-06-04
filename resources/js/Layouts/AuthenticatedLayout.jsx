@@ -31,6 +31,7 @@ const navConfig = [
         { name: 'Invoices', route: 'invoices.index', Icon: Icons.Document, planPermission: 'invoices.view', userPermission: 'invoices.view' },
         { name: 'Credit Notes', route: 'credit-notes.index', Icon: Icons.ReceiptRefund, planPermission: 'credit-notes.view', userPermission: 'credit-notes.view' },
         { name: 'Customers', route: 'customers.index', Icon: Icons.Users, planPermission: 'customers.view', userPermission: 'customers.view' },
+        { name: 'Products & Services', route: 'products.index', Icon: Icons.Folder, planPermission: 'products.view', userPermission: 'products.view', subtitle: 'Reusable invoice line items' },
     ]},
     { group: 'Purchases (Expenses)', links: [
         { name: 'Suppliers', route: 'suppliers.index', Icon: Icons.BuildingOffice, planPermission: 'suppliers.view', userPermission: 'suppliers.view' },

@@ -404,6 +404,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('permission:customers.delete')->group(function () {
         Route::delete('/customers/{id}', [CustomerController::class, 'destroy'])->name('customers.destroy');
     });
+
+    // --- Products & Services (line-item catalogue) ---
+    Route::middleware('permission:products.view')->group(function () {
+        Route::get('/products', [\App\Http\Controllers\ProductController::class, 'index'])->name('products.index');
+    });
+    Route::middleware('permission:products.create')->group(function () {
+        Route::get('/products/create', [\App\Http\Controllers\ProductController::class, 'create'])->name('products.create');
+        Route::post('/products', [\App\Http\Controllers\ProductController::class, 'store'])
+            ->middleware('throttle:creation')
+            ->name('products.store');
+    });
+    Route::middleware('permission:products.edit')->group(function () {
+        Route::get('/products/{id}/edit', [\App\Http\Controllers\ProductController::class, 'edit'])->name('products.edit');
+        Route::put('/products/{id}', [\App\Http\Controllers\ProductController::class, 'update'])->name('products.update');
+    });
+    Route::middleware('permission:products.delete')->group(function () {
+        Route::delete('/products/{id}', [\App\Http\Controllers\ProductController::class, 'destroy'])->name('products.destroy');
+    });
 });
 
 require __DIR__.'/auth.php';

@@ -91,6 +91,7 @@ class PlanSeeder extends Seeder
             'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
             'bills.view', 'bills.create', 'bills.edit', 'bills.delete', 'bills.post', 'bills.void', 'bills.record-payment',
             'credit-notes.view', 'credit-notes.create',
+            'products.view', 'products.create', 'products.edit', 'products.delete',
             'accounts.view', // Chart of Accounts: Limited (View Only)
             'general-ledger.view', // General Ledger: View Only
             'journal.view', // Double Entry System: Partial (View Only journals)

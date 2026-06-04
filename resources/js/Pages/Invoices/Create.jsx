@@ -26,7 +26,7 @@ function currencyPrefix(currency) {
 
 const initialQuickCustomer = { name: '', code: '', email: '', tin: '', brn: '', billing_street: '', billing_city: '', billing_state: '', billing_zip: '' };
 
-export default function Create({ auth, customers = [], lhdn_codes = [], customer_id: preselectedCustomerId = null, next_invoice_number: suggestedInvoiceNumber = null, base_currency = 'MYR' }) {
+export default function Create({ auth, customers = [], lhdn_codes = [], customer_id: preselectedCustomerId = null, next_invoice_number: suggestedInvoiceNumber = null, base_currency = 'MYR', products = [] }) {
     const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
     const [newCustomers, setNewCustomers] = useState([]);
     const [quickCustomer, setQuickCustomer] = useState(initialQuickCustomer);
@@ -89,6 +89,25 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
     const updateItem = (index, field, value) => {
         const newItems = [...data.items];
         newItems[index][field] = value;
+        setData('items', newItems);
+    };
+
+    /**
+     * Apply a saved product to a line: fills description, unit price and tax rate.
+     * Leaves quantity and discount alone since those are usually per-deal.
+     */
+    const applyProduct = (index, productId) => {
+        if (!productId) return;
+        const product = products.find(p => String(p.id) === String(productId));
+        if (!product) return;
+        const newItems = [...data.items];
+        newItems[index] = {
+            ...newItems[index],
+            description: product.description ? `${product.name} — ${product.description}` : product.name,
+            unit_price: parseFloat(product.unit_price) || 0,
+            tax_rate: parseFloat(product.tax_rate) || 0,
+            product_id: product.id,
+        };
         setData('items', newItems);
     };
 
@@ -278,6 +297,19 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                                             </select>
                                         </td>
                                         <td className="p-4">
+                                            {products.length > 0 && (
+                                                <select
+                                                    value=""
+                                                    onChange={e => { applyProduct(index, e.target.value); e.target.value = ''; }}
+                                                    className="mb-1.5 w-full border border-border-warm rounded-lg text-[10px] font-semibold text-ink-muted bg-cream/50 hover:bg-cream py-1 px-2 focus:ring-1 focus:ring-terracotta uppercase tracking-wider cursor-pointer"
+                                                    title="Pick a saved product to auto-fill this line"
+                                                >
+                                                    <option value="">+ Pick from catalogue</option>
+                                                    {products.map(p => (
+                                                        <option key={p.id} value={p.id}>{p.name}{p.code ? ` (${p.code})` : ''}</option>
+                                                    ))}
+                                                </select>
+                                            )}
                                             <input 
                                                 type="text" 
                                                 value={item.description} 

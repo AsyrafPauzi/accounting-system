@@ -31,6 +31,9 @@ class RolesAndPermissionsSeeder extends Seeder
             // Credit Notes
             'credit-notes.view', 'credit-notes.create',
 
+            // Products & Services (line-item catalogue)
+            'products.view', 'products.create', 'products.edit', 'products.delete',
+
             // Chart of Accounts
             'accounts.view', 'accounts.create', 'accounts.edit', 'accounts.delete',
 
@@ -74,6 +77,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'customers.view', 'customers.create', 'customers.edit', 'customers.delete', 'customers.edit-credit-risk',
             'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
             'credit-notes.view', 'credit-notes.create',
+            'products.view', 'products.create', 'products.edit', 'products.delete',
             'accounts.view', 'accounts.create', 'accounts.edit', 'accounts.delete',
             'journal.view', 'journal.create', 'journal.edit', 'journal.post', 'journal.delete',
             'general-ledger.view',
@@ -89,6 +93,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.post', 'invoices.void', 'invoices.record-payment', 'invoices.email',
             'customers.view', 'customers.create', 'customers.edit',
             'credit-notes.view', 'credit-notes.create',
+            'products.view', 'products.create', 'products.edit',
             
             // View Only Access on others
             'bills.view',
@@ -109,6 +114,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'customers.view',
             'suppliers.view',
             'credit-notes.view',
+            'products.view',
             'accounts.view',
             'journal.view',
             'general-ledger.view',
