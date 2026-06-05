@@ -308,6 +308,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
     });
 
+    // --- Transactions feed (bank/cash movements) + quick deposit / withdrawal ---
+    Route::middleware(['permission:journal.view', 'plan.permission:journal.view'])->group(function () {
+        Route::get('/transactions', [\App\Http\Controllers\TransactionsController::class, 'index'])->name('transactions.index');
+    });
+
+    Route::middleware(['permission:journal.create', 'plan.permission:journal.create'])->group(function () {
+        Route::get('/transactions/deposit', [\App\Http\Controllers\TransactionsController::class, 'createDeposit'])->name('transactions.deposit.create');
+        Route::post('/transactions/deposit', [\App\Http\Controllers\TransactionsController::class, 'storeDeposit'])
+            ->middleware('throttle:creation')
+            ->name('transactions.deposit.store');
+
+        Route::get('/transactions/withdrawal', [\App\Http\Controllers\TransactionsController::class, 'createWithdrawal'])->name('transactions.withdrawal.create');
+        Route::post('/transactions/withdrawal', [\App\Http\Controllers\TransactionsController::class, 'storeWithdrawal'])
+            ->middleware('throttle:creation')
+            ->name('transactions.withdrawal.store');
+    });
+
     // --- Manual Journals ---
     Route::middleware(['permission:journal.view', 'plan.permission:journal.view'])->group(function () {
         Route::get('/journal/manual', [JournalController::class, 'index'])->name('journal.index');
@@ -370,6 +387,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/accounts-payable', [AccountsPayableController::class, 'index'])->name('accounts-payable.index');
     });
 
+    // --- Sales Tax Report (output vs input tax) ---
+    Route::middleware(['permission:reports.sales-tax', 'plan.permission:reports.sales-tax'])->group(function () {
+        Route::get('/reports/sales-tax', [\App\Http\Controllers\SalesTaxReportController::class, 'index'])->name('reports.sales-tax.index');
+    });
+
+    // --- Income by Customer (paid vs unpaid breakdown) ---
+    Route::middleware(['permission:reports.sales', 'plan.permission:reports.sales'])->group(function () {
+        Route::get('/reports/income-by-customer', [\App\Http\Controllers\IncomeByCustomerController::class, 'index'])->name('reports.income-by-customer.index');
+    });
+
+    // --- Customer Credits (open credit-note balances) ---
+    Route::middleware(['permission:reports.customer-credits', 'plan.permission:reports.customer-credits'])->group(function () {
+        Route::get('/reports/customer-credits', [\App\Http\Controllers\CustomerCreditsController::class, 'index'])->name('reports.customer-credits.index');
+    });
+
+    // --- Purchases by Vendor ---
+    Route::middleware(['permission:reports.purchases-by-vendor', 'plan.permission:reports.purchases-by-vendor'])->group(function () {
+        Route::get('/reports/purchases-by-vendor', [\App\Http\Controllers\PurchasesByVendorController::class, 'index'])->name('reports.purchases-by-vendor.index');
+    });
+
     // --- Exports (Differentiated by Limited/Full) ---
     Route::middleware(['permission:reports.export.limited|reports.export.full'])->group(function () {
         Route::get('/profit-and-loss/export/csv', [ProfitAndLossController::class, 'exportCsv'])->name('profit-and-loss.export.csv');
@@ -403,6 +440,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
     Route::middleware('permission:customers.delete')->group(function () {
         Route::delete('/customers/{id}', [CustomerController::class, 'destroy'])->name('customers.destroy');
+    });
+
+    // --- Customer Statements (Balance Forward report) ---
+    Route::middleware('permission:customers.view')->group(function () {
+        Route::get('/customer-statements', [\App\Http\Controllers\CustomerStatementController::class, 'index'])->name('customer-statements.index');
+        Route::get('/customer-statements/{customerId}', [\App\Http\Controllers\CustomerStatementController::class, 'show'])->name('customer-statements.show');
+        Route::get('/customer-statements/{customerId}/preview', [\App\Http\Controllers\CustomerStatementController::class, 'previewPdf'])->name('customer-statements.preview');
+        Route::get('/customer-statements/{customerId}/pdf', [\App\Http\Controllers\CustomerStatementController::class, 'downloadPdf'])->name('customer-statements.pdf');
+        Route::post('/customer-statements/{customerId}/email', [\App\Http\Controllers\CustomerStatementController::class, 'email'])
+            ->middleware('throttle:sensitive')
+            ->name('customer-statements.email');
     });
 
     // --- Recurring Invoices (scheduled templates) ---

@@ -128,6 +128,16 @@ class DemoTestAccountSeeder extends Seeder
             tenancy()->end();
         }
 
+        // Revenue-stack data (products / estimates / recurring / credit notes)
+        // layered on via the dedicated expansion seeder so the catalogue
+        // stays in one place. Failures here are logged but don't void the
+        // demo tenant — an operator can always re-run the expansion seeder.
+        try {
+            (new DemoRevenueExpansionSeeder())->setCommand($this->command)->run();
+        } catch (\Throwable $e) {
+            $this->command?->warn('DemoRevenueExpansionSeeder failed: ' . $e->getMessage());
+        }
+
         $this->command->info(sprintf(
             'Provisioned %s (tenant %s). Login password: %s',
             self::EMAIL,

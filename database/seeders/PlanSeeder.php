@@ -29,6 +29,7 @@ class PlanSeeder extends Seeder
             'journal.view', 'journal.create', 'journal.edit', 'journal.delete', 'journal.post',
             'general-ledger.view',
             'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet', 'reports.cashflow', 'reports.aged-reports', 'reports.export.limited', 'reports.export.full',
+            'reports.sales-tax', 'reports.customer-credits', 'reports.purchases-by-vendor',
             'settings.view', 'settings.edit', 'audit-logs.view', 'integrations.view',
             'dashboard.basic', 'dashboard.standard', 'dashboard.advanced',
         ];
@@ -121,6 +122,7 @@ class PlanSeeder extends Seeder
             'general-ledger.view', // General Ledger: View Only
             'journal.view', // Double Entry System: Partial (View Only journals)
             'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.export.limited',
+            'reports.sales-tax', 'reports.customer-credits', 'reports.purchases-by-vendor',
             'settings.view', 'settings.edit', 'dashboard.standard',
         ];
 

@@ -197,47 +197,52 @@ export default function EstimateForm({
                                 const lineTotal = (parseFloat(item.quantity || 0) * parseFloat(item.unit_price || 0)) - parseFloat(item.discount_amount || 0);
                                 return (
                                     <tr key={index}>
-                                        <td className="px-3 py-3 align-top">
-                                            {products.length > 0 && (
-                                                <select
-                                                    value=""
-                                                    onChange={e => { applyProduct(index, e.target.value); e.target.value = ''; }}
-                                                    className="mb-1.5 w-full border border-border-warm rounded-lg text-[10px] font-semibold text-ink-muted bg-cream/50 hover:bg-cream py-1 px-2 focus:ring-1 focus:ring-terracotta uppercase tracking-wider cursor-pointer"
-                                                >
-                                                    <option value="">+ Pick from catalogue</option>
-                                                    {products.map(p => (
-                                                        <option key={p.id} value={p.id}>{p.name}{p.code ? ` (${p.code})` : ''}</option>
-                                                    ))}
-                                                </select>
-                                            )}
-                                            <input
-                                                type="text"
-                                                value={item.description}
-                                                onChange={e => updateItem(index, 'description', e.target.value)}
-                                                placeholder="What are you quoting?"
-                                                className="w-full border border-border-warm rounded-lg py-2 px-2 text-sm focus:ring-1 focus:ring-terracotta"
-                                                required
-                                            />
+                                        <td className="px-3 py-3 align-middle">
+                                            <div className="flex items-stretch gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={item.description}
+                                                    onChange={e => updateItem(index, 'description', e.target.value)}
+                                                    placeholder="What are you quoting?"
+                                                    className="flex-1 min-w-0 border border-border-warm rounded-lg py-2 px-3 text-sm focus:ring-1 focus:ring-terracotta"
+                                                    required
+                                                />
+                                                {products.length > 0 && (
+                                                    <select
+                                                        value=""
+                                                        onChange={e => { applyProduct(index, e.target.value); e.target.value = ''; }}
+                                                        className="shrink-0 w-[110px] border border-border-warm rounded-lg text-[10px] font-semibold text-ink-muted bg-cream/50 hover:bg-cream py-2 px-2 focus:ring-1 focus:ring-terracotta uppercase tracking-wider cursor-pointer"
+                                                        title="Pick a saved product to auto-fill this line"
+                                                    >
+                                                        <option value="">+ Pick</option>
+                                                        {products.map(p => (
+                                                            <option key={p.id} value={p.id}>{p.name}{p.code ? ` (${p.code})` : ''}</option>
+                                                        ))}
+                                                    </select>
+                                                )}
+                                            </div>
                                             {errors[`items.${index}.description`] && <p className="mt-1 text-xs text-terracotta">{errors[`items.${index}.description`]}</p>}
                                         </td>
-                                        <td className="px-3 py-3 align-top">
+                                        <td className="px-3 py-3 align-middle">
                                             <input type="number" step="0.01" min="0.01" value={item.quantity} onChange={e => updateItem(index, 'quantity', e.target.value)} className="w-full text-center border border-border-warm rounded-lg py-2 px-2 text-sm font-mono focus:ring-1 focus:ring-terracotta" />
                                         </td>
-                                        <td className="px-3 py-3 align-top">
+                                        <td className="px-3 py-3 align-middle">
                                             <input type="number" step="0.01" min="0" value={item.unit_price} onChange={e => updateItem(index, 'unit_price', e.target.value)} className="w-full text-right border border-border-warm rounded-lg py-2 px-2 text-sm font-mono focus:ring-1 focus:ring-terracotta" />
                                         </td>
-                                        <td className="px-3 py-3 align-top">
+                                        <td className="px-3 py-3 align-middle">
                                             <input type="number" step="0.01" min="0" value={item.discount_amount || 0} onChange={e => updateItem(index, 'discount_amount', e.target.value)} className="w-full text-right border border-border-warm rounded-lg py-2 px-2 text-sm font-mono text-terracotta focus:ring-1 focus:ring-terracotta" />
                                         </td>
-                                        <td className="px-3 py-3 align-top">
+                                        <td className="px-3 py-3 align-middle">
                                             <select value={item.tax_rate} onChange={e => updateItem(index, 'tax_rate', e.target.value)} className="w-full text-center border border-border-warm rounded-lg py-2 px-2 text-sm focus:ring-1 focus:ring-terracotta">
                                                 {[0, 6, 8, 16].map(r => <option key={r} value={r}>{r}%</option>)}
                                             </select>
                                         </td>
-                                        <td className="px-3 py-3 align-top text-right font-mono text-ink font-semibold">
-                                            {lineTotal.toLocaleString('en-MY', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}
+                                        <td className="px-3 py-3 align-middle">
+                                            <div className="w-full text-right py-2 px-2 text-sm font-mono font-semibold text-ink tabular-nums border border-transparent">
+                                                {lineTotal.toLocaleString('en-MY', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}
+                                            </div>
                                         </td>
-                                        <td className="px-3 py-3 align-top text-center">
+                                        <td className="px-3 py-3 align-middle text-center">
                                             <button
                                                 type="button"
                                                 onClick={() => removeItem(index)}

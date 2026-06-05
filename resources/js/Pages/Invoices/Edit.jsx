@@ -328,18 +328,28 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                         </div>
 
                         {/* Section 2: Line Items */}
-                        <div className="bg-surface rounded-2xl shadow-sm border border-border-warm/80 overflow-hidden">
-                            <table className="w-full text-left border-collapse">
+                        <div className="bg-surface rounded-2xl shadow-sm border border-border-warm/80 overflow-x-auto">
+                            <table className="w-full text-left border-collapse min-w-[1000px]">
+                                <colgroup>
+                                    <col className="w-[14%]" />
+                                    <col className="w-[40%]" />
+                                    <col className="w-[8%]" />
+                                    <col className="w-[10%]" />
+                                    <col className="w-[8%]" />
+                                    <col className="w-[8%]" />
+                                    <col className="w-[10%]" />
+                                    <col className="w-[4%]" />
+                                </colgroup>
                                 <thead>
                                     <tr className="bg-cream/80 border-b border-border-warm text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest">
-                                        <th className="p-6">LHDN classification</th>
-                                        <th className="p-6">Description</th>
-                                        <th className="p-6 text-center w-24">Qty</th>
-                                        <th className="p-6 w-32">Price ({invCur})</th>
-                                        <th className="p-6 w-32">Disc ({invCur})</th>
-                                        <th className="p-6 text-center w-32">Tax</th>
-                                        <th className="p-6 text-right w-40">Total</th>
-                                        <th className="p-6 w-16"></th>
+                                        <th className="p-4">LHDN classification</th>
+                                        <th className="p-4">Description</th>
+                                        <th className="p-4 text-center">Qty</th>
+                                        <th className="p-4 text-right">Price ({invCur})</th>
+                                        <th className="p-4 text-right">Disc ({invCur})</th>
+                                        <th className="p-4 text-center">Tax</th>
+                                        <th className="p-4 text-right">Total</th>
+                                        <th className="p-4"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border-warm">
@@ -356,27 +366,29 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                                                     ))}
                                                 </select>
                                             </td>
-                                            <td className="p-4">
-                                                {products.length > 0 && (
-                                                    <select
-                                                        value=""
-                                                        onChange={e => { applyProduct(index, e.target.value); e.target.value = ''; }}
-                                                        className="mb-1.5 w-full border border-border-warm rounded-lg text-[10px] font-semibold text-ink-muted bg-cream/50 hover:bg-cream py-1 px-2 focus:ring-1 focus:ring-terracotta uppercase tracking-wider cursor-pointer"
-                                                        title="Pick a saved product to auto-fill this line"
-                                                    >
-                                                        <option value="">+ Pick from catalogue</option>
-                                                        {products.map(p => (
-                                                            <option key={p.id} value={p.id}>{p.name}{p.code ? ` (${p.code})` : ''}</option>
-                                                        ))}
-                                                    </select>
-                                                )}
-                                                <input 
-                                                    type="text" 
-                                                    value={item.description} 
-                                                    onChange={e => updateItem(index, 'description', e.target.value)}
-                                                    className="w-full border-none focus:ring-0 p-2 text-sm font-display font-medium text-ink bg-transparent"
-                                                    required
-                                                />
+                                            <td className="p-4 align-middle">
+                                                <div className="flex items-stretch gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={item.description}
+                                                        onChange={e => updateItem(index, 'description', e.target.value)}
+                                                        className="flex-1 min-w-0 border border-border-warm rounded-xl py-2 px-3 text-sm font-display font-medium text-ink bg-surface focus:ring-1 focus:ring-terracotta"
+                                                        required
+                                                    />
+                                                    {products.length > 0 && (
+                                                        <select
+                                                            value=""
+                                                            onChange={e => { applyProduct(index, e.target.value); e.target.value = ''; }}
+                                                            className="shrink-0 w-[110px] border border-border-warm rounded-lg text-[10px] font-semibold text-ink-muted bg-cream/50 hover:bg-cream py-2 px-2 focus:ring-1 focus:ring-terracotta uppercase tracking-wider cursor-pointer"
+                                                            title="Pick a saved product to auto-fill this line"
+                                                        >
+                                                            <option value="">+ Pick</option>
+                                                            {products.map(p => (
+                                                                <option key={p.id} value={p.id}>{p.name}{p.code ? ` (${p.code})` : ''}</option>
+                                                            ))}
+                                                        </select>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="p-4">
                                                 <input type="number" value={item.quantity} onChange={e => updateItem(index, 'quantity', e.target.value)} className="w-full border-border-warm rounded-xl text-sm text-center py-2 focus:ring-terracotta font-bold" />
@@ -395,8 +407,8 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                                                     <option value="16">16%</option>
                                                 </select>
                                             </td>
-                                            <td className="p-4 text-right">
-                                                <div className="text-sm font-display font-semibold text-ink font-mono">
+                                            <td className="p-4 align-middle">
+                                                <div className="w-full text-right py-2 px-2 text-sm font-display font-semibold text-ink font-mono tabular-nums border border-transparent">
                                                     {((parseFloat(item.quantity || 0) * parseFloat(item.unit_price || 0)) - (parseFloat(item.discount_amount || 0))).toLocaleString('en-MY', {minimumFractionDigits: 2})}
                                                 </div>
                                             </td>

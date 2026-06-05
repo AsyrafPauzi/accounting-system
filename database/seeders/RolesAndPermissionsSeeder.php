@@ -50,6 +50,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // Reports
             'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet',
             'reports.cashflow', 'reports.aged-reports', 'reports.export.limited', 'reports.export.full',
+            'reports.sales-tax', 'reports.customer-credits', 'reports.purchases-by-vendor',
 
             // Settings & Admin
             'settings.view', 'settings.edit',
@@ -90,6 +91,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'journal.view', 'journal.create', 'journal.edit', 'journal.post', 'journal.delete',
             'general-ledger.view',
             'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet', 'reports.cashflow', 'reports.aged-reports', 'reports.export.full',
+            'reports.sales-tax', 'reports.customer-credits', 'reports.purchases-by-vendor',
             'settings.view', 'audit-logs.view', 'integrations.view',
             'dashboard.basic', 'dashboard.standard', 'dashboard.advanced',
         ]);
@@ -131,6 +133,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'journal.view',
             'general-ledger.view',
             'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet', 'reports.cashflow', 'reports.aged-reports',
+            'reports.sales-tax', 'reports.customer-credits', 'reports.purchases-by-vendor',
             'settings.view',
             'dashboard.basic',
         ]);
