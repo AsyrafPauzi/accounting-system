@@ -405,6 +405,31 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/customers/{id}', [CustomerController::class, 'destroy'])->name('customers.destroy');
     });
 
+    // --- Estimates (Quotations) ---
+    Route::middleware('permission:estimates.view')->group(function () {
+        Route::get('/estimates', [\App\Http\Controllers\EstimateController::class, 'index'])->name('estimates.index');
+    });
+    Route::middleware('permission:estimates.create')->group(function () {
+        Route::get('/estimates/create', [\App\Http\Controllers\EstimateController::class, 'create'])->name('estimates.create');
+        Route::post('/estimates', [\App\Http\Controllers\EstimateController::class, 'store'])
+            ->middleware('throttle:creation')
+            ->name('estimates.store');
+    });
+    Route::middleware('permission:estimates.view')->group(function () {
+        Route::get('/estimates/{id}', [\App\Http\Controllers\EstimateController::class, 'show'])->name('estimates.show');
+    });
+    Route::middleware('permission:estimates.edit')->group(function () {
+        Route::get('/estimates/{id}/edit', [\App\Http\Controllers\EstimateController::class, 'edit'])->name('estimates.edit');
+        Route::put('/estimates/{id}', [\App\Http\Controllers\EstimateController::class, 'update'])->name('estimates.update');
+        Route::post('/estimates/{id}/transition', [\App\Http\Controllers\EstimateController::class, 'transition'])->name('estimates.transition');
+    });
+    Route::middleware('permission:estimates.convert')->group(function () {
+        Route::post('/estimates/{id}/convert', [\App\Http\Controllers\EstimateController::class, 'convert'])->name('estimates.convert');
+    });
+    Route::middleware('permission:estimates.delete')->group(function () {
+        Route::delete('/estimates/{id}', [\App\Http\Controllers\EstimateController::class, 'destroy'])->name('estimates.destroy');
+    });
+
     // --- Products & Services (line-item catalogue) ---
     Route::middleware('permission:products.view')->group(function () {
         Route::get('/products', [\App\Http\Controllers\ProductController::class, 'index'])->name('products.index');

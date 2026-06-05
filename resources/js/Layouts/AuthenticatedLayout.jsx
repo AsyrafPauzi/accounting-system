@@ -28,6 +28,7 @@ const Icons = {
 const navConfig = [
     { group: 'Main', links: [{ name: 'Dashboard', route: 'dashboard', Icon: Icons.ChartBar }] },
     { group: 'Sales (Revenue)', links: [
+        { name: 'Estimates', route: 'estimates.index', Icon: Icons.ReceiptRefund, planPermission: 'estimates.view', userPermission: 'estimates.view', subtitle: 'Quotations sent to customers' },
         { name: 'Invoices', route: 'invoices.index', Icon: Icons.Document, planPermission: 'invoices.view', userPermission: 'invoices.view' },
         { name: 'Credit Notes', route: 'credit-notes.index', Icon: Icons.ReceiptRefund, planPermission: 'credit-notes.view', userPermission: 'credit-notes.view' },
         { name: 'Customers', route: 'customers.index', Icon: Icons.Users, planPermission: 'customers.view', userPermission: 'customers.view' },

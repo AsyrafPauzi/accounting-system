@@ -13,6 +13,28 @@ class PlanSeeder extends Seeder
      */
     public function run(): void
     {
+        // Ensure every permission referenced below exists in the central DB
+        // BEFORE we try to attach them to plans. Otherwise Spatie throws
+        // PermissionDoesNotExist on first run with new permissions.
+        $allReferencedPermissions = [
+            'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.delete', 'invoices.post', 'invoices.void', 'invoices.record-payment', 'invoices.email',
+            'bills.view', 'bills.create', 'bills.edit', 'bills.delete', 'bills.post', 'bills.void', 'bills.record-payment',
+            'customers.view', 'customers.create', 'customers.edit', 'customers.delete',
+            'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
+            'credit-notes.view', 'credit-notes.create',
+            'products.view', 'products.create', 'products.edit', 'products.delete',
+            'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert',
+            'accounts.view', 'accounts.create', 'accounts.edit', 'accounts.delete',
+            'journal.view', 'journal.create', 'journal.edit', 'journal.delete', 'journal.post',
+            'general-ledger.view',
+            'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet', 'reports.cashflow', 'reports.aged-reports', 'reports.export.limited', 'reports.export.full',
+            'settings.view', 'settings.edit', 'audit-logs.view', 'integrations.view',
+            'dashboard.basic', 'dashboard.standard', 'dashboard.advanced',
+        ];
+        foreach ($allReferencedPermissions as $perm) {
+            Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']);
+        }
+
         // 1. Startup (Free)
         $startup = Plan::updateOrCreate(
             ['slug' => 'startup'],
@@ -92,6 +114,7 @@ class PlanSeeder extends Seeder
             'bills.view', 'bills.create', 'bills.edit', 'bills.delete', 'bills.post', 'bills.void', 'bills.record-payment',
             'credit-notes.view', 'credit-notes.create',
             'products.view', 'products.create', 'products.edit', 'products.delete',
+            'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert',
             'accounts.view', // Chart of Accounts: Limited (View Only)
             'general-ledger.view', // General Ledger: View Only
             'journal.view', // Double Entry System: Partial (View Only journals)

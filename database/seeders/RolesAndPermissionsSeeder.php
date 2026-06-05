@@ -34,6 +34,9 @@ class RolesAndPermissionsSeeder extends Seeder
             // Products & Services (line-item catalogue)
             'products.view', 'products.create', 'products.edit', 'products.delete',
 
+            // Estimates (quotations)
+            'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert',
+
             // Chart of Accounts
             'accounts.view', 'accounts.create', 'accounts.edit', 'accounts.delete',
 
@@ -78,6 +81,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
             'credit-notes.view', 'credit-notes.create',
             'products.view', 'products.create', 'products.edit', 'products.delete',
+            'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert',
             'accounts.view', 'accounts.create', 'accounts.edit', 'accounts.delete',
             'journal.view', 'journal.create', 'journal.edit', 'journal.post', 'journal.delete',
             'general-ledger.view',
@@ -94,6 +98,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'customers.view', 'customers.create', 'customers.edit',
             'credit-notes.view', 'credit-notes.create',
             'products.view', 'products.create', 'products.edit',
+            'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert',
             
             // View Only Access on others
             'bills.view',
@@ -115,6 +120,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'suppliers.view',
             'credit-notes.view',
             'products.view',
+            'estimates.view',
             'accounts.view',
             'journal.view',
             'general-ledger.view',
