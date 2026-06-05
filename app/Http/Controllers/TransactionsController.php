@@ -291,7 +291,17 @@ class TransactionsController extends Controller
     {
         return Account::query()
             ->where('is_active', true)
-            ->whereNotIn('sub_type', ['bank', 'cash'])
+            // Exclude bank / cash accounts from the *category* dropdown so the
+            // counter side of the entry stays clean. SQL's three-valued logic
+            // means `WHERE sub_type NOT IN (...)` silently drops rows where
+            // sub_type IS NULL — and most chart-of-accounts seeds leave the
+            // sub_type empty for non-bank rows. Explicitly OR-ing in the NULL
+            // case keeps Revenue / Expense / Equity / Liability / Receivable
+            // / Payable etc. visible in the dropdown.
+            ->where(function ($q) {
+                $q->whereNull('sub_type')
+                  ->orWhereNotIn('sub_type', ['bank', 'cash']);
+            })
             ->orderBy('type')
             ->orderBy('code')
             ->get(['id', 'code', 'name', 'type'])
