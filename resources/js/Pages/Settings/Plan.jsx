@@ -4,6 +4,14 @@ import { Head, Link } from '@inertiajs/react';
 export default function PlanSettings({ auth, subscription, userCount }) {
     const plan = subscription?.plan;
     const isCorporate = plan?.slug === 'corporate';
+    // Real seat count = included + paid extras. Without this the progress bar
+    // would max out at the included count even after the tenant has paid for
+    // additional seats — so a 3-included plan with 2 paid extras would show
+    // 5/3 (overflow red) instead of 5/5 (full but legitimate).
+    const includedSeats = Number(plan?.users_included || 1);
+    const extraSeats = Number(subscription?.extra_seats || 0);
+    const totalSeats = includedSeats + extraSeats;
+    const overTotal = userCount > totalSeats; // shouldn't happen — defensive only
     
     return (
         <AuthenticatedLayout
@@ -116,7 +124,12 @@ export default function PlanSettings({ auth, subscription, userCount }) {
                                 <div>
                                     <h4 className="text-base font-display font-medium text-ink">Users</h4>
                                     <p className="text-ink-muted text-sm">
-                                        {userCount} of {plan?.users_included || 1} users included
+                                        {userCount} of {totalSeats} seats used
+                                        {extraSeats > 0 && (
+                                            <span className="text-ink-muted">
+                                                {' '}({includedSeats} included + {extraSeats} paid extra{extraSeats === 1 ? '' : 's'})
+                                            </span>
+                                        )}
                                     </p>
                                 </div>
                                 <div className="text-right">
@@ -125,19 +138,24 @@ export default function PlanSettings({ auth, subscription, userCount }) {
                                 </div>
                             </div>
                             <div className="h-2 w-full bg-surface-alt rounded-full overflow-hidden">
-                                <div 
+                                <div
                                     className={`h-full rounded-full transition-all duration-500 ${
-                                        userCount > (plan?.users_included || 1) ? 'bg-terracotta' : 'bg-terracotta'
+                                        overTotal ? 'bg-terracotta' : 'bg-forest'
                                     }`}
-                                    style={{ width: `${Math.min(100, (userCount / (plan?.users_included || 1)) * 100)}%` }}
+                                    style={{ width: `${Math.min(100, (userCount / totalSeats) * 100)}%` }}
                                 />
                             </div>
-                            {userCount > (plan?.users_included || 1) && isCorporate && (
-                                <p className="mt-2 text-xs font-semibold text-terracotta bg-terracotta/10 p-2 rounded-lg inline-block">
-                                    You are using {userCount - plan.users_included} extra users. Each extra user costs RM{Number(plan.extra_user_price).toFixed(2)}/month.
+                            {extraSeats > 0 && (
+                                <p className="mt-2 text-xs font-semibold text-mustard bg-mustard/15 p-2 rounded-lg inline-block">
+                                    {extraSeats} paid extra seat{extraSeats === 1 ? '' : 's'} on this plan · RM{Number(plan?.extra_user_price || 0).toFixed(2)}/seat/month
                                 </p>
                             )}
-                            {userCount >= (plan?.users_included || 1) && !isCorporate && (
+                            {userCount >= totalSeats && Number(plan?.extra_user_price || 0) > 0 && !overTotal && (
+                                <p className="mt-2 text-xs font-semibold text-ink-muted bg-cream p-2 rounded-lg inline-block">
+                                    All seats used — adding the next user will buy an extra seat at RM{Number(plan.extra_user_price).toFixed(2)}/month.
+                                </p>
+                            )}
+                            {userCount >= totalSeats && Number(plan?.extra_user_price || 0) === 0 && (
                                 <p className="mt-2 text-xs font-semibold text-mustard bg-mustard/15 p-2 rounded-lg inline-block">
                                     You have reached your user limit. Upgrade to Corporate to add more members.
                                 </p>

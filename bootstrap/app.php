@@ -22,8 +22,12 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\SanitizeInput::class,
         ]);
 
+        // Toyyibpay calls these from its servers — there's no session, so CSRF
+        // would always fail. The endpoints validate the request shape and rely
+        // on the gateway-issued bill code as the authentication signal.
         $middleware->validateCsrfTokens(except: [
             '/subscription/webhook',
+            '/subscription/webhook/extra-user',
         ]);
 
         $middleware->web(append: [

@@ -13,7 +13,7 @@ const ROLE_LABELS = {
     viewer: 'Viewer',
 };
 
-export default function Team({ auth, users = [], assignableRoles = [] }) {
+export default function Team({ auth, users = [], assignableRoles = [], seatStatus = null }) {
     const { teamPermissions = {} } = auth || {};
     const page = usePage();
     const errors = page.props.errors || {};
@@ -24,10 +24,32 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
         password: '',
         password_confirmation: '',
         role: assignableRoles.includes('accountant') ? 'accountant' : assignableRoles[0] || 'viewer',
+        authorize_extra_seat_charge: false,
     });
+
+    const formattedPrice =
+        seatStatus && seatStatus.extra_user_price > 0
+            ? `${seatStatus.currency || 'RM'} ${Number(seatStatus.extra_user_price).toFixed(2)}`
+            : null;
+
+    const willCharge = !!seatStatus?.next_user_charges;
+    const noSubscription = seatStatus && !seatStatus.has_subscription;
+    const planSellsExtras = (seatStatus?.extra_user_price || 0) > 0;
+    const atHardLimit =
+        seatStatus &&
+        seatStatus.has_subscription &&
+        seatStatus.used >= seatStatus.total_seats &&
+        !planSellsExtras;
 
     const submit = (e) => {
         e.preventDefault();
+        // The extra-seat consent box must be ticked when the next add will
+        // trigger a charge. The server re-checks, but failing fast in the
+        // browser saves a round-trip.
+        if (willCharge && !data.authorize_extra_seat_charge) {
+            setData('authorize_extra_seat_charge', false);
+            return;
+        }
         post(route('settings.team.store'), {
             preserveScroll: true,
             onSuccess: () => reset(),
@@ -68,11 +90,41 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
             <Head title="Team & Roles" />
 
             <div className="max-w-5xl space-y-8">
+                {seatStatus && seatStatus.has_subscription && (
+                    <SeatStatusBanner status={seatStatus} />
+                )}
+
                 {teamPermissions.create && (
                     <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-border-warm/80 shadow-sm">
-                        <h3 className="text-sm font-semibold text-ink uppercase tracking-wider mb-4">
-                            Add team member
-                        </h3>
+                        <div className="flex flex-wrap items-start justify-between gap-2 mb-4">
+                            <h3 className="text-sm font-semibold text-ink uppercase tracking-wider">
+                                Add team member
+                            </h3>
+                            {willCharge && formattedPrice && (
+                                <span className="text-xs font-semibold text-mustard bg-mustard/15 px-2.5 py-1 rounded-full border border-mustard/30">
+                                    Adds an extra seat at {formattedPrice}/month
+                                </span>
+                            )}
+                        </div>
+
+                        {atHardLimit && (
+                            <div className="mb-4 p-4 rounded-xl border border-terracotta/40 bg-terracotta/10 text-sm text-terracotta">
+                                <p className="font-semibold">You've used all {seatStatus.total_seats} seats on the {seatStatus.plan_name} plan.</p>
+                                <p className="mt-1 text-ink-muted">
+                                    This plan doesn't allow extra seats. <Link href={route('subscription.index')} className="font-semibold text-terracotta underline hover:no-underline">Upgrade your plan</Link> to invite more people.
+                                </p>
+                            </div>
+                        )}
+
+                        {noSubscription && (
+                            <div className="mb-4 p-4 rounded-xl border border-terracotta/40 bg-terracotta/10 text-sm text-terracotta">
+                                <p className="font-semibold">No active subscription</p>
+                                <p className="mt-1 text-ink-muted">
+                                    <Link href={route('subscription.index')} className="font-semibold text-terracotta underline hover:no-underline">Pick a plan</Link> before adding team members.
+                                </p>
+                            </div>
+                        )}
+
                         <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className={labelClass}>Name</label>
@@ -140,13 +192,39 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
                                     <p className="text-terracotta text-xs mt-1">{formErrors.role}</p>
                                 )}
                             </div>
+                            {willCharge && formattedPrice && (
+                                <div className="md:col-span-2">
+                                    <label className="flex items-start gap-3 p-3 rounded-xl border border-mustard/40 bg-mustard/10 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={data.authorize_extra_seat_charge}
+                                            onChange={(e) => setData('authorize_extra_seat_charge', e.target.checked)}
+                                            className="mt-0.5 rounded border-border-warm text-terracotta focus:ring-terracotta"
+                                        />
+                                        <span className="text-sm text-ink leading-snug">
+                                            I authorise charging <strong>{formattedPrice}/month</strong> for this extra seat. Payment is collected via Toyyibpay before the user is created.
+                                        </span>
+                                    </label>
+                                    {formErrors.authorize_extra_seat_charge && (
+                                        <p className="text-terracotta text-xs mt-1">{formErrors.authorize_extra_seat_charge}</p>
+                                    )}
+                                </div>
+                            )}
+
                             <div className="md:col-span-2">
                                 <button
                                     type="submit"
-                                    disabled={processing}
-                                    className="inline-flex items-center px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50"
+                                    disabled={
+                                        processing ||
+                                        atHardLimit ||
+                                        noSubscription ||
+                                        (willCharge && !data.authorize_extra_seat_charge)
+                                    }
+                                    className="inline-flex items-center px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta-dark disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    {processing ? 'Adding…' : 'Add user'}
+                                    {processing
+                                        ? (willCharge ? 'Redirecting to payment…' : 'Adding…')
+                                        : (willCharge ? `Pay & add user (${formattedPrice}/mo)` : 'Add user')}
                                 </button>
                             </div>
                         </form>
@@ -242,5 +320,58 @@ export default function Team({ auth, users = [], assignableRoles = [] }) {
                 )}
             </div>
         </AuthenticatedLayout>
+    );
+}
+
+/**
+ * Compact summary at the top of the Team page so the admin always knows
+ * "I'm using N of M seats, and the next one will cost RM X".
+ */
+function SeatStatusBanner({ status }) {
+    const used = Number(status.used || 0);
+    const total = Number(status.total_seats || 0);
+    const included = Number(status.users_included || 0);
+    const extras = Number(status.extra_seats || 0);
+    const price = Number(status.extra_user_price || 0);
+    const currency = status.currency || 'RM';
+    const planSellsExtras = price > 0;
+
+    const overUsed = used > total; // shouldn't happen, but render gracefully if it does
+    const atLimit = used >= total;
+
+    const tone = overUsed
+        ? 'border-terracotta/40 bg-terracotta/10'
+        : atLimit
+            ? 'border-mustard/40 bg-mustard/10'
+            : 'border-forest/30 bg-forest/5';
+
+    const accent = overUsed ? 'text-terracotta' : atLimit ? 'text-mustard' : 'text-forest';
+
+    return (
+        <div className={`p-4 sm:p-5 rounded-2xl border ${tone}`}>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+                <div>
+                    <p className="text-eyebrow font-semibold uppercase text-ink-muted">Plan: {status.plan_name}</p>
+                    <p className="mt-1 text-ink">
+                        Using <strong className={accent}>{used}</strong> of <strong>{total}</strong> seats
+                        {extras > 0 && (
+                            <span className="text-ink-muted text-sm">
+                                {' '}({included} included + {extras} paid extra{extras === 1 ? '' : 's'})
+                            </span>
+                        )}
+                    </p>
+                </div>
+                {planSellsExtras ? (
+                    <p className="text-sm text-ink-muted">
+                        Extra seats: <strong className="text-ink">{currency} {price.toFixed(2)}</strong>
+                        <span className="text-ink-muted"> / month each</span>
+                    </p>
+                ) : (
+                    <Link href={route('subscription.index')} className="text-sm font-semibold text-terracotta underline-offset-2 hover:underline">
+                        Upgrade plan →
+                    </Link>
+                )}
+            </div>
+        </div>
     );
 }

@@ -21,3 +21,24 @@ Schedule::command('invoices:generate-recurring')
     ->withoutOverlapping(60)
     ->onOneServer()
     ->appendOutputTo(storage_path('logs/recurring-invoices.log'));
+
+/*
+ * Daily 02:00 — flip any subscription whose current period has ended and has
+ * a queued downgrade (`pending_plan_id`) onto the new plan. Runs *before*
+ * subscription:expire so the pending plan isn't lost when the row would
+ * otherwise be marked expired.
+ */
+Schedule::command('subscription:apply-pending')
+    ->dailyAt('02:00')
+    ->onOneServer()
+    ->appendOutputTo(storage_path('logs/subscription-pending.log'));
+
+/*
+ * Daily 02:15 — mark active subscriptions whose period_ends_at is past as
+ * expired. Scheduled 15 minutes after apply-pending so any downgrades have
+ * already moved to the new plan and reset their period.
+ */
+Schedule::command('subscription:expire')
+    ->dailyAt('02:15')
+    ->onOneServer()
+    ->appendOutputTo(storage_path('logs/subscription-expire.log'));

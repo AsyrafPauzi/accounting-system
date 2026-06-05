@@ -22,11 +22,13 @@ class Plan extends Model
         'extra_user_price',
         'features',
         'is_active',
+        'is_contact_sales',
     ];
 
     protected $casts = [
         'features' => 'array',
         'is_active' => 'boolean',
+        'is_contact_sales' => 'boolean',
         'extra_user_price' => 'decimal:2',
     ];
 

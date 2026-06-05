@@ -45,6 +45,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Subscription pages (always allowed, EnsureSubscribed skips these)
     Route::get('/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
     Route::post('/subscription/checkout', [SubscriptionController::class, 'checkout'])->name('subscription.checkout');
+    Route::post('/subscription/cancel-pending', [SubscriptionController::class, 'cancelPendingChange'])->name('subscription.cancel_pending');
     Route::get('/subscription/success', [SubscriptionController::class, 'success'])->name('subscription.success');
     Route::get('/subscription/callback', [SubscriptionController::class, 'callback'])->name('subscription.callback');
 

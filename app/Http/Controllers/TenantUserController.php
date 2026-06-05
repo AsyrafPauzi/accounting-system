@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Models\ExtraSeatPurchase;
+use App\Models\Subscription;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Services\ToyyibpayService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -40,6 +43,10 @@ class TenantUserController extends Controller
         return Inertia::render('Settings/Team', [
             'users' => $users,
             'assignableRoles' => self::ASSIGNABLE_ROLES,
+            // Seat status drives the "Add user" panel: are we within the
+            // included quota, or will the next add cost extra? The frontend
+            // uses this to render an explicit consent banner.
+            'seatStatus' => $this->buildSeatStatus($tenantId, $users->count()),
         ]);
     }
 
@@ -50,72 +57,79 @@ class TenantUserController extends Controller
         abort_if(! $tenantId, 404);
 
         $tenant = Tenant::find($tenantId);
-        $subscription = $tenant->activeSubscription();
-        
+        $subscription = $tenant?->activeSubscription();
+
         if (! $subscription) {
             return back()->with('error', 'No active subscription found. Please subscribe to a plan to add team members.');
         }
 
         $plan = $subscription->plan;
         $userCount = User::where('tenant_id', $tenantId)->count();
+        $totalSeats = $subscription->totalSeats();
+        $validated = $request->validated();
 
-        // Check if limit reached
-        if ($userCount >= $plan->users_included) {
-            if ($plan->extra_user_price > 0) {
-                // Handle extra user charge via Toyyibpay
-                // For simplicity, we create a bill and redirect. 
-                // We'll pass the user data in a way that we can complete the creation after payment.
-                // But Toyyibpay callback is limited. 
-                // Alternatively, we just tell them they will be charged RM15.
-                
-                // For this implementation, we will create the user but mark them as "pending payment" if we had a flag.
-                // Since we don't, let's redirect to a checkout for the extra user.
-                
-                $validated = $request->validated();
-                
-                $paymentUrl = $toyyibpay->createBill([
-                    'billName' => "Extra User: {$validated['name']}",
-                    'billDescription' => "Extra user charge for {$plan->name} plan",
-                    'billAmount' => $plan->extra_user_price,
-                    'billReturnUrl' => route('settings.team.index'),
-                    'billCallbackUrl' => route('subscription.webhook.extra_user'), // New webhook needed
-                    'billExternalReferenceNo' => json_encode([
-                        'tenant_id' => $tenantId,
-                        'name' => $validated['name'],
-                        'email' => $validated['email'],
-                        'password' => $validated['password'], // Note: Security risk in logs, but using for demo
-                        'role' => $validated['role'],
-                    ]),
-                    'billTo' => $auth->name,
-                    'billEmail' => $auth->email,
-                    'billPhone' => $auth->phone ?? '0123456789',
-                ]);
+        // Already have headroom (included seats or previously purchased
+        // extras) → create the user immediately, no payment dance.
+        if ($userCount < $totalSeats) {
+            return $this->createUserAndRedirect($tenantId, $validated, 'Team member added. Share the password with them securely or ask them to reset it from the login page.');
+        }
 
-                if ($paymentUrl) {
-                    return Inertia::location($paymentUrl);
-                }
-
-                return back()->with('error', 'Failed to initialize payment for extra user.');
-            }
-
+        // Out of seats. If the plan doesn't sell extras, we can't help.
+        if ((float) $plan->extra_user_price <= 0) {
             return back()->with('error', "User limit reached for your {$plan->name} plan. Upgrade your plan to add more members.");
         }
 
-        $validated = $request->validated();
-        $targetRole = \App\Models\Role::where('name', $validated['role'])->where('guard_name', 'web')->first();
-
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'tenant_id' => $tenantId,
-            'role_id' => $targetRole?->id,
-        ]);
-        if ($targetRole) {
-            $user->assignRole($validated['role']);
+        // The form must explicitly opt-in to the charge. The frontend hides
+        // the submit button until this checkbox is ticked, but we re-validate
+        // here so curl/script abuse can't side-step the consent step.
+        if (! ($validated['authorize_extra_seat_charge'] ?? false)) {
+            return back()->withErrors([
+                'authorize_extra_seat_charge' => "You're about to add a paid extra seat at RM " . number_format($plan->extra_user_price, 2) . "/month. Tick the authorise box to continue.",
+            ])->withInput();
         }
 
-        return redirect()->route('settings.team.index')->with('success', 'Team member added. Share the password with them securely or ask them to reset it from the login page.');
+        // Draft the purchase server-side so the password stays in our DB and
+        // only the purchase id flows through Toyyibpay's payload.
+        $purchase = ExtraSeatPurchase::create([
+            'tenant_id'       => $tenantId,
+            'subscription_id' => $subscription->id,
+            'name'            => $validated['name'],
+            'email'           => $validated['email'],
+            'password_hash'   => Hash::make($validated['password']),
+            'role'            => $validated['role'],
+            'amount'          => $plan->extra_user_price,
+            'currency'        => 'MYR',
+            'status'          => ExtraSeatPurchase::STATUS_PENDING,
+            'gateway'         => 'toyyibpay',
+        ]);
+
+        $paymentUrl = $toyyibpay->createBill([
+            'billName'                => "Extra seat ({$plan->name})",
+            'billDescription'         => "Adds {$validated['name']} as an extra team member on plan {$plan->name}.",
+            'billAmount'              => (float) $plan->extra_user_price,
+            'billReturnUrl'           => route('settings.team.index'),
+            'billCallbackUrl'         => route('subscription.webhook.extra_user'),
+            'billExternalReferenceNo' => 'seat-' . $purchase->id, // safe: only the id, no PII
+            'billTo'                  => $auth->name,
+            'billEmail'               => $auth->email,
+            'billPhone'               => $auth->phone ?? '0123456789',
+        ]);
+
+        if (! $paymentUrl) {
+            $purchase->update([
+                'status'          => ExtraSeatPurchase::STATUS_FAILED,
+                'failure_reason'  => 'Failed to create Toyyibpay bill (gateway error).',
+            ]);
+
+            Log::error('Extra-seat checkout failed: gateway returned no URL', [
+                'tenant_id'   => $tenantId,
+                'purchase_id' => $purchase->id,
+            ]);
+
+            return back()->with('error', 'Failed to initialize payment for the extra seat. Please try again or contact support.');
+        }
+
+        return Inertia::location($paymentUrl);
     }
 
     public function update(\App\Http\Requests\UpdateTenantUserRequest $request, User $user): RedirectResponse
@@ -166,9 +180,95 @@ class TenantUserController extends Controller
             }
         }
 
-        $user->delete();
+        DB::transaction(function () use ($user) {
+            $tenantId = $user->tenant_id;
+            $tenant   = Tenant::find($tenantId);
+            $subscription = $tenant?->activeSubscription();
+
+            $user->delete();
+
+            // If, after removal, the live user count has dipped *below* the
+            // plan's included quota AND we had paid extras, refund one extra
+            // seat so the tenant isn't billed for empty seats next renewal.
+            if ($subscription && $subscription->extra_seats > 0) {
+                $remaining = User::where('tenant_id', $tenantId)->count();
+                $included  = (int) ($subscription->plan?->users_included ?? 1);
+
+                if ($remaining < $included + $subscription->extra_seats) {
+                    $subscription->decrement('extra_seats');
+
+                    Log::info('Released one paid extra seat after user removal', [
+                        'tenant_id'       => $tenantId,
+                        'subscription_id' => $subscription->id,
+                        'remaining_users' => $remaining,
+                        'extra_seats_now' => $subscription->fresh()->extra_seats,
+                    ]);
+                }
+            }
+        });
 
         return redirect()->route('settings.team.index')->with('success', 'User removed from the team.');
+    }
+
+    /**
+     * Compose the bundle the Team page needs to render the seat-status banner
+     * and the conditional extra-seat consent UI.
+     */
+    private function buildSeatStatus(string $tenantId, int $userCount): array
+    {
+        $tenant = Tenant::find($tenantId);
+        $subscription = $tenant?->activeSubscription();
+
+        if (! $subscription || ! $subscription->plan) {
+            return [
+                'plan_name'         => null,
+                'users_included'    => null,
+                'extra_seats'       => 0,
+                'extra_user_price'  => 0,
+                'total_seats'       => $userCount,
+                'used'              => $userCount,
+                'next_user_charges' => false,
+                'currency'          => 'MYR',
+                'has_subscription'  => false,
+            ];
+        }
+
+        $plan        = $subscription->plan;
+        $totalSeats  = $subscription->totalSeats();
+        $price       = (float) $plan->extra_user_price;
+
+        return [
+            'plan_name'         => $plan->name,
+            'users_included'    => (int) $plan->users_included,
+            'extra_seats'       => (int) $subscription->extra_seats,
+            'extra_user_price'  => $price,
+            'total_seats'       => $totalSeats,
+            'used'              => $userCount,
+            // True when the next add will trigger a charge. The frontend
+            // uses this to flip the form into "consent mode".
+            'next_user_charges' => $userCount >= $totalSeats && $price > 0,
+            'currency'          => 'MYR',
+            'has_subscription'  => true,
+        ];
+    }
+
+    private function createUserAndRedirect(string $tenantId, array $validated, string $message): RedirectResponse
+    {
+        $targetRole = \App\Models\Role::where('name', $validated['role'])->where('guard_name', 'web')->first();
+
+        $user = User::create([
+            'name'     => $validated['name'],
+            'email'    => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'tenant_id' => $tenantId,
+            'role_id'  => $targetRole?->id,
+        ]);
+
+        if ($targetRole) {
+            $user->assignRole($validated['role']);
+        }
+
+        return redirect()->route('settings.team.index')->with('success', $message);
     }
 
     private function assertSameTenant(User $auth, User $target): void
