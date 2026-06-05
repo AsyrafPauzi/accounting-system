@@ -20,14 +20,16 @@ php artisan view:cache
 # When RUN_MIGRATIONS=true (set on the ECS task definition):
 #   1. Central migrate  — users, plans, ocr_settings, etc. (database/migrations/)
 #   2. tenants:migrate  — per-tenant accounting schema (database/migrations/tenant/)
-#   3. PlanSeeder       — sync plan tiers + plan→permission mappings (central only;
-#                         idempotent; no demo accounts)
+#   3. PlanSeeder                  — which features each subscription tier allows
+#   4. app:sync-roles-permissions  — which actions each user role can perform
+#      (both central-only, idempotent, no demo accounts)
 #
 # --isolated: during rolling deploys only one container runs pending migrations;
 # others skip quickly if another task holds the lock.
 #
 # Full db:seed is intentionally NOT run here — most seeders include demo/test data.
-# PlanSeeder is the exception: it only updates subscription plan definitions.
+# PlanSeeder and sync-roles-permissions are exceptions: they only sync permission
+# definitions; the sidebar needs both plan AND role permissions to show a link.
 if [ "$RUN_MIGRATIONS" = "true" ]; then
     echo "Running central migrations..."
     php artisan migrate --force --isolated
@@ -37,6 +39,9 @@ if [ "$RUN_MIGRATIONS" = "true" ]; then
 
     echo "Syncing subscription plan permissions..."
     php artisan db:seed --class=PlanSeeder --force
+
+    echo "Syncing role permissions..."
+    php artisan app:sync-roles-permissions
 fi
 
 # If a command is passed to the entrypoint, execute it instead of starting Supervisor
