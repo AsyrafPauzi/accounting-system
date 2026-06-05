@@ -24,6 +24,7 @@ class PlanSeeder extends Seeder
             'credit-notes.view', 'credit-notes.create',
             'products.view', 'products.create', 'products.edit', 'products.delete',
             'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert',
+            'recurring-invoices.view', 'recurring-invoices.create', 'recurring-invoices.edit', 'recurring-invoices.delete', 'recurring-invoices.run',
             'accounts.view', 'accounts.create', 'accounts.edit', 'accounts.delete',
             'journal.view', 'journal.create', 'journal.edit', 'journal.delete', 'journal.post',
             'general-ledger.view',
@@ -115,6 +116,7 @@ class PlanSeeder extends Seeder
             'credit-notes.view', 'credit-notes.create',
             'products.view', 'products.create', 'products.edit', 'products.delete',
             'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert',
+            'recurring-invoices.view', 'recurring-invoices.create', 'recurring-invoices.edit', 'recurring-invoices.delete', 'recurring-invoices.run',
             'accounts.view', // Chart of Accounts: Limited (View Only)
             'general-ledger.view', // General Ledger: View Only
             'journal.view', // Double Entry System: Partial (View Only journals)

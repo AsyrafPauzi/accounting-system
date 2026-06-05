@@ -37,6 +37,9 @@ class RolesAndPermissionsSeeder extends Seeder
             // Estimates (quotations)
             'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert',
 
+            // Recurring invoices (scheduled templates)
+            'recurring-invoices.view', 'recurring-invoices.create', 'recurring-invoices.edit', 'recurring-invoices.delete', 'recurring-invoices.run',
+
             // Chart of Accounts
             'accounts.view', 'accounts.create', 'accounts.edit', 'accounts.delete',
 
@@ -82,6 +85,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'credit-notes.view', 'credit-notes.create',
             'products.view', 'products.create', 'products.edit', 'products.delete',
             'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert',
+            'recurring-invoices.view', 'recurring-invoices.create', 'recurring-invoices.edit', 'recurring-invoices.delete', 'recurring-invoices.run',
             'accounts.view', 'accounts.create', 'accounts.edit', 'accounts.delete',
             'journal.view', 'journal.create', 'journal.edit', 'journal.post', 'journal.delete',
             'general-ledger.view',
@@ -99,6 +103,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'credit-notes.view', 'credit-notes.create',
             'products.view', 'products.create', 'products.edit',
             'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert',
+            'recurring-invoices.view', 'recurring-invoices.create', 'recurring-invoices.edit', 'recurring-invoices.run',
             
             // View Only Access on others
             'bills.view',
@@ -121,6 +126,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'credit-notes.view',
             'products.view',
             'estimates.view',
+            'recurring-invoices.view',
             'accounts.view',
             'journal.view',
             'general-ledger.view',

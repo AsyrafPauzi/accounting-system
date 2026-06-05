@@ -405,6 +405,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/customers/{id}', [CustomerController::class, 'destroy'])->name('customers.destroy');
     });
 
+    // --- Recurring Invoices (scheduled templates) ---
+    Route::middleware('permission:recurring-invoices.view')->group(function () {
+        Route::get('/recurring-invoices', [\App\Http\Controllers\RecurringInvoiceController::class, 'index'])->name('recurring-invoices.index');
+    });
+    Route::middleware('permission:recurring-invoices.create')->group(function () {
+        Route::get('/recurring-invoices/create', [\App\Http\Controllers\RecurringInvoiceController::class, 'create'])->name('recurring-invoices.create');
+        Route::post('/recurring-invoices', [\App\Http\Controllers\RecurringInvoiceController::class, 'store'])
+            ->middleware('throttle:creation')
+            ->name('recurring-invoices.store');
+    });
+    Route::middleware('permission:recurring-invoices.edit')->group(function () {
+        Route::get('/recurring-invoices/{id}/edit', [\App\Http\Controllers\RecurringInvoiceController::class, 'edit'])->name('recurring-invoices.edit');
+        Route::put('/recurring-invoices/{id}', [\App\Http\Controllers\RecurringInvoiceController::class, 'update'])->name('recurring-invoices.update');
+        Route::post('/recurring-invoices/{id}/toggle', [\App\Http\Controllers\RecurringInvoiceController::class, 'toggle'])->name('recurring-invoices.toggle');
+    });
+    Route::middleware('permission:recurring-invoices.run')->group(function () {
+        Route::post('/recurring-invoices/{id}/run', [\App\Http\Controllers\RecurringInvoiceController::class, 'runNow'])->name('recurring-invoices.run');
+    });
+    Route::middleware('permission:recurring-invoices.delete')->group(function () {
+        Route::delete('/recurring-invoices/{id}', [\App\Http\Controllers\RecurringInvoiceController::class, 'destroy'])->name('recurring-invoices.destroy');
+    });
+
     // --- Estimates (Quotations) ---
     Route::middleware('permission:estimates.view')->group(function () {
         Route::get('/estimates', [\App\Http\Controllers\EstimateController::class, 'index'])->name('estimates.index');
