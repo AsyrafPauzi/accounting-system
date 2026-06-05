@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\BrandSettings;
-use App\Support\Deployment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -14,15 +13,13 @@ use Inertia\Response;
 class BrandingController extends Controller
 {
     /**
-     * Branding overrides only exist in self-hosted mode.
-     * SaaS instances should never reach this controller.
+     * Platform-wide branding (product name, logo, accent palette).
+     *
+     * In self-hosted mode this lets the operator white-label their instance.
+     * In SaaS mode it lets the platform owner (super-admin) restyle the
+     * BukuCloud UI for every tenant. Access is already restricted to the
+     * super-admin role at the route level, so no extra gate is needed here.
      */
-    public function __construct()
-    {
-        if (! Deployment::isSelfHosted()) {
-            abort(404);
-        }
-    }
 
     public function edit(): Response
     {

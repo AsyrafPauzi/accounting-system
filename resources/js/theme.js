@@ -9,39 +9,82 @@ import { router, usePage } from '@inertiajs/react';
  *  - Initial paint applied via inline boot script in app.blade.php (FOUC safe)
  *
  * Runtime:
- *  - useTheme() returns the current preference + setter
- *  - When preference is 'system', listens to prefers-color-scheme media query
- *  - setPreference() updates DOM immediately, then PATCHes to the server
+ *  - <ThemeWatcher /> is mounted once at the Inertia app root and keeps the
+ *    html.dark class in sync with the user's preference everywhere — including
+ *    reacting to OS-level prefers-color-scheme changes when preference is
+ *    'system'. Without it, OS theme changes only updated the page that
+ *    happened to render <AppearanceForm/> (i.e. /profile).
+ *  - useTheme() returns the current preference + setter for the AppearanceForm
+ *    UI. Updating the preference applies the DOM class immediately, then
+ *    PATCHes /profile/theme so future pages render with it.
  */
 
 const VALID = ['light', 'dark', 'system'];
 
-function applyTheme(preference) {
-    if (typeof document === 'undefined') return;
-
-    const actual =
-        preference === 'system'
-            ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-            : preference;
-
-    document.documentElement.classList.toggle('dark', actual === 'dark');
+function resolveActual(preference) {
+    if (preference === 'system' && typeof window !== 'undefined' && window.matchMedia) {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return preference === 'dark' ? 'dark' : 'light';
 }
 
-export function useTheme() {
-    const initial = usePage().props?.theme ?? 'light';
-    const [preference, setPreference] = useState(VALID.includes(initial) ? initial : 'light');
+function applyTheme(preference) {
+    if (typeof document === 'undefined') return;
+    document.documentElement.classList.toggle('dark', resolveActual(preference) === 'dark');
+}
 
-    // React to system preference changes when in 'system' mode
+/**
+ * Side-effect hook that keeps the html.dark class in sync with the
+ * server-shared `theme` prop, AND listens to OS-level prefers-color-scheme
+ * changes whenever preference === 'system'. Use via <ThemeWatcher />.
+ */
+export function useThemeSync() {
+    const shared = usePage().props?.theme;
+    const preference = VALID.includes(shared) ? shared : 'light';
+
     useEffect(() => {
-        if (preference !== 'system' || typeof window === 'undefined') return;
-
-        const mq = window.matchMedia('(prefers-color-scheme: dark)');
-        const handler = () => applyTheme('system');
-        mq.addEventListener('change', handler);
-        return () => mq.removeEventListener('change', handler);
+        applyTheme(preference);
     }, [preference]);
 
-    // Apply on every change (covers manual 'light' / 'dark' switches too)
+    useEffect(() => {
+        if (preference !== 'system' || typeof window === 'undefined' || !window.matchMedia) return;
+        const mq = window.matchMedia('(prefers-color-scheme: dark)');
+        const handler = () => applyTheme('system');
+        // Older Safari uses addListener/removeListener; modern browsers use addEventListener.
+        if (mq.addEventListener) {
+            mq.addEventListener('change', handler);
+            return () => mq.removeEventListener('change', handler);
+        }
+        mq.addListener(handler);
+        return () => mq.removeListener(handler);
+    }, [preference]);
+}
+
+/** Mount once at the Inertia app root to enable global theme syncing. */
+export function ThemeWatcher() {
+    useThemeSync();
+    return null;
+}
+
+/**
+ * Read + write the user's theme preference. Used in the AppearanceForm.
+ *
+ * Local state is initialised from the shared prop and re-synced whenever the
+ * server-side preference changes (e.g. another tab updated it). This makes the
+ * active-button highlight reliably reflect the persisted value.
+ */
+export function useTheme() {
+    const shared = usePage().props?.theme;
+    const initial = VALID.includes(shared) ? shared : 'light';
+    const [preference, setPreference] = useState(initial);
+
+    useEffect(() => {
+        if (initial !== preference) {
+            setPreference(initial);
+            applyTheme(initial);
+        }
+    }, [initial]);
+
     useEffect(() => {
         applyTheme(preference);
     }, [preference]);

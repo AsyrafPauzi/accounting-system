@@ -82,7 +82,7 @@ export default function BrandingEdit({ brand, defaults }) {
                     <p className="text-eyebrow font-semibold uppercase text-terracotta">Admin</p>
                     <h1 className="font-display text-2xl lg:text-3xl font-medium text-ink tracking-tight">Branding</h1>
                     <p className="text-ink-muted text-sm">
-                        Customize the product name, accents and logos for this self-hosted instance.
+                        Customize the product name, accent palette and logos. Changes apply platform-wide and every tenant sees them on their next page load.
                     </p>
                 </div>
             }

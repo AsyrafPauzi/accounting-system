@@ -288,9 +288,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                                     { name: 'Platform Users', route: 'admin.users.index', Icon: Icons.Users },
                                     { name: 'Audit Log', route: 'admin.audit-logs.index', Icon: Icons.Audit },
                                     { name: 'Receipt OCR', route: 'admin.ocr.edit', Icon: Icons.Scan },
-                                    ...(page.props.deployment_mode === 'self_hosted'
-                                        ? [{ name: 'Branding', route: 'admin.branding.edit', Icon: Icons.Sparkles }]
-                                        : []),
+                                    { name: 'Branding', route: 'admin.branding.edit', Icon: Icons.Sparkles },
                                 ].map((link) => {
                                     const active = isRouteActive(link.route);
                                     return (

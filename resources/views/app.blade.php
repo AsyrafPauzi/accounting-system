@@ -30,23 +30,34 @@
             })();
         </script>
 
-        {{-- Self-hosted brand override (only renders if APP_DEPLOYMENT_MODE=self_hosted and at least one custom color is set) --}}
-        @if (config('deployment.mode') === 'self_hosted')
-            @php
-                $brand = \Schema::hasTable('brand_settings') ? \App\Models\BrandSettings::current() : null;
-                $hexToRgb = fn($hex) => $hex
-                    ? collect(str_split(ltrim($hex, '#'), 2))->map(fn($c) => hexdec($c))->implode(' ')
-                    : null;
-            @endphp
-            @if ($brand && ($brand->color_terracotta || $brand->color_forest || $brand->color_mustard))
-                <style>
-                    :root {
-                        @if ($brand->color_terracotta) --color-terracotta: {{ $hexToRgb($brand->color_terracotta) }}; @endif
-                        @if ($brand->color_forest) --color-forest: {{ $hexToRgb($brand->color_forest) }}; @endif
-                        @if ($brand->color_mustard) --color-mustard: {{ $hexToRgb($brand->color_mustard) }}; @endif
-                    }
-                </style>
-            @endif
+        {{-- Platform-wide brand override. Renders whenever the super-admin has
+             saved at least one custom accent color (or in self-hosted mode for
+             white-labelling). The brand_settings row lives in the CENTRAL db
+             and is shared across every tenant, so we check the table existence
+             on the central connection (otherwise mid-tenant requests would
+             never resolve the table and the override would silently no-op). --}}
+        @php
+            $brand = null;
+            try {
+                if (\Schema::connection(config('tenancy.database.central_connection', 'mysql'))->hasTable('brand_settings')) {
+                    $brand = \App\Models\BrandSettings::current();
+                }
+            } catch (\Throwable $e) {
+                // First-boot or migration in flight — silently fall back to defaults.
+                $brand = null;
+            }
+            $hexToRgb = fn($hex) => $hex
+                ? collect(str_split(ltrim($hex, '#'), 2))->map(fn($c) => hexdec($c))->implode(' ')
+                : null;
+        @endphp
+        @if ($brand && ($brand->color_terracotta || $brand->color_forest || $brand->color_mustard))
+            <style>
+                :root {
+                    @if ($brand->color_terracotta) --color-terracotta: {{ $hexToRgb($brand->color_terracotta) }}; @endif
+                    @if ($brand->color_forest) --color-forest: {{ $hexToRgb($brand->color_forest) }}; @endif
+                    @if ($brand->color_mustard) --color-mustard: {{ $hexToRgb($brand->color_mustard) }}; @endif
+                }
+            </style>
         @endif
 
         @routes
