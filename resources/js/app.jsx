@@ -5,6 +5,7 @@ import { createInertiaApp, router } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { ThemeWatcher } from './theme';
+import { BrandPreviewWatcher } from './utils/brandPreview';
 
 const appName = import.meta.env.VITE_APP_NAME || 'BukuCloud';
 
@@ -29,14 +30,36 @@ createInertiaApp({
     setup({ el, App, props }) {
         const root = createRoot(el);
 
+        // Inertia React's <App> calls the children render-prop with
+        // { Component, key, props: pageProps }. We re-implement the default
+        // page-with-layout resolution so we can mount <ThemeWatcher /> as a
+        // sibling of the page (it needs to live inside Inertia's PageContext
+        // so usePage() works, but outside any single page so it survives SPA
+        // navigations).
         root.render(
             <App {...props}>
-                {(page) => (
-                    <>
-                        <ThemeWatcher />
-                        {page}
-                    </>
-                )}
+                {({ Component, key, props: pageProps }) => {
+                    const child = <Component key={key} {...pageProps} />;
+                    let rendered = child;
+                    if (typeof Component.layout === 'function') {
+                        rendered = Component.layout(child);
+                    } else if (Array.isArray(Component.layout)) {
+                        rendered = Component.layout
+                            .concat(child)
+                            .reverse()
+                            .reduce((children, Layout) => (
+                                <Layout {...pageProps}>{children}</Layout>
+                            ));
+                    }
+
+                    return (
+                        <>
+                            <ThemeWatcher />
+                            <BrandPreviewWatcher />
+                            {rendered}
+                        </>
+                    );
+                }}
             </App>
         );
     },

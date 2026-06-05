@@ -1,33 +1,67 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { applyBrandPreview, clearPreview, readPreview, writePreview } from '@/utils/brandPreview';
 
 const HEX = /^#[A-Fa-f0-9]{6}$/;
 
+/**
+ * Color picker that survives @tailwindcss/forms' preflight rules.
+ *
+ * The previous version used a styled <input type="color"> directly + a
+ * separate preview <span>. Both got squashed to thin slivers because the
+ * forms plugin overrides padding/appearance on color inputs, leaving the
+ * native color swatch with no room to render.
+ *
+ * Instead we render a real swatch <label> sized exactly how we want, with
+ * the actual <input type="color"> overlaid invisibly inside it. Clicking
+ * the swatch still opens the OS color picker (because the label points to
+ * the input via htmlFor).
+ */
 function ColorField({ label, name, value, onChange, defaultHex }) {
     const safe = HEX.test(value || '') ? value : defaultHex;
+    const inputId = `color-${name}`;
+
     return (
         <div className="space-y-2">
-            <label className="block text-eyebrow font-semibold uppercase text-ink-muted">{label}</label>
+            <label htmlFor={inputId} className="block text-eyebrow font-semibold uppercase text-ink-muted">
+                {label}
+            </label>
             <div className="flex items-center gap-3">
-                <input
-                    type="color"
-                    value={safe}
-                    onChange={(e) => onChange(name, e.target.value.toUpperCase())}
-                    className="h-12 w-14 rounded-xl border border-border-warm bg-surface cursor-pointer"
-                />
+                <label
+                    htmlFor={inputId}
+                    className="relative h-11 w-11 flex-shrink-0 rounded-xl border border-border-warm overflow-hidden cursor-pointer shadow-sm hover:ring-2 hover:ring-terracotta/30 transition-shadow"
+                    style={{ backgroundColor: safe }}
+                    aria-label={`Pick ${label} color`}
+                    title="Click to choose a color"
+                >
+                    <input
+                        id={inputId}
+                        type="color"
+                        value={safe}
+                        onChange={(e) => onChange(name, e.target.value.toUpperCase())}
+                        className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
+                    />
+                </label>
                 <input
                     type="text"
                     value={value || ''}
                     placeholder={defaultHex}
                     onChange={(e) => onChange(name, e.target.value.toUpperCase())}
-                    className="flex-1 rounded-xl border-border-warm bg-surface text-sm font-mono text-ink placeholder-ink-muted/60 focus:border-terracotta focus:ring-terracotta"
+                    className="flex-1 min-w-0 rounded-xl border-border-warm bg-surface text-sm font-mono text-ink placeholder-ink-muted/60 focus:border-terracotta focus:ring-terracotta"
+                    spellCheck={false}
+                    autoComplete="off"
                 />
-                <span
-                    className="h-12 w-12 rounded-xl border border-border-warm"
-                    style={{ background: safe }}
-                    aria-hidden
-                />
+                {value && value !== defaultHex && (
+                    <button
+                        type="button"
+                        onClick={() => onChange(name, '')}
+                        className="text-xs text-ink-muted hover:text-terracotta underline-offset-2 hover:underline whitespace-nowrap"
+                        title="Restore default color"
+                    >
+                        Reset
+                    </button>
+                )}
             </div>
             <p className="text-xs text-ink-muted">Default: <span className="font-mono">{defaultHex}</span></p>
         </div>
@@ -49,11 +83,53 @@ export default function BrandingEdit({ brand, defaults }) {
     const [logoPreview, setLogoPreview] = useState(brand.logo_url);
     const [faviconPreview, setFaviconPreview] = useState(brand.favicon_url);
 
-    const previewColors = {
-        terracotta: HEX.test(data.color_terracotta) ? data.color_terracotta : defaults.color_terracotta,
-        forest: HEX.test(data.color_forest) ? data.color_forest : defaults.color_forest,
-        mustard: HEX.test(data.color_mustard) ? data.color_mustard : defaults.color_mustard,
-    };
+    // If the user navigated away without saving and is now back on this page,
+    // hydrate the form from sessionStorage so the preview matches the in-form
+    // values. Without this the form would re-init from `brand.color_*` (last
+    // saved) and the next useEffect would overwrite their unsaved tweaks.
+    const hydratedFromPreview = useRef(false);
+    useEffect(() => {
+        if (hydratedFromPreview.current) return;
+        hydratedFromPreview.current = true;
+        const stash = readPreview();
+        if (!stash) return;
+        if (stash.color_terracotta && stash.color_terracotta !== brand.color_terracotta) {
+            setData('color_terracotta', stash.color_terracotta);
+        }
+        if (stash.color_forest && stash.color_forest !== brand.color_forest) {
+            setData('color_forest', stash.color_forest);
+        }
+        if (stash.color_mustard && stash.color_mustard !== brand.color_mustard) {
+            setData('color_mustard', stash.color_mustard);
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    /**
+     * Live preview that survives across pages: persist the in-form accent
+     * values to sessionStorage and push them onto :root as inline CSS
+     * variables. The <BrandPreviewWatcher /> mounted at the app root reads
+     * the same sessionStorage entry on every Inertia visit, so the user can
+     * navigate to Invoices / Dashboard / Reports and verify the look before
+     * saving.
+     *
+     * Mustard / forest / terracotta each get THREE variables: base, -dark
+     * (used by `hover:bg-terracotta-dark` etc.) and -light (dark-mode hover).
+     * Variants are derived in HSL space so changing terracotta also changes
+     * the hover/pressed states automatically — no extra fields needed.
+     *
+     * Tailwind's `bg-terracotta` resolves via
+     *   rgb(var(--color-terracotta) / <alpha-value>)
+     * so the sidebar highlight, primary buttons and pills repaint instantly.
+     */
+    useEffect(() => {
+        const preview = {
+            color_terracotta: data.color_terracotta,
+            color_forest: data.color_forest,
+            color_mustard: data.color_mustard,
+        };
+        writePreview(preview);
+        applyBrandPreview(preview);
+    }, [data.color_terracotta, data.color_forest, data.color_mustard]);
 
     const submit = (e) => {
         e.preventDefault();
@@ -61,6 +137,10 @@ export default function BrandingEdit({ brand, defaults }) {
             forceFormData: true,
             preserveScroll: true,
             onSuccess: () => {
+                // The persisted Blade <style> now matches the form values, so
+                // the preview is no longer needed. Clear it before reload so
+                // we don't double-apply on the next visit.
+                clearPreview();
                 window.location.reload();
             },
         });
@@ -71,9 +151,27 @@ export default function BrandingEdit({ brand, defaults }) {
         setData('reset', true);
         post(route('admin.branding.update'), {
             preserveScroll: true,
-            onSuccess: () => window.location.reload(),
+            onSuccess: () => {
+                clearPreview();
+                window.location.reload();
+            },
         });
     };
+
+    const discardPreview = () => {
+        // Revert form fields to last saved values; the useEffect above will
+        // pick this up, write the (now-empty) preview back to sessionStorage
+        // and remove the inline CSS overrides.
+        setData('color_terracotta', brand.color_terracotta || '');
+        setData('color_forest', brand.color_forest || '');
+        setData('color_mustard', brand.color_mustard || '');
+        clearPreview();
+    };
+
+    const isPreviewing =
+        (data.color_terracotta || '') !== (brand.color_terracotta || '') ||
+        (data.color_forest || '') !== (brand.color_forest || '') ||
+        (data.color_mustard || '') !== (brand.color_mustard || '');
 
     return (
         <AuthenticatedLayout
@@ -192,28 +290,44 @@ export default function BrandingEdit({ brand, defaults }) {
                         />
                     </div>
 
-                    <div className="rounded-2xl border border-border-warm p-6 bg-cream">
-                        <p className="text-eyebrow font-semibold uppercase text-ink-muted">Live preview</p>
-                        <div className="mt-3 flex flex-wrap items-center gap-4">
+                    <div className="rounded-2xl border border-border-warm p-6 bg-cream space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div>
+                                <p className="text-eyebrow font-semibold uppercase text-ink-muted">Live preview</p>
+                                <p className="text-xs text-ink-muted mt-0.5">
+                                    These colors apply to <strong>every page</strong> while you're tweaking — open Dashboard or Invoices in another tab to see them in context. Hover states (darker / lighter shades) auto-derive from each base color.
+                                </p>
+                            </div>
+                            {isPreviewing && (
+                                <button
+                                    type="button"
+                                    onClick={discardPreview}
+                                    className="text-xs text-ink-muted hover:text-terracotta underline-offset-2 hover:underline whitespace-nowrap"
+                                    title="Revert to last saved colors"
+                                >
+                                    Discard preview
+                                </button>
+                            )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-4">
                             <button
                                 type="button"
-                                style={{ background: previewColors.terracotta }}
-                                className="px-5 py-2.5 rounded-xl text-white text-sm font-semibold"
+                                className="px-5 py-2.5 rounded-xl text-white text-sm font-semibold bg-terracotta hover:bg-terracotta-dark transition-colors"
                             >
                                 Primary action
                             </button>
-                            <span
-                                style={{ background: `${previewColors.forest}1A`, color: previewColors.forest, borderColor: `${previewColors.forest}4D` }}
-                                className="px-3 py-1 rounded-full text-eyebrow font-semibold uppercase border"
-                            >
+                            <span className="px-3 py-1 rounded-full text-eyebrow font-semibold uppercase border bg-forest/10 text-forest border-forest/30">
                                 Paid
                             </span>
-                            <span
-                                style={{ background: `${previewColors.mustard}26`, color: '#1A1A1A', borderColor: `${previewColors.mustard}66` }}
-                                className="px-3 py-1 rounded-full text-eyebrow font-semibold uppercase border"
-                            >
+                            <span className="px-3 py-1 rounded-full text-eyebrow font-semibold uppercase border bg-mustard/15 text-ink border-mustard/40">
                                 Premium
                             </span>
+                            <button
+                                type="button"
+                                className="px-4 py-2 rounded-xl text-sm font-semibold border border-terracotta/40 text-terracotta hover:bg-terracotta/10 transition-colors"
+                            >
+                                Hover me
+                            </button>
                         </div>
                     </div>
                 </div>

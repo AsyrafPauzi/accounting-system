@@ -35,7 +35,12 @@
              white-labelling). The brand_settings row lives in the CENTRAL db
              and is shared across every tenant, so we check the table existence
              on the central connection (otherwise mid-tenant requests would
-             never resolve the table and the override would silently no-op). --}}
+             never resolve the table and the override would silently no-op).
+
+             We inject not just the base color but also the -dark and -light
+             variants (auto-derived in HSL space) so hover states like
+             `hover:bg-terracotta-dark` follow the chosen accent rather than
+             reverting to the BukuCloud default red. --}}
         @php
             $brand = null;
             try {
@@ -46,16 +51,27 @@
                 // First-boot or migration in flight — silently fall back to defaults.
                 $brand = null;
             }
-            $hexToRgb = fn($hex) => $hex
-                ? collect(str_split(ltrim($hex, '#'), 2))->map(fn($c) => hexdec($c))->implode(' ')
-                : null;
+
+            $accentVars = [];
+            if ($brand) {
+                foreach (['terracotta', 'forest', 'mustard'] as $key) {
+                    $variants = \App\Support\BrandColors::variants($brand->{"color_{$key}"} ?? null);
+                    if (! $variants) continue;
+                    $accentVars["--color-{$key}"] = $variants['base'];
+                    // Mustard is currently a single shade in the design system
+                    // (no -dark / -light utilities reference it), so we only
+                    // emit those for terracotta + forest.
+                    if ($key !== 'mustard') {
+                        $accentVars["--color-{$key}-dark"]  = $variants['dark'];
+                        $accentVars["--color-{$key}-light"] = $variants['light'];
+                    }
+                }
+            }
         @endphp
-        @if ($brand && ($brand->color_terracotta || $brand->color_forest || $brand->color_mustard))
-            <style>
+        @if (! empty($accentVars))
+            <style id="bukucloud-brand-vars">
                 :root {
-                    @if ($brand->color_terracotta) --color-terracotta: {{ $hexToRgb($brand->color_terracotta) }}; @endif
-                    @if ($brand->color_forest) --color-forest: {{ $hexToRgb($brand->color_forest) }}; @endif
-                    @if ($brand->color_mustard) --color-mustard: {{ $hexToRgb($brand->color_mustard) }}; @endif
+                    @foreach ($accentVars as $name => $value) {{ $name }}: {{ $value }}; @endforeach
                 }
             </style>
         @endif
