@@ -6,7 +6,7 @@ const inputClass =
 const labelClass =
     'block text-eyebrow font-semibold text-ink-muted uppercase';
 
-export default function Company({ auth, company }) {
+export default function Company({ auth, company, canEdit = false }) {
     const { available_locales = [] } = usePage().props;
     const planPermissions = auth?.planPermissions ?? {};
     const canViewTeam = auth?.teamPermissions?.view && planPermissions['users.view'];
@@ -28,7 +28,11 @@ export default function Company({ auth, company }) {
         language: company.language || 'en',
     });
 
-    const isAdmin = auth.user.role_name === 'admin' || auth.user.role_name === 'super-admin';
+    // `canEdit` is the authoritative gate computed server-side. It
+    // covers tenant admins / super-admins on their own org AND
+    // firm-users acting on a client tenant with admin permission_level.
+    // Falling back to the role check would lock firm-users out.
+    const isAdmin = canEdit;
 
     const submit = (e) => {
         e.preventDefault();
@@ -66,7 +70,9 @@ export default function Company({ auth, company }) {
             {!isAdmin && (
                 <div className="mb-6 bg-mustard/15 border border-mustard/40 rounded-2xl p-4 flex items-center gap-3 text-mustard">
                     <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                    <p className="text-sm font-medium">Read-only: Only administrators can modify company settings.</p>
+                    <p className="text-sm font-medium">
+                        Read-only: tenant admins (or firm-users with admin access) can modify company settings.
+                    </p>
                 </div>
             )}
 

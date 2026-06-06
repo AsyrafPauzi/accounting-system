@@ -42,10 +42,26 @@ return [
         ],
     ],
 
-    'toyyibpay' => [
-        'secret_key' => env('TOYYIBPAY_SECRET_KEY'),
-        'category_code' => env('TOYYIBPAY_CATEGORY_CODE'),
-        'env' => env('TOYYIBPAY_ENV', 'sandbox'),
-    ],
+    /*
+    |--------------------------------------------------------------------------
+    | Toyyibpay (SaaS billing only)
+    |--------------------------------------------------------------------------
+    |
+    | These are the publisher's payment-gateway credentials. They are
+    | only consulted by routes guarded by `saas.only` (subscription
+    | checkout / webhook). Self-hosted installs MUST NOT carry these
+    | secrets — the customer is paying via the license, not via our
+    | gateway. We zero them out at config load when in self-hosted
+    | mode so a curious operator running `php artisan config:show` /
+    | `phpinfo()` / a config dump can't extract them.
+    |
+    */
+    'toyyibpay' => env('APP_DEPLOYMENT_MODE', 'saas') === 'self_hosted'
+        ? ['secret_key' => null, 'category_code' => null, 'env' => 'disabled']
+        : [
+            'secret_key'    => env('TOYYIBPAY_SECRET_KEY'),
+            'category_code' => env('TOYYIBPAY_CATEGORY_CODE'),
+            'env'           => env('TOYYIBPAY_ENV', 'sandbox'),
+        ],
 
 ];

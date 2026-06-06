@@ -35,7 +35,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'products.view', 'products.create', 'products.edit', 'products.delete',
 
             // Estimates (quotations)
-            'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert',
+            'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert', 'estimates.email',
 
             // Recurring invoices (scheduled templates)
             'recurring-invoices.view', 'recurring-invoices.create', 'recurring-invoices.edit', 'recurring-invoices.delete', 'recurring-invoices.run',
@@ -60,6 +60,17 @@ class RolesAndPermissionsSeeder extends Seeder
             'dashboard.basic', 'dashboard.standard', 'dashboard.advanced',
             'audit-logs.view', 'integrations.view',
             'audit.view',
+
+            // Practice (Accountant track) — gate access to /practice
+            // and to firm-level billing / client linking. firm-staff
+            // get the lighter set; firm-owner gets all of these.
+            'practice.access',         // can open the Practice console at all
+            'practice.clients.view',   // see the client list + client-level dashboards
+            'practice.clients.invite', // create / send firm-to-client invites
+            'practice.clients.unlink', // remove a client from the firm
+            'practice.staff.manage',   // invite / remove firm-staff users
+            'practice.billing.manage', // edit firm subscription, payment method
+            'practice.reports.view',   // run cross-client reports
         ];
 
         foreach ($permissions as $permission) {
@@ -85,7 +96,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
             'credit-notes.view', 'credit-notes.create',
             'products.view', 'products.create', 'products.edit', 'products.delete',
-            'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert',
+            'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert', 'estimates.email',
             'recurring-invoices.view', 'recurring-invoices.create', 'recurring-invoices.edit', 'recurring-invoices.delete', 'recurring-invoices.run',
             'accounts.view', 'accounts.create', 'accounts.edit', 'accounts.delete',
             'journal.view', 'journal.create', 'journal.edit', 'journal.post', 'journal.delete',
@@ -104,7 +115,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'customers.view', 'customers.create', 'customers.edit',
             'credit-notes.view', 'credit-notes.create',
             'products.view', 'products.create', 'products.edit',
-            'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert',
+            'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert', 'estimates.email',
             'recurring-invoices.view', 'recurring-invoices.create', 'recurring-invoices.edit', 'recurring-invoices.run',
             
             // View Only Access on others
@@ -134,6 +145,43 @@ class RolesAndPermissionsSeeder extends Seeder
             'general-ledger.view',
             'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet', 'reports.cashflow', 'reports.aged-reports',
             'reports.sales-tax', 'reports.customer-credits', 'reports.purchases-by-vendor',
+            'settings.view',
+            'dashboard.basic',
+        ]);
+
+        // -----------------------------------------------------------
+        // Practice (Accountant track) roles
+        // -----------------------------------------------------------
+        // These users live on the central DB and belong to a `firm`.
+        // When they switch *into* a client, they pick up the
+        // `accountant` role's permissions inside that tenant via the
+        // FirmClient pivot — so we don't duplicate the financial
+        // permissions here. These two roles only govern firm-level
+        // privileges (Practice console + billing + client onboarding).
+
+        // firm-owner — billing, client onboarding, staff management
+        $firmOwner = Role::firstOrCreate(['name' => 'firm-owner', 'guard_name' => 'web']);
+        $firmOwner->syncPermissions([
+            'practice.access',
+            'practice.clients.view',
+            'practice.clients.invite',
+            'practice.clients.unlink',
+            'practice.staff.manage',
+            'practice.billing.manage',
+            'practice.reports.view',
+            // The owner also gets a working profile / settings page
+            // outside the console.
+            'settings.view',
+            'dashboard.basic',
+        ]);
+
+        // firm-staff — bookkeeping access only; no billing, no
+        // client onboarding decisions.
+        $firmStaff = Role::firstOrCreate(['name' => 'firm-staff', 'guard_name' => 'web']);
+        $firmStaff->syncPermissions([
+            'practice.access',
+            'practice.clients.view',
+            'practice.reports.view',
             'settings.view',
             'dashboard.basic',
         ]);

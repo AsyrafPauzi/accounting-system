@@ -7,12 +7,14 @@ import SpamBotFields from '@/Components/SpamBotFields';
 import TextInput from '@/Components/TextInput';
 import { Head, Link, useForm } from '@inertiajs/react';
 
-export default function Register({ botGuard }) {
+export default function Register({ botGuard, privacyVersion }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         email: '',
         password: '',
         password_confirmation: '',
+        accept_privacy: false,
+        privacy_version: privacyVersion ?? '',
         _hp_email: '',
         _hp_ts: botGuard?.ts ?? '',
     });
@@ -31,10 +33,33 @@ export default function Register({ botGuard }) {
     return (
         <GuestLayout>
             <Head title="Register" />
-            
-            <div className="mb-8 text-center">
+
+            <div className="mb-6 text-center">
                 <h1 className="font-display text-3xl lg:text-4xl font-medium text-ink tracking-tight">Create your account</h1>
                 <p className="text-ink-muted text-sm mt-2">Books made for the way you actually work.</p>
+            </div>
+
+            <div className="mb-7">
+                <p className="text-eyebrow font-semibold uppercase text-ink-muted text-center mb-2">
+                    I'm signing up as
+                </p>
+                <div className="grid grid-cols-2 gap-2 bg-surface border border-border-warm rounded-2xl p-1">
+                    <button
+                        type="button"
+                        className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-terracotta text-white shadow-sm cursor-default"
+                    >
+                        A single business
+                    </button>
+                    <Link
+                        href={route('register.practice.show')}
+                        className="px-4 py-2.5 rounded-xl text-sm font-semibold text-ink-muted hover:text-ink hover:bg-cream/60 transition-colors text-center"
+                    >
+                        An accountancy firm
+                    </Link>
+                </div>
+                <p className="text-ink-muted text-xs mt-2 text-center">
+                    Run a firm with multiple clients? Switch to the accountant signup.
+                </p>
             </div>
 
             <form onSubmit={submit} className="space-y-5">
@@ -100,8 +125,35 @@ export default function Register({ botGuard }) {
                     <InputError message={errors.password_confirmation} className="mt-2" />
                 </div>
 
+                <div className="pt-1">
+                    <label className="flex items-start gap-2.5 text-sm text-ink cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            className="mt-0.5 rounded border-border-warm text-terracotta focus:ring-terracotta"
+                            checked={data.accept_privacy}
+                            onChange={(e) => setData('accept_privacy', e.target.checked)}
+                        />
+                        <span className="leading-snug">
+                            I have read and accept the{' '}
+                            <Link
+                                href={route('privacy.show')}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-terracotta hover:text-terracotta-dark dark:hover:text-terracotta-light font-semibold"
+                            >
+                                privacy policy
+                            </Link>
+                            .
+                        </span>
+                    </label>
+                    <InputError message={errors.accept_privacy} className="mt-2" />
+                </div>
+
                 <div className="pt-2">
-                    <PrimaryButton className="w-full justify-center py-3 rounded-xl" disabled={processing}>
+                    <PrimaryButton
+                        className="w-full justify-center py-3 rounded-xl"
+                        disabled={processing || !data.accept_privacy}
+                    >
                         Create account
                     </PrimaryButton>
                 </div>

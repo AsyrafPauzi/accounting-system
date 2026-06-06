@@ -1,55 +1,43 @@
 #!/bin/sh
+# BukuCloud self-hosted runtime entrypoint.
+#
+# Runs the same idempotent setup steps on every boot — migrations,
+# storage link, route cache. Tens of milliseconds when there's
+# nothing to do; safe to re-run after a customer pulls a new image.
 
-# Exit on error
 set -e
 
-echo "Running Entrypoint Tasks..."
+cd /var/www/html
 
-# The storage volume is mounted at runtime, potentially over the image's
-# storage directory. Ensure www-data can write to it and that the
-# public/storage symlink exists (it lives in public/, outside the volume).
-chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-php artisan storage:link --force
+# Wait for the database to accept connections — give up after 60s so
+# a misconfigured DB host doesn't keep the container in a restart loop
+# forever. The customer's logs will show the timeout and they can fix.
+echo "[entrypoint] waiting for database…"
+i=0
+until php -r 'try { new PDO(getenv("DB_DSN") ?: "mysql:host=".getenv("DB_HOST").";port=".(getenv("DB_PORT") ?: 3306), getenv("DB_USERNAME"), getenv("DB_PASSWORD")); echo "ok\n"; } catch (Throwable $e) { fwrite(STDERR, $e->getMessage()."\n"); exit(1); }' >/dev/null 2>&1; do
+    i=$((i + 1))
+    if [ "$i" -ge 60 ]; then
+        echo "[entrypoint] database not reachable after 60 attempts; giving up." >&2
+        exit 1
+    fi
+    sleep 1
+done
+echo "[entrypoint] database reachable."
 
-# Clear and cache configurations
-php artisan view:clear
+# Run migrations + link storage + warm caches. These are all
+# idempotent so re-running on every boot is a feature, not a bug.
+php artisan migrate --force --no-interaction
+php artisan db:seed --class=RolesAndPermissionsSeeder --force
+php artisan storage:link || true
+
+# Cache config / routes / views. We deliberately don't `optimize`
+# because it sometimes inlines env values that should remain dynamic
+# across container restarts.
 php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+php artisan route:cache || true
+php artisan view:cache  || true
 
-# When RUN_MIGRATIONS=true (set on the ECS task definition):
-#   1. Central migrate  — users, plans, ocr_settings, etc. (database/migrations/)
-#   2. tenants:migrate  — per-tenant accounting schema (database/migrations/tenant/)
-#   3. PlanSeeder                  — which features each subscription tier allows
-#   4. app:sync-roles-permissions  — which actions each user role can perform
-#      (both central-only, idempotent, no demo accounts)
-#
-# --isolated: during rolling deploys only one container runs pending migrations;
-# others skip quickly if another task holds the lock.
-#
-# Full db:seed is intentionally NOT run here — most seeders include demo/test data.
-# PlanSeeder and sync-roles-permissions are exceptions: they only sync permission
-# definitions; the sidebar needs both plan AND role permissions to show a link.
-if [ "$RUN_MIGRATIONS" = "true" ]; then
-    echo "Running central migrations..."
-    php artisan migrate --force --isolated
+echo "[entrypoint] boot complete."
 
-    echo "Running tenant migrations..."
-    php artisan tenants:migrate --force --isolated
-
-    echo "Syncing subscription plan permissions..."
-    php artisan db:seed --class=PlanSeeder --force
-
-    echo "Syncing role permissions..."
-    php artisan app:sync-roles-permissions
-fi
-
-# If a command is passed to the entrypoint, execute it instead of starting Supervisor
-if [ $# -gt 0 ]; then
-    echo "Executing Command: $@"
-    exec "$@"
-fi
-
-# Start Supervisor
-echo "Starting Supervisor..."
-exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisor.conf
+# Hand off to whatever the CMD / docker-compose command was.
+exec "$@"

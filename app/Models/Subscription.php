@@ -3,16 +3,18 @@
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Stancl\Tenancy\Database\Concerns\CentralConnection;
 
 class Subscription extends Model
 {
-    use CentralConnection, Auditable;
+    use CentralConnection, Auditable, BelongsToTenant;
 
     protected $fillable = [
         'tenant_id',
+        'firm_id',
         'plan_id',
         'pending_plan_id',
         'pending_interval',
@@ -36,6 +38,16 @@ class Subscription extends Model
     public function tenant()
     {
         return $this->belongsTo(Tenant::class, 'tenant_id');
+    }
+
+    /**
+     * Practice-level subscriptions belong to a firm rather than a
+     * tenant. Both relationships exist on the same row so the billing
+     * pipeline doesn't have to special-case where the row came from.
+     */
+    public function firm()
+    {
+        return $this->belongsTo(Firm::class, 'firm_id');
     }
 
     public function plan()

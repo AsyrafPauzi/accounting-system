@@ -59,6 +59,15 @@ class CustomerController extends Controller
 
     public function store(\App\Http\Requests\StoreCustomerRequest $request)
     {
+        // Startup (Free) plan caps active customers at 5. The cap is silent
+        // on every other plan and on self-hosted (license-driven).
+        if (\App\Support\PlanCap::customerCapHit()) {
+            return redirect()->route('customers.index')->with(
+                'error',
+                'Your plan only allows '.\App\Support\PlanCap::STARTUP_CUSTOMER_CAP.' customers. Upgrade to Solo or higher for unlimited customers.'
+            );
+        }
+
         $validated = $request->validated();
         $customerData = collect($validated)->except('contacts')->all();
 
@@ -89,6 +98,13 @@ class CustomerController extends Controller
      */
     public function quickStore(\App\Http\Requests\QuickStoreCustomerRequest $request)
     {
+        if (\App\Support\PlanCap::customerCapHit()) {
+            return back()->with(
+                'error',
+                'Your plan only allows '.\App\Support\PlanCap::STARTUP_CUSTOMER_CAP.' customers. Upgrade to Solo or higher for unlimited customers.'
+            );
+        }
+
         $validated = $request->validated();
 
         $code = $validated['code'] ?? ('CUST-' . str_pad((string) (Customer::max('id') + 1), 4, '0', STR_PAD_LEFT));

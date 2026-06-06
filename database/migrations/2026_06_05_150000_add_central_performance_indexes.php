@@ -85,6 +85,22 @@ return new class extends Migration
 
     private function indexExists(string $table, string $indexName): bool
     {
+        $driver = DB::connection()->getDriverName();
+
+        // SQLite (used in CI / phpunit `:memory:`) doesn't expose
+        // information_schema. PRAGMA index_list returns one row per
+        // index on the table — we just match by name.
+        if ($driver === 'sqlite') {
+            $rows = DB::select("PRAGMA index_list('{$table}')");
+            foreach ($rows as $row) {
+                if (($row->name ?? null) === $indexName) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // MySQL / MariaDB path.
         $database = DB::connection()->getDatabaseName();
         $rows = DB::select(
             'SELECT COUNT(*) AS c FROM information_schema.statistics

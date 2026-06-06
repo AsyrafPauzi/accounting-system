@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreEstimateRequest;
 use App\Http\Requests\UpdateEstimateRequest;
+use App\Jobs\SendEstimateEmail;
 use App\Models\Customer;
 use App\Models\Estimate;
 use App\Models\Product;
 use App\Models\Tenant;
 use App\Services\EstimateService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,8 +29,11 @@ class EstimateController extends Controller
         $status = $request->input('status', 'all');
 
         $estimates = Estimate::query()
-            ->select(['id', 'estimate_number', 'customer_id', 'issue_date', 'expiry_date', 'status', 'currency', 'total_amount', 'converted_invoice_id'])
-            ->with(['customer:id,name'])
+            ->select(['id', 'estimate_number', 'customer_id', 'issue_date', 'expiry_date', 'status', 'currency', 'total_amount', 'converted_invoice_id', 'last_emailed_status', 'last_emailed_at'])
+            // Pull customer email so the front-end can show the
+            // "Email" button only for customers who actually have an
+            // address. Avoids exposing a button that always errors out.
+            ->with(['customer:id,name,email'])
             ->when($search !== '', fn ($q) => $q->where(function ($qq) use ($search) {
                 $qq->where('estimate_number', 'like', "%{$search}%")
                     ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$search}%"));
@@ -38,6 +43,14 @@ class EstimateController extends Controller
             ->orderByDesc('id')
             ->paginate(20)
             ->withQueryString();
+
+        // Flatten customer.email → top-level customer_email for a
+        // simpler React shape; the rest of the customer relation is
+        // still available if the frontend wants it.
+        $estimates->getCollection()->transform(function ($estimate) {
+            $estimate->customer_email = $estimate->customer?->email;
+            return $estimate;
+        });
 
         $counts = Estimate::query()
             ->selectRaw('status, COUNT(*) as total')
@@ -187,6 +200,131 @@ class EstimateController extends Controller
 
         return redirect()->route('invoices.edit', $invoice->id)
             ->with('success', "Estimate {$estimate->estimate_number} converted to invoice {$invoice->invoice_number}. Review and post when ready.");
+    }
+
+    /**
+     * Authenticated PDF download for the in-app "Download" button on
+     * the estimates index/edit pages.
+     */
+    public function downloadPdf($id)
+    {
+        $this->authorize('estimates.view');
+
+        $estimate = Estimate::with(['items', 'customer'])->findOrFail($id);
+        $company = $this->resolveCompany();
+
+        return $this->respondWithPdf($estimate, $company, attachment: true);
+    }
+
+    /**
+     * Public PDF download via signed URL — the link inside the
+     * customer's email. No auth required because the signed URL is
+     * the auth (TTL'd, signature-verified, scoped to a specific UUID).
+     */
+    public function publicDownloadPdf($uuid)
+    {
+        $estimate = Estimate::with(['items', 'customer'])
+            ->where('uuid', $uuid)
+            ->firstOrFail();
+
+        $company = $this->resolveCompany();
+
+        return $this->respondWithPdf($estimate, $company, attachment: true);
+    }
+
+    /**
+     * Email the estimate PDF to the customer. Mirrors the invoice
+     * email flow so the queueing / tracking shape is the same.
+     */
+    public function email($id): RedirectResponse
+    {
+        $this->authorize('estimates.email');
+
+        $estimate = Estimate::with(['customer.contacts'])->findOrFail($id);
+
+        if (! $estimate->customer) {
+            return redirect()->back()->with('error', 'Customer not found on this estimate.');
+        }
+
+        $customer = $estimate->customer;
+
+        // Reuse the customer's invoice-delivery preference here too —
+        // a customer who has opted out of automated emails for invoices
+        // will not want estimates either. Saves us a second toggle in
+        // the customer form.
+        if (($customer->invoice_delivery_method ?? 'email') === 'none') {
+            return redirect()->back()->with(
+                'error',
+                'Customer has invoice delivery set to Do not email. Update the customer record to enable estimate emails.'
+            );
+        }
+
+        $recipients = [];
+        $billingContacts = $customer->contacts
+            ->where('type', 'billing')
+            ->filter(fn ($c) => $c->email && filter_var($c->email, FILTER_VALIDATE_EMAIL));
+        if ($billingContacts->isNotEmpty()) {
+            $recipients = $billingContacts->pluck('email')->unique()->values()->all();
+        }
+        if (empty($recipients) && $customer->email && filter_var($customer->email, FILTER_VALIDATE_EMAIL)) {
+            $recipients = [$customer->email];
+        }
+        if (empty($recipients)) {
+            return redirect()->back()->with(
+                'error',
+                'Customer does not have a valid email address or billing contact.'
+            );
+        }
+
+        $estimate->forceFill([
+            'last_emailed_status' => 'pending',
+            'last_emailed_at'     => now(),
+            'last_emailed_error'  => null,
+            'last_emailed_to'     => implode(',', $recipients),
+        ])->save();
+
+        SendEstimateEmail::dispatch($estimate->id, $recipients, $this->resolveCompany());
+
+        return redirect()->back()->with('success', 'Estimate email queued for delivery.');
+    }
+
+    /**
+     * Tenant company details — same shape the invoice flow uses so
+     * the PDF / email templates can read the same keys.
+     */
+    private function resolveCompany(): array
+    {
+        $company = config('invoice.company') ?? [];
+        if (function_exists('tenant') && tenant()) {
+            $company = tenant()->getCompanyDetails();
+        } elseif (auth()->check() && auth()->user()->tenant_id) {
+            $tenant = Tenant::find(auth()->user()->tenant_id);
+            if ($tenant) {
+                $company = $tenant->getCompanyDetails();
+            }
+        }
+        return $company;
+    }
+
+    private function respondWithPdf(Estimate $estimate, array $company, bool $attachment = true)
+    {
+        try {
+            $estimate->loadMissing(['items', 'customer']);
+
+            $pdf = Pdf::loadView('pdf.estimate', [
+                'estimate' => $estimate,
+                'customer' => $estimate->customer,
+                'company'  => $company,
+            ])->setPaper('a4', 'portrait');
+
+            $filename = "Estimate-{$estimate->estimate_number}.pdf";
+
+            return $pdf->stream($filename, ['Attachment' => $attachment]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Could not generate PDF. Please contact support.',
+            ], 500);
+        }
     }
 
     private function customerOptions(): \Illuminate\Support\Collection

@@ -10,6 +10,8 @@ const Icons = {
     Pencil: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>,
     Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
     Eye: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>,
+    Pdf: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+    Mail: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
     MagnifyingGlass: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
 };
 
@@ -42,6 +44,34 @@ export default function Index({ auth, estimates, filters = {}, counts = {}, base
             icon: 'warning',
         });
         if (ok) router.delete(route('estimates.destroy', estimate.id));
+    };
+
+    // Email gating mirrors the invoice list — both the Spatie permission
+    // (`estimates.email`) and the plan flag must be true. The bullet
+    // says "Solo+", so customers on Startup never see the button.
+    const planPermissions = auth?.planPermissions ?? {};
+    const canEmail = (auth.permissions || []).includes('estimates.email')
+        && Boolean(planPermissions['estimates.email']);
+
+    const [emailingId, setEmailingId] = useState(null);
+    const handleEmail = async (estimate) => {
+        if (!estimate.customer_email) {
+            window.alert('This customer has no email on file. Add one to the customer record first.');
+            return;
+        }
+        const ok = await confirm({
+            title: 'Email this estimate?',
+            text: `Send ${estimate.estimate_number} to ${estimate.customer_email}? They\u2019ll get a PDF download link valid for 30 days.`,
+            confirmText: 'Send email',
+            confirmColor: '#0f172a',
+            icon: 'info',
+        });
+        if (!ok) return;
+        router.post(route('estimates.email', estimate.id), {}, {
+            preserveScroll: true,
+            onStart:  () => setEmailingId(estimate.id),
+            onFinish: () => setEmailingId(null),
+        });
     };
 
     const tabs = [
@@ -168,6 +198,26 @@ export default function Index({ auth, estimates, filters = {}, counts = {}, base
                                                 <Link href={route('estimates.show', e.id)} className="p-2 text-ink-muted hover:text-terracotta hover:bg-cream rounded-lg" title="View">
                                                     <Icons.Eye />
                                                 </Link>
+                                                <a
+                                                    href={route('estimates.pdf', e.id)}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="p-2 text-ink-muted hover:text-terracotta hover:bg-cream rounded-lg"
+                                                    title="Download PDF"
+                                                >
+                                                    <Icons.Pdf />
+                                                </a>
+                                                {canEmail && e.customer_email && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleEmail(e)}
+                                                        disabled={emailingId === e.id}
+                                                        className="p-2 text-ink-muted hover:text-terracotta hover:bg-cream rounded-lg disabled:opacity-50 disabled:cursor-wait"
+                                                        title={`Email to ${e.customer_email}`}
+                                                    >
+                                                        <Icons.Mail />
+                                                    </button>
+                                                )}
                                                 {auth.permissions.includes('estimates.edit') && e.status !== 'converted' && (
                                                     <Link href={route('estimates.edit', e.id)} className="p-2 text-ink-muted hover:text-terracotta hover:bg-cream rounded-lg" title="Edit">
                                                         <Icons.Pencil />

@@ -21,10 +21,31 @@ class EnsureSubscribed
         'settings.',
         'subscription.',
         'logout',
+        // Practice / Accountant track lives on the central side, not
+        // inside any tenant — the firm has its own subscription via
+        // `firms.firm_subscription_id`. The tenant-subscription gate
+        // below would redirect-loop firm users otherwise.
+        'practice.',
+        // Tenant→firm invite acceptance lives outside the `practice.`
+        // prefix for naming clarity (`firm.invite.accept`) but is
+        // logically part of the Practice console — firm-owners reach
+        // it via a link the SME shared with them. Without this prefix,
+        // the firm-user fallthrough below would bounce them to the
+        // practice dashboard before they ever see the AcceptInvite
+        // page, which presents to the user as "the link goes back to
+        // homepage and I can't accept the invite."
+        'firm.invite.',
     ];
 
     public function handle(Request $request, Closure $next): Response
     {
+        // Self-hosted: there's no subscription to check. The customer
+        // already paid for their license; the running app is itself
+        // the proof of purchase. Skip the gate entirely.
+        if (\App\Support\Deployment::isSelfHosted()) {
+            return $next($request);
+        }
+
         $user = $request->user();
 
         if (! $user) {
@@ -32,6 +53,33 @@ class EnsureSubscribed
         }
 
         $routeName = (string) $request->route()?->getName();
+
+        // Firm users (Accountant track) — let the practice console
+        // through, and when they're "acting" inside a client, key the
+        // subscription check off the *client's* tenant rather than the
+        // user's (which is null on firm staff).
+        if ($user->isFirmUser()) {
+            // Practice routes never require a tenant subscription.
+            if ($routeName && (str_starts_with($routeName, 'practice.') || $this->isAlwaysAllowed($routeName))) {
+                return $next($request);
+            }
+
+            $actingTenantId = $request->session()->get('acting_tenant_id');
+            if ($actingTenantId) {
+                $clientTenant = Tenant::find($actingTenantId);
+                if ($clientTenant && $clientTenant->hasActiveSubscription()) {
+                    return $next($request);
+                }
+                // Client has no active sub — bounce back to the firm
+                // console with a hint instead of looping subscription.
+                return redirect()->route('practice.dashboard')
+                    ->with('error', 'That client\'s subscription is not active.');
+            }
+
+            // Firm user, no client selected → send them to the
+            // practice console rather than the subscription page.
+            return redirect()->route('practice.dashboard');
+        }
 
         if ($user->hasRole('super-admin')) {
             // Super admins are restricted to central platform management.

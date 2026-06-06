@@ -182,6 +182,40 @@ function ManagePlanModal({ tenant, plans, onClose }) {
                             Cancel Subscription
                         </button>
                     </div>
+
+                    {/* Per-tenant feature toggles */}
+                    <div className="border-t border-border-warm pt-4 space-y-2">
+                        <p className="text-sm font-semibold text-ink">Feature toggles</p>
+                        <div className="flex items-center justify-between gap-3 bg-cream/40 border border-border-warm rounded-xl px-3 py-2.5">
+                            <div className="text-xs">
+                                <p className="font-semibold text-ink">Accountant feature</p>
+                                <p className="text-ink-muted">
+                                    {tenant.features?.practice_disabled
+                                        ? 'Disabled — tenant cannot invite a firm; firms cannot invite this tenant.'
+                                        : 'Enabled — tenant can link to an accountancy firm.'}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const next = !tenant.features?.practice_disabled;
+                                    if (next && !confirm('Disable accountant feature for this tenant? Existing firm links keep working; only NEW invites are blocked.')) return;
+                                    router.patch(
+                                        route('admin.tenants.practice.toggle', tenant.id),
+                                        { disabled: next ? 1 : 0 },
+                                        { preserveScroll: true },
+                                    );
+                                }}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors shrink-0 ${
+                                    tenant.features?.practice_disabled
+                                        ? 'bg-forest/10 text-forest-dark border-forest/30 hover:bg-forest/20'
+                                        : 'bg-terracotta/10 text-terracotta border-terracotta/30 hover:bg-terracotta/20'
+                                }`}
+                            >
+                                {tenant.features?.practice_disabled ? 'Re-enable' : 'Disable'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

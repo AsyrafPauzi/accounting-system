@@ -44,6 +44,10 @@ class Estimate extends Model
         'private_notes',
         'converted_invoice_id',
         'created_by',
+        'last_emailed_at',
+        'last_emailed_to',
+        'last_emailed_status',
+        'last_emailed_error',
     ];
 
     protected function casts(): array
@@ -58,6 +62,7 @@ class Estimate extends Model
             'rounding_adjustment'  => 'decimal:2',
             'total_amount'         => 'decimal:2',
             'exchange_rate'        => 'decimal:6',
+            'last_emailed_at'      => 'datetime',
         ];
     }
 

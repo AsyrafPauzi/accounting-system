@@ -23,6 +23,7 @@ class SubscriptionController extends Controller
         // (Enterprise has price_monthly = 0 like Startup, so we'd otherwise
         // collide with the free tier on price alone).
         $plans = Plan::where('is_active', true)
+            ->where('audience', 'sme') // Practice plans live on /register/practice
             ->orderBy('is_contact_sales') // false (0) before true (1)
             ->orderBy('price_monthly')
             ->orderBy('id')
@@ -265,23 +266,45 @@ class SubscriptionController extends Controller
             $subscription = Subscription::find($subscriptionId);
 
             if ($subscription) {
-                $plan = $subscription->plan;
-                
+                // Practice (and SME, when we extend it) upgrade flow parks
+                // the target plan in `pending_plan_id` / `pending_interval`
+                // and keeps the current plan active so the customer
+                // doesn't lose access while paying. On payment success
+                // we swap the pending fields into the live ones in a
+                // single update so the cutover is atomic.
+                $effectiveInterval = $subscription->pending_interval
+                    ?: $subscription->interval;
+
                 $periodStart = now();
-                $periodEnd = match($subscription->interval) {
+                $periodEnd = match($effectiveInterval) {
                     'lifetime' => null,
                     'yearly' => now()->addYear(),
                     default => now()->addMonth(),
                 };
 
-                $subscription->update([
-                    'status' => 'active',
+                $updates = [
+                    'status'                  => 'active',
                     'gateway_subscription_id' => $billCode,
-                    'current_period_start' => $periodStart->toDateString(),
-                    'current_period_ends_at' => $periodEnd->toDateString(),
-                ]);
+                    'interval'                => $effectiveInterval,
+                    'current_period_start'    => $periodStart->toDateString(),
+                    'current_period_ends_at'  => $periodEnd?->toDateString(),
+                ];
 
-                Log::info('Subscription activated via webhook', ['subscription_id' => $subscription->id]);
+                if ($subscription->pending_plan_id) {
+                    $updates['plan_id']         = $subscription->pending_plan_id;
+                    $updates['pending_plan_id'] = null;
+                }
+                if ($subscription->pending_interval) {
+                    $updates['pending_interval'] = null;
+                }
+
+                $subscription->update($updates);
+
+                Log::info('Subscription activated via webhook', [
+                    'subscription_id' => $subscription->id,
+                    'plan_id'         => $subscription->fresh()->plan_id,
+                    'interval'        => $effectiveInterval,
+                ]);
             }
         }
 
@@ -406,7 +429,25 @@ class SubscriptionController extends Controller
 
     public function planSettings(Request $request): Response
     {
+        // Self-hosted: this page shows the *license* (entitlement, expiry,
+        // heartbeat health, renewal contact) instead of a SaaS subscription.
+        // There is no upgrade flow on a customer-owned install — bumps in
+        // user / tenant cap come from re-issuing the license server-side.
+        if (\App\Support\Deployment::isSelfHosted()) {
+            return $this->licenseSettings($request);
+        }
+
         $user = $request->user();
+
+        // SaaS firm-owners (Practice / Accountant track) don't have a
+        // tenant — their Subscription lives on the firm. Render a
+        // firm-side plan summary so they can see "Practice Starter
+        // — 5 client cap, 2 in use, renews on 12 Aug" without needing
+        // to dig into the Practice console upgrade page.
+        if ($user && method_exists($user, 'isFirmUser') && $user->isFirmUser()) {
+            return $this->firmPlanSettings($request);
+        }
+
         $tenantId = $user?->tenant_id;
         abort_if(! $tenantId, 404);
 
@@ -416,6 +457,161 @@ class SubscriptionController extends Controller
         return Inertia::render('Settings/Plan', [
             'subscription' => $subscription,
             'userCount' => $userCount,
+        ]);
+    }
+
+    /**
+     * Firm-owner Plan & Usage view (SaaS only). Shows the firm's
+     * Practice plan, current client count vs cap, and renewal info.
+     * Self-hosted Enterprise firm-owners hit `licenseSettings()`
+     * higher up so they never reach here.
+     */
+    private function firmPlanSettings(Request $request): Response
+    {
+        $user = $request->user();
+        $firm = $user?->firm()->with('subscription.plan')->first();
+        abort_unless($firm, 404);
+
+        $sub = $firm->subscription;
+        $plan = $sub?->plan;
+
+        // Firm-staff seat usage. Mirrors the SME page's "1 of 5 seats
+        // used" widget but counts users with this firm_id (not
+        // tenant_id), since firm staff don't belong to a tenant.
+        $staffCount = \App\Models\User::query()
+            ->where('firm_id', $firm->id)
+            ->whereNotNull('firm_role')
+            ->count();
+
+        $extraSeats = (int) ($sub?->extra_seats ?? 0);
+
+        return Inertia::render('Settings/PlanFirm', [
+            'firm' => [
+                'id'   => $firm->id,
+                'name' => $firm->name,
+            ],
+            'subscription' => $sub ? [
+                'plan_name'              => $plan?->name ?? 'Practice',
+                'plan_slug'              => $plan?->slug,
+                'is_free'                => $plan?->slug === 'practice-free',
+                'status'                 => $sub->status,
+                'interval'               => $sub->interval,
+                'current_period_start'   => $sub->current_period_start,
+                'current_period_ends_at' => $sub->current_period_ends_at,
+                'price_monthly'          => $plan?->price_monthly,
+                'price_yearly'           => $plan?->price_yearly,
+                'extra_user_price'       => $plan?->extra_user_price,
+                'extra_seats'            => $extraSeats,
+                'users_included'         => (int) ($plan?->users_included ?? 1),
+                // Marketing bullets — same shape the SME page renders
+                // so the layout can use one component for both.
+                'features'               => $plan?->features ?? [],
+                'gateway'                => $sub->gateway,
+            ] : null,
+            'usage' => [
+                'client_count' => $firm->currentClientCount(),
+                'client_cap'   => $firm->clientCap(), // null = unlimited
+                'remaining'    => $firm->clientsRemaining(),
+                'staff_count'  => $staffCount,
+            ],
+        ]);
+    }
+
+    /**
+     * Self-hosted license read-out. We deliberately don't expose the raw
+     * signed key — only its claims and live status — so a screenshot of
+     * this page can't be used to provision another install.
+     *
+     * Renewal contact information is sourced from config/deployment.php
+     * (`vendor_contact_email` / `vendor_contact_url`) so a reseller /
+     * SI partner can override it without forking the page.
+     */
+    private function licenseSettings(Request $request): Response
+    {
+        $svc    = app(\App\Services\Licensing\LicenseService::class);
+        $status = $svc->status();
+        $claims = $status['claims'] ?? null;
+
+        $now       = \Illuminate\Support\Carbon::now();
+        $expiresAt = ! empty($claims['expires_at'])
+            ? \Illuminate\Support\Carbon::parse($claims['expires_at'])
+            : null;
+        $issuedAt  = ! empty($claims['issued_at'])
+            ? \Illuminate\Support\Carbon::parse($claims['issued_at'])
+            : null;
+
+        // Negative values mean "already expired"; we keep the sign so the
+        // UI can render "12 days overdue" without an extra branch.
+        $daysLeft = $expiresAt ? (int) round($now->diffInDays($expiresAt, false)) : null;
+
+        $features = is_array($claims['features'] ?? null) ? array_values($claims['features']) : [];
+
+        // Heartbeat health drives a small "you've been offline for N days"
+        // chip on the page so the operator knows their install can still
+        // phone home; we read the same cache key the gate middleware uses.
+        $lastHeartbeatIso = \Illuminate\Support\Facades\Cache::get(
+            \App\Console\Commands\SelfHostedHeartbeat::LAST_OK_KEY
+        );
+
+        // Usage counts. Wrapped in try/catch so the page renders even
+        // if a freshly-bootstrapped install hasn't run all migrations
+        // yet — we don't want a partial state to hide the renewal info.
+        $tenantId = $request->user()?->tenant_id;
+        try {
+            $userCount = $tenantId
+                ? \App\Models\User::where('tenant_id', $tenantId)->count()
+                : \App\Models\User::query()->count();
+        } catch (\Throwable $e) {
+            $userCount = 0;
+        }
+        try {
+            $tenantCount = \App\Models\Tenant::query()->count();
+        } catch (\Throwable $e) {
+            $tenantCount = 0;
+        }
+
+        // Local "you should update" advertisement — heartbeat persists
+        // these from the publisher into platform_settings, so we just
+        // read them back. Null when no banner is broadcast (or when
+        // the table isn't available, e.g. mid-migration).
+        try {
+            $latestVersion = \App\Models\PlatformSetting::get('latest_available_version');
+        } catch (\Throwable $e) {
+            $latestVersion = null;
+        }
+        $currentVersion = (string) (config('app.version') ?? env('APP_VERSION', '1.0.0'));
+
+        return Inertia::render('Settings/PlanSelfHosted', [
+            'license' => [
+                'status'         => $status['status'] ?? 'missing',
+                'customer_id'    => $claims['customer_id']   ?? null,
+                'customer_name'  => $claims['customer_name'] ?? null,
+                'plan_tier'      => $claims['plan_tier']     ?? null,
+                'max_users'      => isset($claims['max_users'])   ? (int) $claims['max_users']   : 0,
+                'max_tenants'    => isset($claims['max_tenants']) ? (int) $claims['max_tenants'] : 0,
+                'features'       => $features,
+                'issued_at'      => $issuedAt?->toIso8601String(),
+                'expires_at'     => $expiresAt?->toIso8601String(),
+                'days_left'      => $daysLeft,
+                'is_perpetual'   => $expiresAt === null,
+                'is_expired'     => $expiresAt && $expiresAt->isPast(),
+                'last_heartbeat' => $lastHeartbeatIso,
+            ],
+            'usage' => [
+                'user_count'   => $userCount,
+                'tenant_count' => $tenantCount,
+            ],
+            'version' => [
+                'current'   => $currentVersion,
+                'latest'    => $latestVersion,
+                'is_behind' => $latestVersion !== null && $currentVersion !== $latestVersion,
+            ],
+            'renewal' => [
+                'contact_email' => config('deployment.vendor_contact_email')
+                    ?? config('mail.from.address'),
+                'contact_url'   => config('deployment.vendor_contact_url'),
+                'vendor_name'   => config('deployment.vendor_name', 'BukuCloud'),
+            ],
         ]);
     }
 }

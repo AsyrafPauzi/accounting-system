@@ -45,6 +45,11 @@ class TenantAdminController extends Controller
                     'name'  => $owner->name,
                     'email' => $owner->email,
                 ] : null,
+                // Per-tenant feature flags. Stored on the Stancl `data`
+                // JSON column so toggling doesn't require a migration.
+                'features' => [
+                    'practice_disabled' => (bool) ($tenant->practice_disabled ?? false),
+                ],
                 'subscription' => $sub ? [
                     'plan_id'              => $sub->plan_id,
                     'plan_name'            => $sub->plan?->name ?? '—',

@@ -8,6 +8,7 @@ use App\Models\Account;
 use App\Models\Bill;
 use App\Models\Supplier;
 use App\Services\BillService;
+use App\Services\ImageMetadataStripper;
 use App\Services\OCRService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -19,7 +20,8 @@ class BillController extends Controller
 {
     public function __construct(
         protected BillService $billService,
-        protected OCRService $ocrService
+        protected OCRService $ocrService,
+        protected ImageMetadataStripper $metadataStripper,
     ) {}
 
     public function index(Request $request): Response
@@ -180,6 +182,16 @@ class BillController extends Controller
         ]);
 
         $file = $request->file('receipt');
+
+        // PDPA: scrub EXIF/GPS/device metadata from phone photos before the
+        // bytes leave the temp directory. Best-effort — if magick isn't
+        // available or fails, the upload still proceeds with the original
+        // file (the stripper logs the failure for ops visibility).
+        $tempPath = $file->getRealPath();
+        if (is_string($tempPath) && $tempPath !== '') {
+            $this->metadataStripper->strip($tempPath, $file->getMimeType());
+        }
+
         $path = $file->store('receipts', 'public');
 
         if (! is_string($path) || $path === '') {
@@ -211,24 +223,34 @@ class BillController extends Controller
 
     /**
      * Serve the receipt file securely.
+     *
+     * Defence in depth — even though Stancl's FilesystemTenancyBootstrapper
+     * prefixes the public disk's root with the current tenant id (so a
+     * cross-tenant `?path=` lookup naturally misses), we still:
+     *   1. require an active tenant context (no central-side leakage),
+     *   2. reject traversal sequences and absolute paths up front,
+     *   3. require the path to live under `receipts/` (the only prefix we
+     *      ever write to from upload flows),
+     * before letting Storage handle the lookup.
+     *
+     * The `?path=` parameter is preserved because the bill-create flow
+     * needs a way to preview a freshly uploaded receipt *before* the bill
+     * row exists in the DB — otherwise we'd just key off the bill id.
      */
     public function showReceipt(Request $request, $id = null)
     {
+        abort_if(tenant() === null, 403, 'Tenant context required.');
+
         $path = $request->query('path');
-        
-        if (!$path && $id) {
+
+        if (! $path && $id) {
             $bill = Bill::find($id);
             $path = $bill?->receipt_path;
         }
 
-        if (!$path) {
+        $path = $this->sanitiseReceiptPath($path);
+        if ($path === null) {
             abort(404);
-        }
-
-        // Clean up path
-        $path = ltrim($path, '/');
-        if (str_starts_with($path, 'storage/')) {
-            $path = substr($path, 8);
         }
 
         if (! Storage::disk('public')->exists($path)) {
@@ -236,5 +258,42 @@ class BillController extends Controller
         }
 
         return Storage::disk('public')->response($path);
+    }
+
+    /**
+     * Normalise a user-supplied receipt path, returning null for anything
+     * that doesn't look like a legitimate receipt key. Used as the single
+     * choke point for everything that resolves a path on the public disk.
+     */
+    private function sanitiseReceiptPath(?string $path): ?string
+    {
+        if (! is_string($path) || trim($path) === '') {
+            return null;
+        }
+
+        // Strip leading slashes and the legacy `storage/` prefix (older bills
+        // sometimes have receipt_path saved with that prefix).
+        $path = ltrim($path, '/');
+        if (str_starts_with($path, 'storage/')) {
+            $path = substr($path, 8);
+        }
+
+        // Block obvious traversal / null-byte / encoded slash attempts. S3
+        // wouldn't resolve `..` segments anyway, but the local disk fallback
+        // would, and we don't want to rely on the storage backend's quirks
+        // for security.
+        if (str_contains($path, "\0")
+            || str_contains($path, '..')
+            || str_contains($path, '\\')) {
+            return null;
+        }
+
+        // Receipts are the only thing this route serves. If a future flow
+        // needs to expose a different prefix, add it here explicitly.
+        if (! str_starts_with($path, 'receipts/')) {
+            return null;
+        }
+
+        return $path;
     }
 }

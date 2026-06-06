@@ -32,22 +32,134 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
+Route::get('/privacy', [\App\Http\Controllers\PrivacyController::class, 'show'])
+    ->name('privacy.show');
+
 Route::get('/public/invoices/{uuid}/download', [InvoiceController::class, 'publicDownloadPdf'])
     ->name('public.invoices.download')
+    ->middleware('signed');
+
+Route::get('/public/estimates/{uuid}/download', [\App\Http\Controllers\EstimateController::class, 'publicDownloadPdf'])
+    ->name('public.estimates.download')
     ->middleware('signed');
 
 // --- Toyyibpay Webhook (Server-to-Server) ---
 Route::post('/subscription/webhook', [SubscriptionController::class, 'webhook'])->name('subscription.webhook');
 Route::post('/subscription/webhook/extra-user', [SubscriptionController::class, 'webhookExtraUser'])->name('subscription.webhook.extra_user');
 
+// --- Self-hosted publisher API ---
+// Customer installs ping this once a day with their license + stats.
+// It's intentionally public — the license signature *is* the auth.
+Route::post('/api/self-hosted/heartbeat', [\App\Http\Controllers\Api\HeartbeatController::class, 'store'])
+    ->middleware(['throttle:30,1'])
+    ->name('api.self-hosted.heartbeat');
+
+// License-invalid landing page (used by SelfHostedLicenseGate when
+// the running install can't validate). Returns a static Inertia page.
+Route::get('/license-invalid', function (\Illuminate\Http\Request $request) {
+    return inertia('License/Invalid', ['reason' => $request->session()->get('reason', 'unknown')]);
+})->name('license.invalid');
+
+// First-run install wizard — only reachable on self-hosted, and only
+// before the default tenant has an admin user. Throttled hard since
+// the form drops a license key into .env on POST.
+Route::middleware('throttle:6,60')->group(function () {
+    Route::get('/install', [\App\Http\Controllers\Install\InstallController::class, 'show'])
+        ->name('install.show');
+    Route::post('/install', [\App\Http\Controllers\Install\InstallController::class, 'store'])
+        ->name('install.store');
+});
+
 // --- Dashboard, Profile & App (Auth Required) ---
 Route::middleware(['auth', 'verified'])->group(function () {
-    // Subscription pages (always allowed, EnsureSubscribed skips these)
-    Route::get('/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
-    Route::post('/subscription/checkout', [SubscriptionController::class, 'checkout'])->name('subscription.checkout');
-    Route::post('/subscription/cancel-pending', [SubscriptionController::class, 'cancelPendingChange'])->name('subscription.cancel_pending');
-    Route::get('/subscription/success', [SubscriptionController::class, 'success'])->name('subscription.success');
-    Route::get('/subscription/callback', [SubscriptionController::class, 'callback'])->name('subscription.callback');
+    // Subscription pages, publisher tenant admin, license issue/revoke,
+    // patch broadcaster, etc. — all SaaS-only routes are extracted to
+    // routes/saas.php for visual quarantine. They're all gated by
+    // `saas.only` middleware, so they 404 on self-hosted.
+
+    // --- Practice (Accountant track) ---
+    // Routes the firm reaches without "acting into" a client. Any
+    // firm-user can read; mutating actions are gated by their own
+    // permission (handled inside the controllers).
+    //
+    // `feature.practice` returns 404 unless this deployment has the
+    // Practice console enabled — SaaS always does; self-hosted only
+    // does when the license carries the `practice.console` feature
+    // (i.e. self-hosted Enterprise tier).
+    Route::middleware(['feature.practice', 'permission:practice.access'])->prefix('practice')->name('practice.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Practice\PracticeDashboardController::class, 'index'])->name('dashboard');
+        // Switcher — sets `acting_tenant_id` and bounces to the client
+        // dashboard. Posting (not GET) prevents accidental switching
+        // via prefetch / link previews.
+        Route::post('/switch/{tenantId}', [\App\Http\Controllers\Practice\ClientSwitcherController::class, 'switch'])
+            ->where('tenantId', '[A-Za-z0-9_-]+')
+            ->name('switch');
+        Route::post('/exit', [\App\Http\Controllers\Practice\ClientSwitcherController::class, 'exit'])->name('exit');
+
+        // Plan picker — firm-owners land here from the in-console
+        // upgrade banner once they outgrow Practice Free. SaaS-only;
+        // self-hosted Enterprise uses license-driven caps so there's
+        // no plan picker on those installs. The controller methods
+        // also defend themselves (`abort_if(!saasFeaturesEnabled())`)
+        // so removing the middleware here is safe — defence in depth
+        // without two layers of route-level gating.
+        Route::middleware('saas.only')->group(function () {
+            Route::get('/plan', [\App\Http\Controllers\Practice\PracticeBillingController::class, 'show'])->name('plan');
+            Route::post('/plan/checkout', [\App\Http\Controllers\Practice\PracticeBillingController::class, 'checkout'])->name('plan.checkout');
+        });
+
+        // Add Client — firm provisions a new tenant or invites an
+        // existing SME's email. Cap-gated by the firm's plan.
+        Route::get('/clients/create', [\App\Http\Controllers\Practice\AddClientController::class, 'show'])->name('clients.create');
+        Route::post('/clients/create', [\App\Http\Controllers\Practice\AddClientController::class, 'createNew'])->name('clients.create.new');
+        Route::post('/clients/invite', [\App\Http\Controllers\Practice\AddClientController::class, 'inviteExisting'])->name('clients.invite');
+
+        // Unlink a client. Firm-owners only via the dedicated permission;
+        // staff need the action escalated. Tenant data is preserved —
+        // see ClientLinkController for the rationale.
+        Route::delete('/clients/{tenantId}/unlink', [\App\Http\Controllers\Practice\ClientLinkController::class, 'destroy'])
+            ->where('tenantId', '[A-Za-z0-9_-]+')
+            ->middleware('permission:practice.clients.unlink')
+            ->name('clients.unlink');
+    });
+
+    // Tenant → firm invite acceptance. Lives outside `practice.` prefix
+    // because we want "firm.invite.*" naming for clarity, but it still
+    // requires an authenticated firm-owner (enforced in the controller).
+    //
+    // Deliberately drops the `verified` requirement: the token in the URL
+    // *is* the secret, and the inviting SME chose where to share it. A
+    // freshly-registered firm-owner whose email isn't verified yet would
+    // otherwise hit `/verify-email` instead of the AcceptInvite page,
+    // which looked to them like the link "didn't work" and silently sent
+    // them back to homepage. After accepting we redirect to
+    // `practice.dashboard`, which IS still `verified`-gated — so they
+    // still have to verify before *using* the console.
+    Route::get('/firm-invite/{token}', [\App\Http\Controllers\Practice\FirmInvitationController::class, 'show'])
+        ->where('token', '[A-Za-z0-9]+')
+        ->withoutMiddleware('verified')
+        ->name('firm.invite.accept');
+    Route::post('/firm-invite/{token}', [\App\Http\Controllers\Practice\FirmInvitationController::class, 'accept'])
+        ->where('token', '[A-Za-z0-9]+')
+        ->withoutMiddleware('verified')
+        ->name('firm.invite.accept.store');
+
+    // Tenant-side: SME admin invites a firm to take over their books.
+    Route::get('/settings/invite-firm', [\App\Http\Controllers\Settings\InviteFirmController::class, 'show'])
+        ->name('settings.invite-firm.show');
+    Route::post('/settings/invite-firm', [\App\Http\Controllers\Settings\InviteFirmController::class, 'store'])
+        ->name('settings.invite-firm.store');
+    Route::delete('/settings/invite-firm/{invitation}', [\App\Http\Controllers\Settings\InviteFirmController::class, 'destroy'])
+        ->whereNumber('invitation')
+        ->name('settings.invite-firm.destroy');
+
+    // Tenant-side: accept / decline a firm-initiated invite.
+    Route::post('/settings/invite-firm/{invitation}/accept', [\App\Http\Controllers\Settings\InviteFirmController::class, 'acceptIncoming'])
+        ->whereNumber('invitation')
+        ->name('settings.invite-firm.accept');
+    Route::post('/settings/invite-firm/{invitation}/decline', [\App\Http\Controllers\Settings\InviteFirmController::class, 'declineIncoming'])
+        ->whereNumber('invitation')
+        ->name('settings.invite-firm.decline');
 
     // Dashboard (paid-only via EnsureSubscribed)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -62,6 +174,34 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/settings/company', [CompanySettingsController::class, 'edit'])->name('settings.company');
     Route::patch('/settings/company', [CompanySettingsController::class, 'update'])->name('settings.company.update');
     Route::get('/settings/plan', [SubscriptionController::class, 'planSettings'])->name('settings.plan.index');
+
+    // PDPA: right of access (data export) + right of erasure (account
+    // deletion) — both available to any authenticated user. Throttled
+    // independently from the global limiter because building the zip is
+    // CPU-heavier than a normal page render.
+    // PDPA right of access / right of erasure — both audited so we can
+    // answer "did the user actually request this?" if anyone asks later.
+    Route::middleware('log.sensitive')->group(function () {
+        Route::get('/settings/data-export', [\App\Http\Controllers\Settings\DataExportController::class, 'show'])
+            ->name('settings.data_export.show');
+        // GET + signed URL for the actual download — see the comment in
+        // DataExportController::show() for the reasoning. The `signed`
+        // middleware verifies the URL was generated by us and hasn't
+        // expired; combined with `throttle:6,60` this gives the same
+        // safety profile as a CSRF-protected POST without the brittle
+        // meta-tag plumbing.
+        Route::get('/settings/data-export/download', [\App\Http\Controllers\Settings\DataExportController::class, 'download'])
+            ->middleware(['signed', 'throttle:6,60'])
+            ->name('settings.data_export.download');
+
+        Route::get('/settings/delete-account', [\App\Http\Controllers\Settings\AccountErasureController::class, 'show'])
+            ->name('settings.account_erase.show');
+        Route::post('/settings/delete-account', [\App\Http\Controllers\Settings\AccountErasureController::class, 'request'])
+            ->middleware('throttle:5,60')
+            ->name('settings.account_erase.request');
+        Route::post('/settings/delete-account/cancel', [\App\Http\Controllers\Settings\AccountErasureController::class, 'cancel'])
+            ->name('settings.account_erase.cancel');
+    });
 
     Route::middleware(['permission:audit-logs.view', 'plan.permission:audit-logs.view'])->group(function () {
         Route::get('/settings/audit-logs', [\App\Http\Controllers\AuditLogController::class, 'index'])->name('audit-logs.index');
@@ -89,33 +229,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/settings/team/{user}', [TenantUserController::class, 'destroy'])->name('settings.team.destroy');
     });
 
-    // --- Admin: Tenant management ---
-    Route::middleware('permission:admin.tenants')->group(function () {
-        Route::get('/admin/tenants', [TenantAdminController::class, 'index'])->name('admin.tenants.index');
-
-        // Destructive tenant actions — low limit (backup/delete/impersonate)
-        Route::middleware('throttle:sensitive')->group(function () {
-            Route::get('/admin/tenants/{tenant}/backup', [TenantAdminController::class, 'backup'])->name('admin.tenants.backup');
-            Route::delete('/admin/tenants/{tenant}', [TenantAdminController::class, 'destroy'])->name('admin.tenants.destroy');
-            Route::post('/admin/tenants/impersonate/{user}', [TenantAdminController::class, 'impersonate'])->name('admin.tenants.impersonate');
-        });
-
-        // Subscription management — higher limit for normal admin workflow
-        Route::middleware('throttle:creation')->group(function () {
-            Route::put('/admin/tenants/{tenant}/subscription', [TenantAdminController::class, 'assignSubscription'])->name('admin.tenants.subscription.assign');
-            Route::post('/admin/tenants/{tenant}/subscription/extend', [TenantAdminController::class, 'extendSubscription'])->name('admin.tenants.subscription.extend');
-            Route::post('/admin/tenants/{tenant}/subscription/cancel', [TenantAdminController::class, 'cancelSubscription'])->name('admin.tenants.subscription.cancel');
-            Route::post('/admin/tenants/{tenant}/subscription/lifetime', [TenantAdminController::class, 'grantLifetimeSubscription'])->name('admin.tenants.subscription.lifetime');
-        });
-    });
-
-    // Stop impersonating can be called by an impersonated user who lacks "admin.tenants"
-    Route::post('/admin/tenants/stop-impersonating', [TenantAdminController::class, 'stopImpersonating'])
-        ->middleware('throttle:sensitive')
-        ->name('admin.tenants.stop-impersonating');
+    // Publisher-side SaaS admin (tenant management, license issue,
+    // patch broadcaster, /admin/tenants/{tenant}/practice toggle,
+    // /admin/tenants/stop-impersonating) lives in routes/saas.php.
+    // See that file for the full inventory.
 
     // --- Admin: Plan catalog ---
-    Route::middleware('permission:admin.plans')->group(function () {
+    Route::middleware(['internal.host', 'permission:admin.plans'])->group(function () {
         Route::get('/admin/plans', [AdminPlanController::class, 'index'])->name('admin.plans.index');
         Route::get('/admin/plans/create', [AdminPlanController::class, 'create'])->name('admin.plans.create');
         Route::post('/admin/plans', [AdminPlanController::class, 'store'])
@@ -203,10 +323,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // --- Credit Notes ---
-    Route::middleware('permission:credit-notes.view')->group(function () {
+    // Solo+ on the SaaS pricing page. Startup can view invoices but
+    // can't issue credit notes — `plan.permission:` enforces that.
+    Route::middleware(['permission:credit-notes.view', 'plan.permission:credit-notes.view'])->group(function () {
         Route::get('/credit-notes', [CreditNoteController::class, 'index'])->name('credit-notes.index');
     });
-    Route::middleware('permission:credit-notes.create')->group(function () {
+    Route::middleware(['permission:credit-notes.create', 'plan.permission:credit-notes.view'])->group(function () {
         Route::get('/credit-notes/create/{invoice_id}', [CreditNoteController::class, 'create'])->name('credit-notes.create');
         Route::post('/credit-notes', [CreditNoteController::class, 'store'])->name('credit-notes.store');
     });
@@ -243,7 +365,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/bills', [BillController::class, 'store'])
             ->middleware('throttle:creation')
             ->name('bills.store');
-        Route::post('/bills/upload-receipt', [BillController::class, 'uploadReceipt'])->name('bills.upload-receipt');
+        // OCR is the differentiating bullet on Solo+ — gate the receipt
+        // upload endpoint specifically (the plain bill form stays open).
+        Route::post('/bills/upload-receipt', [BillController::class, 'uploadReceipt'])
+            ->middleware('plan.permission:ocr.use')
+            ->name('bills.upload-receipt');
     });
     Route::middleware(['permission:bills.edit', 'plan.permission:bills.view'])->group(function () {
         Route::put('/bills/{id}', [BillController::class, 'update'])->name('bills.update');
@@ -352,9 +478,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // --- Payroll ---
-    // Re-uses the journal.create permission (any staff member who can post a
-    // manual journal can also record a payroll run).
-    Route::middleware(['permission:journal.create', 'plan.permission:journal.create'])->group(function () {
+    // Advertised as a Corporate-tier bullet, so gate by `payroll.run` plan
+    // permission as well as the role-based `journal.create` (a payroll run
+    // posts a manual journal under the hood, so the role still applies).
+    Route::middleware(['permission:journal.create', 'plan.permission:payroll.run'])->group(function () {
         Route::get('/payroll', [\App\Http\Controllers\PayrollController::class, 'create'])->name('payroll.create');
         Route::post('/payroll', [\App\Http\Controllers\PayrollController::class, 'store'])
             ->middleware('throttle:creation')
@@ -444,7 +571,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // --- Customer Statements (Balance Forward report) ---
-    Route::middleware('permission:customers.view')->group(function () {
+    // Growth+ on the SaaS pricing page ("Customer statements & portal").
+    // Role-wise it reuses customers.view since anyone who can see a
+    // customer can in principle see their statement — the gate that
+    // matters here is the plan one.
+    Route::middleware(['permission:customers.view', 'plan.permission:customer-statements.view'])->group(function () {
         Route::get('/customer-statements', [\App\Http\Controllers\CustomerStatementController::class, 'index'])->name('customer-statements.index');
         Route::get('/customer-statements/{customerId}', [\App\Http\Controllers\CustomerStatementController::class, 'show'])->name('customer-statements.show');
         Route::get('/customer-statements/{customerId}/preview', [\App\Http\Controllers\CustomerStatementController::class, 'previewPdf'])->name('customer-statements.preview');
@@ -455,67 +586,77 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // --- Recurring Invoices (scheduled templates) ---
-    Route::middleware('permission:recurring-invoices.view')->group(function () {
+    // Solo+ on the SaaS pricing page.
+    Route::middleware(['permission:recurring-invoices.view', 'plan.permission:recurring-invoices.view'])->group(function () {
         Route::get('/recurring-invoices', [\App\Http\Controllers\RecurringInvoiceController::class, 'index'])->name('recurring-invoices.index');
     });
-    Route::middleware('permission:recurring-invoices.create')->group(function () {
+    Route::middleware(['permission:recurring-invoices.create', 'plan.permission:recurring-invoices.view'])->group(function () {
         Route::get('/recurring-invoices/create', [\App\Http\Controllers\RecurringInvoiceController::class, 'create'])->name('recurring-invoices.create');
         Route::post('/recurring-invoices', [\App\Http\Controllers\RecurringInvoiceController::class, 'store'])
             ->middleware('throttle:creation')
             ->name('recurring-invoices.store');
     });
-    Route::middleware('permission:recurring-invoices.edit')->group(function () {
+    Route::middleware(['permission:recurring-invoices.edit', 'plan.permission:recurring-invoices.view'])->group(function () {
         Route::get('/recurring-invoices/{id}/edit', [\App\Http\Controllers\RecurringInvoiceController::class, 'edit'])->name('recurring-invoices.edit');
         Route::put('/recurring-invoices/{id}', [\App\Http\Controllers\RecurringInvoiceController::class, 'update'])->name('recurring-invoices.update');
         Route::post('/recurring-invoices/{id}/toggle', [\App\Http\Controllers\RecurringInvoiceController::class, 'toggle'])->name('recurring-invoices.toggle');
     });
-    Route::middleware('permission:recurring-invoices.run')->group(function () {
+    Route::middleware(['permission:recurring-invoices.run', 'plan.permission:recurring-invoices.view'])->group(function () {
         Route::post('/recurring-invoices/{id}/run', [\App\Http\Controllers\RecurringInvoiceController::class, 'runNow'])->name('recurring-invoices.run');
     });
-    Route::middleware('permission:recurring-invoices.delete')->group(function () {
+    Route::middleware(['permission:recurring-invoices.delete', 'plan.permission:recurring-invoices.view'])->group(function () {
         Route::delete('/recurring-invoices/{id}', [\App\Http\Controllers\RecurringInvoiceController::class, 'destroy'])->name('recurring-invoices.destroy');
     });
 
     // --- Estimates (Quotations) ---
-    Route::middleware('permission:estimates.view')->group(function () {
+    // Solo+ on the SaaS pricing page ("Email invoices & estimates").
+    Route::middleware(['permission:estimates.view', 'plan.permission:estimates.view'])->group(function () {
         Route::get('/estimates', [\App\Http\Controllers\EstimateController::class, 'index'])->name('estimates.index');
     });
-    Route::middleware('permission:estimates.create')->group(function () {
+    Route::middleware(['permission:estimates.create', 'plan.permission:estimates.view'])->group(function () {
         Route::get('/estimates/create', [\App\Http\Controllers\EstimateController::class, 'create'])->name('estimates.create');
         Route::post('/estimates', [\App\Http\Controllers\EstimateController::class, 'store'])
             ->middleware('throttle:creation')
             ->name('estimates.store');
     });
-    Route::middleware('permission:estimates.view')->group(function () {
+    Route::middleware(['permission:estimates.view', 'plan.permission:estimates.view'])->group(function () {
         Route::get('/estimates/{id}', [\App\Http\Controllers\EstimateController::class, 'show'])->name('estimates.show');
+        Route::get('/estimates/{id}/pdf', [\App\Http\Controllers\EstimateController::class, 'downloadPdf'])->name('estimates.pdf');
     });
-    Route::middleware('permission:estimates.edit')->group(function () {
+    Route::middleware(['permission:estimates.edit', 'plan.permission:estimates.view'])->group(function () {
         Route::get('/estimates/{id}/edit', [\App\Http\Controllers\EstimateController::class, 'edit'])->name('estimates.edit');
         Route::put('/estimates/{id}', [\App\Http\Controllers\EstimateController::class, 'update'])->name('estimates.update');
         Route::post('/estimates/{id}/transition', [\App\Http\Controllers\EstimateController::class, 'transition'])->name('estimates.transition');
     });
-    Route::middleware('permission:estimates.convert')->group(function () {
+    // Email is gated on its own permission AND its own plan flag so
+    // we can sell it as the "Email estimates" bullet on Solo+ without
+    // also selling estimate viewing/editing as paid features.
+    Route::middleware(['permission:estimates.email', 'plan.permission:estimates.email'])->group(function () {
+        Route::post('/estimates/{id}/email', [\App\Http\Controllers\EstimateController::class, 'email'])->name('estimates.email');
+    });
+    Route::middleware(['permission:estimates.convert', 'plan.permission:estimates.view'])->group(function () {
         Route::post('/estimates/{id}/convert', [\App\Http\Controllers\EstimateController::class, 'convert'])->name('estimates.convert');
     });
-    Route::middleware('permission:estimates.delete')->group(function () {
+    Route::middleware(['permission:estimates.delete', 'plan.permission:estimates.view'])->group(function () {
         Route::delete('/estimates/{id}', [\App\Http\Controllers\EstimateController::class, 'destroy'])->name('estimates.destroy');
     });
 
     // --- Products & Services (line-item catalogue) ---
-    Route::middleware('permission:products.view')->group(function () {
+    // Growth+ on the SaaS pricing page.
+    Route::middleware(['permission:products.view', 'plan.permission:products.view'])->group(function () {
         Route::get('/products', [\App\Http\Controllers\ProductController::class, 'index'])->name('products.index');
     });
-    Route::middleware('permission:products.create')->group(function () {
+    Route::middleware(['permission:products.create', 'plan.permission:products.view'])->group(function () {
         Route::get('/products/create', [\App\Http\Controllers\ProductController::class, 'create'])->name('products.create');
         Route::post('/products', [\App\Http\Controllers\ProductController::class, 'store'])
             ->middleware('throttle:creation')
             ->name('products.store');
     });
-    Route::middleware('permission:products.edit')->group(function () {
+    Route::middleware(['permission:products.edit', 'plan.permission:products.view'])->group(function () {
         Route::get('/products/{id}/edit', [\App\Http\Controllers\ProductController::class, 'edit'])->name('products.edit');
         Route::put('/products/{id}', [\App\Http\Controllers\ProductController::class, 'update'])->name('products.update');
     });
-    Route::middleware('permission:products.delete')->group(function () {
+    Route::middleware(['permission:products.delete', 'plan.permission:products.view'])->group(function () {
         Route::delete('/products/{id}', [\App\Http\Controllers\ProductController::class, 'destroy'])->name('products.destroy');
     });
 });

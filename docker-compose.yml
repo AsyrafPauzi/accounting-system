@@ -1,44 +1,113 @@
+# BukuCloud self-hosted stack.
+#
+# Customers run this from the unzipped release archive:
+#
+#   1. cp .env.example.self-hosted .env  (and edit values)
+#   2. docker compose up -d
+#   3. open http://localhost:8000  →  paste licence key + create admin
+#
+# Designed to work on a single VPS / on-prem box. Customers with their
+# own load balancer / object storage / managed DB can drop those
+# services and point the app at the externals via .env.
+
 services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8080:80"
+      dockerfile: docker/Dockerfile
+    image: ghcr.io/bukucloud/bukucloud:${BUKUCLOUD_VERSION:-latest}
+    restart: unless-stopped
+    env_file: .env
     environment:
-      - APP_ENV=local
-      - APP_DEBUG=true
-      - APP_URL=http://localhost:8080
-      - SESSION_SECURE_COOKIE=false
-      - DB_CONNECTION=mysql
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_DATABASE=laravel
-      - DB_USERNAME=root
-      - DB_PASSWORD=root
-      - RUN_MIGRATIONS=true
-    volumes:
-      - storage_data:/var/www/html/storage
+      # Make sure the runtime is in self-hosted mode regardless of
+      # what the customer puts in .env. They CAN override but they
+      # generally shouldn't.
+      APP_DEPLOYMENT_MODE: ${APP_DEPLOYMENT_MODE:-self_hosted}
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - app_storage:/var/www/html/storage
+      # The .env file is mounted in so the install wizard can write
+      # the licence key back into the same file the next boot reads.
+      - ./.env:/var/www/html/.env
+    networks:
+      - bukucloud
+
+  scheduler:
+    image: ghcr.io/bukucloud/bukucloud:${BUKUCLOUD_VERSION:-latest}
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["sh", "-c", "while true; do php artisan schedule:run; sleep 60; done"]
+    volumes:
+      - app_storage:/var/www/html/storage
+    networks:
+      - bukucloud
+
+  worker:
+    image: ghcr.io/bukucloud/bukucloud:${BUKUCLOUD_VERSION:-latest}
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3"]
+    volumes:
+      - app_storage:/var/www/html/storage
+    networks:
+      - bukucloud
+
+  web:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - app_storage:/var/www/html/storage:ro
+    ports:
+      - "${BUKUCLOUD_HTTP_PORT:-8000}:80"
+    networks:
+      - bukucloud
 
   db:
-    image: mysql:8.0
+    image: mariadb:11
+    restart: unless-stopped
     environment:
-      - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=laravel
-    ports:
-      - "3307:3306"
+      MARIADB_DATABASE: ${DB_DATABASE:-bukucloud}
+      MARIADB_USER: ${DB_USERNAME:-bukucloud}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-please-change-me}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-please-change-me-too}
     volumes:
       - db_data:/var/lib/mysql
+    networks:
+      - bukucloud
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
-      interval: 5s
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
       timeout: 5s
-      retries: 12
-      start_period: 30s
+      retries: 6
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - bukucloud
 
 volumes:
+  app_storage:
   db_data:
-  storage_data:
+  redis_data:
+
+networks:
+  bukucloud:

@@ -42,3 +42,27 @@ Schedule::command('subscription:expire')
     ->dailyAt('02:15')
     ->onOneServer()
     ->appendOutputTo(storage_path('logs/subscription-expire.log'));
+
+/*
+ * Daily 03:00 — trim aged operational tables (sessions, password resets,
+ * failed jobs, audit logs) and finalise scheduled account erasures whose
+ * cooling-off has elapsed. Runs after the subscription jobs so a deletion
+ * that landed on the same day as a renewal still gets the renewal logic
+ * first.
+ */
+Schedule::command('retention:purge')
+    ->dailyAt('03:00')
+    ->onOneServer()
+    ->appendOutputTo(storage_path('logs/retention-purge.log'));
+
+/*
+ * Daily 04:00 — self-hosted heartbeat. Pings the publisher with the
+ * license key + usage stats and picks up any revocations. The command
+ * itself short-circuits on SaaS deployments, so this schedule is safe
+ * to keep enabled in both shapes (one less mode-aware kernel branch
+ * to maintain).
+ */
+Schedule::command('self-hosted:heartbeat')
+    ->dailyAt('04:00')
+    ->onOneServer()
+    ->appendOutputTo(storage_path('logs/self-hosted-heartbeat.log'));

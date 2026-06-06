@@ -13,9 +13,14 @@ class ToyyibpayService
 
     public function __construct()
     {
-        $this->secretKey = config('services.toyyibpay.secret_key', env('TOYYIBPAY_SECRET_KEY'));
-        $this->categoryCode = config('services.toyyibpay.category_code', env('TOYYIBPAY_CATEGORY_CODE'));
-        $env = config('services.toyyibpay.env', env('TOYYIBPAY_ENV', 'sandbox'));
+        // Read strictly from config (which is gated to null on
+        // self-hosted installs in config/services.php). The previous
+        // version fell back to env() directly, which would have leaked
+        // a real key on a self-hosted install if someone left
+        // TOYYIBPAY_SECRET_KEY set in the env file by mistake.
+        $this->secretKey    = (string) (config('services.toyyibpay.secret_key') ?? '');
+        $this->categoryCode = (string) (config('services.toyyibpay.category_code') ?? '');
+        $env = (string) (config('services.toyyibpay.env') ?? 'sandbox');
 
         $this->baseUrl = $env === 'production'
             ? 'https://toyyibpay.com/index.php/api'

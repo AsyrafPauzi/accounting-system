@@ -18,6 +18,9 @@ const Icons = {
     DocumentCheck: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
     Exclamation: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
     Sparkles: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5zM19 11l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z" /></svg>,
+    Download: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" /></svg>,
+    Trash: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" /></svg>,
+    Shield: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
     Menu: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>,
     X: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>,
     ChevronDown: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>,
@@ -38,7 +41,7 @@ const navConfig = [
         { name: 'Recurring Invoices', route: 'recurring-invoices.index', Icon: Icons.ArrowPath, planPermission: 'recurring-invoices.view', userPermission: 'recurring-invoices.view', subtitle: 'Auto-generate drafts on a schedule' },
         { name: 'Credit Notes', route: 'credit-notes.index', Icon: Icons.ReceiptRefund, planPermission: 'credit-notes.view', userPermission: 'credit-notes.view' },
         { name: 'Customers', route: 'customers.index', Icon: Icons.Users, planPermission: 'customers.view', userPermission: 'customers.view' },
-        { name: 'Customer Statements', route: 'customer-statements.index', Icon: Icons.DocumentChart, planPermission: 'customers.view', userPermission: 'customers.view', subtitle: 'Balance forward report per customer' },
+        { name: 'Customer Statements', route: 'customer-statements.index', Icon: Icons.DocumentChart, planPermission: 'customer-statements.view', userPermission: 'customers.view', subtitle: 'Balance forward report per customer' },
         { name: 'Products & Services', route: 'products.index', Icon: Icons.Tag, planPermission: 'products.view', userPermission: 'products.view', subtitle: 'Reusable invoice line items' },
     ]},
     { group: 'Purchases (Expenses)', links: [
@@ -51,7 +54,7 @@ const navConfig = [
         { name: 'Chart of Accounts', route: 'chart-of-accounts.index', Icon: Icons.Folder, planPermission: 'accounts.view', userPermission: 'accounts.view', subtitle: 'Accounts used in postings and reports' },
         { name: 'General Ledger', route: 'general-ledger.index', Icon: Icons.BookOpen, planPermission: 'general-ledger.view', userPermission: 'general-ledger.view', subtitle: 'By journal entry' },
         { name: 'Manual Journal Entry', route: 'journal.index', Icon: Icons.Scale, planPermission: 'journal.create', userPermission: 'journal.view', subtitle: 'Post custom journal entries' },
-        { name: 'Payroll', route: 'payroll.create', Icon: Icons.Users, planPermission: 'journal.create', userPermission: 'journal.create', subtitle: 'Record monthly salaries & statutory' },
+        { name: 'Payroll', route: 'payroll.create', Icon: Icons.Users, planPermission: 'payroll.run', userPermission: 'journal.create', subtitle: 'Record monthly salaries & statutory' },
         { name: 'Trial Balance', route: 'trial-balance.index', Icon: Icons.Scale, planPermission: 'general-ledger.view', userPermission: 'general-ledger.view', subtitle: 'Verify account balances' },
     ]},
     { group: 'Reports', links: [
@@ -80,6 +83,12 @@ export default function Authenticated({ user: propUser, header, children }) {
     const teamPermissions = auth?.teamPermissions ?? { view: false, create: false, edit: false, delete: false };
     const isAdmin = user?.role_name === 'super-admin';
     const isImpersonating = Boolean(auth?.impersonator_id);
+    const practice = page.props.practice;
+    const isFirmActingOnClient = Boolean(practice?.is_inside_client);
+    // Deployment mode is shared via Inertia's `share()`; default to
+    // 'saas' so missing prop = SaaS behaviour (least surprising).
+    const deploymentMode = page.props.deployment_mode ?? 'saas';
+    const isSelfHosted = deploymentMode === 'self_hosted';
     const planPermissions = auth?.planPermissions ?? {};
     const permissions = auth?.permissions ?? [];
 
@@ -199,7 +208,10 @@ export default function Authenticated({ user: propUser, header, children }) {
                 </div>
 
                 <nav className="flex-1 py-5 overflow-y-auto px-3 bg-surface">
-                    {!hasActiveSubscription && !isAdmin && (
+                    {/* SME plan nag — only for tenant users on free, never for
+                        firm users (they have their own practice plan badge
+                        below) and never for super-admins or self-hosted. */}
+                    {!hasActiveSubscription && !isAdmin && !isSelfHosted && !practice && (
                         <div className="mb-4 mx-1 px-3 py-2 rounded-xl bg-mustard/15 border border-mustard/40 text-ink text-[11px] font-medium flex items-center justify-between">
                             <span>You&apos;re on the Free tier.</span>
                             <Link
@@ -208,6 +220,34 @@ export default function Authenticated({ user: propUser, header, children }) {
                             >
                                 Upgrade
                             </Link>
+                        </div>
+                    )}
+
+                    {/* Firm-side plan badge. Shows the firm's *own* practice
+                        plan (Practice Free / Starter / Growth / Firm), not the
+                        tenant's. The Upgrade link lands on /practice/plan, the
+                        firm-specific billing page. */}
+                    {practice?.subscription && !isAdmin && (
+                        <div className={`mb-4 mx-1 px-3 py-2 rounded-xl text-[11px] font-medium flex items-center justify-between ${
+                            practice.subscription.is_free
+                                ? 'bg-mustard/15 border border-mustard/40 text-ink'
+                                : 'bg-forest/10 border border-forest/30 text-ink'
+                        }`}>
+                            <span>
+                                {practice.subscription.is_free ? "You're on " : 'Plan: '}
+                                <strong>{practice.subscription.plan_name}</strong>
+                            </span>
+                            {/* Upgrade is a SaaS-only flow — self-hosted
+                                Enterprise customers expand caps by getting
+                                a re-issued license, not via /practice/plan. */}
+                            {practice.subscription.is_free && !isSelfHosted && (
+                                <Link
+                                    href={getSafeRoute('practice.plan')}
+                                    className="ml-2 text-eyebrow font-semibold uppercase text-terracotta hover:text-terracotta-dark dark:hover:text-terracotta-light underline-offset-2 hover:underline"
+                                >
+                                    Upgrade
+                                </Link>
+                            )}
                         </div>
                     )}
                     {navConfig.map((section, idx) => {
@@ -285,11 +325,13 @@ export default function Authenticated({ user: propUser, header, children }) {
                                 {[
                                     { name: 'Tenants', route: 'admin.tenants.index', Icon: Icons.BuildingOffice },
                                     { name: 'Plan Catalog', route: 'admin.plans.index', Icon: Icons.Sparkles },
+                                    { name: 'Self-hosted Installs', route: 'admin.self-hosted.index', Icon: Icons.BuildingOffice, saasOnly: true },
+                                    { name: 'Patch Broadcaster', route: 'admin.platform.show', Icon: Icons.ArrowPath, saasOnly: true },
                                     { name: 'Platform Users', route: 'admin.users.index', Icon: Icons.Users },
                                     { name: 'Audit Log', route: 'admin.audit-logs.index', Icon: Icons.Audit },
                                     { name: 'Receipt OCR', route: 'admin.ocr.edit', Icon: Icons.Scan },
                                     { name: 'Branding', route: 'admin.branding.edit', Icon: Icons.Sparkles },
-                                ].map((link) => {
+                                ].filter((link) => !link.saasOnly || !isSelfHosted).map((link) => {
                                     const active = isRouteActive(link.route);
                                     return (
                                         <Link
@@ -330,6 +372,20 @@ export default function Authenticated({ user: propUser, header, children }) {
                                     </span>
                                     <span className="flex-1">Company settings</span>
                                 </Link>
+                                {/* Tenant admins can hand the books to a firm here. Hidden when
+                                    the user is themselves a firm/accountant user — they're the
+                                    party who would receive such an invite, not send one. */}
+                                {!practice && (
+                                    <Link
+                                        href={getSafeRoute('settings.invite-firm.show')}
+                                        className={linkClasses(isRouteActive('settings.invite-firm.show'), false)}
+                                    >
+                                        <span className={iconWrapClasses(isRouteActive('settings.invite-firm.show'))}>
+                                            <Icons.Users />
+                                        </span>
+                                        <span className="flex-1">Invite my accountant</span>
+                                    </Link>
+                                )}
                                 {hasPermission('audit.view') && planPermissions['audit-logs.view'] && (
                                     <Link
                                         href={getSafeRoute('audit.index')}
@@ -365,7 +421,13 @@ export default function Authenticated({ user: propUser, header, children }) {
                                         <span className="flex-1">Audit Logs</span>
                                     </Link>
                                 )}
-                                {(user.role_name === 'admin' || user.role_name === 'super-admin') && (
+                                {/* Plan & Usage:
+                                      - SaaS: tenant admins only (subscription dashboard).
+                                      - Self-hosted: also surface to firm-owners — on
+                                        Enterprise installs the firm-owner is effectively
+                                        the operator, and they need to see license
+                                        expiry / heartbeat / renewal contact. */}
+                                {(user.role_name === 'admin' || user.role_name === 'super-admin' || (isSelfHosted && user.role_name === 'firm-owner')) && (
                                     <Link
                                         href={getSafeRoute('settings.plan.index')}
                                         className={linkClasses(isRouteActive('settings.plan.index'), false)}
@@ -373,9 +435,15 @@ export default function Authenticated({ user: propUser, header, children }) {
                                         <span className={iconWrapClasses(isRouteActive('settings.plan.index'))}>
                                             <Icons.Sparkles />
                                         </span>
-                                        <span className="flex-1">Plan & Usage</span>
+                                        <span className="flex-1">{isSelfHosted ? 'License & Usage' : 'Plan & Usage'}</span>
                                     </Link>
                                 )}
+                                {/* Two-factor auth, Download my data, and Delete account
+                                    used to live here as separate sidebar items. They've moved
+                                    to the user's account page (/profile → Security & data
+                                    section) so the Company group stays focused on company-wide
+                                    things (settings, audit, team, plan) and account-level
+                                    controls live with the user's own profile. */}
                             </div>
                         </div>
                     )}
@@ -449,6 +517,54 @@ export default function Authenticated({ user: propUser, header, children }) {
                             >
                                 Return to admin
                             </Link>
+                        </div>
+                    )}
+
+                    {isFirmActingOnClient && (
+                        <div className="max-w-7xl mx-auto mb-4 px-4 py-3 rounded-xl bg-terracotta/10 border border-terracotta/30 text-ink text-sm font-medium flex items-center justify-between gap-3">
+                            <span>
+                                <span className="text-eyebrow uppercase font-semibold text-terracotta mr-2">Practice</span>
+                                Working in <strong>{practice.acting_client?.name}</strong>{' '}
+                                — every change is logged against {practice.firm?.name}.
+                            </span>
+                            <Link
+                                href={route('practice.exit')}
+                                method="post"
+                                as="button"
+                                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-cream bg-terracotta hover:bg-terracotta-dark dark:hover:bg-terracotta-light"
+                            >
+                                Back to firm
+                            </Link>
+                        </div>
+                    )}
+
+                    {/* Self-hosted update banner. Only renders when the
+                        publisher (BukuCloud) has advertised a different
+                        version than what this install is running. The
+                        banner is informational — the actual upgrade
+                        happens via `docker compose pull` outside the app. */}
+                    {page.props.self_hosted_update && (
+                        <div className="max-w-7xl mx-auto mb-4 px-4 py-3 rounded-xl bg-mustard/15 border border-mustard/40 text-ink text-sm font-medium flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <span>
+                                <span className="text-eyebrow uppercase font-semibold text-mustard-dark dark:text-mustard mr-2">Update available</span>
+                                BukuCloud <strong>{page.props.self_hosted_update.available_version}</strong> is now released.
+                                You're running <strong>{page.props.self_hosted_update.current_version}</strong>.
+                                {page.props.self_hosted_update.notes && (
+                                    <span className="block text-xs text-ink-muted mt-1 whitespace-pre-line">
+                                        {page.props.self_hosted_update.notes}
+                                    </span>
+                                )}
+                            </span>
+                            {page.props.self_hosted_update.url && (
+                                <a
+                                    href={page.props.self_hosted_update.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-ink bg-mustard/40 hover:bg-mustard/60 shrink-0"
+                                >
+                                    View release notes
+                                </a>
+                            )}
                         </div>
                     )}
 

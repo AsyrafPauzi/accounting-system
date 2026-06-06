@@ -28,6 +28,23 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        // Defence-in-depth for firm (Practice) users:
+        //   - If they're "acting into" a client (acting_tenant_id is
+        //     set AND tenancy initialised), let them see the SME
+        //     dashboard for that client. This is the whole point of
+        //     the client switcher.
+        //   - If they're NOT acting on a client, they have no tenant
+        //     DB, so the queries below would fall back to the central
+        //     connection and 500. Bounce them to the Practice console.
+        $user = auth()->user();
+        if ($user && method_exists($user, 'isFirmUser') && $user->isFirmUser()) {
+            $actingOnClient = (bool) session('acting_tenant_id');
+            $tenancyReady = function_exists('tenancy') && tenancy()->initialized;
+            if (! $actingOnClient || ! $tenancyReady) {
+                return redirect()->route('practice.dashboard');
+            }
+        }
+
         $today = Carbon::today();
         $startOfMonth = $today->copy()->startOfMonth();
         $endOfMonth = $today->copy()->endOfMonth();

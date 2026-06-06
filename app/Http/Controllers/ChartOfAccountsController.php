@@ -64,6 +64,20 @@ class ChartOfAccountsController extends Controller
         $validated['display_order'] = isset($validated['display_order']) && $validated['display_order'] !== '' ? (int) $validated['display_order'] : null;
         $validated['is_active'] = $request->boolean('is_active', true);
 
+        // Startup (Free) plan is capped at a single bank account. Other
+        // CoA rows (income, expense, equity, etc.) are unaffected, only
+        // sub_type === 'bank'. seedDefault() is exempt because it runs
+        // once at company-creation time and ships exactly one bank row.
+        if (
+            ($validated['sub_type'] ?? null) === 'bank'
+            && \App\Support\PlanCap::bankAccountCapHit()
+        ) {
+            return redirect()->route('chart-of-accounts.index')->with(
+                'error',
+                'Your plan only allows '.\App\Support\PlanCap::STARTUP_BANK_ACCOUNT_CAP.' bank account. Upgrade to Solo or higher for additional bank accounts.'
+            );
+        }
+
         Account::create($validated);
 
         return redirect()->route('chart-of-accounts.index')

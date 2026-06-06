@@ -28,6 +28,39 @@ class AppServiceProvider extends ServiceProvider
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
 
+        // Practice / Accountant track: firm users get tenant-level
+        // permissions (invoices.create, bills.delete, customers.edit,
+        // etc.) only while they're "acting into" a client tenant —
+        // i.e. their session has a valid `acting_tenant_id` and the
+        // FirmClient pivot is still active (re-checked by
+        // InitializeTenancyByLoggedInUser on every request).
+        //
+        // Two safety constraints:
+        //   1. We require `practice.access` on the firm user, so a
+        //      revoked staff member loses tenant-write rights even if
+        //      a stale session still has the acting id.
+        //   2. We refuse to grant `admin.*` permissions through this
+        //      path — those are central super-admin rights, never
+        //      tenant-scoped, so we leave them to Spatie's normal
+        //      role/permission resolution.
+        \Illuminate\Support\Facades\Gate::before(function ($user, string $ability) {
+            if (! $user || ! method_exists($user, 'isFirmUser') || ! $user->isFirmUser()) {
+                return null;
+            }
+            if (! $user->can('practice.access')) {
+                return null;
+            }
+            if (str_starts_with($ability, 'admin.') || str_starts_with($ability, 'practice.')) {
+                return null;
+            }
+            // Only when actually acting on a client (tenancy
+            // initialised by InitializeTenancyByLoggedInUser).
+            if (! function_exists('tenancy') || ! tenancy()->initialized) {
+                return null;
+            }
+            return true;
+        });
+
         \Illuminate\Database\Eloquent\Model::shouldBeStrict(!$this->app->environment('production'));
 
         \Illuminate\Validation\Rules\Password::defaults(function () {

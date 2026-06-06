@@ -18,9 +18,17 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = $request->user();
+
         return Inertia::render('Profile/Edit', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => session('status'),
+            // Surface the security/data-rights state so the cards on
+            // the profile page can show the right status pill without
+            // a second round-trip to /settings/2fa or /settings/data-export.
+            'security' => [
+                'two_factor_enabled' => (bool) $user?->two_factor_confirmed_at,
+            ],
         ]);
     }
 

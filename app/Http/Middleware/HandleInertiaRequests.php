@@ -47,7 +47,24 @@ class HandleInertiaRequests extends Middleware
         // called Tenant::find twice on every page load (once for auth /
         // subscription props, once for app_name). Memoising via $tenant
         // halves that DB cost.
-        $tenant = ($user && $user->tenant_id) ? Tenant::find($user->tenant_id) : null;
+        //
+        // Two slightly different shapes here:
+        //   - SME tenant users: $tenant comes from $user->tenant_id
+        //   - Firm users acting on a client: $tenant comes from
+        //     `acting_tenant_id` in session. We still want plan
+        //     permissions / branding / app name to reflect the *client*
+        //     they're inside, not the firm.
+        $tenant = null;
+        if ($user) {
+            if ($user->isFirmUser()) {
+                $actingTenantId = $request->session()->get('acting_tenant_id');
+                if ($actingTenantId) {
+                    $tenant = Tenant::find($actingTenantId);
+                }
+            } elseif ($user->tenant_id) {
+                $tenant = Tenant::find($user->tenant_id);
+            }
+        }
 
         return [
             ...parent::share($request),
@@ -62,15 +79,40 @@ class HandleInertiaRequests extends Middleware
                 ],
                 // Lazy: not every page calls hasPermission() and Inertia
                 // partial reloads can skip resolving permissions entirely.
-                'permissions' => fn () => $user
-                    ? $user->getAllPermissions()->pluck('name')->toArray()
-                    : [],
-                'hasActiveSubscription' => fn () => $tenant ? $tenant->hasActiveSubscription() : false,
+                //
+                // For firm users acting on a client, mirror the
+                // `Gate::before` projection in AppServiceProvider —
+                // they effectively hold every tenant-level permission
+                // (everything except `admin.*` and `practice.*`) once
+                // their FirmClient pivot has been resolved by
+                // InitializeTenancyByLoggedInUser. The sidebar reads
+                // this array directly, so without the projection menu
+                // items would hide even though the route handlers
+                // themselves accept the request.
+                'permissions' => fn () => $this->projectedPermissions($user),
+                // Self-hosted has no subscription concept — the customer
+                // bought a license, the running app *is* the entitlement.
+                // Returning true short-circuits the subscription nags &
+                // paid-only link gating on the SME-side UI.
+                'hasActiveSubscription' => fn () => \App\Support\Deployment::isSelfHosted()
+                    ? true
+                    : ($tenant ? $tenant->hasActiveSubscription() : false),
                 'subscription_ends_at' => function () use ($tenant) {
+                    if (\App\Support\Deployment::isSelfHosted()) return null;
                     $subscription = $tenant?->activeSubscription();
                     return $subscription?->current_period_ends_at;
                 },
                 'planPermissions' => function () use ($tenant) {
+                    // Self-hosted unlocks every feature — license tier
+                    // gating happens at the LicenseService layer, not
+                    // via the Plan permissions table. Returning every
+                    // perm as true is the simplest universal grant.
+                    if (\App\Support\Deployment::isSelfHosted()) {
+                        return \App\Models\Permission::query()
+                            ->pluck('name')
+                            ->mapWithKeys(fn ($n) => [$n => true])
+                            ->toArray();
+                    }
                     if (! $tenant) return [];
                     $subscription = $tenant->activeSubscription();
                     if (! $subscription || ! $subscription->plan) return [];
@@ -83,6 +125,11 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error'   => fn () => $request->session()->get('error'),
                 'info'    => fn () => $request->session()->get('info'),
+                // One-shot license payload from /admin/self-hosted issue.
+                // We never persist the signed key in the DB, so this is
+                // the only place the operator sees it. Strict per-request
+                // — Laravel's flash machinery clears it on the next req.
+                'issued_license' => fn () => $request->session()->get('issued_license'),
             ],
             'product_name' => config('app.product_name'),
             'product_tagline' => config('app.product_tagline'),
@@ -94,6 +141,89 @@ class HandleInertiaRequests extends Middleware
             ],
             'theme' => fn () => $user?->theme_preference ?? 'light',
             'deployment_mode' => config('deployment.mode', 'saas'),
+            // Self-hosted update notification. Populated only when:
+            //   1. We're running in self_hosted mode
+            //   2. The publisher's heartbeat response has advertised a
+            //      version string different from our current one
+            // SaaS instances always get null — they're managed.
+            'self_hosted_update' => function () {
+                if (! \App\Support\Deployment::isSelfHosted()) {
+                    return null;
+                }
+                $advertised = \App\Models\PlatformSetting::get('latest_available_version');
+                if (! $advertised) {
+                    return null;
+                }
+                $current = (string) config('app.version', 'unknown');
+                if ($advertised === $current) {
+                    return null;
+                }
+                return [
+                    'current_version'     => $current,
+                    'available_version'   => $advertised,
+                    'notes'               => \App\Models\PlatformSetting::get('latest_update_notes'),
+                    'url'                 => \App\Models\PlatformSetting::get('latest_update_url'),
+                ];
+            },
+            // Practice / Accountant track context — only populated for
+            // firm users; null for normal SME tenant users so the
+            // front-end can do `practice && <Banner />` cleanly.
+            'practice' => function () use ($user, $request, $tenant) {
+                if (! $user || ! $user->isFirmUser()) {
+                    return null;
+                }
+                $firm = $user->firm;
+                $actingTenantId = $request->session()->get('acting_tenant_id');
+                // Firm subscription info — drives the sidebar plan
+                // badge ("Practice Starter" / "Practice Free") and the
+                // "Upgrade" link target for firm users. Without this,
+                // the SME-side "Free tier" nag mis-fires because firm
+                // users have no tenant subscription by design.
+                // Self-hosted installs don't model SaaS Practice plans —
+                // entitlement comes from the license, not from a
+                // Subscription row. Skip the (always-null) DB query so
+                // every page render shaves one trip.
+                $firmSub = null;
+                if ($firm && \App\Support\Deployment::isSaas()) {
+                    $firmSub = \App\Models\Subscription::query()
+                        ->where('firm_id', $firm->id)
+                        ->whereNull('tenant_id')
+                        ->with('plan')
+                        ->latest('id')
+                        ->first();
+                }
+                return [
+                    'firm' => $firm ? [
+                        'id'   => $firm->id,
+                        'name' => $firm->name,
+                        'role' => $user->firm_role,
+                    ] : null,
+                    'is_inside_client' => (bool) $actingTenantId,
+                    'acting_client'    => $actingTenantId && $tenant ? [
+                        'tenant_id' => $tenant->id,
+                        'name'      => $tenant->display_name ?: ($tenant->legal_name ?: $tenant->id),
+                    ] : null,
+                    'subscription' => $firmSub ? [
+                        'plan_name' => $firmSub->plan?->name ?? 'Practice',
+                        'plan_slug' => $firmSub->plan?->slug,
+                        'is_free'   => $firmSub->plan?->slug === 'practice-free',
+                        'is_active' => $firmSub->isActive(),
+                    ] : null,
+                ];
+            },
+            // SME-side: how many firm-initiated invites are pending for
+            // this tenant. We expose just the count so layouts can flag
+            // the Settings menu without leaking firm names everywhere.
+            'pending_firm_invites_count' => function () use ($user, $tenant) {
+                if (! $user || ! $tenant || $user->isFirmUser()) {
+                    return 0;
+                }
+                return \App\Models\FirmInvitation::query()
+                    ->where('tenant_id', $tenant->id)
+                    ->where('direction', \App\Models\FirmInvitation::DIRECTION_FIRM_TO_CLIENT)
+                    ->where('status', \App\Models\FirmInvitation::STATUS_PENDING)
+                    ->count();
+            },
             'app_name' => function () use ($tenant) {
                 if ($tenant && $tenant->company) {
                     return $tenant->company['display_name']
@@ -133,5 +263,53 @@ class HandleInertiaRequests extends Middleware
         $contents = file_get_contents($path);
         $data = json_decode($contents, true);
         return is_array($data) ? $data : [];
+    }
+
+    /**
+     * Project the user's effective permission set, taking into account
+     * the firm-user "act as client" path.
+     *
+     * Server-side authorisation lives in `Gate::before` (see
+     * AppServiceProvider): firm users with `practice.access`, currently
+     * acting on a client tenant (tenancy initialised), are granted
+     * every ability except `admin.*` and `practice.*`. The frontend
+     * sidebar / button gates read `auth.permissions` as a flat array,
+     * so without this mirror the menu items would hide even though
+     * the routes themselves accept the request.
+     *
+     * Permission filtering by FirmClient permission_level (admin /
+     * editor / viewer) is intentionally NOT done here — that's a
+     * server-side concern handled by Gate::before today, and adding a
+     * second filter here would diverge from the source of truth. If
+     * we tighten Gate::before later, this projection automatically
+     * follows.
+     */
+    protected function projectedPermissions($user): array
+    {
+        if (! $user) {
+            return [];
+        }
+
+        $own = $user->getAllPermissions()->pluck('name')->toArray();
+
+        if (! method_exists($user, 'isFirmUser') || ! $user->isFirmUser()) {
+            return $own;
+        }
+
+        // Mirror Gate::before short-circuits: must hold practice.access
+        // and tenancy must actually be initialised (i.e. the firm-user
+        // is currently *inside* a client tenant).
+        $hasAccess = in_array('practice.access', $own, true);
+        $tenancyOn = function_exists('tenancy') && tenancy()->initialized;
+        if (! $hasAccess || ! $tenancyOn) {
+            return $own;
+        }
+
+        $tenantWide = \App\Models\Permission::query()
+            ->pluck('name')
+            ->reject(fn ($name) => str_starts_with($name, 'admin.') || str_starts_with($name, 'practice.'))
+            ->all();
+
+        return array_values(array_unique(array_merge($own, $tenantWide)));
     }
 }
