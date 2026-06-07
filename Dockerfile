@@ -95,7 +95,7 @@ RUN mkdir -p /var/log/supervisor && \
     chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/log/supervisor
 
 # Copy Nginx and Supervisor configurations
-COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf
+COPY docker/nginx/ecs-default.conf /etc/nginx/http.d/default.conf
 COPY docker/supervisor.conf /etc/supervisor/conf.d/supervisor.conf
 
 # Copy entrypoint script
@@ -105,5 +105,6 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 # Expose port
 EXPOSE 80
 
-# Use entrypoint script
+# Use entrypoint script, then keep the container alive via supervisor
 ENTRYPOINT ["entrypoint.sh"]
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/conf.d/supervisor.conf"]

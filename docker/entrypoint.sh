@@ -41,5 +41,11 @@ php artisan view:cache  || true
 
 echo "[entrypoint] boot complete."
 
-# Hand off to whatever the CMD / docker-compose command was.
-exec "$@"
+# docker-compose passes an explicit command (php-fpm, queue:work, …).
+# The ECS image has no CMD — start supervisor here when nothing was passed.
+if [ $# -gt 0 ]; then
+    exec "$@"
+fi
+
+echo "[entrypoint] starting supervisor…"
+exec /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisor.conf
