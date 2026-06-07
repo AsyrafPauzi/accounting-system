@@ -1,8 +1,11 @@
 # Accounter (Malaysia Edition)
 
 [![Deployment](https://img.shields.io/badge/Deployment-Guide-blue)](./DEPLOYMENT.md)
+[![Docs](https://img.shields.io/badge/Docs-Index-purple)](./docs/README.md)
 
 Multi-tenant accounting SaaS built with **Laravel 12**, **Inertia.js**, and **React**. Each company gets its own database (Stancl Tenancy). Use this guide to run the app locally and test core flows.
+
+> **Looking for sales / customer-facing docs?** Start at [`docs/README.md`](./docs/README.md). Sales playbook, pricing, self-hosted engineer runbook, and license operations are all under `docs/`.
 
 ## Requirements
 
