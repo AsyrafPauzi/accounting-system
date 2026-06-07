@@ -26,8 +26,10 @@ echo "[entrypoint] database reachable."
 
 # Run migrations + link storage + warm caches. These are all
 # idempotent so re-running on every boot is a feature, not a bug.
-php artisan migrate --force --no-interaction
-php artisan db:seed --class=RolesAndPermissionsSeeder --force
+php artisan migrate --force --no-interaction --isolated
+php artisan tenants:migrate --force --isolated
+php artisan app:sync-roles-permissions
+php artisan app:sync-plans
 php artisan storage:link || true
 
 # Cache config / routes / views. We deliberately don't `optimize`
