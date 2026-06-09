@@ -110,7 +110,85 @@ php artisan migrate:status
 - Startup: only `php artisan migrate --force --isolated` (set `RUN_MIGRATIONS` to run central only — customize entrypoint), and
 - A single one-off task per deploy for `tenants:migrate`
 
-## 4. Manual Deployment (Fallback)
+## 4. Mail (Email Sending)
+
+The app uses **Resend** (`resend.com`) as its production email transport. Resend's free tier gives 3,000 emails/month / 100/day, which covers all early-stage SaaS volume; paid tiers start at $20/month for 50k emails.
+
+### What sends mail today
+
+| Mailable | Trigger |
+|---|---|
+| Estimate emails | "Email" button on `/estimates` |
+| Firm invitation (existing client) | When a firm invites an SME tenant they already manage |
+| Email verification | New user registration |
+| Password reset | Forgot-password flow |
+
+All of those are queued via the standard Laravel mail queue, so a Resend outage delays delivery but does **not** block user requests.
+
+### One-time provider setup
+
+1. **Sign up at [resend.com](https://resend.com)** and verify your account email.
+2. **Add and verify your sending domain** (e.g. `bukucloud.com`):
+    - Resend → **Domains** → **Add Domain**.
+    - Resend will show you 3 DNS records to publish on whatever DNS host owns the domain (Cloudflare, Route 53, etc.):
+
+      | Type | Host | Value |
+      |---|---|---|
+      | TXT | `send.bukucloud.com` (or root, depending on Resend's pick) | `v=spf1 include:amazonses.com ~all` (Resend gives the exact value) |
+      | TXT | `resend._domainkey.bukucloud.com` | (long DKIM key, copy from Resend) |
+      | MX (optional but recommended) | `send.bukucloud.com` | `feedback-smtp.us-east-1.amazonses.com` priority 10 |
+
+      Plus a DMARC record on the root if you don't already have one:
+
+      | Type | Host | Value |
+      |---|---|---|
+      | TXT | `_dmarc.bukucloud.com` | `v=DMARC1; p=none; rua=mailto:dmarc-reports@bukucloud.com` |
+
+    - Wait 5–60 minutes for DNS propagation, then click **Verify** in the Resend dashboard.
+
+3. **Generate an API key** at [resend.com/api-keys](https://resend.com/api-keys). Pick **Sending access** scope (not the broader admin scope).
+
+4. **Add to ECS task definition environment variables**:
+
+    ```
+    MAIL_MAILER=resend
+    RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxx
+    MAIL_FROM_ADDRESS=no-reply@bukucloud.com
+    MAIL_FROM_NAME=BukuCloud
+    ```
+
+    `MAIL_FROM_ADDRESS` must be on the verified domain or Resend will reject the send.
+
+5. **Redeploy.** New ECS tasks will pick up the env vars on boot.
+
+### Smoke test after switching
+
+```bash
+php artisan tinker
+>>> Mail::raw('Resend smoke test', fn ($m) => $m->to('you@yourdomain.com')->subject('Test'));
+```
+
+Within ~30 seconds the email should arrive. If it doesn't:
+
+- Check `storage/logs/laravel.log` for `Symfony\Component\Mailer\Exception\TransportException` — usually means the API key is wrong or the from-address domain isn't verified.
+- Check the Resend dashboard → **Logs** for delivery status. Bounces, deferred, and delivered are all logged with full SMTP transcripts.
+
+### Switching to a different provider later
+
+Every transport listed in `config/mail.php` (`ses`, `postmark`, `smtp`, `log`) is already wired. Switching is a `.env` change plus the relevant credentials — no code changes:
+
+| Switch to | Set | Plus credentials |
+|---|---|---|
+| AWS SES | `MAIL_MAILER=ses` | Requires `composer require aws/aws-sdk-php` and `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_DEFAULT_REGION` |
+| Postmark | `MAIL_MAILER=postmark` | `POSTMARK_API_KEY` |
+| Generic SMTP (Brevo, Mailjet, etc.) | `MAIL_MAILER=smtp` | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_ENCRYPTION` |
+| Local dev / silent | `MAIL_MAILER=log` | Nothing — emails go to `storage/logs/laravel.log` |
+
+### Self-hosted instances
+
+Self-hosted defaults to `MAIL_MAILER=log` (see `.env.example.self-hosted`). Each customer's IT/engineer picks their own transport during install — they typically point it at their company's existing SMTP relay. The engineer runbook covers this in the post-install configuration phase.
+
+## 5. Manual Deployment (Fallback)
 If GitHub Actions is unavailable, you can deploy manually from your local machine:
 
 1. **Login to ECR**:
@@ -133,7 +211,7 @@ If GitHub Actions is unavailable, you can deploy manually from your local machin
 
 Ensure `RUN_MIGRATIONS=true` on the service so new tasks apply migrations on boot.
 
-## 5. Troubleshooting
+## 6. Troubleshooting
 - **Logs**: View application logs in **AWS CloudWatch** under the log group associated with the ECS Task.
 - **500 after deploy on central features** (profile theme, `/admin/ocr`): usually missing central migrations — run `php artisan migrate --force` and confirm pending migrations in `migrate:status`.
 - **500 on tenant features** (bills, invoices): usually missing tenant migrations — run `php artisan tenants:migrate --force`.
