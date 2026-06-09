@@ -16,11 +16,11 @@
         "laravel/tinker": "^2.10.1",
         "league/flysystem-aws-s3-v3": "^3.0",
         "pragmarx/google2fa-laravel": "*",
+        "resend/resend-php": "*",
         "smalot/pdfparser": "^2.12",
         "spatie/laravel-permission": "^7.2",
         "stancl/tenancy": "^3.9",
         "symfony/http-client": "^8.0",
-        "symfony/mailgun-mailer": "^8.0",
         "thiagoalessio/tesseract_ocr": "^2.13",
         "tightenco/ziggy": "^2.0"
     },
