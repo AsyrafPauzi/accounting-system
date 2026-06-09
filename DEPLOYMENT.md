@@ -128,21 +128,21 @@ All of those are queued via the standard Laravel mail queue, so a Resend outage 
 ### One-time provider setup
 
 1. **Sign up at [resend.com](https://resend.com)** and verify your account email.
-2. **Add and verify your sending domain** (e.g. `bukucloud.com`):
-    - Resend → **Domains** → **Add Domain**.
-    - Resend will show you 3 DNS records to publish on whatever DNS host owns the domain (Cloudflare, Route 53, etc.):
+2. **Add and verify your sending subdomain** — `app.bukucloud.com`:
+    - Resend → **Domains** → **Add Domain** → enter `app.bukucloud.com` (NOT the apex `bukucloud.com`; the marketing site lives on the apex and this keeps app-transactional mail cleanly scoped to the app).
+    - Resend will show you 3 DNS records to publish on whatever DNS host owns `bukucloud.com` (Cloudflare, Route 53, etc.):
 
       | Type | Host | Value |
       |---|---|---|
-      | TXT | `send.bukucloud.com` (or root, depending on Resend's pick) | `v=spf1 include:amazonses.com ~all` (Resend gives the exact value) |
-      | TXT | `resend._domainkey.bukucloud.com` | (long DKIM key, copy from Resend) |
-      | MX (optional but recommended) | `send.bukucloud.com` | `feedback-smtp.us-east-1.amazonses.com` priority 10 |
+      | TXT | `send.app.bukucloud.com` | `v=spf1 include:amazonses.com ~all` (Resend gives the exact value) |
+      | TXT | `resend._domainkey.app.bukucloud.com` | (long DKIM key, copy from Resend) |
+      | MX (optional but recommended) | `send.app.bukucloud.com` | `feedback-smtp.us-east-1.amazonses.com` priority 10 |
 
-      Plus a DMARC record on the root if you don't already have one:
+      Plus a DMARC record on `app.bukucloud.com` if you don't already inherit one from the apex:
 
       | Type | Host | Value |
       |---|---|---|
-      | TXT | `_dmarc.bukucloud.com` | `v=DMARC1; p=none; rua=mailto:dmarc-reports@bukucloud.com` |
+      | TXT | `_dmarc.app.bukucloud.com` | `v=DMARC1; p=none; rua=mailto:dmarc-reports@bukucloud.com` |
 
     - Wait 5–60 minutes for DNS propagation, then click **Verify** in the Resend dashboard.
 
@@ -153,7 +153,7 @@ All of those are queued via the standard Laravel mail queue, so a Resend outage 
     ```
     MAIL_MAILER=resend
     RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxx
-    MAIL_FROM_ADDRESS=no-reply@bukucloud.com
+    MAIL_FROM_ADDRESS=no-reply@app.bukucloud.com
     MAIL_FROM_NAME=BukuCloud
     ```
 

@@ -20,7 +20,7 @@ use Throwable;
 class SendTestResendEmail extends Command
 {
     protected $signature = 'mail:test-resend
-                            {--to=acap_sum41@hotmail.com : Recipient address}
+                            {--to=asyraf.pauzi@hirix.ai : Recipient address}
                             {--from=onboarding@resend.dev : Sender address (must be on a Resend-verified domain)}';
 
     protected $description = 'Send a one-off "Hello World" test email via the Resend API.';
