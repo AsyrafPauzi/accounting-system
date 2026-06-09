@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Services\BillingHistoryService;
 use App\Services\ToyyibpayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -457,6 +458,7 @@ class SubscriptionController extends Controller
         return Inertia::render('Settings/Plan', [
             'subscription' => $subscription,
             'userCount' => $userCount,
+            'history' => app(BillingHistoryService::class)->forSubscription($subscription),
         ]);
     }
 
@@ -490,6 +492,7 @@ class SubscriptionController extends Controller
                 'id'   => $firm->id,
                 'name' => $firm->name,
             ],
+            'history' => app(BillingHistoryService::class)->forSubscription($sub),
             'subscription' => $sub ? [
                 'plan_name'              => $plan?->name ?? 'Practice',
                 'plan_slug'              => $plan?->slug,

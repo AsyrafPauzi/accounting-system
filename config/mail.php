@@ -115,4 +115,20 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Mail Logo URL
+    |--------------------------------------------------------------------------
+    |
+    | Absolute URL to the logo image rendered in the mail header
+    | (resources/views/vendor/mail/html/header.blade.php). When unset we
+    | fall back to asset('images/bukucloud-logo.png'), which respects
+    | APP_URL. Set MAIL_LOGO_URL explicitly when APP_URL is not publicly
+    | reachable (e.g. local development sending real emails via Resend
+    | to an external inbox — point this at https://app.bukucloud.com/...).
+    |
+    */
+
+    'logo_url' => env('MAIL_LOGO_URL'),
+
 ];

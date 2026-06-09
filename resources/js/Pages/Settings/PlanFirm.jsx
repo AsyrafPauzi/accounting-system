@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
+import BillingHistory from '@/Components/BillingHistory';
 
 const formatDate = (iso) => {
     if (!iso) return null;
@@ -27,7 +28,7 @@ const formatRM = (raw) => {
  * plan picker lives — separating "see what I have" from "switch to
  * something else" keeps the cognitive load on this page lower.
  */
-export default function PlanFirm({ auth, firm, subscription, usage }) {
+export default function PlanFirm({ auth, firm, subscription, usage, history = [] }) {
     const plan = subscription;
 
     const clientCap = usage.client_cap;
@@ -287,6 +288,8 @@ export default function PlanFirm({ auth, firm, subscription, usage }) {
                         </p>
                     </div>
                 )}
+
+                <BillingHistory events={history} />
             </div>
         </AuthenticatedLayout>
     );

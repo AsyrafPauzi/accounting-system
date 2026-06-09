@@ -35,7 +35,10 @@ use Illuminate\Support\Facades\Route;
 |   - everything else
 */
 
-Route::middleware(['auth', 'verified'])->group(function () {
+// SaaS-only surfaces are auth-gated but no longer hard-blocked on
+// email verification — see the rationale on the equivalent group in
+// routes/web.php. The reminder modal handles the verification nag.
+Route::middleware(['auth'])->group(function () {
     // ── Tenant SaaS billing ───────────────────────────────────────────
     // SubscriptionController endpoints. Self-hosted customers use the
     // license-driven /settings/plan page instead — no checkout, no

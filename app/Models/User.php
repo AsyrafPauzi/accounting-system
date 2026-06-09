@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Stancl\Tenancy\Database\Concerns\CentralConnection;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, CentralConnection, HasRoles, Auditable;
@@ -46,6 +47,8 @@ class User extends Authenticatable
         'privacy_accepted_version',
         'data_exported_at',
         'deletion_requested_at',
+        'welcomed_at',
+        'verify_reminder_at',
     ];
 
     /**
@@ -75,6 +78,8 @@ class User extends Authenticatable
             'privacy_accepted_at'    => 'datetime',
             'data_exported_at'       => 'datetime',
             'deletion_requested_at'  => 'datetime',
+            'welcomed_at'            => 'datetime',
+            'verify_reminder_at'     => 'datetime',
             'password'               => 'hashed',
             'is_active'              => 'boolean',
         ];

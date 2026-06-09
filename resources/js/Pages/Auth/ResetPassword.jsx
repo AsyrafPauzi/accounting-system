@@ -12,7 +12,7 @@ export default function ResetPassword({ token, email, botGuard }) {
         email: email,
         password: '',
         password_confirmation: '',
-        _hp_email: '',
+        _hp_url: '',
         _hp_ts: botGuard?.ts ?? '',
     });
 

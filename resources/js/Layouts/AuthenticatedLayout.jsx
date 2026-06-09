@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import { Link, usePage } from '@inertiajs/react';
 import MobileQuickAction from '@/Components/MobileQuickAction';
+import WelcomeModal from '@/Components/WelcomeModal';
+import VerifyEmailReminderModal from '@/Components/VerifyEmailReminderModal';
+import { shouldShowVerifyReminder } from '@/Utils/verifyReminder';
 
 const Icons = {
     ChartBar: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
@@ -95,6 +98,23 @@ export default function Authenticated({ user: propUser, header, children }) {
     const hasPermission = (p) => permissions.includes(p) || isAdmin;
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [openGroups, setOpenGroups] = useState({});
+
+    // Post-signup welcome tour. Shows on the first authenticated page
+    // load after a freshly-registered user verifies their email — i.e.
+    // when `email_verified_at` is set but `welcomed_at` is still null.
+    // Suppress while impersonating: the welcome message would say "Hi
+    // <impersonated user>" which is the wrong UX for an admin debugging.
+    const [welcomeOpen, setWelcomeOpen] = useState(
+        Boolean(user?.email_verified_at) && !user?.welcomed_at && !isImpersonating
+    );
+
+    // Verify-email reminder. Mutually exclusive with the welcome modal:
+    // welcome only shows AFTER verification, this only shows BEFORE.
+    // Cadence (>=2 days since last skip) is computed in the shared util
+    // so the same gate is reusable in PracticeLayout.
+    const [verifyReminderOpen, setVerifyReminderOpen] = useState(
+        shouldShowVerifyReminder(user, isImpersonating)
+    );
 
     const toggleGroup = (groupName) => {
         setOpenGroups(prev => ({
@@ -640,6 +660,17 @@ export default function Authenticated({ user: propUser, header, children }) {
                     </button>
                 </nav>
             </div>
+
+            <WelcomeModal
+                show={welcomeOpen}
+                isFirm={Boolean(user?.firm_id)}
+                onClose={() => setWelcomeOpen(false)}
+            />
+
+            <VerifyEmailReminderModal
+                show={verifyReminderOpen}
+                onClose={() => setVerifyReminderOpen(false)}
+            />
         </div>
     );
 }

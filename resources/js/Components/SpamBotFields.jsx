@@ -7,8 +7,13 @@ import { useEffect } from 'react';
  *
  * Pairs with App\Http\Middleware\SpamBotGuard on the backend:
  *
- *  - `_hp_email`  honeypot. Visually hidden, but real (so headless bots
- *                 that enumerate inputs will fill it).
+ *  - `_hp_url`    honeypot. Visually hidden, but real (so headless bots
+ *                 that enumerate inputs will fill it). Field name uses
+ *                 "url" not "email"/"name"/"address" because Chrome's
+ *                 autofill heuristic aggressively fills any input named
+ *                 *email* with the user's saved address even with
+ *                 `autocomplete="off"` set. URL-named fields aren't
+ *                 autofilled, which keeps the signal clean.
  *  - `_hp_ts`     encrypted render timestamp. The middleware requires
  *                 ≥800 ms between this token's mint time and POST receipt.
  *
@@ -32,7 +37,9 @@ export default function SpamBotFields({ data, setData, botGuard }) {
         <>
             {/* Honeypot. Off-screen via CSS rather than `display:none` —
                 some bots skip display:none inputs. tabIndex={-1} and
-                aria-hidden keep it out of accessible navigation. */}
+                aria-hidden keep it out of accessible navigation. The
+                generic name "Leave blank" gives screen readers a clue
+                while not being a meaningful autofill target. */}
             <div
                 aria-hidden="true"
                 style={{
@@ -44,15 +51,15 @@ export default function SpamBotFields({ data, setData, botGuard }) {
                     overflow: 'hidden',
                 }}
             >
-                <label htmlFor="_hp_email">Leave this field empty</label>
+                <label htmlFor="_hp_url">Leave this field empty</label>
                 <input
-                    id="_hp_email"
+                    id="_hp_url"
                     type="text"
-                    name="_hp_email"
+                    name="_hp_url"
                     tabIndex={-1}
                     autoComplete="off"
-                    value={data?._hp_email ?? ''}
-                    onChange={(e) => setData?.('_hp_email', e.target.value)}
+                    value={data?._hp_url ?? ''}
+                    onChange={(e) => setData?.('_hp_url', e.target.value)}
                 />
             </div>
 

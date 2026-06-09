@@ -15,7 +15,7 @@ export default function Register({ botGuard, privacyVersion }) {
         password_confirmation: '',
         accept_privacy: false,
         privacy_version: privacyVersion ?? '',
-        _hp_email: '',
+        _hp_url: '',
         _hp_ts: botGuard?.ts ?? '',
     });
 

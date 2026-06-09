@@ -25,7 +25,7 @@ export default function RegisterPractice({ botGuard, privacyVersion }) {
         password_confirmation: '',
         accept_privacy: false,
         privacy_version: privacyVersion ?? '',
-        _hp_email: '',
+        _hp_url: '',
         _hp_ts: botGuard?.ts ?? '',
     });
 
@@ -71,7 +71,7 @@ export default function RegisterPractice({ botGuard, privacyVersion }) {
             </div>
 
             <form onSubmit={submit} className="space-y-5">
-                <SpamBotFields data={data} setData={setData} />
+                <SpamBotFields data={data} setData={setData} botGuard={botGuard} />
 
                 <div>
                     <InputLabel htmlFor="firm_name" value="Firm name" />

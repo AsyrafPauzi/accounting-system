@@ -108,6 +108,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'two_factor_recovery_codes',
             'token',
             '_hp_email',
+            '_hp_url',
             '_hp_ts',
             'authorize_extra_seat_charge',
         ]);

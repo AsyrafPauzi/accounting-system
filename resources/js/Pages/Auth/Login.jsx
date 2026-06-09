@@ -13,7 +13,7 @@ export default function Login({ status, canResetPassword, botGuard }) {
         email: '',
         password: '',
         remember: false,
-        _hp_email: '',
+        _hp_url: '',
         _hp_ts: botGuard?.ts ?? '',
     });
 

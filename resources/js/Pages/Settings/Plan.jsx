@@ -1,7 +1,8 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
+import BillingHistory from '@/Components/BillingHistory';
 
-export default function PlanSettings({ auth, subscription, userCount }) {
+export default function PlanSettings({ auth, subscription, userCount, history = [] }) {
     const plan = subscription?.plan;
     const isCorporate = plan?.slug === 'corporate';
     // Real seat count = included + paid extras. Without this the progress bar
@@ -195,6 +196,8 @@ export default function PlanSettings({ auth, subscription, userCount }) {
                         </ul>
                     </div>
                 </div>
+
+                <BillingHistory events={history} />
             </div>
         </AuthenticatedLayout>
     );

@@ -30,8 +30,19 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class SpamBotGuard
 {
-    /** Hidden input name. Must match resources/js/Components/SpamBotFields.jsx. */
-    public const HONEYPOT_FIELD = '_hp_email';
+    /**
+     * Hidden input name. Must match resources/js/Components/SpamBotFields.jsx.
+     *
+     * Deliberately named `_hp_url` (not `_hp_email`): Chrome's autofill
+     * heuristic aggressively fills any text input whose name contains
+     * "email" with the user's saved address — even with `autocomplete="off"`
+     * and `aria-hidden="true"` on the parent. That fired our honeypot
+     * for legitimate users on the firm-signup form (the SME form happened
+     * to escape because Chrome had already autofilled their email visibly
+     * on the first text input by the time it reached the hidden one).
+     * URL-shaped names don't trigger autofill at all.
+     */
+    public const HONEYPOT_FIELD = '_hp_url';
 
     /** Encrypted form-render timestamp field. */
     public const TIMESTAMP_FIELD = '_hp_ts';
@@ -61,9 +72,14 @@ class SpamBotGuard
         }
 
         // 1) HONEYPOT — any value in the hidden field is a bot.
+        // Log a 32-char preview of the value so we can later
+        // distinguish "autofill artefact" (looks like an email/URL) from
+        // "real bot" (random gibberish or links) in production logs.
         $honeypot = $request->input(self::HONEYPOT_FIELD);
         if ($honeypot !== null && $honeypot !== '') {
-            $this->logTrip($request, 'honeypot');
+            $this->logTrip($request, 'honeypot', [
+                'value_preview' => mb_substr((string) $honeypot, 0, 32),
+            ]);
             return $this->reject();
         }
 

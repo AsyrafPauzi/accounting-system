@@ -1,5 +1,9 @@
+import { useState } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import WelcomeModal from '@/Components/WelcomeModal';
+import VerifyEmailReminderModal from '@/Components/VerifyEmailReminderModal';
+import { shouldShowVerifyReminder } from '@/Utils/verifyReminder';
 
 /**
  * Wrapper for the Practice console (firm-side). Deliberately *not*
@@ -15,7 +19,18 @@ import ApplicationLogo from '@/Components/ApplicationLogo';
 export default function PracticeLayout({ children, header }) {
     const { auth, product_name: productName } = usePage().props;
     const user = auth?.user;
+    const isImpersonating = Boolean(auth?.impersonator_id);
     const displayName = productName || 'BukuCloud';
+
+    // Mirror AuthenticatedLayout's welcome-tour gate: firm-owner sees
+    // the firm-flavoured tour the first time they hit the console
+    // post-verification.
+    const [welcomeOpen, setWelcomeOpen] = useState(
+        Boolean(user?.email_verified_at) && !user?.welcomed_at && !isImpersonating
+    );
+    const [verifyReminderOpen, setVerifyReminderOpen] = useState(
+        shouldShowVerifyReminder(user, isImpersonating)
+    );
 
     return (
         <div className="min-h-screen bg-cream text-ink">
@@ -84,6 +99,17 @@ export default function PracticeLayout({ children, header }) {
                     &copy; {new Date().getFullYear()} {displayName} · Practice Console
                 </div>
             </footer>
+
+            <WelcomeModal
+                show={welcomeOpen}
+                isFirm={true}
+                onClose={() => setWelcomeOpen(false)}
+            />
+
+            <VerifyEmailReminderModal
+                show={verifyReminderOpen}
+                onClose={() => setVerifyReminderOpen(false)}
+            />
         </div>
     );
 }

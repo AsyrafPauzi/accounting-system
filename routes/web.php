@@ -71,7 +71,15 @@ Route::middleware('throttle:6,60')->group(function () {
 });
 
 // --- Dashboard, Profile & App (Auth Required) ---
-Route::middleware(['auth', 'verified'])->group(function () {
+//
+// Email verification is a soft requirement now: unverified users can
+// still use the app, but a reminder modal nags them every 2 days
+// until they verify (see resources/js/Components/VerifyEmailReminderModal.jsx
+// and `users.verify_reminder_at`). Hard-blocking on `verified` here used
+// to bounce freshly-registered users to /verify-email and stranded them
+// if email delivery was delayed — we deliberately moved that to a
+// product-level nag instead of a route-level wall.
+Route::middleware(['auth'])->group(function () {
     // Subscription pages, publisher tenant admin, license issue/revoke,
     // patch broadcaster, etc. — all SaaS-only routes are extracted to
     // routes/saas.php for visual quarantine. They're all gated by
@@ -112,7 +120,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // existing SME's email. Cap-gated by the firm's plan.
         Route::get('/clients/create', [\App\Http\Controllers\Practice\AddClientController::class, 'show'])->name('clients.create');
         Route::post('/clients/create', [\App\Http\Controllers\Practice\AddClientController::class, 'createNew'])->name('clients.create.new');
-        Route::post('/clients/invite', [\App\Http\Controllers\Practice\AddClientController::class, 'inviteExisting'])->name('clients.invite');
+        Route::post('/clients/invite', [\App\Http\Controllers\Practice\AddClientController::class, 'inviteExisting'])
+            ->middleware(\App\Http\Middleware\EnsureEmailVerifiedForOutbound::class)
+            ->name('clients.invite');
 
         // Unlink a client. Firm-owners only via the dedicated permission;
         // staff need the action escalated. Tenant data is preserved —
@@ -127,14 +137,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // because we want "firm.invite.*" naming for clarity, but it still
     // requires an authenticated firm-owner (enforced in the controller).
     //
-    // Deliberately drops the `verified` requirement: the token in the URL
-    // *is* the secret, and the inviting SME chose where to share it. A
-    // freshly-registered firm-owner whose email isn't verified yet would
-    // otherwise hit `/verify-email` instead of the AcceptInvite page,
-    // which looked to them like the link "didn't work" and silently sent
-    // them back to homepage. After accepting we redirect to
-    // `practice.dashboard`, which IS still `verified`-gated — so they
-    // still have to verify before *using* the console.
+    // The historical `withoutMiddleware('verified')` calls became no-ops
+    // when we moved verification from a route-wall to a soft reminder
+    // modal. Kept here as defence-in-depth: if a future change re-adds
+    // `verified` to the parent group, the firm-invite token flow must
+    // remain reachable to unverified users — the token in the URL is
+    // the secret, and the inviting SME chose where to share it.
     Route::get('/firm-invite/{token}', [\App\Http\Controllers\Practice\FirmInvitationController::class, 'show'])
         ->where('token', '[A-Za-z0-9]+')
         ->withoutMiddleware('verified')
@@ -143,6 +151,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->where('token', '[A-Za-z0-9]+')
         ->withoutMiddleware('verified')
         ->name('firm.invite.accept.store');
+
+    // Onboarding tour dismissal. Both "Skip" and "Get started" on the
+    // post-signup welcome modal hit this single endpoint to stamp
+    // welcomed_at = now() so the modal never shows again.
+    Route::post('/onboarding/dismiss', [\App\Http\Controllers\WelcomeTourController::class, 'dismiss'])
+        ->name('onboarding.dismiss');
+
+    // Verify-email reminder dismissal. Stamps verify_reminder_at = now()
+    // so the modal cools down for 2 days. Deliberately auth-only (not
+    // verified-gated) because the user clicking this *is* the unverified
+    // user — the whole point is to keep them moving without verifying.
+    Route::post('/onboarding/verify-reminder/dismiss', [\App\Http\Controllers\WelcomeTourController::class, 'dismissVerifyReminder'])
+        ->name('onboarding.verify-reminder.dismiss');
 
     // Tenant-side: SME admin invites a firm to take over their books.
     Route::get('/settings/invite-firm', [\App\Http\Controllers\Settings\InviteFirmController::class, 'show'])
@@ -315,7 +336,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('permission:invoices.void')->group(function () {
         Route::post('/invoices/{id}/void', [InvoiceController::class, 'voidInvoice'])->name('invoices.void');
     });
-    Route::middleware(['permission:invoices.email', 'plan.permission:invoices.email'])->group(function () {
+    Route::middleware(['permission:invoices.email', 'plan.permission:invoices.email', \App\Http\Middleware\EnsureEmailVerifiedForOutbound::class])->group(function () {
         Route::post('/invoices/{id}/email', [InvoiceController::class, 'emailPdf'])->name('invoices.email');
     });
     Route::middleware(['permission:invoices.record-payment', 'plan.permission:invoices.record-payment'])->group(function () {
@@ -581,7 +602,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/customer-statements/{customerId}/preview', [\App\Http\Controllers\CustomerStatementController::class, 'previewPdf'])->name('customer-statements.preview');
         Route::get('/customer-statements/{customerId}/pdf', [\App\Http\Controllers\CustomerStatementController::class, 'downloadPdf'])->name('customer-statements.pdf');
         Route::post('/customer-statements/{customerId}/email', [\App\Http\Controllers\CustomerStatementController::class, 'email'])
-            ->middleware('throttle:sensitive')
+            ->middleware(['throttle:sensitive', \App\Http\Middleware\EnsureEmailVerifiedForOutbound::class])
             ->name('customer-statements.email');
     });
 
@@ -631,7 +652,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Email is gated on its own permission AND its own plan flag so
     // we can sell it as the "Email estimates" bullet on Solo+ without
     // also selling estimate viewing/editing as paid features.
-    Route::middleware(['permission:estimates.email', 'plan.permission:estimates.email'])->group(function () {
+    Route::middleware(['permission:estimates.email', 'plan.permission:estimates.email', \App\Http\Middleware\EnsureEmailVerifiedForOutbound::class])->group(function () {
         Route::post('/estimates/{id}/email', [\App\Http\Controllers\EstimateController::class, 'email'])->name('estimates.email');
     });
     Route::middleware(['permission:estimates.convert', 'plan.permission:estimates.view'])->group(function () {
