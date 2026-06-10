@@ -7,7 +7,7 @@ import SpamBotFields from '@/Components/SpamBotFields';
 import TextInput from '@/Components/TextInput';
 import { Head, Link, useForm } from '@inertiajs/react';
 
-export default function Register({ botGuard, privacyVersion }) {
+export default function Register({ botGuard, privacyVersion, trialDays = 14 }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         email: '',
@@ -37,6 +37,11 @@ export default function Register({ botGuard, privacyVersion }) {
             <div className="mb-6 text-center">
                 <h1 className="font-display text-3xl lg:text-4xl font-medium text-ink tracking-tight">Create your account</h1>
                 <p className="text-ink-muted text-sm mt-2">Books made for the way you actually work.</p>
+                {trialDays > 0 && (
+                    <p className="mt-3 inline-block px-3 py-1 rounded-full bg-terracotta/10 text-terracotta text-xs font-semibold uppercase tracking-wide">
+                        {trialDays}-day free Corporate trial — no card required
+                    </p>
+                )}
             </div>
 
             <div className="mb-7">

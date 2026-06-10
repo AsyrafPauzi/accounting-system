@@ -19,6 +19,10 @@ export default function WelcomeModal({ show, onClose, isFirm = false }) {
     const page = usePage();
     const userName = page.props.auth?.user?.name ?? '';
     const productName = page.props.product_name ?? 'BukuCloud';
+    // SME signups land on a 14-day Corporate trial — auth.trial is
+    // populated for them by HandleInertiaRequests. Firm users never get
+    // a trial today, so the firm path always reads the non-trial copy.
+    const trial = !isFirm ? page.props.auth?.trial ?? null : null;
 
     const [step, setStep] = useState(0);
     const [submitting, setSubmitting] = useState(false);
@@ -40,7 +44,7 @@ export default function WelcomeModal({ show, onClose, isFirm = false }) {
         );
     };
 
-    const steps = isFirm ? firmSteps(productName) : smeSteps(productName);
+    const steps = isFirm ? firmSteps(productName) : smeSteps(productName, trial);
     const last = step === steps.length - 1;
     const current = steps[step];
 
@@ -153,7 +157,62 @@ export default function WelcomeModal({ show, onClose, isFirm = false }) {
     );
 }
 
-function smeSteps(productName) {
+function smeSteps(productName, trial = null) {
+    // Trial users land on Corporate with every paid feature unlocked
+    // for 14 days. Their step 1 welcome and step 3 plan copy both need
+    // to mention the trial explicitly so they understand both (a) why
+    // they have access to bills/OCR/payroll on day 1 and (b) what
+    // happens when the timer hits zero. Non-trial copy is the historical
+    // free-from-day-one flow (preserved for the trial-disabled config).
+    if (trial) {
+        const daysLabel = trial.days_left === 0
+            ? 'today'
+            : `${trial.days_left} day${trial.days_left === 1 ? '' : 's'}`;
+        const fallbackName = trial.fallback_name || 'Startup (Free)';
+        const planName = trial.plan_name || 'Corporate';
+        return [
+            {
+                title: `Welcome to ${productName}.`,
+                footnote: `You're on a ${planName} free trial — every paid feature unlocked, no card required.`,
+            },
+            {
+                title: 'Here\'s what you can do.',
+                items: [
+                    {
+                        title: 'Send invoices and track payments',
+                        body: 'Create estimates and invoices, email them to customers, and record payments. Customers and credit notes live in the same place.',
+                    },
+                    {
+                        title: 'Record bills and pay suppliers',
+                        body: 'Add suppliers, capture bills with the OCR receipt scanner, and track what you owe in Accounts Payable — all unlocked during your trial.',
+                    },
+                    {
+                        title: 'See the numbers that matter',
+                        body: 'Open the Dashboard for cash position, then Reports for P&L, balance sheet, and tax summaries.',
+                    },
+                ],
+            },
+            {
+                title: `${daysLabel === 'today' ? 'Trial ends today.' : daysLabel + ' left in your free trial.'} Pick a plan to keep the paid features.`,
+                items: [
+                    {
+                        title: `Auto-switch to ${fallbackName} when the trial ends`,
+                        body: `On day 15 we automatically move your account to ${fallbackName}. Your data stays put — bills, products, and reports just become read-only or hidden until you upgrade.`,
+                    },
+                    {
+                        title: 'Upgrade any time from Settings → Plan',
+                        body: 'Pick Solo (RM 49/mo), Growth (RM 99/mo), or Corporate (RM 219/mo). Pay via Toyyibpay (FPX / card / e-wallet); monthly or yearly (~17% off).',
+                    },
+                    {
+                        title: 'Need more than 5 users or a self-hosted deployment?',
+                        body: 'Talk to sales — Enterprise quotes include white-label, SLAs, and the self-hosted option for keeping data on your own infra.',
+                    },
+                ],
+                footnote: 'You can also invite your accountant from Settings → Invite my accountant.',
+            },
+        ];
+    }
+
     return [
         {
             title: `Welcome to ${productName}.`,

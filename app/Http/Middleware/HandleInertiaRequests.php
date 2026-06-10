@@ -120,6 +120,38 @@ class HandleInertiaRequests extends Middleware
                         fn ($name) => [$name => true]
                     )->toArray();
                 },
+                // Trial state for the active SME tenant. Null for self-
+                // hosted, firm users, anonymous, and tenants whose
+                // subscription is not in `trialing` status — which lets
+                // every component do `auth.trial && <Banner />` without
+                // re-checking. Firm users get their trial info via the
+                // separate `practice` block below if we ever add firm
+                // trials.
+                'trial' => function () use ($tenant) {
+                    if (\App\Support\Deployment::isSelfHosted() || ! $tenant) {
+                        return null;
+                    }
+                    $sub = $tenant->activeSubscription()?->loadMissing(['plan', 'pendingPlan']);
+                    if (! $sub || $sub->status !== 'trialing') {
+                        return null;
+                    }
+                    $endsAt = $sub->current_period_ends_at;
+                    $daysLeft = null;
+                    if ($endsAt) {
+                        $end = $endsAt instanceof \Carbon\Carbon
+                            ? $endsAt->copy()->endOfDay()
+                            : \Carbon\Carbon::parse((string) $endsAt)->endOfDay();
+                        $daysLeft = max(0, (int) ceil(now()->diffInRealSeconds($end, false) / 86400));
+                    }
+                    return [
+                        'plan_slug'      => $sub->plan?->slug,
+                        'plan_name'      => $sub->plan?->name,
+                        'ends_at'        => $endsAt?->toDateString(),
+                        'days_left'      => $daysLeft,
+                        'fallback_name'  => $sub->pendingPlan?->name,
+                        'fallback_slug'  => $sub->pendingPlan?->slug,
+                    ];
+                },
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

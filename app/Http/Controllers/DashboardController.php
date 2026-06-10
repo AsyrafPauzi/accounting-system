@@ -6,6 +6,7 @@ use App\Models\Bill;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Supplier;
+use App\Models\Tenant;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
@@ -50,6 +51,15 @@ class DashboardController extends Controller
         $endOfMonth = $today->copy()->endOfMonth();
         $startOfYear = $today->copy()->startOfYear();
 
+        // Plan-permission gates. When the tenant's active plan doesn't
+        // include `bills.view` (e.g. they're on Startup after a Corporate
+        // trial expired), we must not surface bill totals, AP aging,
+        // expense series, or overdue-bill lists — those are paid-tier
+        // numbers and shouldn't bleed through into the free dashboard.
+        // We zero/empty the corresponding slots instead of hiding them
+        // entirely so the React component's prop shape stays stable.
+        [$canSeeBills, $canSeeCreditNotes] = $this->planFeatureGates($user);
+
         // ───────── Top KPIs (existing behaviour, preserved) ─────────
         $customerCount = Customer::count();
         $activeCustomers = Customer::where('is_active', true)->count();
@@ -78,40 +88,54 @@ class DashboardController extends Controller
             ->whereBetween('issue_date', [$startOfMonth, $endOfMonth])
             ->sum('total_amount');
 
-        $creditNotesCount = \App\Models\CreditNote::count();
-        $creditNotesValue = (float) \App\Models\CreditNote::sum('total_amount');
+        $creditNotesCount = $canSeeCreditNotes ? \App\Models\CreditNote::count() : 0;
+        $creditNotesValue = $canSeeCreditNotes ? (float) \App\Models\CreditNote::sum('total_amount') : 0.0;
 
         $supplierCount = Supplier::count();
         $activeSuppliers = Supplier::where('is_active', true)->count();
 
-        $billStats = Bill::selectRaw("
-            COUNT(*) as total,
-            SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) as draft_count,
-            SUM(CASE WHEN status IN ('unpaid','partially paid') THEN 1 ELSE 0 END) as unpaid_count,
-            SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) as paid_count,
-            SUM(CASE WHEN status NOT IN ('draft','void') THEN total_amount ELSE 0 END) as total_billed,
-            SUM(CASE WHEN status NOT IN ('draft','void') THEN (total_amount - amount_paid) ELSE 0 END) as total_ap
-        ")->first();
+        // Bill-derived stats are paid-tier only. When `bills.view` isn't
+        // granted we emit a zero-shaped row so the dashboard still renders
+        // the bill widgets but they show "0 / RM 0" — no real data leaks
+        // through. The audit_status counts are bill-based too.
+        if ($canSeeBills) {
+            $billStats = Bill::selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) as draft_count,
+                SUM(CASE WHEN status IN ('unpaid','partially paid') THEN 1 ELSE 0 END) as unpaid_count,
+                SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) as paid_count,
+                SUM(CASE WHEN status NOT IN ('draft','void') THEN total_amount ELSE 0 END) as total_billed,
+                SUM(CASE WHEN status NOT IN ('draft','void') THEN (total_amount - amount_paid) ELSE 0 END) as total_ap
+            ")->first();
 
-        $expensesThisMonth = (float) Bill::whereIn('status', ['unpaid', 'partially paid', 'paid'])
-            ->whereBetween('bill_date', [$startOfMonth, $endOfMonth])
-            ->sum('total_amount');
+            $expensesThisMonth = (float) Bill::whereIn('status', ['unpaid', 'partially paid', 'paid'])
+                ->whereBetween('bill_date', [$startOfMonth, $endOfMonth])
+                ->sum('total_amount');
 
-        $overdueBillsCount = Bill::whereIn('status', ['unpaid', 'partially paid'])
-            ->whereNotNull('due_date')
-            ->whereDate('due_date', '<', $today)
-            ->whereRaw('(total_amount - amount_paid) > 0')
-            ->count();
+            $overdueBillsCount = Bill::whereIn('status', ['unpaid', 'partially paid'])
+                ->whereNotNull('due_date')
+                ->whereDate('due_date', '<', $today)
+                ->whereRaw('(total_amount - amount_paid) > 0')
+                ->count();
+        } else {
+            $billStats = null;
+            $expensesThisMonth = 0.0;
+            $overdueBillsCount = 0;
+        }
 
         // ───────── Wave-style insight series ─────────
         $cashFlow = $this->cashFlowSeries($today);
-        $pnl = $this->profitAndLossSeries($today);
-        $expensesBreakdown = $this->expensesBreakdown($startOfYear, $today);
-        $netIncomeComparison = $this->netIncomeComparison($today);
+        $pnl = $this->profitAndLossSeries($today, $canSeeBills);
+        $expensesBreakdown = $canSeeBills
+            ? $this->expensesBreakdown($startOfYear, $today)
+            : ['categories' => [], 'total' => 0.0, 'period' => ['from' => $startOfYear->toDateString(), 'to' => $today->toDateString()]];
+        $netIncomeComparison = $this->netIncomeComparison($today, $canSeeBills);
         $arAging = $this->agingBuckets('receivables', $today);
-        $apAging = $this->agingBuckets('payables', $today);
+        $apAging = $canSeeBills
+            ? $this->agingBuckets('payables', $today)
+            : ['coming_due' => 0.0, '1_30' => 0.0, '31_60' => 0.0, '61_90' => 0.0, 'over_90' => 0.0, 'total' => 0.0];
         $overdueInvoiceList = $this->overdueInvoiceList($today);
-        $overdueBillList = $this->overdueBillList($today);
+        $overdueBillList = $canSeeBills ? $this->overdueBillList($today) : [];
 
         return Inertia::render('Dashboard', [
             'stats' => [
@@ -154,13 +178,21 @@ class DashboardController extends Controller
                     'expenses_this_month' => $expensesThisMonth,
                     'net_this_month' => round($salesThisMonth - $expensesThisMonth, 2),
                 ],
-                'audit' => [
+                'audit' => $canSeeBills ? [
                     'total' => Bill::count(),
                     'unaudited' => Bill::where(function ($q) {
                         $q->where('audit_status', 'unaudited')->orWhereNull('audit_status');
                     })->count(),
                     'verified' => Bill::where('audit_status', 'verified')->count(),
                     'flagged' => Bill::where('audit_status', 'flagged')->count(),
+                ] : [
+                    'total' => 0, 'unaudited' => 0, 'verified' => 0, 'flagged' => 0,
+                ],
+                // Frontend uses these to render an upgrade nudge in place
+                // of the empty bill cards instead of "0 / RM 0" silently.
+                'plan_features' => [
+                    'bills'        => $canSeeBills,
+                    'credit_notes' => $canSeeCreditNotes,
                 ],
                 // ── Wave-style insights ──
                 'cash_flow'           => $cashFlow,
@@ -231,9 +263,11 @@ class DashboardController extends Controller
     /**
      * 12-month income vs expenses based on invoice/bill issue dates.
      * Uses headers (not journal-items) because P&L on the dashboard is meant
-     * to track sales activity, not strict accrual GL totals.
+     * to track sales activity, not strict accrual GL totals. The expense
+     * leg only runs when `bills.view` is granted; otherwise we keep the
+     * 12-bucket shape but force expense to zero so the chart still renders.
      */
-    private function profitAndLossSeries(CarbonInterface $today): array
+    private function profitAndLossSeries(CarbonInterface $today, bool $canSeeBills = true): array
     {
         $start = $today->copy()->startOfMonth()->subMonths(11);
         $end = $today->copy()->endOfMonth();
@@ -245,12 +279,14 @@ class DashboardController extends Controller
             ->groupBy('ym')
             ->pluck('v', 'ym');
 
-        $expense = Bill::query()
-            ->where('status', '!=', 'void')
-            ->whereBetween('bill_date', [$start, $end])
-            ->select(DB::raw("DATE_FORMAT(bill_date, '%Y-%m') as ym"), DB::raw('SUM(total_amount) as v'))
-            ->groupBy('ym')
-            ->pluck('v', 'ym');
+        $expense = $canSeeBills
+            ? Bill::query()
+                ->where('status', '!=', 'void')
+                ->whereBetween('bill_date', [$start, $end])
+                ->select(DB::raw("DATE_FORMAT(bill_date, '%Y-%m') as ym"), DB::raw('SUM(total_amount) as v'))
+                ->groupBy('ym')
+                ->pluck('v', 'ym')
+            : collect();
 
         $months = [];
         $totalIncome = 0;
@@ -341,8 +377,10 @@ class DashboardController extends Controller
     /**
      * Compare current month-to-date with the previous month-to-date.
      * Uses the same header-based logic as the P&L series so the cards agree.
+     * Expense leg gated on `bills.view` for the same reason as the P&L
+     * series — paid-feature numbers must zero out on the free plan.
      */
-    private function netIncomeComparison(CarbonInterface $today): array
+    private function netIncomeComparison(CarbonInterface $today, bool $canSeeBills = true): array
     {
         $currentStart = $today->copy()->startOfMonth();
         $currentEnd = $today->copy();
@@ -354,7 +392,10 @@ class DashboardController extends Controller
                 ->whereBetween('issue_date', [$a, $b])
                 ->sum('total_amount');
         };
-        $expense = function (CarbonInterface $a, CarbonInterface $b): float {
+        $expense = function (CarbonInterface $a, CarbonInterface $b) use ($canSeeBills): float {
+            if (! $canSeeBills) {
+                return 0.0;
+            }
             return (float) Bill::where('status', '!=', 'void')
                 ->whereBetween('bill_date', [$a, $b])
                 ->sum('total_amount');
@@ -456,6 +497,43 @@ class DashboardController extends Controller
                 ];
             })
             ->all();
+    }
+
+    /**
+     * Resolve the active tenant's plan permission gates for paid-feature
+     * widgets on this dashboard. Returns [canSeeBills, canSeeCreditNotes].
+     *
+     * Self-hosted instances always see everything (no plan walls). Firm
+     * users acting into a client read the client's tenant subscription
+     * via session('acting_tenant_id'). On any failure (no tenant, no
+     * subscription, lookup error) we default to "can't see" — failing
+     * safe means a paid feature never leaks numbers it shouldn't.
+     */
+    private function planFeatureGates(?\App\Models\User $user): array
+    {
+        if (\App\Support\Deployment::isSelfHosted()) {
+            return [true, true];
+        }
+        if (! $user) {
+            return [false, false];
+        }
+
+        $tenantId = $user->isFirmUser()
+            ? session('acting_tenant_id')
+            : $user->tenant_id;
+        if (! $tenantId) {
+            return [false, false];
+        }
+
+        $tenant = Tenant::find($tenantId);
+        if (! $tenant) {
+            return [false, false];
+        }
+
+        return [
+            $tenant->hasPlanPermission('bills.view'),
+            $tenant->hasPlanPermission('credit-notes.view'),
+        ];
     }
 
     /**

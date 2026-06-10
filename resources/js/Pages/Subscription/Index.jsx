@@ -50,6 +50,14 @@ export default function SubscriptionIndex({ auth, plans = [], currentSubscriptio
     const currentEndsAt = currentSubscription?.current_period_ends_at;
     const pendingPlan = currentSubscription?.pending_plan;
     const hasPending = !!currentSubscription?.pending_plan_id && !!pendingPlan;
+    const isTrialing = currentSubscription?.status === 'trialing';
+    const trialDaysLeft = (() => {
+        if (!isTrialing || !currentEndsAt) return null;
+        const ends = new Date(currentEndsAt);
+        if (Number.isNaN(ends.getTime())) return null;
+        const ms = ends.setHours(23, 59, 59, 999) - Date.now();
+        return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+    })();
 
     return (
         <AuthenticatedLayout
@@ -65,7 +73,27 @@ export default function SubscriptionIndex({ auth, plans = [], currentSubscriptio
             <Head title="Pricing" />
 
             <div className="space-y-10 max-w-7xl">
-                {currentSubscription && (
+                {isTrialing && (
+                    <div className="bg-terracotta/10 border border-terracotta/40 rounded-2xl px-6 py-4 text-sm text-ink flex items-center justify-between flex-wrap gap-3">
+                        <div>
+                            <p className="font-semibold text-terracotta">
+                                {trialDaysLeft === 0
+                                    ? `Your ${currentSubscription.plan?.name} trial ends today.`
+                                    : `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left in your ${currentSubscription.plan?.name} free trial.`}
+                            </p>
+                            <p className="mt-0.5 text-ink-muted">
+                                {currentEndsAt
+                                    ? `Pick a plan below to keep all the paid features. Otherwise we'll switch you to ${pendingPlan?.name || 'Startup (Free)'} on ${formatDate(currentEndsAt)}.`
+                                    : `Pick a plan below to keep all the paid features after your trial ends.`}
+                            </p>
+                        </div>
+                        <span className="px-3 py-1 bg-terracotta/20 text-terracotta rounded-full text-eyebrow font-semibold uppercase">
+                            Trial
+                        </span>
+                    </div>
+                )}
+
+                {currentSubscription && !isTrialing && (
                     <div className="bg-forest/10 border border-forest/30 rounded-2xl px-6 py-4 text-sm text-forest-dark dark:text-forest-light flex items-center justify-between flex-wrap gap-3">
                         <div>
                             <p className="font-semibold">
@@ -83,7 +111,7 @@ export default function SubscriptionIndex({ auth, plans = [], currentSubscriptio
                     </div>
                 )}
 
-                {hasPending && (
+                {hasPending && !isTrialing && (
                     <div className="bg-mustard/15 border border-mustard/40 rounded-2xl px-6 py-4 text-sm text-ink flex items-center justify-between flex-wrap gap-3">
                         <div>
                             <p className="font-semibold">

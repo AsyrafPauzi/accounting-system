@@ -138,15 +138,21 @@ class SubscriptionController extends Controller
         // can't cleanly proration-charge today. We tell the tenant to wait
         // for renewal (or schedule a downgrade) instead of silently taking
         // money on top of an active sub.
-        if ($currentSubscription && $currentSubscription->plan->slug !== 'startup') {
+        //
+        // Trialing tenants are explicitly NOT blocked here: their
+        // subscription is technically on Corporate but no money has changed
+        // hands, so converting mid-trial to any paid plan is a clean
+        // checkout. We skip the side-grade refusal for them.
+        $isTrialing = $currentSubscription && $currentSubscription->status === 'trialing';
+        if ($currentSubscription && $currentSubscription->plan->slug !== 'startup' && ! $isTrialing) {
             return redirect()->back()->with(
                 'error',
                 'You already have an active paid subscription. To upgrade now please email sales@bukucloud.com — or schedule a downgrade and we\'ll switch you on the renewal date.'
             );
         }
 
-        // Brand-new paid subscription (or coming from Startup free): proceed
-        // to Toyyibpay checkout.
+        // Brand-new paid subscription (or coming from Startup free / a
+        // mid-trial conversion): proceed to Toyyibpay checkout.
         $subscription = Subscription::updateOrCreate(
             ['tenant_id' => $tenantId],
             [
@@ -217,6 +223,16 @@ class SubscriptionController extends Controller
      */
     private function isDowngrade(Subscription $current, Plan $target, string $targetInterval): bool
     {
+        // Trialing subscriptions are not "actively on" their trial plan —
+        // no payment has been taken, no commitment made. Picking any
+        // paid plan mid-trial is a paid conversion (force fresh checkout),
+        // not a downgrade. Picking the free tier still routes through the
+        // schedule path so the tenant gets the same "stays on Corporate
+        // until trial-end then auto-switches" UX they got at signup.
+        if ($current->status === 'trialing' && (float) $target->price_monthly > 0.0) {
+            return false;
+        }
+
         // Coming from the free tier → it's not a downgrade.
         if (! $current->plan || $current->plan->slug === 'startup') {
             return false;
@@ -452,7 +468,14 @@ class SubscriptionController extends Controller
         $tenantId = $user?->tenant_id;
         abort_if(! $tenantId, 404);
 
-        $subscription = Subscription::where('tenant_id', $tenantId)->active()->with('plan')->first();
+        // Eager-load pendingPlan because the trial banner on Settings/Plan
+        // names the fallback plan ("Auto-switches to Startup on …"). Same
+        // relation Subscription/Index already hydrates for the scheduled-
+        // change banner, kept consistent here so the UI reads one shape.
+        $subscription = Subscription::where('tenant_id', $tenantId)
+            ->active()
+            ->with(['plan', 'pendingPlan'])
+            ->first();
         $userCount = \App\Models\User::where('tenant_id', $tenantId)->count();
 
         return Inertia::render('Settings/Plan', [

@@ -122,6 +122,29 @@ class BillingHistoryService
             $planId = $new['plan_id'] ?? null;
             $plan = $planId ? $plans->get($planId) : null;
             $interval = $new['interval'] ?? null;
+
+            // Trial-on-signup is a `created` event with status="trialing".
+            // Render it as a distinct "Started 14-day trial" entry instead
+            // of generic "Subscribed to Corporate" so the timeline reads
+            // honestly when the auto-downgrade-to-Startup fires later.
+            if (($new['status'] ?? null) === 'trialing') {
+                $endsAt = $new['current_period_ends_at'] ?? null;
+                $detail = $endsAt
+                    ? 'Auto-switches to the free plan on '.$this->formatDate($endsAt).' unless you upgrade.'
+                    : 'Auto-switches to the free plan when the trial ends.';
+                return [
+                    'id' => $idKey,
+                    'happened_at' => $when->toIso8601String(),
+                    'type' => 'trial_started',
+                    'icon' => 'sparkles',
+                    'title' => $plan
+                        ? "Started trial of {$plan->name}"
+                        : 'Started subscription trial',
+                    'detail' => $detail,
+                    'actor' => $actor,
+                ];
+            }
+
             return [
                 'id' => $idKey,
                 'happened_at' => $when->toIso8601String(),
@@ -162,6 +185,43 @@ class BillingHistoryService
             $oldPrice = (float) ($oldPlan?->price_monthly ?? 0);
             $newPrice = (float) ($newPlan?->price_monthly ?? 0);
             $isUpgrade = $newPrice > $oldPrice;
+
+            // Special case: ApplyPendingSubscriptionChanges flipping a
+            // `trialing` row to a free plan IS the trial expiring. The
+            // single audit row has plan_id, status, gateway, and the
+            // period dirty all at once, but the user-visible event is
+            // "your trial ended" — not "you downgraded". Detect it here
+            // and emit a dedicated `trial_expired` so the timeline reads
+            // correctly instead of saying "Downgraded to Startup (Free)"
+            // for what was an automatic, non-user-initiated switch.
+            $oldStatus = $old['status'] ?? null;
+            if ($oldStatus === 'trialing' && $newPrice === 0.0) {
+                return [
+                    'id' => $idKey,
+                    'happened_at' => $when->toIso8601String(),
+                    'type' => 'trial_expired',
+                    'icon' => 'clock',
+                    'title' => "Trial ended — moved to {$newName} (Free)",
+                    'detail' => "Your free trial of {$oldName} finished. Upgrade any time to restore the paid features.",
+                    'actor' => null, // system action, never a real user
+                ];
+            }
+
+            // Other transition out of trialing → user paid mid-trial.
+            // Render as "Trial converted" instead of generic Upgrade so
+            // the history captures intent.
+            if ($oldStatus === 'trialing' && $newPrice > 0.0) {
+                return [
+                    'id' => $idKey,
+                    'happened_at' => $when->toIso8601String(),
+                    'type' => 'trial_converted',
+                    'icon' => 'arrow-up',
+                    'title' => "Trial converted to {$newName}",
+                    'detail' => "Trial of {$oldName} ended early — paid plan is now active.".$this->intervalSuffix($new['interval'] ?? null, $new['current_period_ends_at'] ?? null),
+                    'actor' => $actor,
+                ];
+            }
+
             return [
                 'id' => $idKey,
                 'happened_at' => $when->toIso8601String(),

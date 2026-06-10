@@ -5,6 +5,20 @@ import BillingHistory from '@/Components/BillingHistory';
 export default function PlanSettings({ auth, subscription, userCount, history = [] }) {
     const plan = subscription?.plan;
     const isCorporate = plan?.slug === 'corporate';
+    const isTrialing = subscription?.status === 'trialing';
+    const pendingPlan = subscription?.pending_plan;
+    const trialEndsAt = subscription?.current_period_ends_at;
+    // Inclusive day count: a trial that ends today reads "0 days left",
+    // a trial ending tomorrow reads "1 day". We use end-of-day on the
+    // ends_at boundary so a fresh signup at 11pm doesn't show "13 days
+    // left" instead of 14.
+    const trialDaysLeft = (() => {
+        if (!isTrialing || !trialEndsAt) return null;
+        const ends = new Date(trialEndsAt);
+        if (Number.isNaN(ends.getTime())) return null;
+        const ms = ends.setHours(23, 59, 59, 999) - Date.now();
+        return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+    })();
     // Real seat count = included + paid extras. Without this the progress bar
     // would max out at the included count even after the tenant has paid for
     // additional seats — so a 3-included plan with 2 paid extras would show
@@ -40,6 +54,34 @@ export default function PlanSettings({ auth, subscription, userCount, history = 
             <Head title="Plan & Usage" />
 
             <div className="max-w-5xl space-y-8">
+                {/* Trial banner — visible whenever the subscription is in
+                    `trialing` status. It's the same shape as the existing
+                    "scheduled change" banner on Subscription/Index, but
+                    sized down for the settings layout. The CTA goes to
+                    pricing because that's where they convert. */}
+                {isTrialing && (
+                    <div className="bg-terracotta/10 border border-terracotta/40 rounded-2xl px-6 py-4 text-sm text-ink flex items-center justify-between flex-wrap gap-3">
+                        <div>
+                            <p className="font-semibold text-terracotta">
+                                {trialDaysLeft === 0
+                                    ? `Your ${plan?.name} trial ends today.`
+                                    : `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left in your ${plan?.name} free trial.`}
+                            </p>
+                            <p className="mt-0.5 text-ink-muted">
+                                {trialEndsAt
+                                    ? `Pick a plan to keep your paid features — otherwise we'll switch you to ${pendingPlan?.name || 'Startup (Free)'} on ${new Date(trialEndsAt).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}.`
+                                    : `Pick a plan to keep your paid features after the trial ends.`}
+                            </p>
+                        </div>
+                        <Link
+                            href={route('subscription.index')}
+                            className="px-4 py-1.5 rounded-lg bg-terracotta text-white text-eyebrow font-semibold uppercase hover:bg-terracotta-dark transition-colors"
+                        >
+                            Choose a plan
+                        </Link>
+                    </div>
+                )}
+
                 {/* Plan Overview Card */}
                 <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-border-warm/80 shadow-sm">
                     <div className="flex items-start justify-between">
@@ -56,12 +98,26 @@ export default function PlanSettings({ auth, subscription, userCount, history = 
                                         Active
                                     </span>
                                 )}
+                                {isTrialing && (
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-terracotta/15 text-terracotta uppercase">
+                                        Trial
+                                    </span>
+                                )}
                             </div>
                             <p className="text-ink-muted text-sm mt-1 font-medium">
                                 {subscription?.interval === 'lifetime' ? (
                                     <>
                                         <span className="text-forest font-bold">Lifetime Access</span>
                                         <span className="text-ink-muted"> • Expires: Never</span>
+                                    </>
+                                ) : isTrialing ? (
+                                    <>
+                                        <span className="text-terracotta font-semibold">Free trial</span>
+                                        {trialEndsAt && (
+                                            <span className="text-ink-muted">
+                                                {' • '}Auto-switches on {new Date(trialEndsAt).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                            </span>
+                                        )}
                                     </>
                                 ) : (
                                     <>
@@ -80,7 +136,7 @@ export default function PlanSettings({ auth, subscription, userCount, history = 
                             href={route('subscription.index')}
                             className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta shadow-sm transition-colors"
                         >
-                            Change Plan
+                            {isTrialing ? 'Upgrade' : 'Change Plan'}
                         </Link>
                     </div>
 
