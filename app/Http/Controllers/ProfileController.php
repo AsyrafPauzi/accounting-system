@@ -21,7 +21,8 @@ class ProfileController extends Controller
         $user = $request->user();
 
         return Inertia::render('Profile/Edit', [
-            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
+            'mustVerifyEmail' => $user instanceof MustVerifyEmail
+                && ! $user->hasRole('super-admin'),
             'status' => session('status'),
             // Surface the security/data-rights state so the cards on
             // the profile page can show the right status pill without
