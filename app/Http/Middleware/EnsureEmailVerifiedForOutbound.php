@@ -32,7 +32,9 @@ class EnsureEmailVerifiedForOutbound
     public function handle(Request $request, Closure $next)
     {
         $user = $request->user();
-        if (! $user instanceof MustVerifyEmail || $user->hasVerifiedEmail()) {
+        if (! $user instanceof MustVerifyEmail
+            || $user->hasVerifiedEmail()
+            || $user->hasRole('super-admin')) {
             return $next($request);
         }
 

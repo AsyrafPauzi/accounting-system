@@ -7,9 +7,10 @@
  * The modal pops when ALL of these are true:
  *   1. The user is logged in.
  *   2. They have not verified their email yet (`email_verified_at` null).
- *   3. They aren't being impersonated by an admin (we don't want to
+ *   3. They aren't a platform super-admin (internal operators are exempt).
+ *   4. They aren't being impersonated by an admin (we don't want to
  *      pester the admin while they're debugging the customer's account).
- *   4. Either they've never seen the reminder before, or they last
+ *   5. Either they've never seen the reminder before, or they last
  *      dismissed it 2+ days ago.
  *
  * The 2-day cadence is computed against the timestamp the server
@@ -22,6 +23,7 @@ const REMINDER_INTERVAL_MS = 2 * 24 * 60 * 60 * 1000; // 2 days
 export function shouldShowVerifyReminder(user, isImpersonating = false) {
     if (!user) return false;
     if (user.email_verified_at) return false;
+    if (user.role_name === 'super-admin') return false;
     if (isImpersonating) return false;
 
     if (!user.verify_reminder_at) return true;
