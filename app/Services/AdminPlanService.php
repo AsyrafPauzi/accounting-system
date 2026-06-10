@@ -62,7 +62,7 @@ class AdminPlanService
             'Team'              => ['users.view', 'users.create', 'users.edit', 'users.delete', 'roles.manage', 'permissions.manage'],
             'Dashboard'         => ['dashboard.basic', 'dashboard.standard', 'dashboard.advanced'],
             'Audit & Compliance' => ['audit-logs.view', 'audit.view'],
-            'Integrations'      => ['integrations.view'],
+            'Integrations'      => ['integrations.view', 'api.access'],
         ];
 
         // Only return permissions that actually exist in the DB.

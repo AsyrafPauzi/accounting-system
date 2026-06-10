@@ -149,6 +149,7 @@ export default function Authenticated({ user: propUser, header, children }) {
             isRouteActive('settings.team.index') ||
             isRouteActive('audit-logs.index') ||
             isRouteActive('settings.plan.index') ||
+            isRouteActive('settings.integrations.index') ||
             isRouteActive('audit.index') ||
             url.startsWith('/audit')
         ) {
@@ -439,6 +440,22 @@ export default function Authenticated({ user: propUser, header, children }) {
                                             </svg>
                                         </span>
                                         <span className="flex-1">Audit Logs</span>
+                                    </Link>
+                                )}
+                                {/* API & Integrations — visible to admins on Solo+ tenants
+                                    (Solo is the lowest tier with `api.access`). Hidden on
+                                    Startup/Free tenants and from non-admin team members. */}
+                                {hasPermission('integrations.view') && planPermissions['api.access'] && (
+                                    <Link
+                                        href={getSafeRoute('settings.integrations.index')}
+                                        className={linkClasses(isRouteActive('settings.integrations.index'), false)}
+                                    >
+                                        <span className={iconWrapClasses(isRouteActive('settings.integrations.index'))}>
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                            </svg>
+                                        </span>
+                                        <span className="flex-1">API & Integrations</span>
                                     </Link>
                                 )}
                                 {/* Plan & Usage:

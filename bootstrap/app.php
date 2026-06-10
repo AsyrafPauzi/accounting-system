@@ -13,6 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ])
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        // Stateless external API for OAuth-style partner integrations
+        // (today: Fin Persona). Auth on /api/v1/* is by Bearer api_key
+        // → ApiKeyAuth middleware → tenancy initialise. /api/oauth/token
+        // is the partner's server-to-server code-for-keys exchange and
+        // is registered CSRF-exempt in the api stack (no session).
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         // SaaS-only routes (publisher tenant admin, license issue,
@@ -39,6 +45,14 @@ return Application::configure(basePath: dirname(__DIR__))
             // Self-hosted heartbeat is a public API endpoint
             // authenticated by the license signature, not a session.
             '/api/self-hosted/heartbeat',
+            // OAuth token-exchange is server-to-server (partner backend
+            // posts client_secret + auth code). Pre-shared client_secret
+            // is the auth signal, not a session cookie.
+            '/api/oauth/token',
+            // External partner /api/v1 surface. Authenticated by Bearer
+            // api_key (and HMAC for writes), not by session — CSRF is
+            // not the right defence here.
+            '/api/v1/*',
         ]);
 
         $webMiddleware = [
@@ -86,6 +100,16 @@ return Application::configure(basePath: dirname(__DIR__))
             // on `internal.bukucloud.com` (when INTERNAL_ADMIN_HOST is
             // set). No-op when the config is null (local dev).
             'internal.host' => \App\Http\Middleware\InternalAdminHost::class,
+            // External /api/v1 partner authentication. Resolves
+            // Authorization: Bearer <api_key> to a tenant_api_credentials
+            // row, initialises tenancy, and re-checks the api.access
+            // plan permission on every request.
+            'api.key' => \App\Http\Middleware\ApiKeyAuth::class,
+            // HMAC-SHA256 signature verifier for mutating /api/v1
+            // requests. Must run after api.key (depends on the
+            // resolved credential). See ApiSignatureVerifier docblock
+            // for the canonical-string format.
+            'api.signed' => \App\Http\Middleware\ApiSignatureVerifier::class,
         ]);
 
         $middleware->trustProxies(at: '*');
@@ -111,6 +135,14 @@ return Application::configure(basePath: dirname(__DIR__))
             '_hp_url',
             '_hp_ts',
             'authorize_extra_seat_charge',
+            // OAuth "Connect to BukuCloud" partner credentials. Even
+            // though these never live in form input under normal flow,
+            // a 422 re-render after a webhook validation error could
+            // otherwise leak them into rendered HTML.
+            'client_secret',
+            'transaction_signing_key',
+            'signing_key',
+            'oauth_state',
         ]);
 
         $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, $request) {
