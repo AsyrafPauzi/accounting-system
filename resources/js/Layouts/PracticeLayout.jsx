@@ -3,7 +3,7 @@ import { Link, usePage } from '@inertiajs/react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import WelcomeModal from '@/Components/WelcomeModal';
 import VerifyEmailReminderModal from '@/Components/VerifyEmailReminderModal';
-import { shouldShowVerifyReminder } from '@/Utils/verifyReminder';
+import { shouldShowVerifyReminder } from '@/utils/verifyReminder';
 
 /**
  * Wrapper for the Practice console (firm-side). Deliberately *not*
