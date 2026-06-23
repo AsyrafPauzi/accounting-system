@@ -3,13 +3,16 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Mail\ClientInviteFirm;
 use App\Models\Firm;
 use App\Models\FirmClient;
 use App\Models\FirmInvitation;
+use App\Models\Tenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -97,7 +100,7 @@ class InviteFirmController extends Controller
         // accountant feature off for this tenant. We refuse new
         // invites in that state without clobbering anything that
         // already exists.
-        $tenant = \App\Models\Tenant::where('id', $tenantId)->first();
+        $tenant = Tenant::where('id', $tenantId)->first();
         if ($tenant && (bool) ($tenant->practice_disabled ?? false)) {
             return back()->withErrors(['email' => 'The accountant feature is currently disabled for your account. Please contact BukuCloud support.']);
         }
@@ -131,16 +134,35 @@ class InviteFirmController extends Controller
         // double the parameters without adding security.
         $acceptUrl = URL::route('firm.invite.accept', ['token' => $invitation->token]);
 
-        // Real implementation will queue a Mailable here. For v1 we
-        // log + flash the URL into the session so the firm can paste
-        // it directly during demo / smoke testing.
+        $emailDispatched = false;
+        try {
+            Mail::to($invitation->email)->queue(new ClientInviteFirm(
+                tenant: $tenant,
+                invitation: $invitation,
+                inviterName: $request->user()?->name,
+            ));
+            $emailDispatched = true;
+        } catch (\Throwable $e) {
+            Log::warning('Tenant invite firm email dispatch failed', [
+                'tenant_id' => $tenantId,
+                'email' => $invitation->email,
+                'err' => $e->getMessage(),
+            ]);
+        }
+
         Log::info('Tenant invited firm', [
             'tenant_id'  => $tenantId,
             'email'      => $invitation->email,
             'invite_url' => $acceptUrl,
+            'email_dispatched' => $emailDispatched,
         ]);
 
-        return back()->with('success', 'Invite created. Send this link to your accountant: '.$acceptUrl);
+        return back()->with(
+            $emailDispatched ? 'success' : 'error',
+            $emailDispatched
+                ? 'Invite emailed to your accountant. They can accept it from the link in their email.'
+                : 'Invite created, but we could not send the email right now. You can still send this link manually: '.$acceptUrl
+        );
     }
 
     public function destroy(Request $request, int $invitationId): RedirectResponse

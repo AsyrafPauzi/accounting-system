@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\TeamMemberWelcome;
 use App\Models\ExtraSeatPurchase;
 use App\Models\Subscription;
 use App\Models\Tenant;
@@ -12,6 +13,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -71,7 +74,7 @@ class TenantUserController extends Controller
         // Already have headroom (included seats or previously purchased
         // extras) → create the user immediately, no payment dance.
         if ($userCount < $totalSeats) {
-            return $this->createUserAndRedirect($tenantId, $validated, 'Team member added. Share the password with them securely or ask them to reset it from the login page.');
+            return $this->createUserAndRedirect($auth, $tenantId, $validated);
         }
 
         // Out of seats. If the plan doesn't sell extras, we can't help.
@@ -252,7 +255,7 @@ class TenantUserController extends Controller
         ];
     }
 
-    private function createUserAndRedirect(string $tenantId, array $validated, string $message): RedirectResponse
+    private function createUserAndRedirect(User $inviter, string $tenantId, array $validated): RedirectResponse
     {
         $targetRole = \App\Models\Role::where('name', $validated['role'])->where('guard_name', 'web')->first();
 
@@ -268,7 +271,41 @@ class TenantUserController extends Controller
             $user->assignRole($validated['role']);
         }
 
-        return redirect()->route('settings.team.index')->with('success', $message);
+        $tenant = Tenant::find($tenantId);
+        $emailDispatched = false;
+
+        if ($tenant) {
+            try {
+                $token = Password::broker()->createToken($user);
+                $resetUrl = route('password.reset', [
+                    'token' => $token,
+                    'email' => $user->email,
+                ]);
+
+                Mail::to($user->email)->queue(new TeamMemberWelcome(
+                    user: $user,
+                    tenant: $tenant,
+                    role: $validated['role'],
+                    resetUrl: $resetUrl,
+                    inviterName: $inviter->name,
+                ));
+                $emailDispatched = true;
+            } catch (\Throwable $e) {
+                Log::warning('Team member welcome email dispatch failed', [
+                    'tenant_id' => $tenantId,
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'err' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return redirect()->route('settings.team.index')->with(
+            $emailDispatched ? 'success' : 'error',
+            $emailDispatched
+                ? 'Team member added and emailed a secure password setup link.'
+                : 'Team member added, but we could not send the welcome email. Ask them to use Forgot Password from the login page.'
+        );
     }
 
     private function assertSameTenant(User $auth, User $target): void
