@@ -39,7 +39,7 @@ export default function Register({ botGuard, privacyVersion, trialDays = 14 }) {
                 <p className="text-ink-muted text-sm mt-2">Books made for the way you actually work.</p>
                 {trialDays > 0 && (
                     <p className="mt-3 inline-block px-3 py-1 rounded-full bg-terracotta/10 text-terracotta text-xs font-semibold uppercase tracking-wide">
-                        {trialDays}-day free Corporate trial — no card required
+                        {trialDays}-day free Solo trial — no card required
                     </p>
                 )}
             </div>

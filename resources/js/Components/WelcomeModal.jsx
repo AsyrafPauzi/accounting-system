@@ -19,7 +19,7 @@ export default function WelcomeModal({ show, onClose, isFirm = false }) {
     const page = usePage();
     const userName = page.props.auth?.user?.name ?? '';
     const productName = page.props.product_name ?? 'BukuCloud';
-    // SME signups land on a 14-day Corporate trial — auth.trial is
+    // SME signups land on a 14-day Solo trial — auth.trial is
     // populated for them by HandleInertiaRequests. Firm users never get
     // a trial today, so the firm path always reads the non-trial copy.
     const trial = !isFirm ? page.props.auth?.trial ?? null : null;
@@ -158,22 +158,22 @@ export default function WelcomeModal({ show, onClose, isFirm = false }) {
 }
 
 function smeSteps(productName, trial = null) {
-    // Trial users land on Corporate with every paid feature unlocked
+    // Trial users land on the configured trial plan (Solo by default)
     // for 14 days. Their step 1 welcome and step 3 plan copy both need
     // to mention the trial explicitly so they understand both (a) why
-    // they have access to bills/OCR/payroll on day 1 and (b) what
-    // happens when the timer hits zero. Non-trial copy is the historical
+    // they have access to Solo features on day 1 and (b) what happens
+    // when the timer hits zero. Non-trial copy is the historical
     // free-from-day-one flow (preserved for the trial-disabled config).
     if (trial) {
         const daysLabel = trial.days_left === 0
             ? 'today'
             : `${trial.days_left} day${trial.days_left === 1 ? '' : 's'}`;
         const fallbackName = trial.fallback_name || 'Startup (Free)';
-        const planName = trial.plan_name || 'Corporate';
+        const planName = trial.plan_name || 'Solo';
         return [
             {
                 title: `Welcome to ${productName}.`,
-                footnote: `You're on a ${planName} free trial — every paid feature unlocked, no card required.`,
+                footnote: `You're on a ${planName} free trial — core paid bookkeeping features unlocked, no card required.`,
             },
             {
                 title: 'Here\'s what you can do.',
@@ -188,7 +188,7 @@ function smeSteps(productName, trial = null) {
                     },
                     {
                         title: 'See the numbers that matter',
-                        body: 'Open the Dashboard for cash position, then Reports for P&L, balance sheet, and tax summaries.',
+                        body: 'Open the Dashboard for cash position, then Reports for P&L and sales summaries. Higher-tier reports unlock if you upgrade later.',
                     },
                 ],
             },
@@ -197,7 +197,7 @@ function smeSteps(productName, trial = null) {
                 items: [
                     {
                         title: `Auto-switch to ${fallbackName} when the trial ends`,
-                        body: `On day 15 we automatically move your account to ${fallbackName}. Your data stays put — bills, products, and reports just become read-only or hidden until you upgrade.`,
+                        body: `On day 15 we automatically move your account to ${fallbackName}. Your data stays put — Solo-only features just become disabled or hidden until you upgrade.`,
                     },
                     {
                         title: 'Upgrade any time from Settings → Plan',

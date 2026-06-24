@@ -33,9 +33,9 @@ class RegisteredUserController extends Controller
         abort_if(! \App\Support\Deployment::publicRegistrationEnabled(), 404);
 
         // Surface the trial duration on the form so the headline copy
-        // ("14-day free Corporate trial") matches what we'll actually
-        // grant in store(). When the trial is disabled the form hides
-        // the badge entirely instead of lying to the user.
+        // ("14-day free Solo trial") matches what we'll actually grant
+        // in store(). When the trial is disabled the form hides the
+        // badge entirely instead of lying to the user.
         $trialDays = (bool) config('subscriptions.trial_enabled', true)
             ? max(0, (int) config('subscriptions.trial_days', 14))
             : 0;
@@ -93,8 +93,8 @@ class RegisteredUserController extends Controller
         // 3. Plant the initial subscription.
         //
         // When the trial is enabled (default) we land new tenants on the
-        // Corporate tier with status="trialing" for `trial_days` days and
-        // queue the free Startup tier as the pending plan. The existing
+        // Solo tier with status="trialing" for `trial_days` days and queue
+        // the free Startup tier as the pending plan. The existing
         // `subscription:apply-pending` cron then flips them to Startup
         // automatically when the trial ends — same code path as a manual
         // user-initiated downgrade, no special logic required.
@@ -104,7 +104,7 @@ class RegisteredUserController extends Controller
         // Startup, period=1 month" behaviour so signup never breaks.
         $trialEnabled    = (bool) config('subscriptions.trial_enabled', true);
         $trialDays       = max(0, (int) config('subscriptions.trial_days', 14));
-        $trialPlanSlug   = (string) config('subscriptions.trial_plan_slug', 'corporate');
+        $trialPlanSlug   = (string) config('subscriptions.trial_plan_slug', 'solo');
         $fallbackSlug    = (string) config('subscriptions.trial_fallback_slug', 'startup');
 
         $trialPlan    = $trialEnabled && $trialDays > 0
@@ -125,7 +125,7 @@ class RegisteredUserController extends Controller
                 'gateway'                => 'system',
             ]);
 
-            Log::info('SME signup with Corporate trial', [
+            Log::info('SME signup with Solo trial', [
                 'tenant_id'    => $tenant->id,
                 'trial_plan'   => $trialPlan->slug,
                 'fallback'     => $fallbackPlan->slug,

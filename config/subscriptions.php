@@ -3,12 +3,12 @@
 return [
     /*
     |--------------------------------------------------------------------------
-    | New-tenant Corporate trial
+    | New-tenant Solo trial
     |--------------------------------------------------------------------------
     |
-    | When a new SME signs up via /register we drop them onto the Corporate
-    | plan with status="trialing" for this many days, with the free Startup
-    | tier queued as `pending_plan_id`. The existing
+    | When a new SME signs up via /register we drop them onto the Solo plan
+    | with status="trialing" for this many days, with the free Startup tier
+    | queued as `pending_plan_id`. The existing
     | `subscription:apply-pending` cron flips them to Startup automatically
     | when the trial ends — no extra cron needed.
     |
@@ -26,11 +26,12 @@ return [
 
     /**
      * The slug of the plan a new tenant trials. Must exist in the `plans`
-     * table with audience=sme. Defaults to "corporate" — the top SME tier
-     * so trial users get to taste every paid feature (bills, OCR, payroll,
-     * audit log export, advanced reports).
+     * table with audience=sme. Defaults to "solo" so trial users can try
+     * core paid bookkeeping features (bills, suppliers, credit notes,
+     * recurring invoices, estimates, OCR, and standard reports) without
+     * unlocking higher-tier Growth/Corporate-only features.
      */
-    'trial_plan_slug'    => env('SUBSCRIPTION_TRIAL_PLAN_SLUG', 'corporate'),
+    'trial_plan_slug'    => env('SUBSCRIPTION_TRIAL_PLAN_SLUG', 'solo'),
 
     /**
      * The slug the trial auto-downgrades into when it ends. Must exist in
