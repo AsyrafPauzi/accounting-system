@@ -18,7 +18,7 @@ use Illuminate\Http\Request;
  *
  *   - dismissVerifyReminder():
  *       Stamps the verify-email reminder. Idempotent. Re-fires every
- *       2 days while the user is still unverified — the cadence is
+ *       day while the user is still unverified — the cadence is
  *       enforced client-side from `users.verify_reminder_at`. We
  *       deliberately don't gate the route on `verified` middleware
  *       because the entire point of the reminder is that the user

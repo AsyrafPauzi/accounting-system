@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
+import { markVerifyReminderSkipped } from '@/utils/verifyReminder';
 
 /**
  * Soft email-verification nag. Shows on top of every authenticated
  * page when the user is unverified AND has not dismissed the modal in
- * the last 2 days. The "every 2 days" cadence is enforced server-side
- * via `users.verify_reminder_at`; this component just renders the
- * modal when the layout decides it should appear.
+ * the last day. The cadence uses the server-side `users.verify_reminder_at`
+ * timestamp plus a same-browser cooldown marker so Skip cannot pop back
+ * open from stale Inertia props.
  *
  * Three actions:
  *
@@ -18,7 +19,7 @@ import Modal from '@/Components/Modal';
  *
  *   - "Skip for now" → POSTs to `onboarding.verify-reminder.dismiss`
  *     which stamps verify_reminder_at = now(). Modal stays away for
- *     2 days, then comes back if still unverified.
+ *     1 day, then comes back if still unverified.
  *
  *   - "I already verified — refresh" → soft reload. Handles the case
  *     where the user clicked the verify link in another tab and is
@@ -31,7 +32,8 @@ import Modal from '@/Components/Modal';
  */
 export default function VerifyEmailReminderModal({ show, onClose }) {
     const page = usePage();
-    const userEmail = page.props.auth?.user?.email ?? '';
+    const user = page.props.auth?.user;
+    const userEmail = user?.email ?? '';
     const productName = page.props.product_name ?? 'BukuCloud';
 
     const [busy, setBusy] = useState(null); // 'send' | 'skip' | null
@@ -65,16 +67,15 @@ export default function VerifyEmailReminderModal({ show, onClose }) {
     const skip = () => {
         if (busy) return;
         setBusy('skip');
+        markVerifyReminderSkipped(user);
+        onClose?.();
         router.post(
             route('onboarding.verify-reminder.dismiss'),
             {},
             {
                 preserveScroll: true,
                 preserveState: true,
-                onFinish: () => {
-                    setBusy(null);
-                    onClose?.();
-                },
+                onFinish: () => setBusy(null),
             },
         );
     };
@@ -99,7 +100,7 @@ export default function VerifyEmailReminderModal({ show, onClose }) {
                     </p>
 
                     <div className="rounded-xl bg-surface border border-border-warm p-4 text-sm text-ink-muted">
-                        You can keep using {productName} either way — we'll just remind you again in 2 days if you skip.
+                        You can keep using {productName} either way — we'll just remind you again tomorrow if you skip.
                     </div>
 
                     {sent && (
