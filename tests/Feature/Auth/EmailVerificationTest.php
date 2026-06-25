@@ -67,6 +67,29 @@ class EmailVerificationTest extends TestCase
         $this->assertFalse($user->fresh()->hasVerifiedEmail());
     }
 
+    public function test_invalid_or_expired_verification_link_shows_bukucloud_page(): void
+    {
+        $user = $this->makeUnverifiedTenantUser();
+
+        $verificationUrl = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->subMinute(),
+            ['id' => $user->id, 'hash' => sha1($user->email)]
+        );
+
+        $version = app(\App\Http\Middleware\HandleInertiaRequests::class)->version(request());
+
+        $response = $this->actingAs($user)
+            ->withHeader('X-Inertia', 'true')
+            ->withHeader('X-Inertia-Version', $version)
+            ->get($verificationUrl);
+
+        $response->assertStatus(403);
+        $response->assertHeader('X-Inertia', 'true');
+        $response->assertJsonPath('component', 'Auth/InvalidVerificationLink');
+        $response->assertJsonPath('props.isVerified', false);
+    }
+
     public function test_verification_notification_can_be_resent_for_business_user(): void
     {
         Notification::fake();

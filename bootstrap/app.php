@@ -159,4 +159,23 @@ return Application::configure(basePath: dirname(__DIR__))
             }
             abort(403);
         });
+
+        $exceptions->render(function (\Illuminate\Routing\Exceptions\InvalidSignatureException $e, $request) {
+            if (! $request->routeIs('verification.verify')) {
+                return null;
+            }
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'This verification link is invalid or has expired.'], 403);
+            }
+
+            $user = $request->user();
+            $isVerified = (bool) $user?->hasVerifiedEmail();
+            $homeRoute = $user?->isFirmUser() ? 'practice.dashboard' : 'dashboard';
+
+            return \Inertia\Inertia::render('Auth/InvalidVerificationLink', [
+                'isVerified' => $isVerified,
+                'homeUrl' => $user ? route($homeRoute, absolute: false) : route('login', absolute: false),
+            ])->toResponse($request)->setStatusCode(403);
+        });
     })->create();

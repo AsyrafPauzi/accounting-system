@@ -377,6 +377,48 @@ class ReceiptParserTest extends TestCase
         $this->assertEqualsWithDelta(44.70, $result['items'][0]['amount'], 0.001);
     }
 
+    public function test_extracts_multiline_pdf_table_item_without_summary_rows(): void
+    {
+        $text = <<<TXT
+        Receipt
+        Invoice number UGBSETX6-0002
+        Receipt number 2050-4417
+        Date paid June 5, 2026
+        ACCEA MALAYSIA SDN. BHD.
+        Bill to
+        Asyraf Pauzi / Hunt & Gather Sdn Bhd
+        RM20.00 paid on June 5, 2026
+        Description
+        Business Card 250gsm Art Card 2 Sided Coated + Rounded Corner 54mm x 90mm
+        Double Sided 100pcs / 1 box
+        Qty
+        Unit price
+        Amount
+        1
+        RM20.00
+        RM20.00
+        Subtotal
+        RM20.00
+        Total
+        RM20.00
+        Amount paid
+        RM20.00
+        Payment history
+        Visa - 3145 June 5, 2026 RM20.00 2050-4417
+        TXT;
+
+        $result = $this->parser->parse($text);
+
+        $this->assertCount(1, $result['items']);
+        $this->assertSame(
+            'Business Card 250gsm Art Card 2 Sided Coated + Rounded Corner 54mm x 90mm Double Sided 100pcs / 1 box',
+            $result['items'][0]['description']
+        );
+        $this->assertEqualsWithDelta(1, $result['items'][0]['quantity'], 0.001);
+        $this->assertEqualsWithDelta(20.00, $result['items'][0]['unit_amount'], 0.001);
+        $this->assertEqualsWithDelta(20.00, $result['items'][0]['amount'], 0.001);
+    }
+
     public function test_stops_scanning_items_after_totals_section(): void
     {
         // The transaction row at the bottom looks structurally like an item
@@ -444,5 +486,389 @@ class ReceiptParserTest extends TestCase
         $this->assertEqualsWithDelta(23.76, $result['total_amount'], 0.001);
         $this->assertEqualsWithDelta(22.00, $result['subtotal'], 0.001);
         $this->assertEqualsWithDelta(1.76, $result['tax_amount'], 0.001);
+    }
+
+    public function test_parses_uploaded_watsons_receipt_screenshot_layout(): void
+    {
+        $text = <<<TXT
+        WATSONS MALAYSIA
+        WATSONS PERSONAL CARE STORES
+        SDN BHD
+        MID VALLEY MEGAMALL, KL
+        RECEIPT: WAT-455219
+        DATE: 25/06/2026 15:40
+        MEMBER ID: 601233448891
+        PANADOL ACTIFAST 14.20
+        20S
+        1 x 14.20
+        BLACKMORES VIT C 65.00
+        1000MG
+        1 x 65.00
+        WATSONS WET 17.80
+        WIPES 3X10S
+        2 x 8.90
+        GARNIER MICELLAR 28.50
+        WATER
+        1 x 28.50
+        ITEMS TOTAL 125.50
+        TOTAL SST 2.45
+        INCLUDED
+        NET PAYABLE 127.95
+        (RM)
+        TXT;
+
+        $result = $this->parser->parse($text);
+
+        $this->assertSame('WATSONS MALAYSIA', $result['vendor_name']);
+        $this->assertSame('2026-06-25', $result['bill_date']);
+        $this->assertSame('WAT-455219', $result['reference']);
+        $this->assertEqualsWithDelta(127.95, $result['total_amount'], 0.001);
+        $this->assertEqualsWithDelta(2.45, $result['tax_amount'], 0.001);
+        $this->assertCount(4, $result['items']);
+        $this->assertSame('PANADOL ACTIFAST 20S', $result['items'][0]['description']);
+        $this->assertEqualsWithDelta(14.20, $result['items'][0]['amount'], 0.001);
+        $this->assertEqualsWithDelta(1, $result['items'][0]['quantity'], 0.001);
+        $this->assertEqualsWithDelta(14.20, $result['items'][0]['unit_amount'], 0.001);
+        $this->assertSame('WATSONS WET WIPES 3X10S', $result['items'][2]['description']);
+        $this->assertEqualsWithDelta(17.80, $result['items'][2]['amount'], 0.001);
+        $this->assertEqualsWithDelta(2, $result['items'][2]['quantity'], 0.001);
+        $this->assertEqualsWithDelta(8.90, $result['items'][2]['unit_amount'], 0.001);
+    }
+
+    public function test_parses_uploaded_senheng_invoice_screenshot_layout(): void
+    {
+        $text = <<<TXT
+        TAX INVOICE
+        SENHENG ELECTRIC (KL) SDN BHD
+        ONE UTAMA SHOPPING CENTRE, PETALING
+        JAYA
+        CO. REG NO: 199401002345 | SST ID:
+        W10-1808-32001111
+        INVOICE NO:
+        SH-2026-9912
+        DATE: 25/06/2026
+        SALESPERSON:
+        ALEX_KANG
+        TIME: 12:00:45
+        DESCRIPTION / QTY UNIT(RM) TOTAL(RM)
+        ITEM CODE
+        SAM-A55-5G 1 1,999.00 1,999.00
+        S/N:
+        358921029112023
+        ANANK SCREEN 1 89.00 89.00
+        PROTECTOR
+        UGREEN GAN 1 129.00 129.00
+        65W CHARGER
+        SUBTOTAL 2,217.00
+        EXCL SST
+        SST @ 6% 133.02
+        ROUNDING -0.02
+        TOTAL DUE 2,350.00
+        (RM)
+        TXT;
+
+        $result = $this->parser->parse($text);
+
+        $this->assertSame('SENHENG ELECTRIC (KL) SDN BHD', $result['vendor_name']);
+        $this->assertSame('2026-06-25', $result['bill_date']);
+        $this->assertSame('SH-2026-9912', $result['reference']);
+        $this->assertEqualsWithDelta(2350.00, $result['total_amount'], 0.001);
+        $this->assertEqualsWithDelta(133.02, $result['tax_amount'], 0.001);
+        $this->assertCount(3, $result['items']);
+        $this->assertSame('SAM-A55-5G S/N: 358921029112023', $result['items'][0]['description']);
+        $this->assertEqualsWithDelta(1999.00, $result['items'][0]['amount'], 0.001);
+        $this->assertSame('UGREEN GAN 65W CHARGER', $result['items'][2]['description']);
+    }
+
+    public function test_parses_uploaded_petronas_receipt_screenshot_layout(): void
+    {
+        $text = <<<TXT
+        KEDAI MESRA PETRONAS
+        PETRONAS DAGANGAN BERHAD
+        KLCC STATION, KUALA LUMPUR
+        DATE: 25/06/2026 14:20:11
+        INV NO: PET-99831
+        ITEM QTY RM
+        PRIMAX 97 PRO 45.12 155.66
+        @ RM 3.45/L
+        MILO CANVAS 2 6.40
+        240ML
+        SNEK KU SHOYU 1 2.80
+        60G
+        TOTAL (EXCL TAX) 164.86
+        SST @ 6% 0.55
+        (RETAIL)
+        ROUNDING -0.01
+        TOTAL PAID (RM) 165.40
+        TXT;
+
+        $result = $this->parser->parse($text);
+
+        $this->assertSame('KEDAI MESRA PETRONAS', $result['vendor_name']);
+        $this->assertSame('2026-06-25', $result['bill_date']);
+        $this->assertSame('PET-99831', $result['reference']);
+        $this->assertEqualsWithDelta(165.40, $result['total_amount'], 0.001);
+        $this->assertEqualsWithDelta(0.55, $result['tax_amount'], 0.001);
+        $this->assertCount(3, $result['items']);
+        $this->assertSame('PRIMAX 97 PRO @ RM 3.45/L', $result['items'][0]['description']);
+        $this->assertEqualsWithDelta(45.12, $result['items'][0]['quantity'], 0.001);
+        $this->assertEqualsWithDelta(155.66, $result['items'][0]['amount'], 0.001);
+    }
+
+    public function test_parses_uploaded_maxis_receipt_screenshot_layout(): void
+    {
+        $text = <<<TXT
+        maxis
+        MAXIS BROADBAND SDN BHD
+        OFFICIAL RECEIPT
+        ACCOUNT NO: 1099281722
+        STATEMENT DATE: 22/06/2026
+        PAYMENT DATE: 25/06/2026 08:30
+        DESCRIPTION OF CHARGES BILLING PERIOD TAX BASE (RM) AMOUNT (RM)
+        MAXIS HOME FIBRE 100MBPS PLAN 22 MAY - 21 JUN 129.00 129.00
+        SST ON TELECOMMUNICATION SERVICES (6%) -- -- 7.74
+        CURRENT CHARGES TOTAL 136.74
+        ROUNDING CORRECTION 0.01
+        TOTAL AMOUNT PAID (RM) 136.75
+        STATUS: PAID IN FULL
+        TRANSACTION REF: MX-FIB-77810291-KL
+        TXT;
+
+        $result = $this->parser->parse($text);
+
+        $this->assertSame('MAXIS BROADBAND SDN BHD', $result['vendor_name']);
+        $this->assertSame('2026-06-25', $result['bill_date']);
+        $this->assertSame('MX-FIB-77810291-KL', $result['reference']);
+        $this->assertEqualsWithDelta(136.75, $result['total_amount'], 0.001);
+        $this->assertEqualsWithDelta(7.74, $result['tax_amount'], 0.001);
+        $this->assertCount(1, $result['items']);
+        $this->assertSame('MAXIS HOME FIBRE 100MBPS PLAN 22 MAY - 21 JUN', $result['items'][0]['description']);
+        $this->assertEqualsWithDelta(129.00, $result['items'][0]['amount'], 0.001);
+    }
+
+    public function test_parses_uploaded_zus_coffee_receipt_screenshot_layout(): void
+    {
+        $text = <<<TXT
+        ZUS COFFEE
+        ZUS COFFEE MALAYSIA SDN BHD
+        BANGSAR BARU, KUALA LUMPUR
+        ORDER ID: ZUS-77102 (DINE-IN)
+        DATE: 25/06/2026 09:15 AM
+        CASHIER: JESSICA
+        1 Iced CEO Latte 11.90
+        [+] Almond 2.50
+        Milk Swap
+        1 Hot Spanish 10.90
+        Latte
+        2 Butter 13.80
+        Croissant
+        SUBTOTAL 39.10
+        SERVICE CHARGE 1.96
+        (5%)
+        SERVICE TAX 2.35
+        (6%)
+        ROUNDING -0.01
+        TOTAL AMOUNT 43.40
+        (RM)
+        TXT;
+
+        $result = $this->parser->parse($text);
+
+        $this->assertSame('ZUS COFFEE', $result['vendor_name']);
+        $this->assertSame('2026-06-25', $result['bill_date']);
+        $this->assertSame('ZUS-77102', $result['reference']);
+        $this->assertEqualsWithDelta(43.40, $result['total_amount'], 0.001);
+        $this->assertEqualsWithDelta(2.35, $result['tax_amount'], 0.001);
+        $this->assertCount(3, $result['items']);
+        $this->assertSame('Iced CEO Latte [+] Almond Milk Swap', $result['items'][0]['description']);
+        $this->assertEqualsWithDelta(14.40, $result['items'][0]['amount'], 0.001);
+        $this->assertSame('Butter Croissant', $result['items'][2]['description']);
+        $this->assertEqualsWithDelta(2, $result['items'][2]['quantity'], 0.001);
+    }
+
+    public function test_parses_uploaded_parking_receipt_screenshot_layout(): void
+    {
+        $text = <<<TXT
+        SURIA KLCC PARKING
+        SURIA KLCC PARKING MANAGEMENT
+        KUALA LUMPUR CITY CENTRE
+        TICKET NO: PK-99210291
+        ENTRY: 25/06/2026 10:15:22
+        EXIT: 25/06/2026 14:45:10
+        DURATION: 4 HRS 30 MINS
+        BASEMENT PARKING
+        CHARGES
+        Tier 1: First Hr
+        = RM5.00
+        Tier 2: Subsq
+        Hrs = RM4.00/Hr 21.00
+        SUBTOTAL 21.00
+        SERVICE TAX 1.26
+        (6%)
+        ROUNDING -0.01
+        TOTAL PAID (RM) 22.25
+        TXT;
+
+        $result = $this->parser->parse($text);
+
+        $this->assertSame('SURIA KLCC PARKING', $result['vendor_name']);
+        $this->assertSame('2026-06-25', $result['bill_date']);
+        $this->assertSame('PK-99210291', $result['reference']);
+        $this->assertEqualsWithDelta(22.25, $result['total_amount'], 0.001);
+        $this->assertEqualsWithDelta(1.26, $result['tax_amount'], 0.001);
+        $this->assertCount(1, $result['items']);
+        $this->assertSame('BASEMENT PARKING CHARGES Tier 1: First Hr = RM5.00 Tier 2: Subsq Hrs = RM4.00/Hr', $result['items'][0]['description']);
+        $this->assertEqualsWithDelta(21.00, $result['items'][0]['amount'], 0.001);
+    }
+
+    public function test_parses_uploaded_pelita_receipt_screenshot_layout(): void
+    {
+        $text = <<<TXT
+        RESTORAN PELITA
+        NASI KANDAR PELITA (KL) SDN BHD
+        JALAN AMPANG, KUALA LUMPUR
+        TABLE NO: 14
+        BILL NO: MK-88721
+        DATE: 25/06/2026 13:05
+        2X NASI KANDAR 25.00
+        (AYAM+BENDI)
+        3X ROTI CANAI 5.40
+        ORDINARY
+        2X TEH TARIK AIS 5.40
+        1X MAGGI GORENG 8.50
+        AYAM
+        SUBTOTAL (RM) 44.30
+        SERVICE TAX 0.00
+        (0%)
+        GRAND TOTAL 44.30
+        (RM)
+        TXT;
+
+        $result = $this->parser->parse($text);
+
+        $this->assertSame('RESTORAN PELITA', $result['vendor_name']);
+        $this->assertSame('2026-06-25', $result['bill_date']);
+        $this->assertSame('MK-88721', $result['reference']);
+        $this->assertEqualsWithDelta(44.30, $result['total_amount'], 0.001);
+        $this->assertCount(4, $result['items']);
+        $this->assertSame('NASI KANDAR (AYAM+BENDI)', $result['items'][0]['description']);
+        $this->assertEqualsWithDelta(2, $result['items'][0]['quantity'], 0.001);
+        $this->assertEqualsWithDelta(25.00, $result['items'][0]['amount'], 0.001);
+        $this->assertSame('MAGGI GORENG AYAM', $result['items'][3]['description']);
+    }
+
+    public function test_parses_uploaded_lotus_receipt_screenshot_layout(): void
+    {
+        $text = <<<TXT
+        LOTUS'S MALAYSIA
+        LOTUS'S STORES MALAYSIA SDN BHD
+        MUTIARA DAMANSARA, SELANGOR
+        TAX INVOICE: TX-9008212
+        DATE: 25/06/2026 18:45
+        CASHIER: SITI_021
+        DESCRIPTION QTY PRICE
+        SUNSILK SHAMPOO1 18.90
+        650ML (S)
+        LOTUS BASMATI 1 34.90
+        RICE 5KG (Z)
+        FARM FRESH MILK2 17.00
+        1L (Z)
+        AYAM STANDARD 1.85 17.39
+        PER KG (Z)
+        JACOB'S CRACKER1 12.50
+        (S)
+        SUBTOTAL 31.40
+        (TAXABLE S)
+        SUBTOTAL (ZERO Z) 69.29
+        SST @ 6% 1.13
+        ROUNDING AMOUNT 0.01
+        TOTAL TO PAY 101.83
+        (RM)
+        TXT;
+
+        $result = $this->parser->parse($text);
+
+        $this->assertSame("LOTUS'S MALAYSIA", $result['vendor_name']);
+        $this->assertSame('2026-06-25', $result['bill_date']);
+        $this->assertSame('TX-9008212', $result['reference']);
+        $this->assertEqualsWithDelta(101.83, $result['total_amount'], 0.001);
+        $this->assertEqualsWithDelta(1.13, $result['tax_amount'], 0.001);
+        $this->assertCount(5, $result['items']);
+        $this->assertSame('SUNSILK SHAMPOO 650ML (S)', $result['items'][0]['description']);
+        $this->assertEqualsWithDelta(18.90, $result['items'][0]['amount'], 0.001);
+        $this->assertSame('AYAM STANDARD PER KG (Z)', $result['items'][3]['description']);
+        $this->assertEqualsWithDelta(1.85, $result['items'][3]['quantity'], 0.001);
+    }
+
+    public function test_parses_uploaded_popular_bookstore_receipt_screenshot_layout(): void
+    {
+        $text = <<<TXT
+        POPULAR BOOKSTORE
+        POPULAR BOOK CO. (M) SDN BHD
+        SUNWAY PYRAMID MALL, SELANGOR
+        RECEIPT: POP-882910
+        DATE: 25/06/2026 19:30
+        CASHIER: VIVIAN
+        ISBN: 39.90
+        9789814928123
+        THINK AND GROW
+        RICH (Z)
+        FABER-CASTELL 10.50
+        GEL PEN BLK
+        3 x RM 3.50 (S)
+        HARDCOVER 18.90
+        NOTEBOOK A5 BLU
+        1 x RM 18.90 (S)
+        SUBTOTAL EXCL SST 69.30
+        SST @ 6% 0.63
+        (STATIONERY ONLY)
+        ROUNDING ADJUSTMENT 0.02
+        TOTAL AMOUNT 69.95
+        (RM)
+        TXT;
+
+        $result = $this->parser->parse($text);
+
+        $this->assertSame('POPULAR BOOKSTORE', $result['vendor_name']);
+        $this->assertSame('2026-06-25', $result['bill_date']);
+        $this->assertSame('POP-882910', $result['reference']);
+        $this->assertEqualsWithDelta(69.95, $result['total_amount'], 0.001);
+        $this->assertEqualsWithDelta(0.63, $result['tax_amount'], 0.001);
+        $this->assertCount(3, $result['items']);
+        $this->assertSame('ISBN: 9789814928123 THINK AND GROW RICH (Z)', $result['items'][0]['description']);
+        $this->assertEqualsWithDelta(39.90, $result['items'][0]['amount'], 0.001);
+        $this->assertEqualsWithDelta(3, $result['items'][1]['quantity'], 0.001);
+        $this->assertEqualsWithDelta(3.50, $result['items'][1]['unit_amount'], 0.001);
+    }
+
+    public function test_parses_uploaded_hotel_folio_screenshot_layout(): void
+    {
+        $text = <<<TXT
+        THE MAJESTIC HOTEL KUALA LUMPUR
+        YTL HOTELS & PROPERTIES SDN BHD
+        GUEST FOLIO / INVOICE
+        FOLIO NO: MJ-99281
+        DATE: 25/06/2026
+        DATE DESCRIPTION / REFERENCE QTY RATE (RM) AMOUNT (RM)
+        24/06/2026 DELUXE ROOM NIGHTLY STAY 1 550.00 550.00
+        24/06/2026 IN-ROOM DINING (NASI GORENG MAJESTIC) 1 65.00 65.00
+        25/06/2026 TOURISM TAX (TTX) - FLAT RATE MANDATORY 1 10.00 10.00
+        SUBTOTAL SUBJECT TO SST 615.00
+        SERVICE TAX (8% ON HOSPITALITY) 49.20
+        TOURISM TAX (EXEMPT FROM SST) 10.00
+        TOTAL PAYABLE BALANCE 674.20
+        TXT;
+
+        $result = $this->parser->parse($text);
+
+        $this->assertSame('THE MAJESTIC HOTEL KUALA LUMPUR', $result['vendor_name']);
+        $this->assertSame('2026-06-25', $result['bill_date']);
+        $this->assertSame('MJ-99281', $result['reference']);
+        $this->assertEqualsWithDelta(674.20, $result['total_amount'], 0.001);
+        $this->assertEqualsWithDelta(49.20, $result['tax_amount'], 0.001);
+        $this->assertCount(3, $result['items']);
+        $this->assertSame('DELUXE ROOM NIGHTLY STAY', $result['items'][0]['description']);
+        $this->assertEqualsWithDelta(550.00, $result['items'][0]['amount'], 0.001);
+        $this->assertSame('TOURISM TAX (TTX) - FLAT RATE MANDATORY', $result['items'][2]['description']);
     }
 }

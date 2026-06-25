@@ -23,10 +23,16 @@ class ReceiptParser
         'jumlah besar',
         'jumlah bayaran', // BM: "amount payable" — final total on Malaysian receipts
         'total pembayaran', // Indonesian: "total payment"
+        'net payable',
+        'total due',
+        'total paid',
+        'total amount paid',
+        'total amount',
+        'total to pay',
+        'total payable balance',
+        'total payable',
         'amount due',
         'amount payable',
-        'total payable',
-        'total paid', // before 'total amount' — receipts often show "Net Total Amount" as the subtotal
         'total amount',
         'jumlah',
         'total',
@@ -38,6 +44,8 @@ class ReceiptParser
      * with the final total separately as "JUMLAH BAYARAN".
      */
     private const SUBTOTAL_KEYWORDS = [
+        'items total',
+        'current charges total',
         'sub total',
         'sub-total',
         'subtotal',
@@ -57,10 +65,16 @@ class ReceiptParser
         'jumlah besar',
         'jumlah bayaran',
         'total pembayaran',
+        'net payable',
+        'total due',
+        'total paid',
+        'total amount paid',
+        'total amount',
+        'total to pay',
+        'total payable balance',
+        'total payable',
         'amount due',
         'amount payable',
-        'total payable',
-        'total paid',
     ];
 
     private const TAX_KEYWORDS = [
@@ -88,7 +102,6 @@ class ReceiptParser
         'tunai',
         'baki',
         'tendered',
-        'card',
         'visa',
         'mastercard',
     ];
@@ -186,7 +199,7 @@ class ReceiptParser
      */
     private function findVendor(array $lines): ?string
     {
-        foreach (array_slice($lines, 0, 8) as $line) {
+        foreach (array_slice($lines, 0, 8) as $offset => $line) {
             // Letter-spacing collapse runs FIRST so the rest of the checks see
             // a clean candidate. ("T H E M E R I D I A N" → "THEMERIDIAN".)
             $candidate = $this->collapseLetterSpacing($line);
@@ -206,6 +219,15 @@ class ReceiptParser
             if ($this->lineMatchesAnyKeyword($candidate, self::STATUS_BANNERS)) continue;
 
             if ($this->lineMatchesAnyKeyword($candidate, [...self::TOTAL_KEYWORDS, ...self::SUBTOTAL_KEYWORDS, ...self::TAX_KEYWORDS, 'date', 'time', 'tarikh', 'receipt', 'invoice'])) continue;
+
+            $next = trim($lines[$offset + 1] ?? '');
+            if (
+                $next !== ''
+                && strtolower($candidate) === $candidate
+                && preg_match('/\b(?:sdn|bhd|berhad|pte|ltd)\b/i', $next)
+            ) {
+                continue;
+            }
 
             return $candidate;
         }
@@ -253,6 +275,16 @@ class ReceiptParser
      */
     private function findDate(string $text): ?string
     {
+        if (preg_match('/\b(?:payment date|date paid)\s*:?\s*(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/i', $text, $m)) {
+            $day = (int) $m[1];
+            $month = (int) $m[2];
+            $year = (int) $m[3];
+            if ($year < 100) $year += 2000;
+            if ($day >= 1 && $day <= 31 && $month >= 1 && $month <= 12 && $year >= 2000 && $year <= 2100) {
+                return sprintf('%04d-%02d-%02d', $year, $month, $day);
+            }
+        }
+
         // Collect all date candidates with their byte-offset in the text.
         // When a document has multiple receipts (e.g. an OCR scan with two
         // stacked receipts), the receipt's OWN date is almost always the
@@ -340,9 +372,22 @@ class ReceiptParser
     {
         $map = $this->buildLabelAmountMap($lines);
 
+        if ($keywords === self::TAX_KEYWORDS) {
+            foreach (['service tax', 'sst @', 'sst ', 'total sst', 'cukai perkhidmatan', 'caj perkhidmatan'] as $preferred) {
+                foreach ($map as $label => $amount) {
+                    if (stripos($label, $preferred) === false) continue;
+                    if (str_contains($label, 'tourism tax')) continue;
+                    return $amount;
+                }
+            }
+        }
+
         foreach ($keywords as $keyword) {
             foreach ($map as $label => $amount) {
                 if (stripos($label, $keyword) === false) continue;
+                if ($keywords === self::TAX_KEYWORDS && $this->lineMatchesAnyKeyword($label, self::SUBTOTAL_KEYWORDS)) {
+                    continue;
+                }
                 return $amount;
             }
         }
@@ -467,15 +512,15 @@ class ReceiptParser
      */
     private function findReference(array $lines): ?string
     {
-        $labelWords = ['RUJUKAN', 'RESIT', 'REFERENCE', 'INVOICE', 'RECEIPT', 'INV', 'REF', 'NUMBER', 'NO'];
+        $labelWords = ['RUJUKAN', 'RESIT', 'REFERENCE', 'INVOICE', 'RECEIPT', 'INV', 'REF', 'NUMBER', 'NO', 'BILL', 'TICKET', 'FOLIO'];
 
         $patterns = [
             // Two-word forms: "No. Resit ABC", "No. Invoice ABC", "Invoice No: ABC", "Receipt No ABC", "Resit No ABC"
-            '/(?:no\.?\s+(?:resit|invoice|inv|ref|reference|receipt)|(?:invoice|receipt|resit|inv|ref|reference)\s+no\.?)\s*[:#\-]?\s*([A-Z0-9][A-Z0-9\-\/_]{2,30})/i',
+            '/(?:no\.?\s+(?:resit|invoice|inv|ref|reference|receipt|bill|ticket|folio)|(?:invoice|receipt|resit|inv|ref|reference|bill|ticket|folio)\s+no\.?)\s*[:#\-]?\s*([A-Z0-9][A-Z0-9\-\/_]{2,30})/i',
             // Single-keyword with an explicit separator: "Ref: ABC", "Invoice #INV-001", "Invoice-ABC123"
-            '/\b(?:invoice|inv|reference|resit|receipt|ref)\s*[#:\-]\s*([A-Z0-9][A-Z0-9\-\/_]{2,30})/i',
+            '/\b(?:invoice|inv|reference|resit|receipt|ref|order id|ticket no|bill no|folio no|transaction ref|tax invoice)\s*[#:\-]?\s*([A-Z0-9][A-Z0-9\-\/_]{2,30})/i',
         ];
-        foreach ($lines as $line) {
+        foreach ($lines as $index => $line) {
             foreach ($patterns as $pattern) {
                 if (preg_match($pattern, $line, $m)) {
                     $candidate = trim($m[1]);
@@ -483,6 +528,18 @@ class ReceiptParser
                     if (preg_match('/^[A-Z0-9]+\-/i', $candidate) || mb_strlen($candidate) >= 6) {
                         return strtoupper($candidate);
                     }
+                }
+            }
+
+            if (preg_match('/^\s*(?:invoice no|receipt no|ticket no|bill no|folio no|tax invoice)\s*:?\s*$/i', $line)) {
+                for ($i = $index + 1; $i < count($lines); $i++) {
+                    $candidate = trim($lines[$i]);
+                    if ($candidate === '') continue;
+                    if (in_array(strtoupper($candidate), $labelWords, true)) continue;
+                    if (preg_match('/^[A-Z0-9][A-Z0-9\-\/_]{2,30}$/i', $candidate)) {
+                        return strtoupper($candidate);
+                    }
+                    break;
                 }
             }
         }
@@ -504,6 +561,16 @@ class ReceiptParser
      */
     private function findItems(array $lines): array
     {
+        $monospaceItems = $this->findMonospaceReceiptItems($lines);
+        if (! empty($monospaceItems)) {
+            return $monospaceItems;
+        }
+
+        $generatedPdfItems = $this->findGeneratedPdfTableItems($lines);
+        if (! empty($generatedPdfItems)) {
+            return $generatedPdfItems;
+        }
+
         $items = [];
 
         // Per-line skip keywords: header rows and known-non-item words.
@@ -535,6 +602,10 @@ class ReceiptParser
         // qty is a bare integer; unit and amount are money-shaped (NN.NN).
         // Currency may be glued to amount ("RM44.70") or absent.
         $tableRowRegex = '/^' . $prefix . '(.+?)\s+(\d+)\s+' . $cur . '?\s*(\d+(?:,\d{3})*\.\d{2})\s+' . $cur . '?\s*(\d+(?:,\d{3})*\.\d{2})\s*$/i';
+
+        // Pattern A2: stacked generated-PDF table row where description is on
+        // previous line(s), followed by "<qty> <unit> <amount>".
+        $stackedTableValueRegex = '/^(\d+)\s+' . $cur . '?\s*(\d+(?:,\d{3})*\.\d{2})\s+' . $cur . '?\s*(\d+(?:,\d{3})*\.\d{2})\s*$/i';
 
         // Pattern B: "<desc> [currency]<amount>" — simple list-style.
         $simpleRowRegex = '/^' . $prefix . '(.+?)\s+' . $cur . '?\s*(\d+(?:,\d{3})*\.\d{2})\s*$/i';
@@ -585,6 +656,21 @@ class ReceiptParser
                 $amt = (float) str_replace(',', '', $m[4]);
                 if ($qty > 0 && $unit > 0 && abs(round($qty * $unit, 2) - $amt) < 0.02) {
                     $description = trim($m[1]);
+                    $quantity = $qty;
+                    $unitAmount = $unit;
+                    $amount = $amt;
+                }
+            }
+
+            // Pattern A2: description already buffered, current row is only
+            // the table values. Common in selectable-text PDFs where a long
+            // description wraps before the quantity/unit/amount columns.
+            if ($description === null && $pendingDescription !== '' && preg_match($stackedTableValueRegex, $line, $m)) {
+                $qty = (float) str_replace(',', '', $m[1]);
+                $unit = (float) str_replace(',', '', $m[2]);
+                $amt = (float) str_replace(',', '', $m[3]);
+                if ($qty > 0 && $unit > 0 && abs(round($qty * $unit, 2) - $amt) < 0.02) {
+                    $description = $pendingDescription;
                     $quantity = $qty;
                     $unitAmount = $unit;
                     $amount = $amt;
@@ -643,6 +729,312 @@ class ReceiptParser
         }
 
         return $items;
+    }
+
+    /**
+     * Handles common monospaced Malaysian receipt screenshots where the item
+     * name wraps across lines and quantity detail appears on a later line:
+     *
+     *   WATSONS WET        17.80
+     *   WIPES 3X10S
+     *   2 x 8.90
+     *
+     * It also covers simple invoice tables and hotel folios with qty/unit/amount.
+     *
+     * @return array<int, array{description: string, amount: float, quantity?: float, unit_amount?: float}>
+     */
+    private function findMonospaceReceiptItems(array $lines): array
+    {
+        $items = [];
+        $pending = [];
+        $openIndex = null;
+        $seenItem = false;
+        $afterHeader = false;
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '' || preg_match('/^[\-=]{5,}$/', $line)) continue;
+
+            if ($seenItem && $this->lineMatchesAnyKeyword($line, [...self::SUBTOTAL_KEYWORDS, ...self::TOTAL_KEYWORDS])) {
+                break;
+            }
+
+            if ($this->isReceiptMetadataLine($line)) {
+                $pending = [];
+                $openIndex = null;
+                $afterHeader = true;
+                continue;
+            }
+
+            if (preg_match('/^\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?$/', $line)) {
+                $pending = [];
+                $openIndex = null;
+                $afterHeader = true;
+                continue;
+            }
+
+            if (preg_match('/^=\s*(?:RM|MYR)?\s*\d+(?:,\d{3})*\.\d{2}$/i', $line)) {
+                if (! empty($pending)) {
+                    $pending[] = $line;
+                }
+                continue;
+            }
+
+            if ($openIndex !== null && preg_match('/^@\s*(?:RM|MYR)?\s*(\d+(?:,\d{3})*\.\d{2})(.*)$/i', $line, $m)) {
+                $items[$openIndex]['description'] .= ' '.$line;
+                if (! isset($items[$openIndex]['unit_amount'])) {
+                    $items[$openIndex]['unit_amount'] = (float) str_replace(',', '', $m[1]);
+                }
+                continue;
+            }
+
+            if ($openIndex !== null && preg_match('/^(\d+(?:\.\d+)?)\s*x\s*(?:RM\s*)?(\d+(?:,\d{3})*\.\d{2})/i', $line, $m)) {
+                $qty = (float) $m[1];
+                $unit = (float) str_replace(',', '', $m[2]);
+                $items[$openIndex]['quantity'] = $qty;
+                $items[$openIndex]['unit_amount'] = $unit;
+                $items[$openIndex]['amount'] = round($qty * $unit, 2);
+                $openIndex = null;
+                continue;
+            }
+
+            if (preg_match('/^\[\+\]\s*(.+?)\s+(\d+(?:,\d{3})*\.\d{2})$/i', $line, $m) && $openIndex !== null) {
+                $items[$openIndex]['description'] .= ' [+] '.trim($m[1]);
+                $items[$openIndex]['amount'] += (float) str_replace(',', '', $m[2]);
+                continue;
+            }
+
+            $parsed = $this->parseMonospaceItemLine($line, $pending);
+            if ($parsed !== null) {
+                if ($this->lineMatchesAnyKeyword($line, self::TAX_KEYWORDS) && ! isset($parsed['quantity'], $parsed['unit_amount'])) {
+                    $pending = [];
+                    $openIndex = null;
+                    continue;
+                }
+
+                if (! $this->isUsefulItemDescription($parsed['description'])) {
+                    $pending = [];
+                    $openIndex = null;
+                    continue;
+                }
+
+                $items[] = $parsed;
+                $openIndex = array_key_last($items);
+                $seenItem = true;
+                $pending = [];
+                continue;
+            }
+
+            if ($seenItem || ($afterHeader && $this->looksLikeItemDescriptionFragment($line))) {
+                if ($openIndex !== null && ! $this->lineHasMoney($line)) {
+                    $items[$openIndex]['description'] = trim($items[$openIndex]['description'].' '.$line);
+                    continue;
+                }
+
+                if (! $this->lineMatchesAnyKeyword($line, [...self::TAX_KEYWORDS, ...self::SKIP_KEYWORDS])) {
+                    $pending[] = $line;
+                }
+            }
+        }
+
+        return array_values(array_map(function (array $item) {
+            $item['description'] = $this->cleanItemDescription($item['description']);
+            return $item;
+        }, $items));
+    }
+
+    private function parseMonospaceItemLine(string $line, array $pending): ?array
+    {
+        $cur = '(?:RM|MYR|SGD|USD|EUR|GBP|S\$|US\$|\$|£|€)';
+        $amount = '(\d+(?:,\d{3})*\.\d{2})';
+        $pendingDescription = trim(implode(' ', $pending));
+
+        if (preg_match('/^\d{2}\/\d{2}\/\d{4}\s+(.+?)\s+(\d+(?:\.\d+)?)\s+'.$amount.'\s+'.$amount.'$/i', $line, $m)) {
+            return [
+                'description' => trim($m[1]),
+                'amount' => (float) str_replace(',', '', $m[4]),
+                'quantity' => (float) $m[2],
+                'unit_amount' => (float) str_replace(',', '', $m[3]),
+            ];
+        }
+
+        if (preg_match('/^(.+?)\s+(\d+(?:\.\d+)?)\s+'.$amount.'\s+'.$amount.'$/i', $line, $m)) {
+            return [
+                'description' => trim($m[1]),
+                'amount' => (float) str_replace(',', '', $m[4]),
+                'quantity' => (float) $m[2],
+                'unit_amount' => (float) str_replace(',', '', $m[3]),
+            ];
+        }
+
+        if (preg_match('/^(\d+)X?\s+(.+?)\s+'.$amount.'$/i', $line, $m)) {
+            return [
+                'description' => trim($m[2]),
+                'amount' => (float) str_replace(',', '', $m[3]),
+                'quantity' => (float) $m[1],
+            ];
+        }
+
+        if (preg_match('/^(.+?)\s+(\d+(?:\.\d+)?)\s+'.$amount.'$/i', $line, $m)) {
+            $qty = (float) $m[2];
+            $amt = (float) str_replace(',', '', $m[3]);
+            $description = trim($m[1]);
+
+            if (abs($qty - $amt) < 0.001 && $qty >= 50) {
+                return [
+                    'description' => $this->combinePendingDescription($pendingDescription, $description),
+                    'amount' => $amt,
+                ];
+            }
+
+            return [
+                'description' => $this->combinePendingDescription($pendingDescription, $description),
+                'amount' => $amt,
+                'quantity' => $qty,
+                'unit_amount' => $qty > 0 ? round($amt / $qty, 2) : null,
+            ];
+        }
+
+        if (preg_match('/^(.+?)\s+'.$cur.'?\s*'.$amount.'$/i', $line, $m)) {
+            return [
+                'description' => $this->combinePendingDescription($pendingDescription, trim($m[1])),
+                'amount' => (float) str_replace(',', '', $m[2]),
+            ];
+        }
+
+        return null;
+    }
+
+    private function combinePendingDescription(string $pending, string $description): string
+    {
+        return trim($pending === '' ? $description : $pending.' '.$description);
+    }
+
+    private function cleanItemDescription(string $description): string
+    {
+        $description = trim(preg_replace('/\s+/', ' ', $description));
+        $description = preg_replace('/^\d+\.\s+/', '', $description);
+        $description = preg_replace('/^\d+\s+(?=[A-Za-z])/', '', $description);
+        $description = preg_replace('/\b([A-Z][A-Z\'-]+)(\d)(?!\.)\b/u', '$1', $description);
+        $description = preg_replace('/\s+\(\s*$/', '', $description);
+        return trim($description);
+    }
+
+    private function isReceiptMetadataLine(string $line): bool
+    {
+        $lower = strtolower($line);
+        if (preg_match('/^(receipt|invoice|inv no|date|member id|cashier|salesperson|time|table no|bill no|ticket no|entry|exit|duration|payment|card no|approval code|account no|statement date|payment date|status|transaction ref|co\. reg|sst id|sst registration|guest name|nationality|check-in|check-out|folio no|item code|item\s+qty)\b/i', $line)) {
+            return true;
+        }
+
+        if (str_contains($lower, 'description') && (str_contains($lower, 'qty') || str_contains($lower, 'amount') || str_contains($lower, 'price'))) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function looksLikeItemDescriptionFragment(string $line): bool
+    {
+        if (preg_match('/^=\s*(?:RM|MYR)?\s*\d+(?:,\d{3})*\.\d{2}$/i', trim($line))) return false;
+        if (! preg_match('/[A-Za-z]/', $line)) return false;
+        if (mb_strlen($line) < 2) return false;
+        if ($this->lineMatchesAnyKeyword($line, [...self::TOTAL_KEYWORDS, ...self::SUBTOTAL_KEYWORDS, ...self::TAX_KEYWORDS])) return false;
+        return true;
+    }
+
+    /**
+     * Poppler's pdftotext can emit generated invoice tables vertically:
+     *
+     * Description
+     * Long product line
+     * Wrapped product line
+     * Qty
+     * Unit price
+     * Amount
+     * 1
+     * RM20.00
+     * RM20.00
+     *
+     * The generic line parser sees the later totals values as separate rows.
+     * This pre-pass reconstructs the item from the table header/value order.
+     *
+     * @return array<int, array{description: string, amount: float, quantity: float, unit_amount: float}>
+     */
+    private function findGeneratedPdfTableItems(array $lines): array
+    {
+        $descriptionIndex = null;
+        foreach ($lines as $index => $line) {
+            if (strtolower(trim($line)) === 'description') {
+                $descriptionIndex = $index;
+                break;
+            }
+        }
+        if ($descriptionIndex === null) return [];
+
+        $qtyIndex = $this->findNextExactLine($lines, 'qty', $descriptionIndex + 1);
+        $unitIndex = $this->findNextExactLine($lines, 'unit price', ($qtyIndex ?? $descriptionIndex) + 1);
+        $amountIndex = $this->findNextExactLine($lines, 'amount', ($unitIndex ?? $descriptionIndex) + 1);
+        if ($qtyIndex === null || $unitIndex === null || $amountIndex === null) return [];
+
+        $descriptionParts = [];
+        for ($i = $descriptionIndex + 1; $i < $qtyIndex; $i++) {
+            $part = trim($lines[$i]);
+            if ($part === '') continue;
+            if (! preg_match('/[A-Za-z]/', $part)) continue;
+            $descriptionParts[] = $part;
+        }
+        $description = trim(preg_replace('/\s+/', ' ', implode(' ', $descriptionParts)));
+        if (! $this->isUsefulItemDescription($description)) return [];
+
+        $valueLines = array_slice($lines, $amountIndex + 1);
+        $qty = null;
+        $unit = null;
+        $amount = null;
+
+        foreach ($valueLines as $line) {
+            $trimmed = trim($line);
+            if ($trimmed === '') continue;
+            if ($this->lineMatchesAnyKeyword($trimmed, [...self::SUBTOTAL_KEYWORDS, ...self::TOTAL_KEYWORDS, 'payment history'])) {
+                break;
+            }
+
+            if ($qty === null && preg_match('/^\d+(?:\.\d+)?$/', $trimmed)) {
+                $qty = (float) $trimmed;
+                continue;
+            }
+
+            if ($qty !== null && $unit === null && $this->isMoneyOnlyLine($trimmed)) {
+                $unit = $this->extractAmountFromLine($trimmed);
+                continue;
+            }
+
+            if ($qty !== null && $unit !== null && $amount === null && $this->isMoneyOnlyLine($trimmed)) {
+                $amount = $this->extractAmountFromLine($trimmed);
+                break;
+            }
+        }
+
+        if ($qty === null || $unit === null || $amount === null) return [];
+        if ($qty <= 0 || $unit <= 0 || abs(round($qty * $unit, 2) - $amount) >= 0.02) return [];
+
+        return [[
+            'description' => $description,
+            'amount' => $amount,
+            'quantity' => $qty,
+            'unit_amount' => $unit,
+        ]];
+    }
+
+    private function findNextExactLine(array $lines, string $needle, int $start): ?int
+    {
+        for ($i = $start; $i < count($lines); $i++) {
+            if (strtolower(trim($lines[$i])) === $needle) {
+                return $i;
+            }
+        }
+
+        return null;
     }
 
     /**
