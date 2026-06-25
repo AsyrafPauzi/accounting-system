@@ -20,6 +20,7 @@ class EnsureSubscribed
         'profile.',
         'settings.',
         'subscription.',
+        'verification.',
         'logout',
         // Practice / Accountant track lives on the central side, not
         // inside any tenant — the firm has its own subscription via

@@ -36,17 +36,27 @@ export default function VerifyEmailReminderModal({ show, onClose }) {
 
     const [busy, setBusy] = useState(null); // 'send' | 'skip' | null
     const [sent, setSent] = useState(false);
+    const [sendError, setSendError] = useState('');
 
     const sendVerification = () => {
         if (busy) return;
         setBusy('send');
+        setSendError('');
         router.post(
             route('verification.send'),
             {},
             {
                 preserveScroll: true,
                 preserveState: true,
-                onSuccess: () => setSent(true),
+                onSuccess: (page) => {
+                    const error = page.props.flash?.error;
+                    if (error) {
+                        setSendError(error);
+                        return;
+                    }
+                    setSent(true);
+                },
+                onError: () => setSendError('We could not send the verification email. Please try again in a minute.'),
                 onFinish: () => setBusy(null),
             },
         );
@@ -95,6 +105,12 @@ export default function VerifyEmailReminderModal({ show, onClose }) {
                     {sent && (
                         <div className="rounded-xl bg-forest/10 border border-forest/30 p-3 text-sm font-medium text-forest">
                             Verification email re-sent. Check your inbox (and spam folder).
+                        </div>
+                    )}
+
+                    {sendError && (
+                        <div className="rounded-xl bg-terracotta/10 border border-terracotta/30 p-3 text-sm font-medium text-terracotta">
+                            {sendError}
                         </div>
                     )}
                 </div>

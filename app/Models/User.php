@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Notifications\Auth\VerifyEmail as VerifyEmailNotification;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Traits\HasRoles;
 use Stancl\Tenancy\Database\Concerns\CentralConnection;
 
@@ -100,6 +102,19 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isFirmUser(): bool
     {
         return ! empty($this->firm_id);
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new VerifyEmailNotification());
+
+        Log::info('Email verification notification sent', [
+            'user_id' => $this->id,
+            'email' => $this->email,
+            'account_type' => $this->isFirmUser() ? 'practice' : 'business',
+            'firm_id' => $this->firm_id,
+            'tenant_id' => $this->tenant_id,
+        ]);
     }
 
     /**
