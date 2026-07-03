@@ -162,6 +162,7 @@ class HandleInertiaRequests extends Middleware
                 // the only place the operator sees it. Strict per-request
                 // — Laravel's flash machinery clears it on the next req.
                 'issued_license' => fn () => $request->session()->get('issued_license'),
+                'issued_api_key' => fn () => $request->session()->get('issued_api_key'),
             ],
             'product_name' => config('app.product_name'),
             'product_tagline' => config('app.product_tagline'),

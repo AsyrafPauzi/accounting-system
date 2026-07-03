@@ -129,15 +129,24 @@ class TokenController extends Controller
                 'issued_by_user_id' => $code->user_id,
             ]);
 
-            return response()->json([
-                'api_key'                  => $issued['api_key'],
-                'transaction_signing_key'  => $issued['signing_key'],
-                'tenant'                   => [
+            $clientConfig = config("oauth.clients.{$code->oauth_client_id}", []);
+            $readOnly = (bool) ($clientConfig['read_only'] ?? false);
+
+            $payload = [
+                'api_key'     => $issued['api_key'],
+                'tenant'      => [
                     'id'   => $tenant->id,
                     'name' => $tenant->display_name ?? $tenant->legal_name ?? $tenant->id,
                 ],
-                'issued_at'                => $issued['credential']->created_at->toIso8601String(),
-            ]);
+                'issued_at'   => $issued['credential']->created_at->toIso8601String(),
+            ];
+
+            // Read-only partners only need the bearer key for GET feeds.
+            if (! $readOnly) {
+                $payload['transaction_signing_key'] = $issued['signing_key'];
+            }
+
+            return response()->json($payload);
         });
     }
 

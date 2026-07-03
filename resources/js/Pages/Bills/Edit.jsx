@@ -326,7 +326,16 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                                                 <span className="text-ink text-sm">{item.account_code}</span>
                                             )}
                                         </td>
-                                        <td className="px-3 py-3">{isDraft ? <input type="text" value={item.description} onChange={(e) => updateItem(index, 'description', e.target.value)} className={inputClass + ' w-full'} /> : <span className="text-sm">{item.description || '—'}</span>}</td>
+                                        <td className="px-3 py-3">
+                                            {isDraft ? (
+                                                <>
+                                                    <input type="text" value={item.description} maxLength={255} onChange={(e) => updateItem(index, 'description', e.target.value)} className={inputClass + ' w-full'} />
+                                                    {errors[`items.${index}.description`] && <p className="mt-1 text-xs text-terracotta">{errors[`items.${index}.description`]}</p>}
+                                                </>
+                                            ) : (
+                                                <span className="text-sm">{item.description || '—'}</span>
+                                            )}
+                                        </td>
                                         <td className="px-3 py-3">{isDraft ? <input type="number" step="0.01" min="0" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className={inputClass + ' w-full'} /> : <span className="text-sm font-mono font-tabular">{item.quantity}</span>}</td>
                                         <td className="px-3 py-3">{isDraft ? <input type="number" step="0.01" min="0" value={item.unit_amount} onChange={(e) => updateItem(index, 'unit_amount', e.target.value)} className={inputClass + ' w-full'} /> : <span className="text-sm font-mono font-tabular">{formatMoney(item.unit_amount)}</span>}</td>
                                         <td className="px-3 py-3 text-right text-sm font-mono font-tabular">{formatMoney(item.amount)}</td>

@@ -27,22 +27,34 @@ return [
     'clients' => [
         'finpersona' => [
             'name' => 'Fin Persona',
-            'description' => 'Personal finance app — pulls bank transactions, invoices, bills, and journal entries from BukuCloud.',
+            'description' => 'Personal finance app — read-only access to transactions, invoices, bills, customers, and suppliers.',
             'client_secret' => env('FINPERSONA_CLIENT_SECRET'),
             'redirect_uris' => array_filter([
                 env('FINPERSONA_REDIRECT_URI'),
                 env('FINPERSONA_REDIRECT_URI_DEV'),
             ]),
-            // What we tell the user on the consent screen. Keep it
-            // honest — every endpoint group enabled on the issued key
-            // should appear here.
+            'read_only' => true,
             'scopes' => [
-                'transactions' => 'Bank transactions (deposits and withdrawals)',
-                'invoices'     => 'Customer invoices and payment status',
-                'bills'        => 'Supplier bills and payables',
+                'transactions' => 'Bank transactions (read-only)',
+                'invoices'     => 'Customer invoices (read-only)',
+                'bills'        => 'Supplier bills (read-only)',
                 'customers'    => 'Customer directory (read-only)',
                 'suppliers'    => 'Supplier directory (read-only)',
-                'journal'      => 'Journal entries (read-only — derived from your books)',
+            ],
+        ],
+
+        // Tenant-generated API keys from Settings → Integrations.
+        // No OAuth, no partner env vars. User copies pk_live_* into Fin Persona.
+        'direct' => [
+            'name' => 'Direct API access',
+            'description' => 'Read-only API key for Fin Persona and similar apps.',
+            'read_only' => true,
+            'scopes' => [
+                'transactions' => 'Bank transactions (read-only)',
+                'invoices'     => 'Customer invoices (read-only)',
+                'bills'        => 'Supplier bills (read-only)',
+                'customers'    => 'Customer directory (read-only)',
+                'suppliers'    => 'Supplier directory (read-only)',
             ],
         ],
     ],

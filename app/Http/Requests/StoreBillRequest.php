@@ -26,7 +26,7 @@ class StoreBillRequest extends FormRequest
             'ocr_data'             => 'nullable|array',
             'items'                => 'required|array|min:1',
             'items.*.account_code' => 'required|string|exists:accounts,code',
-            'items.*.description'  => 'nullable|string',
+            'items.*.description'  => 'nullable|string|max:255',
             'items.*.quantity'     => 'nullable|numeric|min:0',
             'items.*.unit_amount'  => 'nullable|numeric|min:0',
             'items.*.amount'       => 'required|numeric|min:0',

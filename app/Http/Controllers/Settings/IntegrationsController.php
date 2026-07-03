@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Models\Tenant;
 use App\Models\TenantApiCredential;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,13 +13,9 @@ use Inertia\Response;
 /**
  * Settings → API & Integrations.
  *
- * Lists every active OAuth credential the tenant has issued and lets
- * an admin revoke any of them. Plan-gated by `api.access` (Solo+).
- *
- * Note this is NOT where users *issue* keys — that happens through the
- * partner-driven OAuth flow (the partner's "Connect to BukuCloud"
- * button). Manual issuance from this page would defeat the purpose
- * of having an authorization handshake at all.
+ * Lists active API credentials and lets an admin generate a direct
+ * read-only key or revoke any existing credential. Plan-gated by
+ * `api.access` (Solo+).
  */
 class IntegrationsController extends Controller
 {
@@ -38,6 +35,7 @@ class IntegrationsController extends Controller
                     'id'               => $c->id,
                     'partner_id'       => $c->oauth_client_id,
                     'partner_name'     => $client['name'] ?? $c->oauth_client_id,
+                    'read_only'        => (bool) ($client['read_only'] ?? false),
                     'masked_api_key'   => $c->maskedApiKey(),
                     'masked_signing'   => $c->maskedSigningKey(),
                     'issued_at'        => $c->created_at?->toIso8601String(),
@@ -57,18 +55,28 @@ class IntegrationsController extends Controller
 
         return Inertia::render('Settings/Integrations', [
             'credentials' => $credentials->values()->all(),
-            // Surface the configured partner list so the empty-state can
-            // tell the user "to connect Fin Persona, click their Connect
-            // button" rather than a generic blank slate.
-            'available_partners' => collect(config('oauth.clients', []))
-                ->map(fn ($c, $id) => [
-                    'id'          => $id,
-                    'name'        => $c['name'] ?? $id,
-                    'description' => $c['description'] ?? null,
-                ])
-                ->values()
-                ->all(),
         ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $tenant = $user->tenant_id ? Tenant::find($user->tenant_id) : null;
+
+        if (! $tenant || ! $tenant->hasPlanPermission('api.access')) {
+            return redirect()->route('settings.integrations.index')
+                ->with('error', 'Your plan does not include API access.');
+        }
+
+        $issued = TenantApiCredential::issueFor(
+            tenantId: $tenant->id,
+            oauthClientId: 'direct',
+            issuedByUserId: $user->id,
+        );
+
+        return redirect()->route('settings.integrations.index')
+            ->with('success', 'API key generated. Copy it now — it will not be shown again.')
+            ->with('issued_api_key', $issued['api_key']);
     }
 
     public function revoke(Request $request, int $id): RedirectResponse

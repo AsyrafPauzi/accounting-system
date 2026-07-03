@@ -246,7 +246,8 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
                                             </select>
                                         </td>
                                         <td className="px-3 py-3">
-                                            <input type="text" value={item.description} onChange={(e) => updateItem(index, 'description', e.target.value)} className={inputClass + ' w-full'} placeholder="Description" />
+                                            <input type="text" value={item.description} maxLength={255} onChange={(e) => updateItem(index, 'description', e.target.value)} className={inputClass + ' w-full'} placeholder="Description" />
+                                            {errors[`items.${index}.description`] && <p className="mt-1 text-xs text-terracotta">{errors[`items.${index}.description`]}</p>}
                                         </td>
                                         <td className="px-3 py-3">
                                             <input type="number" step="0.01" min="0" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className={inputClass + ' w-full'} />

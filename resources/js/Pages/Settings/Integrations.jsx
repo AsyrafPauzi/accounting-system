@@ -1,26 +1,32 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 
-/**
- * Settings → API & Integrations.
- *
- * Shows every OAuth-issued credential (active and revoked) for the
- * tenant. The plaintext API key + signing key are NEVER shown here —
- * they only ever appear in the partner's server-side response from
- * /api/oauth/token. We only show last4 + masked dots, plus issue/
- * revoke audit trails.
- */
-export default function Integrations({ auth, credentials = [], available_partners = [] }) {
+export default function Integrations({ auth, credentials = [] }) {
+    const { flash } = usePage().props;
     const [confirmingId, setConfirmingId] = useState(null);
+    const [issuedKey, setIssuedKey] = useState(null);
     const revoke = useForm({});
+    const generate = useForm({});
+
+    useEffect(() => {
+        if (flash?.issued_api_key) {
+            setIssuedKey(flash.issued_api_key);
+        }
+    }, [flash?.issued_api_key]);
 
     const onRevoke = (id) => {
         revoke.post(route('settings.integrations.revoke', id), {
             preserveScroll: true,
             onFinish: () => setConfirmingId(null),
+        });
+    };
+
+    const onGenerate = () => {
+        generate.post(route('settings.integrations.store'), {
+            preserveScroll: true,
         });
     };
 
@@ -31,45 +37,58 @@ export default function Integrations({ auth, credentials = [], available_partner
         <AuthenticatedLayout
             user={auth.user}
             header={
-                <div>
-                    <h2 className="font-display text-2xl font-medium text-ink">API & Integrations</h2>
-                    <p className="text-sm text-ink-muted mt-1">Manage external apps connected to your BukuCloud account.</p>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h2 className="font-display text-2xl font-medium text-ink">API & Integrations</h2>
+                        <p className="text-sm text-ink-muted mt-1">Generate an API key for Fin Persona or other apps.</p>
+                    </div>
+                    <PrimaryButton onClick={onGenerate} disabled={generate.processing}>
+                        {generate.processing ? 'Generating…' : 'Generate API key'}
+                    </PrimaryButton>
                 </div>
             }
         >
             <Head title="API & Integrations" />
 
             <div className="py-6 max-w-4xl mx-auto space-y-6 px-4 sm:px-6 lg:px-8">
-                {/* How it works */}
+                {issuedKey && (
+                    <div className="rounded-2xl border border-terracotta/30 bg-terracotta/5 p-5 space-y-3">
+                        <h3 className="font-medium text-ink">Copy your API key now</h3>
+                        <p className="text-sm text-ink-muted">
+                            Paste this into Fin Persona. BukuCloud will not show the full key again.
+                        </p>
+                        <div className="rounded-xl bg-white border border-border-warm px-4 py-3 font-mono text-sm break-all text-ink">
+                            {issuedKey}
+                        </div>
+                        <div className="flex gap-2">
+                            <SecondaryButton
+                                type="button"
+                                onClick={() => navigator.clipboard?.writeText(issuedKey)}
+                            >
+                                Copy
+                            </SecondaryButton>
+                            <SecondaryButton type="button" onClick={() => setIssuedKey(null)}>
+                                Dismiss
+                            </SecondaryButton>
+                        </div>
+                    </div>
+                )}
+
                 <div className="rounded-2xl border border-border-warm bg-cream/40 p-5 text-sm">
-                    <h3 className="font-medium text-ink mb-2">How API access works</h3>
+                    <h3 className="font-medium text-ink mb-2">How it works</h3>
                     <ol className="list-decimal list-inside text-ink-muted space-y-1">
-                        <li>Open the partner app (e.g. Fin Persona) and click "Connect to BukuCloud".</li>
-                        <li>Sign in to BukuCloud and review the data they're requesting.</li>
-                        <li>Click <strong>Authorize</strong> — the partner receives an API key + signing key automatically.</li>
-                        <li>Manage or revoke their access from this page anytime.</li>
+                        <li>Click <strong>Generate API key</strong>.</li>
+                        <li>Copy the key and paste it into Fin Persona.</li>
+                        <li>Fin Persona calls the BukuCloud API with <code className="text-xs">Authorization: Bearer &lt;api_key&gt;</code>.</li>
+                        <li>Revoke the key here anytime to disconnect the app.</li>
                     </ol>
-                    <p className="text-ink-muted mt-3 text-xs">
-                        BukuCloud never shows the full API key after issuance — even to you. If the partner loses theirs, they must re-authorize.
-                    </p>
                 </div>
 
-                {/* Active credentials */}
                 <section>
-                    <h3 className="font-medium text-ink mb-3">Active connections ({active.length})</h3>
+                    <h3 className="font-medium text-ink mb-3">Active API keys ({active.length})</h3>
                     {active.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-border-warm p-6 text-center text-sm text-ink-muted">
-                            No active integrations yet.
-                            {available_partners.length > 0 && (
-                                <div className="mt-3 text-xs">
-                                    Available partners:
-                                    <ul className="mt-2 space-y-1">
-                                        {available_partners.map((p) => (
-                                            <li key={p.id} className="font-medium text-ink">{p.name}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
+                            No API keys yet. Generate one to connect Fin Persona.
                         </div>
                     ) : (
                         <ul className="space-y-3">
@@ -110,15 +129,9 @@ export default function Integrations({ auth, credentials = [], available_partner
                                             )}
                                         </div>
                                     </div>
-                                    <div className="grid sm:grid-cols-2 gap-3 text-xs">
-                                        <div className="rounded-xl bg-cream/50 px-3 py-2">
-                                            <div className="text-ink-muted">API key</div>
-                                            <div className="font-mono text-ink mt-0.5">{c.masked_api_key}</div>
-                                        </div>
-                                        <div className="rounded-xl bg-cream/50 px-3 py-2">
-                                            <div className="text-ink-muted">Signing key</div>
-                                            <div className="font-mono text-ink mt-0.5">{c.masked_signing}</div>
-                                        </div>
+                                    <div className="rounded-xl bg-cream/50 px-3 py-2 text-xs">
+                                        <div className="text-ink-muted">API key</div>
+                                        <div className="font-mono text-ink mt-0.5">{c.masked_api_key}</div>
                                     </div>
                                 </li>
                             ))}
@@ -126,10 +139,9 @@ export default function Integrations({ auth, credentials = [], available_partner
                     )}
                 </section>
 
-                {/* Revoked / expired */}
                 {inactive.length > 0 && (
                     <section>
-                        <h3 className="font-medium text-ink mb-3">Past connections ({inactive.length})</h3>
+                        <h3 className="font-medium text-ink mb-3">Revoked keys ({inactive.length})</h3>
                         <ul className="space-y-2">
                             {inactive.map((c) => (
                                 <li key={c.id} className="rounded-xl border border-border-warm p-3 text-sm flex flex-wrap items-center gap-x-4 gap-y-1 opacity-70">

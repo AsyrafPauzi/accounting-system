@@ -245,6 +245,9 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['plan.permission:api.access', 'permission:integrations.view'])->group(function () {
         Route::get('/settings/integrations', [\App\Http\Controllers\Settings\IntegrationsController::class, 'index'])
             ->name('settings.integrations.index');
+        Route::post('/settings/integrations', [\App\Http\Controllers\Settings\IntegrationsController::class, 'store'])
+            ->middleware('throttle:creation')
+            ->name('settings.integrations.store');
         Route::post('/settings/integrations/{id}/revoke', [\App\Http\Controllers\Settings\IntegrationsController::class, 'revoke'])
             ->whereNumber('id')
             ->name('settings.integrations.revoke');
