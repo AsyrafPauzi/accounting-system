@@ -54,47 +54,6 @@ Route::post('/api/self-hosted/heartbeat', [\App\Http\Controllers\Api\HeartbeatCo
     ->middleware(['throttle:30,1'])
     ->name('api.self-hosted.heartbeat');
 
-// --- OAuth "Connect to BukuCloud" handshake ---
-// Three-leg flow: authorize → custom login → consent → redirect-with-code.
-// All routes throttled per-IP since they're entry points an attacker can
-// hit without authentication. The token-exchange POST itself lives at
-// /api/oauth/token (routes/api.php) and is rate-limited separately.
-Route::middleware(['throttle:60,1'])->prefix('oauth')->name('oauth.')->group(function () {
-    Route::get('/authorize', \App\Http\Controllers\OAuth\AuthorizeController::class)
-        ->name('authorize');
-
-    Route::get('/login', [\App\Http\Controllers\OAuth\LoginController::class, 'show'])
-        ->name('login.show');
-    // The login POST itself uses the tighter `throttle:auth` (5
-    // attempts per IP+email) the regular login uses, plus the
-    // shared spam-bot honeypot.
-    Route::post('/login', [\App\Http\Controllers\OAuth\LoginController::class, 'store'])
-        ->middleware(['throttle:auth', \App\Http\Middleware\SpamBotGuard::class])
-        ->name('login.store');
-
-    Route::middleware(['auth'])->group(function () {
-        Route::get('/consent', [\App\Http\Controllers\OAuth\ConsentController::class, 'show'])
-            ->name('consent.show');
-        Route::post('/consent/approve', [\App\Http\Controllers\OAuth\ConsentController::class, 'approve'])
-            ->name('consent.approve');
-        Route::post('/consent/deny', [\App\Http\Controllers\OAuth\ConsentController::class, 'deny'])
-            ->name('consent.deny');
-    });
-
-    // Static informational pages — kept here (not in a controller)
-    // because they have no logic, just messaging.
-    Route::get('/upgrade', function () {
-        return Inertia::render('OAuth/Upgrade');
-    })->name('upgrade.show');
-
-    Route::get('/error/firm-user', function () {
-        return Inertia::render('OAuth/Error', [
-            'reason' => 'firm_user',
-            'detail' => 'API integrations are scoped to a single business account. Please log in with the company account that owns the data you want to share.',
-        ]);
-    })->name('error.firm-user');
-});
-
 // License-invalid landing page (used by SelfHostedLicenseGate when
 // the running install can't validate). Returns a static Inertia page.
 Route::get('/license-invalid', function (\Illuminate\Http\Request $request) {
@@ -237,8 +196,7 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/settings/company', [CompanySettingsController::class, 'update'])->name('settings.company.update');
     Route::get('/settings/plan', [SubscriptionController::class, 'planSettings'])->name('settings.plan.index');
 
-    // API & Integrations — list and revoke OAuth credentials issued
-    // through the "Connect to BukuCloud" handshake. Plan-gated by
+    // API & Integrations — generate and revoke tenant API keys. Plan-gated by
     // `api.access` (Solo+); Spatie permission `integrations.view` is
     // also required so non-admin team members on the same tenant can
     // be excluded from the page even if the plan grants access.

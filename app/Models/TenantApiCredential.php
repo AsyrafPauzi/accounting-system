@@ -12,16 +12,15 @@ use Illuminate\Support\Str;
 use Stancl\Tenancy\Database\Concerns\CentralConnection;
 
 /**
- * Per-tenant API credential issued through the OAuth "Connect" flow.
+ * Per-tenant API credential for external API access.
  *
- * One row authorises ONE partner (oauth_client_id) to call BukuCloud's
- * /api/v1 surface on behalf of ONE tenant. A tenant can have multiple
- * rows if they connect multiple partners (today only Fin Persona).
+ * One row authorises ONE client (oauth_client_id) to call BukuCloud's
+ * /api/v1 surface on behalf of ONE tenant.
  *
  * Two key materials live here:
  *
- *   - Plaintext API key (`pk_live_...`): generated, shown ONCE in the
- *     OAuth token-exchange response, then never recoverable from the
+ *   - Plaintext API key (`pk_live_...`): generated, shown ONCE when
+ *     issued from Settings → Integrations, then never recoverable from
  *     DB. We only persist a SHA-256 hash + last-4 for lookup and UI.
  *
  *   - Plaintext signing key (`sk_live_...`): generated, returned with
@@ -92,9 +91,8 @@ class TenantApiCredential extends Model
     /**
      * Mint a brand-new credential row for the given tenant + partner.
      * Returns the row plus the **plaintext** key materials, which the
-     * caller MUST surface to the partner (via the OAuth token-exchange
-     * response) and then discard — there is no second chance to read
-     * either plaintext from the database.
+     * caller MUST surface to the user once, then discard — there is no
+     * second chance to read either plaintext from the database.
      *
      * @return array{credential: self, api_key: string, signing_key: string}
      */

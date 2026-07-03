@@ -139,7 +139,7 @@ class AppServiceProvider extends ServiceProvider
         // External API throttle. Keyed by api_key when present (so each
         // partner credential gets its own bucket) so a chatty Fin Persona
         // backend can't starve a quieter integration. Falls back to IP
-        // for the unauthenticated /api/oauth/token exchange.
+        // for the unauthenticated API surface when no bearer key is sent.
         \Illuminate\Support\Facades\RateLimiter::for('api-v1', function (\Illuminate\Http\Request $request) {
             $auth = (string) $request->header('Authorization', '');
             if (preg_match('/^Bearer\s+(\S+)$/i', $auth, $m)) {

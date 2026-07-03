@@ -29,29 +29,23 @@ class IntegrationsController extends Controller
             ->where('tenant_id', $tenantId)
             ->orderByDesc('created_at')
             ->get()
-            ->map(function (TenantApiCredential $c) {
-                $client = config("oauth.clients.{$c->oauth_client_id}");
-                return [
-                    'id'               => $c->id,
-                    'partner_id'       => $c->oauth_client_id,
-                    'partner_name'     => $client['name'] ?? $c->oauth_client_id,
-                    'read_only'        => (bool) ($client['read_only'] ?? false),
-                    'masked_api_key'   => $c->maskedApiKey(),
-                    'masked_signing'   => $c->maskedSigningKey(),
-                    'issued_at'        => $c->created_at?->toIso8601String(),
-                    'last_used_at'     => $c->last_used_at?->toIso8601String(),
-                    'revoked_at'       => $c->revoked_at?->toIso8601String(),
-                    'is_active'        => $c->isActive(),
-                    'issued_by'        => $c->issuedBy ? [
-                        'name'  => $c->issuedBy->name,
-                        'email' => $c->issuedBy->email,
-                    ] : null,
-                    'revoked_by'       => $c->revokedBy ? [
-                        'name'  => $c->revokedBy->name,
-                        'email' => $c->revokedBy->email,
-                    ] : null,
-                ];
-            });
+            ->map(fn (TenantApiCredential $c) => [
+                'id'             => $c->id,
+                'partner_name'   => $this->partnerName($c->oauth_client_id),
+                'masked_api_key' => $c->maskedApiKey(),
+                'issued_at'      => $c->created_at?->toIso8601String(),
+                'last_used_at'   => $c->last_used_at?->toIso8601String(),
+                'revoked_at'     => $c->revoked_at?->toIso8601String(),
+                'is_active'      => $c->isActive(),
+                'issued_by'      => $c->issuedBy ? [
+                    'name'  => $c->issuedBy->name,
+                    'email' => $c->issuedBy->email,
+                ] : null,
+                'revoked_by'     => $c->revokedBy ? [
+                    'name'  => $c->revokedBy->name,
+                    'email' => $c->revokedBy->email,
+                ] : null,
+            ]);
 
         return Inertia::render('Settings/Integrations', [
             'credentials' => $credentials->values()->all(),
@@ -100,6 +94,14 @@ class IntegrationsController extends Controller
         $credential->revoke($user->id);
 
         return redirect()->route('settings.integrations.index')
-            ->with('success', 'API credential revoked. The partner will receive 401 errors immediately on subsequent calls.');
+            ->with('success', 'API key revoked.');
+    }
+
+    private function partnerName(string $clientId): string
+    {
+        return match ($clientId) {
+            'direct' => 'Direct API access',
+            default  => $clientId,
+        };
     }
 }

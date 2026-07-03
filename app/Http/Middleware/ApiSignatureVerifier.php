@@ -29,7 +29,7 @@ use Symfony\Component\HttpFoundation\Response;
  *     X-BukuCloud-Timestamp:  unix-millis at sign time
  *     X-BukuCloud-Signature:  hex-encoded hmac_sha256(canonical, signing_key)
  *
- * Replay defence: requests outside `oauth.signature_skew_seconds`
+ * Replay defence: requests outside `api.signature_skew_seconds`
  * (default 5 min) of server time are rejected. Combined with the
  * signature itself this means a captured request body+sig is unusable
  * 5 minutes after capture.
@@ -67,7 +67,7 @@ class ApiSignatureVerifier
             return $this->fail(401, 'invalid_request', 'X-BukuCloud-Timestamp must be unix milliseconds as digits.');
         }
 
-        $skew = (int) config('oauth.signature_skew_seconds', 300);
+        $skew = (int) config('api.signature_skew_seconds', 300);
         $delta = abs((int) (now()->getTimestampMs()) - (int) $timestamp);
         if ($delta > $skew * 1000) {
             return $this->fail(401, 'invalid_request', "Timestamp is more than {$skew}s away from server time.");

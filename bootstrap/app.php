@@ -13,11 +13,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ])
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
-        // Stateless external API for OAuth-style partner integrations
-        // (today: Fin Persona). Auth on /api/v1/* is by Bearer api_key
-        // → ApiKeyAuth middleware → tenancy initialise. /api/oauth/token
-        // is the partner's server-to-server code-for-keys exchange and
-        // is registered CSRF-exempt in the api stack (no session).
+        // Stateless external API. Auth on /api/v1/* is by Bearer api_key
+        // → ApiKeyAuth middleware → tenancy initialise.
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
@@ -45,10 +42,6 @@ return Application::configure(basePath: dirname(__DIR__))
             // Self-hosted heartbeat is a public API endpoint
             // authenticated by the license signature, not a session.
             '/api/self-hosted/heartbeat',
-            // OAuth token-exchange is server-to-server (partner backend
-            // posts client_secret + auth code). Pre-shared client_secret
-            // is the auth signal, not a session cookie.
-            '/api/oauth/token',
             // External partner /api/v1 surface. Authenticated by Bearer
             // api_key (and HMAC for writes), not by session — CSRF is
             // not the right defence here.
@@ -135,14 +128,8 @@ return Application::configure(basePath: dirname(__DIR__))
             '_hp_url',
             '_hp_ts',
             'authorize_extra_seat_charge',
-            // OAuth "Connect to BukuCloud" partner credentials. Even
-            // though these never live in form input under normal flow,
-            // a 422 re-render after a webhook validation error could
-            // otherwise leak them into rendered HTML.
-            'client_secret',
             'transaction_signing_key',
             'signing_key',
-            'oauth_state',
         ]);
 
         $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, $request) {

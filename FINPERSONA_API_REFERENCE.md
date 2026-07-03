@@ -1,25 +1,29 @@
 # BukuCloud API for Fin Persona
 
-No OAuth. No BukuCloud env setup for Fin Persona.
+## Step 1 — Get API Key (BukuCloud user)
 
-## How to Connect
+1. Log in to BukuCloud
+2. Go to **Settings → API & Integrations**
+3. Click **Generate API key**
+4. Copy the key immediately (shown once only)
+5. Paste the key into Fin Persona
 
-### BukuCloud user
+Example key format:
 
-1. Go to **Settings → API & Integrations**
-2. Click **Generate API key**
-3. Copy the key (shown once)
-4. Paste it into Fin Persona
+```text
+pk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
 
-### Fin Persona
+## Step 2 — Use API Key (Fin Persona)
 
-1. Save the API key in Fin Persona backend
-2. Call the API with:
+Every request must include:
 
 ```http
-Authorization: Bearer pk_live_xxx
+Authorization: Bearer <api_key>
 Accept: application/json
 ```
+
+Replace `<api_key>` with the key from Step 1.
 
 ## Base URL
 
@@ -27,24 +31,97 @@ Accept: application/json
 https://app.bukucloud.com
 ```
 
-## Endpoints
+## API URLs
+
+### Transactions
 
 ```text
-GET /api/v1/transactions
-GET /api/v1/invoices
-GET /api/v1/bills
-GET /api/v1/customers
-GET /api/v1/suppliers
+GET https://app.bukucloud.com/api/v1/transactions
 ```
 
-## Example
+With filters:
+
+```text
+GET https://app.bukucloud.com/api/v1/transactions?start_date=2026-01-01&end_date=2026-06-30&per_page=100
+```
+
+### Invoices
+
+```text
+GET https://app.bukucloud.com/api/v1/invoices
+```
+
+With filters:
+
+```text
+GET https://app.bukucloud.com/api/v1/invoices?status=paid&per_page=50
+```
+
+### Bills
+
+```text
+GET https://app.bukucloud.com/api/v1/bills
+```
+
+With filters:
+
+```text
+GET https://app.bukucloud.com/api/v1/bills?status=unpaid&per_page=50
+```
+
+### Customers
+
+```text
+GET https://app.bukucloud.com/api/v1/customers
+```
+
+With filters:
+
+```text
+GET https://app.bukucloud.com/api/v1/customers?is_active=true&search=abc&per_page=50
+```
+
+### Suppliers
+
+```text
+GET https://app.bukucloud.com/api/v1/suppliers
+```
+
+With filters:
+
+```text
+GET https://app.bukucloud.com/api/v1/suppliers?is_active=true&per_page=50
+```
+
+## cURL Examples
+
+Invoices:
 
 ```bash
-curl -H "Authorization: Bearer pk_live_xxx" \
-  "https://app.bukucloud.com/api/v1/invoices?per_page=50"
+curl -X GET "https://app.bukucloud.com/api/v1/invoices?per_page=50" \
+  -H "Authorization: Bearer pk_live_xxx" \
+  -H "Accept: application/json"
 ```
 
-## Response
+Bills:
+
+```bash
+curl -X GET "https://app.bukucloud.com/api/v1/bills?per_page=50" \
+  -H "Authorization: Bearer pk_live_xxx" \
+  -H "Accept: application/json"
+```
+
+Transactions:
+
+```bash
+curl -X GET "https://app.bukucloud.com/api/v1/transactions?start_date=2026-01-01&end_date=2026-06-30" \
+  -H "Authorization: Bearer pk_live_xxx" \
+  -H "Accept: application/json"
+```
+
+## Response Format
+
+All list endpoints return:
 
 ```json
 {
@@ -52,22 +129,38 @@ curl -H "Authorization: Bearer pk_live_xxx" \
   "meta": {
     "current_page": 1,
     "per_page": 50,
-    "total": 0,
-    "last_page": 1
+    "total": 120,
+    "last_page": 3
   }
 }
 ```
 
-Use `?page=2` for the next page.
-
-## Optional Filters
+Next page:
 
 ```text
-transactions: start_date, end_date, account, search, per_page
-invoices: status, customer_id, start_date, end_date, per_page
-bills: status, supplier_id, start_date, end_date, per_page
-customers: is_active, search, per_page
-suppliers: is_active, search, per_page
+GET https://app.bukucloud.com/api/v1/invoices?page=2&per_page=50
+```
+
+## Query Parameters
+
+| Endpoint | Parameters |
+| --- | --- |
+| transactions | `start_date`, `end_date`, `account`, `search`, `per_page` (max 500) |
+| invoices | `status`, `customer_id`, `start_date`, `end_date`, `per_page` (max 200) |
+| bills | `status`, `supplier_id`, `start_date`, `end_date`, `per_page` (max 200) |
+| customers | `is_active`, `search`, `per_page` (max 200) |
+| suppliers | `is_active`, `search`, `per_page` (max 200) |
+
+Invoice/bill status values:
+
+```text
+draft, posted, paid, partial, overdue, void
+```
+
+Date format:
+
+```text
+YYYY-MM-DD
 ```
 
 ## Limits
@@ -76,9 +169,11 @@ suppliers: is_active, search, per_page
 120 requests per minute per API key
 ```
 
-Tenant must be on Solo plan or above.
+BukuCloud tenant must be on **Solo plan or above**.
 
 ## Errors
+
+Invalid or revoked key:
 
 ```json
 {
@@ -87,19 +182,26 @@ Tenant must be on Solo plan or above.
 }
 ```
 
-## Fin Persona Checklist
+HTTP status: `401`
 
-- [ ] Add field for user to paste BukuCloud API key
-- [ ] Store API key securely on backend
-- [ ] Send `Authorization: Bearer <api_key>` on every request
-- [ ] Call the 5 GET endpoints above
-- [ ] Handle pagination
+## Revoke Access
 
-## BukuCloud Checklist
+BukuCloud user can revoke the key anytime from:
 
-- [ ] No `FINPERSONA_*` env vars needed
-- [ ] Deploy the Integrations page with **Generate API key**
-- [ ] Tenant generates key and shares it with Fin Persona manually
+```text
+Settings → API & Integrations → Revoke
+```
+
+After revoke, all API calls return `401`.
+
+## Fin Persona Implementation
+
+1. Add input field for BukuCloud API key
+2. Save key securely on backend
+3. Call the 5 GET URLs above with Bearer token
+4. Read `data` array from response
+5. Use `meta.last_page` for pagination
+6. Handle `401` if key is revoked
 
 ## Contact
 

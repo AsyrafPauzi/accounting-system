@@ -89,12 +89,8 @@ class PlanSeeder extends Seeder
             'reports.sales-tax', 'reports.customer-credits', 'reports.purchases-by-vendor',
             'settings.view', 'settings.edit', 'audit-logs.view', 'integrations.view',
             'dashboard.basic', 'dashboard.standard', 'dashboard.advanced',
-            // External API / OAuth "Connect to BukuCloud" gate. Granted
-            // to Solo+ (Startup is excluded). Required to even reach the
-            // /oauth/authorize consent screen, AND to make any /api/v1
-            // request once a key is issued. PlanPermissionAlignmentTest
-            // requires this be wired to at least one route — see the
-            // 'plan.permission:api.access' middleware in routes/api.php.
+            // External API access gate (Solo+). Required to generate API
+            // keys from Settings → Integrations and to call /api/v1.
             'api.access',
             // Tier-specific feature gates added June 2026 to align routes
             // with the bullets on the pricing page. See PlanPermissionAlignmentTest.
@@ -496,9 +492,8 @@ class PlanSeeder extends Seeder
             // inheritance from Startup, dashboard.standard for the
             // richer Solo-tier widgets.
             'dashboard.basic', 'dashboard.standard',
-            // External API access (OAuth "Connect to BukuCloud" flow +
-            // /api/v1/* endpoints). Solo is the lowest tier that gets
-            // it; Startup is intentionally locked out of integrations.
+            // External API access (/api/v1/* + Settings → Integrations).
+            // Solo is the lowest tier that gets it.
             'api.access', 'integrations.view',
         ]);
 
