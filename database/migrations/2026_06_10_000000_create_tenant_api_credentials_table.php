@@ -5,13 +5,11 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Per-tenant API credentials issued through the OAuth-style "Connect"
- * flow. One row per (tenant, oauth_client) pair.
+ * Per-tenant API credentials. One row per tenant client integration.
  *
  * The flow that produces a row in this table:
  *
- *   1. Partner (e.g. Fin Persona) bounces the user to
- *      /oauth/authorize?client_id=finpersona&redirect_uri=...
+ *   1. Tenant admin generates a key from Settings → Integrations.
  *   2. User logs in on a forked branded login page, hits the consent
  *      screen, clicks "Authorize"
  *   3. We mint an `api_key` (public-ish identifier the partner sends in
@@ -54,9 +52,7 @@ return new class extends Migration {
                 ->references('id')->on('tenants')
                 ->cascadeOnDelete();
 
-            // OAuth client slug (e.g. 'finpersona'). Hardcoded today
-            // via config/oauth.php; future-proofed as a string column
-            // so we can add more partners without a schema change.
+            // Client slug (e.g. 'direct').
             $table->string('oauth_client_id', 64);
             $table->index('oauth_client_id');
 

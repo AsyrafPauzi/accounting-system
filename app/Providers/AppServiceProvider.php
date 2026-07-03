@@ -136,16 +136,15 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
-        // External API throttle. Keyed by api_key when present (so each
-        // partner credential gets its own bucket) so a chatty Fin Persona
-        // backend can't starve a quieter integration. Falls back to IP
-        // for the unauthenticated API surface when no bearer key is sent.
+        // External API throttle. Keyed by api_key when present so each
+        // credential gets its own bucket. Falls back to IP when no bearer
+        // key is sent.
         \Illuminate\Support\Facades\RateLimiter::for('api-v1', function (\Illuminate\Http\Request $request) {
+            $perMinute = max(1, (int) config('api.rate_limit_per_minute', 600));
+
             $auth = (string) $request->header('Authorization', '');
             if (preg_match('/^Bearer\s+(\S+)$/i', $auth, $m)) {
-                // Hash the bearer token so it doesn't leak into the
-                // rate-limiter cache key (Redis logs, debug dumps).
-                return \Illuminate\Cache\RateLimiting\Limit::perMinute(120)
+                return \Illuminate\Cache\RateLimiting\Limit::perMinute($perMinute)
                     ->by('api-v1:'.hash('sha256', $m[1]));
             }
             return \Illuminate\Cache\RateLimiting\Limit::perMinute(30)->by($request->ip());

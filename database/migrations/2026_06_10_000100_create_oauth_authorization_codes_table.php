@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Schema;
  *        code         = random 64-char URL-safe string
  *        tenant_id    = the tenant whose data they're authorising
  *        user_id      = the user who clicked Authorize (for audit)
- *        oauth_client_id = e.g. 'finpersona'
+ *        oauth_client_id = e.g. 'direct'
  *        redirect_uri = the URI we'll redirect back to (verified at
  *                       exchange to defeat code interception)
  *        expires_at   = now()+10 min

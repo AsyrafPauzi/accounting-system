@@ -40,7 +40,7 @@ export default function Integrations({ auth, credentials = [] }) {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <h2 className="font-display text-2xl font-medium text-ink">API & Integrations</h2>
-                        <p className="text-sm text-ink-muted mt-1">Generate an API key for Fin Persona or other apps.</p>
+                        <p className="text-sm text-ink-muted mt-1">Generate an API key for external apps and integrations.</p>
                     </div>
                     <PrimaryButton onClick={onGenerate} disabled={generate.processing}>
                         {generate.processing ? 'Generating…' : 'Generate API key'}
@@ -55,7 +55,7 @@ export default function Integrations({ auth, credentials = [] }) {
                     <div className="rounded-2xl border border-terracotta/30 bg-terracotta/5 p-5 space-y-3">
                         <h3 className="font-medium text-ink">Copy your API key now</h3>
                         <p className="text-sm text-ink-muted">
-                            Paste this into Fin Persona. BukuCloud will not show the full key again.
+                            Paste this into your app. BukuCloud will not show the full key again.
                         </p>
                         <div className="rounded-xl bg-white border border-border-warm px-4 py-3 font-mono text-sm break-all text-ink">
                             {issuedKey}
@@ -78,8 +78,8 @@ export default function Integrations({ auth, credentials = [] }) {
                     <h3 className="font-medium text-ink mb-2">How it works</h3>
                     <ol className="list-decimal list-inside text-ink-muted space-y-1">
                         <li>Click <strong>Generate API key</strong>.</li>
-                        <li>Copy the key and paste it into Fin Persona.</li>
-                        <li>Fin Persona calls the BukuCloud API with <code className="text-xs">Authorization: Bearer &lt;api_key&gt;</code>.</li>
+                        <li>Copy the key and paste it into your app.</li>
+                        <li>Your app calls the BukuCloud API with <code className="text-xs">Authorization: Bearer &lt;api_key&gt;</code>.</li>
                         <li>Revoke the key here anytime to disconnect the app.</li>
                     </ol>
                 </div>
@@ -88,7 +88,7 @@ export default function Integrations({ auth, credentials = [] }) {
                     <h3 className="font-medium text-ink mb-3">Active API keys ({active.length})</h3>
                     {active.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-border-warm p-6 text-center text-sm text-ink-muted">
-                            No API keys yet. Generate one to connect Fin Persona.
+                            No API keys yet. Generate one to connect an external app.
                         </div>
                     ) : (
                         <ul className="space-y-3">
