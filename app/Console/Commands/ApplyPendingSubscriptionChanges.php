@@ -38,7 +38,7 @@ class ApplyPendingSubscriptionChanges extends Command
         $due = Subscription::query()
             ->whereNotNull('pending_plan_id')
             ->whereNotNull('current_period_ends_at')
-            ->whereDate('current_period_ends_at', '<=', $today)
+            ->where('current_period_ends_at', '<=', $today)
             ->with(['plan', 'pendingPlan'])
             ->get();
 

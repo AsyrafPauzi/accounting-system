@@ -406,6 +406,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/bills/upload-receipt', [BillController::class, 'uploadReceipt'])
             ->middleware('plan.permission:ocr.use')
             ->name('bills.upload-receipt');
+        Route::get('/bills/ocr-status', [BillController::class, 'ocrStatus'])
+            ->middleware('plan.permission:ocr.use')
+            ->name('bills.ocr-status');
     });
     Route::middleware(['permission:bills.edit', 'plan.permission:bills.view'])->group(function () {
         Route::put('/bills/{id}', [BillController::class, 'update'])->name('bills.update');

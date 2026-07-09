@@ -39,14 +39,46 @@ export default function ReceiptUpload({ onOcrComplete, billId = null }) {
             });
 
             if (response.data.success) {
-                setSuccess(true);
-                if (onOcrComplete) {
-                    onOcrComplete(response.data.ocr_data, response.data.url, response.data.path);
+                if (response.data.status === 'pending') {
+                    const pollPath = response.data.path;
+                    const pollUrl = response.data.url;
+                    
+                    const pollInterval = setInterval(async () => {
+                        try {
+                            const pollResponse = await axios.get(route('bills.ocr-status'), {
+                                params: { path: pollPath }
+                            });
+                            
+                            if (pollResponse.data.status === 'completed') {
+                                clearInterval(pollInterval);
+                                setSuccess(true);
+                                setUploading(false);
+                                if (onOcrComplete) {
+                                    onOcrComplete(pollResponse.data.ocr_data, pollUrl, pollPath);
+                                }
+                            } else if (pollResponse.data.status === 'failed') {
+                                clearInterval(pollInterval);
+                                setError(pollResponse.data.error || 'OCR scanning failed. Please enter details manually.');
+                                setUploading(false);
+                            }
+                        } catch (pollErr) {
+                            clearInterval(pollInterval);
+                            setError('Failed to retrieve OCR scan status');
+                            setUploading(false);
+                        }
+                    }, 2000);
+                } else {
+                    setSuccess(true);
+                    setUploading(false);
+                    if (onOcrComplete) {
+                        onOcrComplete(response.data.ocr_data, response.data.url, response.data.path);
+                    }
                 }
+            } else {
+                setUploading(false);
             }
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to upload receipt');
-        } finally {
             setUploading(false);
         }
     };

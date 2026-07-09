@@ -23,7 +23,7 @@ class TrialBalanceController extends Controller
         // Calculate balances per account up to the specified date
         $balances = JournalItem::query()
             ->join('journal_entries', 'journal_items.journal_entry_id', '=', 'journal_entries.id')
-            ->whereDate('journal_entries.date', '<=', $asOfDate)
+            ->where('journal_entries.date', '<=', $asOfDate)
             ->select(
                 'journal_items.account_code',
                 DB::raw('SUM(journal_items.debit) as total_debit'),

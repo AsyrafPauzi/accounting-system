@@ -32,10 +32,10 @@ class GeneralLedgerController extends Controller
         $accountCode = $request->input('account_code');
 
         if ($dateFrom) {
-            $query->whereDate('journal_entries.date', '>=', $dateFrom);
+            $query->where('journal_entries.date', '>=', $dateFrom);
         }
         if ($dateTo) {
-            $query->whereDate('journal_entries.date', '<=', $dateTo);
+            $query->where('journal_entries.date', '<=', $dateTo);
         }
         if ($referenceType && in_array($referenceType, self::REFERENCE_TYPES, true)) {
             $query->where('journal_entries.reference_type', $referenceType);
@@ -66,8 +66,8 @@ class GeneralLedgerController extends Controller
         $accountsMap = $allCodes ? Account::whereIn('code', $allCodes)->pluck('name', 'code')->toArray() : [];
 
         $statsQuery = JournalItem::join('journal_entries', 'journal_items.journal_entry_id', '=', 'journal_entries.id')
-            ->when($dateFrom, fn ($q) => $q->whereDate('journal_entries.date', '>=', $dateFrom))
-            ->when($dateTo, fn ($q) => $q->whereDate('journal_entries.date', '<=', $dateTo))
+            ->when($dateFrom, fn ($q) => $q->where('journal_entries.date', '>=', $dateFrom))
+            ->when($dateTo, fn ($q) => $q->where('journal_entries.date', '<=', $dateTo))
             ->when($referenceType && in_array($referenceType, self::REFERENCE_TYPES, true), fn ($q) => $q->where('journal_entries.reference_type', $referenceType))
             ->when($accountCode, fn ($q) => $q->where('journal_items.account_code', $accountCode));
 
@@ -112,10 +112,10 @@ class GeneralLedgerController extends Controller
         $referenceType = $request->input('reference_type');
 
         if ($dateFrom) {
-            $query->whereDate('date', '>=', $dateFrom);
+            $query->where('date', '>=', $dateFrom);
         }
         if ($dateTo) {
-            $query->whereDate('date', '<=', $dateTo);
+            $query->where('date', '<=', $dateTo);
         }
         if ($referenceType && in_array($referenceType, self::REFERENCE_TYPES, true)) {
             $query->where('reference_type', $referenceType);
@@ -146,8 +146,8 @@ class GeneralLedgerController extends Controller
         $accountsMap = $allCodes ? Account::whereIn('code', $allCodes)->pluck('name', 'code')->toArray() : [];
 
         $statsQuery = JournalEntry::with('items')
-            ->when($dateFrom, fn ($q) => $q->whereDate('date', '>=', $dateFrom))
-            ->when($dateTo, fn ($q) => $q->whereDate('date', '<=', $dateTo))
+            ->when($dateFrom, fn ($q) => $q->where('date', '>=', $dateFrom))
+            ->when($dateTo, fn ($q) => $q->where('date', '<=', $dateTo))
             ->when($referenceType && in_array($referenceType, self::REFERENCE_TYPES, true), fn ($q) => $q->where('reference_type', $referenceType));
 
         $entriesForStats = $statsQuery->get();
@@ -233,10 +233,10 @@ class GeneralLedgerController extends Controller
         $dateTo = $request->input('date_to');
         $referenceType = $request->input('reference_type');
         if ($dateFrom) {
-            $query->whereDate('date', '>=', $dateFrom);
+            $query->where('date', '>=', $dateFrom);
         }
         if ($dateTo) {
-            $query->whereDate('date', '<=', $dateTo);
+            $query->where('date', '<=', $dateTo);
         }
         if ($referenceType && in_array($referenceType, self::REFERENCE_TYPES, true)) {
             $query->where('reference_type', $referenceType);
@@ -282,10 +282,10 @@ class GeneralLedgerController extends Controller
         $dateTo = $request->input('date_to');
         $referenceType = $request->input('reference_type');
         if ($dateFrom) {
-            $query->whereDate('date', '>=', $dateFrom);
+            $query->where('date', '>=', $dateFrom);
         }
         if ($dateTo) {
-            $query->whereDate('date', '<=', $dateTo);
+            $query->where('date', '<=', $dateTo);
         }
         if ($referenceType && in_array($referenceType, self::REFERENCE_TYPES, true)) {
             $query->where('reference_type', $referenceType);
@@ -333,10 +333,10 @@ class GeneralLedgerController extends Controller
         $referenceType = $request->input('reference_type');
         $accountCode = $request->input('account_code');
         if ($dateFrom) {
-            $query->whereDate('journal_entries.date', '>=', $dateFrom);
+            $query->where('journal_entries.date', '>=', $dateFrom);
         }
         if ($dateTo) {
-            $query->whereDate('journal_entries.date', '<=', $dateTo);
+            $query->where('journal_entries.date', '<=', $dateTo);
         }
         if ($referenceType && in_array($referenceType, self::REFERENCE_TYPES, true)) {
             $query->where('journal_entries.reference_type', $referenceType);
@@ -392,10 +392,10 @@ class GeneralLedgerController extends Controller
         $referenceType = $request->input('reference_type');
         $accountCode = $request->input('account_code');
         if ($dateFrom) {
-            $query->whereDate('journal_entries.date', '>=', $dateFrom);
+            $query->where('journal_entries.date', '>=', $dateFrom);
         }
         if ($dateTo) {
-            $query->whereDate('journal_entries.date', '<=', $dateTo);
+            $query->where('journal_entries.date', '<=', $dateTo);
         }
         if ($referenceType && in_array($referenceType, self::REFERENCE_TYPES, true)) {
             $query->where('journal_entries.reference_type', $referenceType);

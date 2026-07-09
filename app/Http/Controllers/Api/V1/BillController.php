@@ -29,8 +29,8 @@ class BillController extends Controller
             ->with(['supplier:id,name,email'])
             ->when($request->input('status'), fn ($q, $s) => $q->where('status', $s))
             ->when($request->input('supplier_id'), fn ($q, $s) => $q->where('supplier_id', $s))
-            ->when($request->input('start_date'), fn ($q, $d) => $q->whereDate('bill_date', '>=', $d))
-            ->when($request->input('end_date'),   fn ($q, $d) => $q->whereDate('bill_date', '<=', $d))
+            ->when($request->input('start_date'), fn ($q, $d) => $q->where('bill_date', '>=', $d))
+            ->when($request->input('end_date'),   fn ($q, $d) => $q->where('bill_date', '<=', $d))
             ->orderByDesc('bill_date')
             ->orderByDesc('id')
             ->paginate((int) $request->input('per_page', 50));

@@ -33,8 +33,8 @@ class InvoiceController extends Controller
             ->with(['customer:id,name,email'])
             ->when($request->input('status'), fn ($q, $s) => $q->where('status', $s))
             ->when($request->input('customer_id'), fn ($q, $c) => $q->where('customer_id', $c))
-            ->when($request->input('start_date'), fn ($q, $d) => $q->whereDate('issue_date', '>=', $d))
-            ->when($request->input('end_date'),   fn ($q, $d) => $q->whereDate('issue_date', '<=', $d))
+            ->when($request->input('start_date'), fn ($q, $d) => $q->where('issue_date', '>=', $d))
+            ->when($request->input('end_date'),   fn ($q, $d) => $q->where('issue_date', '<=', $d))
             ->orderByDesc('issue_date')
             ->orderByDesc('id')
             ->paginate((int) $request->input('per_page', 50));

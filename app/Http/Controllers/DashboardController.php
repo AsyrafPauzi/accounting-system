@@ -80,7 +80,7 @@ class DashboardController extends Controller
 
         $overdueInvoicesCount = Invoice::whereIn('status', ['unpaid', 'partially paid'])
             ->whereNotNull('due_date')
-            ->whereDate('due_date', '<', $today)
+            ->where('due_date', '<', $today)
             ->whereRaw('(total_amount - amount_paid) > 0')
             ->count();
 
@@ -114,7 +114,7 @@ class DashboardController extends Controller
 
             $overdueBillsCount = Bill::whereIn('status', ['unpaid', 'partially paid'])
                 ->whereNotNull('due_date')
-                ->whereDate('due_date', '<', $today)
+                ->where('due_date', '<', $today)
                 ->whereRaw('(total_amount - amount_paid) > 0')
                 ->count();
         } else {
@@ -478,7 +478,7 @@ class DashboardController extends Controller
         return Invoice::with('customer:id,name')
             ->whereIn('status', ['unpaid', 'partially paid'])
             ->whereNotNull('due_date')
-            ->whereDate('due_date', '<', $today)
+            ->where('due_date', '<', $today)
             ->whereRaw('(total_amount - amount_paid) > 0')
             ->orderBy('due_date')
             ->limit(5)
@@ -544,7 +544,7 @@ class DashboardController extends Controller
         return Bill::with('supplier:id,name')
             ->whereIn('status', ['unpaid', 'partially paid'])
             ->whereNotNull('due_date')
-            ->whereDate('due_date', '<', $today)
+            ->where('due_date', '<', $today)
             ->whereRaw('(total_amount - amount_paid) > 0')
             ->orderBy('due_date')
             ->limit(5)

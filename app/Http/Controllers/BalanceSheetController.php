@@ -21,7 +21,7 @@ class BalanceSheetController extends Controller
             ->join('journal_entries', 'journal_items.journal_entry_id', '=', 'journal_entries.id')
             ->join('accounts', 'journal_items.account_code', '=', 'accounts.code')
             ->whereIn('accounts.type', ['asset', 'liability', 'equity'])
-            ->whereDate('journal_entries.date', '<=', $asAtDate)
+            ->where('journal_entries.date', '<=', $asAtDate)
             ->select(
                 'accounts.code',
                 'accounts.name',
@@ -91,7 +91,7 @@ class BalanceSheetController extends Controller
             ->join('journal_entries', 'journal_items.journal_entry_id', '=', 'journal_entries.id')
             ->join('accounts', 'journal_items.account_code', '=', 'accounts.code')
             ->whereIn('accounts.type', ['asset', 'liability', 'equity'])
-            ->whereDate('journal_entries.date', '<=', $asAtDate)
+            ->where('journal_entries.date', '<=', $asAtDate)
             ->select(
                 'accounts.code',
                 'accounts.name',
