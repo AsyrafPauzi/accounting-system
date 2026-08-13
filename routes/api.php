@@ -25,5 +25,6 @@ Route::prefix('v1')
         Route::middleware(['api.signed'])->group(function () {
             Route::post('/transactions/deposit',    [\App\Http\Controllers\Api\V1\TransactionController::class, 'storeDeposit'])->name('transactions.deposit');
             Route::post('/transactions/withdrawal', [\App\Http\Controllers\Api\V1\TransactionController::class, 'storeWithdrawal'])->name('transactions.withdrawal');
+            Route::post('/payroll',                 [\App\Http\Controllers\Api\V1\PayrollController::class, 'store'])->name('payroll.store');
         });
     });

@@ -1,0 +1,949 @@
+openapi: 3.0.3
+info:
+  title: BukuCloud API
+  version: '1.0.0'
+  description: |
+    JSON API for external apps. BukuCloud stores the books; your app sends
+    amounts. Payroll is a **journal of RM amounts** only — no employees or
+    payslips are stored.
+
+    ## Authentication
+
+    1. In BukuCloud go to **Settings → API & Integrations**.
+    2. Click **Generate API key**.
+    3. Copy the **API key** and **signing key** immediately. Neither is shown again.
+
+    Every request:
+
+    ```
+    Authorization: Bearer <api_key>
+    Accept: application/json
+    ```
+
+    ### HMAC on writes
+
+    `POST` endpoints also require:
+
+    - `X-BukuCloud-Timestamp` — unix time in **milliseconds** (digits only)
+    - `X-BukuCloud-Signature` — hex HMAC-SHA256 of the canonical string
+
+    Canonical string (sign the **exact** raw body bytes you send):
+
+    ```
+    {timestamp}.{METHOD}.{path}{?query}.{rawBody}
+    ```
+
+    Example (no query string):
+
+    ```
+    1710000000000.POST./api/v1/payroll.{"period_date":"2026-08-31",...}
+    ```
+
+    Node.js:
+
+    ```js
+    const crypto = require('crypto');
+    const timestamp = Date.now().toString();
+    const body = JSON.stringify(payload);
+    const canonical = `${timestamp}.POST./api/v1/payroll.${body}`;
+    const signature = crypto
+      .createHmac('sha256', signingKey)
+      .update(canonical)
+      .digest('hex');
+    ```
+
+    Timestamps more than 300 seconds from server time are rejected
+    (`API_SIGNATURE_SKEW`, default 300).
+
+    ## Plans
+
+    - API access: **Solo** and above (`api.access`)
+    - Payroll posting: **Corporate** and above (`payroll.run`)
+
+    ## Rate limit
+
+    600 requests per minute per API key (`API_RATE_LIMIT_PER_MINUTE`).
+  contact:
+    name: BukuCloud Support
+    email: support@bukucloud.com
+    url: https://bukucloud.com/contact
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://app.bukucloud.com
+    description: Production
+
+tags:
+  - name: Transactions
+    description: Bank and cash movements.
+  - name: Invoices
+    description: Customer invoices (read-only feed).
+  - name: Bills
+    description: Supplier bills (read-only feed).
+  - name: Customers
+    description: Customer directory (read-only).
+  - name: Suppliers
+    description: Supplier directory (read-only).
+  - name: Payroll
+    description: Post a balanced payroll journal from RM amounts calculated in your HR app.
+
+paths:
+  /api/v1/transactions:
+    get:
+      tags: [Transactions]
+      operationId: listTransactions
+      summary: List bank and cash transactions
+      description: |
+        Journal items that hit an active bank or cash account. Positive
+        `amount` is money in; negative is money out. Defaults to the last 90 days.
+      security:
+        - ApiKey: []
+      parameters:
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+        - name: account
+          in: query
+          description: Filter to a single bank/cash account id.
+          schema:
+            type: integer
+        - name: search
+          in: query
+          description: Search description and reference number.
+          schema:
+            type: string
+            maxLength: 200
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+      responses:
+        '200':
+          description: Paginated transaction feed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/transactions/deposit:
+    post:
+      tags: [Transactions]
+      operationId: createDeposit
+      summary: Record a deposit
+      description: Debits the bank/cash account and credits the category account.
+      security:
+        - ApiKey: []
+          Timestamp: []
+          Signature: []
+      parameters:
+        - $ref: '#/components/parameters/TimestampHeader'
+        - $ref: '#/components/parameters/SignatureHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BankMovementRequest'
+            example:
+              date: '2026-08-13'
+              bank_account_id: 12
+              category_account_id: 40
+              amount: 1500.00
+              description: Customer receipt
+              reference_number: DEP-1001
+      responses:
+        '201':
+          description: Posted deposit.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankMovementResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+
+  /api/v1/transactions/withdrawal:
+    post:
+      tags: [Transactions]
+      operationId: createWithdrawal
+      summary: Record a withdrawal
+      description: Credits the bank/cash account and debits the category account.
+      security:
+        - ApiKey: []
+          Timestamp: []
+          Signature: []
+      parameters:
+        - $ref: '#/components/parameters/TimestampHeader'
+        - $ref: '#/components/parameters/SignatureHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BankMovementRequest'
+            example:
+              date: '2026-08-13'
+              bank_account_id: 12
+              category_account_id: 55
+              amount: 250.00
+              description: Office supplies
+              reference_number: WD-2001
+      responses:
+        '201':
+          description: Posted withdrawal.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankMovementResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+
+  /api/v1/invoices:
+    get:
+      tags: [Invoices]
+      operationId: listInvoices
+      summary: List invoices
+      security:
+        - ApiKey: []
+      parameters:
+        - $ref: '#/components/parameters/DocumentStatus'
+        - name: customer_id
+          in: query
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+        - $ref: '#/components/parameters/PerPage200'
+      responses:
+        '200':
+          description: Paginated invoices.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/bills:
+    get:
+      tags: [Bills]
+      operationId: listBills
+      summary: List bills
+      security:
+        - ApiKey: []
+      parameters:
+        - $ref: '#/components/parameters/DocumentStatus'
+        - name: supplier_id
+          in: query
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+        - $ref: '#/components/parameters/PerPage200'
+      responses:
+        '200':
+          description: Paginated bills.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/customers:
+    get:
+      tags: [Customers]
+      operationId: listCustomers
+      summary: List customers
+      security:
+        - ApiKey: []
+      parameters:
+        - $ref: '#/components/parameters/IsActive'
+        - $ref: '#/components/parameters/DirectorySearch'
+        - $ref: '#/components/parameters/PerPage200'
+      responses:
+        '200':
+          description: Paginated customers.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/suppliers:
+    get:
+      tags: [Suppliers]
+      operationId: listSuppliers
+      summary: List suppliers
+      security:
+        - ApiKey: []
+      parameters:
+        - $ref: '#/components/parameters/IsActive'
+        - $ref: '#/components/parameters/DirectorySearch'
+        - $ref: '#/components/parameters/PerPage200'
+      responses:
+        '200':
+          description: Paginated suppliers.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/payroll:
+    post:
+      tags: [Payroll]
+      operationId: createPayrollJournal
+      summary: Post a payroll journal
+      description: |
+        Records payroll as one posted `manual` journal. Your HR app calculates
+        EPF, SOCSO, EIS, PCB, HRD, and net pay. BukuCloud only posts the
+        amounts you send.
+
+        Required: `period_date`, `bank_account_code`, `gross_salaries`, `net_pay`.
+        Optional statutory fields default to 0.
+
+        Debits must equal credits within RM 0.01:
+
+        - Debits: `gross_salaries` + employer EPF/SOCSO/EIS/HRD
+        - Credits: payable fields + `net_pay` (credited to `bank_account_code`)
+
+        Missing payroll CoA codes (5100–5140 expenses, 2200–2240 payables) are
+        created on first post.
+
+        Send a unique `reference_number` for idempotency. A duplicate returns
+        the existing journal with `200`; a new post returns `201`.
+
+        Requires plan permission `payroll.run` (Corporate+).
+      security:
+        - ApiKey: []
+          Timestamp: []
+          Signature: []
+      parameters:
+        - $ref: '#/components/parameters/TimestampHeader'
+        - $ref: '#/components/parameters/SignatureHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PayrollRequest'
+            examples:
+              simple:
+                summary: Gross equals net (no statutory)
+                value:
+                  period_date: '2026-08-31'
+                  bank_account_code: '1100'
+                  gross_salaries: 10000
+                  net_pay: 10000
+              statutory:
+                summary: With EPF, SOCSO, EIS
+                value:
+                  period_date: '2026-08-31'
+                  bank_account_code: '1100'
+                  description: Payroll August 2026
+                  reference_number: PAY-2026-08
+                  gross_salaries: 10000
+                  employer_epf: 1300
+                  employer_socso: 175
+                  employer_eis: 20
+                  employer_hrd: 0
+                  epf_payable: 2400
+                  socso_payable: 245
+                  eis_payable: 40
+                  pcb_payable: 0
+                  hrd_payable: 0
+                  net_pay: 8810
+      responses:
+        '200':
+          description: Existing journal for this `reference_number`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayrollResponse'
+        '201':
+          description: New posted payroll journal.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayrollResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+
+components:
+  securitySchemes:
+    ApiKey:
+      type: http
+      scheme: bearer
+      bearerFormat: api_key
+      description: API key from Settings → API & Integrations (`pk_live_…`).
+    Timestamp:
+      type: apiKey
+      in: header
+      name: X-BukuCloud-Timestamp
+      description: Unix time in milliseconds at sign time.
+    Signature:
+      type: apiKey
+      in: header
+      name: X-BukuCloud-Signature
+      description: Hex HMAC-SHA256 of `{timestamp}.{METHOD}.{path}{?query}.{rawBody}`.
+
+  parameters:
+    StartDate:
+      name: start_date
+      in: query
+      schema:
+        type: string
+        format: date
+      description: Inclusive start date (`YYYY-MM-DD`).
+    EndDate:
+      name: end_date
+      in: query
+      schema:
+        type: string
+        format: date
+      description: Inclusive end date (`YYYY-MM-DD`). Must be on or after `start_date`.
+    PerPage200:
+      name: per_page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    DocumentStatus:
+      name: status
+      in: query
+      schema:
+        type: string
+        enum: [draft, posted, paid, partial, overdue, void]
+    IsActive:
+      name: is_active
+      in: query
+      schema:
+        type: boolean
+    DirectorySearch:
+      name: search
+      in: query
+      description: Search name, email, and code.
+      schema:
+        type: string
+        maxLength: 200
+    TimestampHeader:
+      name: X-BukuCloud-Timestamp
+      in: header
+      required: true
+      schema:
+        type: string
+        pattern: '^[0-9]+$'
+        example: '1710000000000'
+      description: Unix time in milliseconds.
+    SignatureHeader:
+      name: X-BukuCloud-Signature
+      in: header
+      required: true
+      schema:
+        type: string
+        example: a1b2c3d4e5f6
+      description: Hex-encoded HMAC-SHA256 of the canonical request string.
+
+  schemas:
+    PaginationMeta:
+      type: object
+      required: [current_page, per_page, total, last_page]
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        per_page:
+          type: integer
+          example: 50
+        total:
+          type: integer
+          example: 120
+        last_page:
+          type: integer
+          example: 3
+
+    AccountRef:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+
+    PartyRef:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          nullable: true
+
+    ApiError:
+      type: object
+      required: [error, error_description]
+      properties:
+        error:
+          type: string
+          description: |
+            Machine code. Common values: `invalid_token`, `invalid_signature`,
+            `invalid_request`, `insufficient_scope`, `payroll_invalid`,
+            `invalid_bank_account`.
+          example: invalid_token
+        error_description:
+          type: string
+          example: API key is invalid or has been revoked.
+
+    ValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        error:
+          type: string
+        error_description:
+          type: string
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        journal_entry_id:
+          type: integer
+        date:
+          type: string
+          format: date
+        description:
+          type: string
+          nullable: true
+        reference_number:
+          type: string
+          nullable: true
+        account:
+          $ref: '#/components/schemas/AccountRef'
+        amount:
+          type: number
+          format: double
+          description: Positive = money in; negative = money out.
+        direction:
+          type: string
+          enum: [in, out]
+        type:
+          type: string
+        status:
+          type: string
+
+    TransactionListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    BankMovementRequest:
+      type: object
+      required: [date, bank_account_id, category_account_id, amount]
+      properties:
+        date:
+          type: string
+          format: date
+        bank_account_id:
+          type: integer
+          description: Active bank or cash account id.
+        category_account_id:
+          type: integer
+          description: Counter-account id (must differ from the bank account).
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+        description:
+          type: string
+          maxLength: 500
+        reference_number:
+          type: string
+          maxLength: 100
+
+    BankMovementResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            journal_entry_id:
+              type: integer
+            date:
+              type: string
+              format: date
+            type:
+              type: string
+              enum: [deposit, withdrawal]
+            status:
+              type: string
+              example: posted
+            description:
+              type: string
+              nullable: true
+            reference_number:
+              type: string
+              nullable: true
+            amount:
+              type: number
+              format: double
+              description: Positive for deposits; negative for withdrawals.
+            direction:
+              type: string
+              enum: [in, out]
+            bank_account:
+              $ref: '#/components/schemas/AccountRef'
+            category_account:
+              $ref: '#/components/schemas/AccountRef'
+
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: integer
+        uuid:
+          type: string
+        invoice_number:
+          type: string
+        status:
+          type: string
+        issue_date:
+          type: string
+          format: date
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        currency:
+          type: string
+          example: MYR
+        amount_before_tax:
+          type: number
+          format: double
+        tax_amount:
+          type: number
+          format: double
+        total_amount:
+          type: number
+          format: double
+        amount_paid:
+          type: number
+          format: double
+        balance_due:
+          type: number
+          format: double
+        customer:
+          $ref: '#/components/schemas/PartyRef'
+
+    InvoiceListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Invoice'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    Bill:
+      type: object
+      properties:
+        id:
+          type: integer
+        uuid:
+          type: string
+        bill_number:
+          type: string
+        reference:
+          type: string
+          nullable: true
+        status:
+          type: string
+        bill_date:
+          type: string
+          format: date
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        currency:
+          type: string
+          example: MYR
+        total_amount:
+          type: number
+          format: double
+        amount_paid:
+          type: number
+          format: double
+        balance_due:
+          type: number
+          format: double
+        supplier:
+          $ref: '#/components/schemas/PartyRef'
+
+    BillListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Bill'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    DirectoryParty:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        tin:
+          type: string
+          nullable: true
+        brn:
+          type: string
+          nullable: true
+        currency:
+          type: string
+          nullable: true
+        payment_terms:
+          type: string
+          nullable: true
+        billing_country:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+
+    CustomerListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DirectoryParty'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    SupplierListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DirectoryParty'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    PayrollRequest:
+      type: object
+      required: [period_date, bank_account_code, gross_salaries, net_pay]
+      properties:
+        period_date:
+          type: string
+          format: date
+          description: Payroll period date (used as the journal date).
+        description:
+          type: string
+          maxLength: 255
+        reference_number:
+          type: string
+          maxLength: 50
+          description: Idempotency key. Duplicates return the existing journal.
+        bank_account_code:
+          type: string
+          description: Chart of accounts code for the bank that pays net salaries.
+          example: '1100'
+        gross_salaries:
+          type: number
+          format: double
+          minimum: 0.01
+        employer_epf:
+          type: number
+          format: double
+          minimum: 0
+          default: 0
+        employer_socso:
+          type: number
+          format: double
+          minimum: 0
+          default: 0
+        employer_eis:
+          type: number
+          format: double
+          minimum: 0
+          default: 0
+        employer_hrd:
+          type: number
+          format: double
+          minimum: 0
+          default: 0
+        epf_payable:
+          type: number
+          format: double
+          minimum: 0
+          default: 0
+        socso_payable:
+          type: number
+          format: double
+          minimum: 0
+          default: 0
+        eis_payable:
+          type: number
+          format: double
+          minimum: 0
+          default: 0
+        pcb_payable:
+          type: number
+          format: double
+          minimum: 0
+          default: 0
+        hrd_payable:
+          type: number
+          format: double
+          minimum: 0
+          default: 0
+        net_pay:
+          type: number
+          format: double
+          minimum: 0
+          description: Credited to `bank_account_code`. Must balance the journal.
+
+    PayrollResponse:
+      type: object
+      properties:
+        journal_entry_id:
+          type: integer
+        reference_number:
+          type: string
+          nullable: true
+        date:
+          type: string
+          format: date
+        status:
+          type: string
+          example: posted
+        total_debits:
+          type: number
+          format: double
+        total_credits:
+          type: number
+          format: double
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid API key or HMAC signature.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          examples:
+            invalid_token:
+              value:
+                error: invalid_token
+                error_description: API key is invalid or has been revoked.
+            invalid_signature:
+              value:
+                error: invalid_signature
+                error_description: Computed HMAC does not match X-BukuCloud-Signature.
+    Forbidden:
+      description: Plan does not include this API capability.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          examples:
+            api_access:
+              value:
+                error: insufficient_scope
+                error_description: The tenant's current plan does not include API access.
+            payroll_run:
+              value:
+                error: insufficient_scope
+                error_description: The tenant's current plan does not include payroll posting.
+    Unprocessable:
+      description: Validation failed or the journal would not balance.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+          examples:
+            laravel:
+              value:
+                message: 'Debits (RM 10,000.00) must equal Credits (RM 1.00). Adjust Net Pay or check the statutory amounts.'
+                errors:
+                  net_pay:
+                    - 'Debits (RM 10,000.00) must equal Credits (RM 1.00). Adjust Net Pay or check the statutory amounts.'
+            payroll_invalid:
+              value:
+                error: payroll_invalid
+                error_description: Payroll entry is unbalanced.
+                message: Payroll entry is unbalanced.

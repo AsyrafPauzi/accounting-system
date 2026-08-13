@@ -3,12 +3,49 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class StorePayrollRequest extends FormRequest
 {
     public function authorize(): bool
     {
+        // API callers are already authenticated by api.key. Web callers
+        // still need journal.create (the in-app Run Payroll form).
+        if ($this->user() === null) {
+            return true;
+        }
+
         return $this->user()->can('journal.create');
+    }
+
+    /**
+     * Shared field rules without DB lookups — used by unit tests and
+     * merged into rules() with exists:accounts,code.
+     *
+     * @return array<string, string>
+     */
+    public static function payloadRules(): array
+    {
+        return [
+            'period_date'       => 'required|date',
+            'description'       => 'nullable|string|max:255',
+            'reference_number'  => 'nullable|string|max:50',
+            'bank_account_code' => 'required|string',
+
+            'gross_salaries' => 'required|numeric|min:0.01',
+            'employer_epf'   => 'nullable|numeric|min:0',
+            'employer_socso' => 'nullable|numeric|min:0',
+            'employer_eis'   => 'nullable|numeric|min:0',
+            'employer_hrd'   => 'nullable|numeric|min:0',
+
+            'epf_payable'   => 'nullable|numeric|min:0',
+            'socso_payable' => 'nullable|numeric|min:0',
+            'eis_payable'   => 'nullable|numeric|min:0',
+            'pcb_payable'   => 'nullable|numeric|min:0',
+            'hrd_payable'   => 'nullable|numeric|min:0',
+
+            'net_pay' => 'required|numeric|min:0',
+        ];
     }
 
     /**
@@ -16,49 +53,30 @@ class StorePayrollRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'period_date'       => 'required|date',
-            'description'       => 'nullable|string|max:255',
-            'reference_number'  => 'nullable|string|max:50',
-            'bank_account_code' => 'required|string|exists:accounts,code',
+        $rules = self::payloadRules();
+        $rules['bank_account_code'] = 'required|string|exists:accounts,code';
 
-            // Expenses (debit). Gross is the only one that's required.
-            'gross_salaries' => 'required|numeric|min:0.01',
-            'employer_epf'   => 'nullable|numeric|min:0',
-            'employer_socso' => 'nullable|numeric|min:0',
-            'employer_eis'   => 'nullable|numeric|min:0',
-            'employer_hrd'   => 'nullable|numeric|min:0',
-
-            // Liabilities (credit)
-            'epf_payable'   => 'nullable|numeric|min:0',
-            'socso_payable' => 'nullable|numeric|min:0',
-            'eis_payable'   => 'nullable|numeric|min:0',
-            'pcb_payable'   => 'nullable|numeric|min:0',
-            'hrd_payable'   => 'nullable|numeric|min:0',
-
-            // Cash out — what actually left the bank
-            'net_pay' => 'required|numeric|min:0',
-        ];
+        return $rules;
     }
 
-    public function withValidator($validator): void
+    public static function addBalanceCheck(Validator $validator, array $input): void
     {
-        $validator->after(function ($validator) {
+        $validator->after(function (Validator $validator) use ($input) {
             $debits = array_sum([
-                (float) $this->input('gross_salaries', 0),
-                (float) $this->input('employer_epf', 0),
-                (float) $this->input('employer_socso', 0),
-                (float) $this->input('employer_eis', 0),
-                (float) $this->input('employer_hrd', 0),
+                (float) ($input['gross_salaries'] ?? 0),
+                (float) ($input['employer_epf'] ?? 0),
+                (float) ($input['employer_socso'] ?? 0),
+                (float) ($input['employer_eis'] ?? 0),
+                (float) ($input['employer_hrd'] ?? 0),
             ]);
 
             $credits = array_sum([
-                (float) $this->input('epf_payable', 0),
-                (float) $this->input('socso_payable', 0),
-                (float) $this->input('eis_payable', 0),
-                (float) $this->input('pcb_payable', 0),
-                (float) $this->input('hrd_payable', 0),
-                (float) $this->input('net_pay', 0),
+                (float) ($input['epf_payable'] ?? 0),
+                (float) ($input['socso_payable'] ?? 0),
+                (float) ($input['eis_payable'] ?? 0),
+                (float) ($input['pcb_payable'] ?? 0),
+                (float) ($input['hrd_payable'] ?? 0),
+                (float) ($input['net_pay'] ?? 0),
             ]);
 
             if (abs($debits - $credits) > 0.01) {
@@ -69,5 +87,10 @@ class StorePayrollRequest extends FormRequest
                 );
             }
         });
+    }
+
+    public function withValidator($validator): void
+    {
+        self::addBalanceCheck($validator, $this->all());
     }
 }

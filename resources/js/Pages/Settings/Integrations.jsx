@@ -8,6 +8,7 @@ export default function Integrations({ auth, credentials = [] }) {
     const { flash } = usePage().props;
     const [confirmingId, setConfirmingId] = useState(null);
     const [issuedKey, setIssuedKey] = useState(null);
+    const [issuedSigningKey, setIssuedSigningKey] = useState(null);
     const revoke = useForm({});
     const generate = useForm({});
 
@@ -15,7 +16,10 @@ export default function Integrations({ auth, credentials = [] }) {
         if (flash?.issued_api_key) {
             setIssuedKey(flash.issued_api_key);
         }
-    }, [flash?.issued_api_key]);
+        if (flash?.issued_signing_key) {
+            setIssuedSigningKey(flash.issued_signing_key);
+        }
+    }, [flash?.issued_api_key, flash?.issued_signing_key]);
 
     const onRevoke = (id) => {
         revoke.post(route('settings.integrations.revoke', id), {
@@ -53,21 +57,36 @@ export default function Integrations({ auth, credentials = [] }) {
             <div className="py-6 max-w-4xl mx-auto space-y-6 px-4 sm:px-6 lg:px-8">
                 {issuedKey && (
                     <div className="rounded-2xl border border-terracotta/30 bg-terracotta/5 p-5 space-y-3">
-                        <h3 className="font-medium text-ink">Copy your API key now</h3>
+                        <h3 className="font-medium text-ink">Copy your credentials now</h3>
                         <p className="text-sm text-ink-muted">
-                            Paste this into your app. BukuCloud will not show the full key again.
+                            BukuCloud will not show these full values again. Use the API key on every request. Use the signing key only for POST writes (HMAC).
                         </p>
-                        <div className="rounded-xl bg-white border border-border-warm px-4 py-3 font-mono text-sm break-all text-ink">
-                            {issuedKey}
+                        <div>
+                            <div className="text-xs text-ink-muted mb-1">API key</div>
+                            <div className="rounded-xl bg-white border border-border-warm px-4 py-3 font-mono text-sm break-all text-ink">
+                                {issuedKey}
+                            </div>
                         </div>
+                        {issuedSigningKey && (
+                            <div>
+                                <div className="text-xs text-ink-muted mb-1">Signing key (writes)</div>
+                                <div className="rounded-xl bg-white border border-border-warm px-4 py-3 font-mono text-sm break-all text-ink">
+                                    {issuedSigningKey}
+                                </div>
+                            </div>
+                        )}
                         <div className="flex gap-2">
                             <SecondaryButton
                                 type="button"
-                                onClick={() => navigator.clipboard?.writeText(issuedKey)}
+                                onClick={() => navigator.clipboard?.writeText(
+                                    issuedSigningKey
+                                        ? `API key: ${issuedKey}\nSigning key: ${issuedSigningKey}`
+                                        : issuedKey
+                                )}
                             >
                                 Copy
                             </SecondaryButton>
-                            <SecondaryButton type="button" onClick={() => setIssuedKey(null)}>
+                            <SecondaryButton type="button" onClick={() => { setIssuedKey(null); setIssuedSigningKey(null); }}>
                                 Dismiss
                             </SecondaryButton>
                         </div>
@@ -78,8 +97,8 @@ export default function Integrations({ auth, credentials = [] }) {
                     <h3 className="font-medium text-ink mb-2">How it works</h3>
                     <ol className="list-decimal list-inside text-ink-muted space-y-1">
                         <li>Click <strong>Generate API key</strong>.</li>
-                        <li>Copy the key and paste it into your app.</li>
-                        <li>Your app calls the BukuCloud API with <code className="text-xs">Authorization: Bearer &lt;api_key&gt;</code>.</li>
+                        <li>Copy the API key and signing key into your app.</li>
+                        <li>GET requests use <code className="text-xs">Authorization: Bearer &lt;api_key&gt;</code>. POST writes also need HMAC headers signed with the signing key.</li>
                         <li>Revoke the key here anytime to disconnect the app.</li>
                     </ol>
                 </div>

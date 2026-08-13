@@ -14,8 +14,8 @@ use Inertia\Response;
  * Settings → API & Integrations.
  *
  * Lists active API credentials and lets an admin generate a direct
- * read-only key or revoke any existing credential. Plan-gated by
- * `api.access` (Solo+).
+ * API key (plus signing key for HMAC writes) or revoke any existing
+ * credential. Plan-gated by `api.access` (Solo+).
  */
 class IntegrationsController extends Controller
 {
@@ -69,8 +69,9 @@ class IntegrationsController extends Controller
         );
 
         return redirect()->route('settings.integrations.index')
-            ->with('success', 'API key generated. Copy it now — it will not be shown again.')
-            ->with('issued_api_key', $issued['api_key']);
+            ->with('success', 'API credentials generated. Copy them now — they will not be shown again.')
+            ->with('issued_api_key', $issued['api_key'])
+            ->with('issued_signing_key', $issued['signing_key']);
     }
 
     public function revoke(Request $request, int $id): RedirectResponse
