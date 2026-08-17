@@ -15,7 +15,7 @@
         
         /* Top Header Bar */
         .top-bar {
-            background-color: #0f172a;
+            background-color: {{ $company['brand_color'] ?? '#0f172a' }};
             color: #fff;
             display: table;
             width: 100%;
@@ -161,6 +161,9 @@
                     <div class="address-col-inner">
                         <div class="address-title">From</div>
                         <div class="logo-box">
+                            @if(!empty($company['logo_url']))
+                                <img src="{{ $company['logo_url'] }}" alt="" style="max-height:48px;max-width:180px;margin-bottom:8px;" />
+                            @endif
                             <div class="logo-text">{{ $company['name'] }}</div>
                             @if(!empty($company['tin']) || !empty($company['brn']))
                                 <div class="logo-headline">Reg: {{ $company['brn'] ?? 'N/A' }}</div>
@@ -225,7 +228,7 @@
                             $lineTotal = ($item->quantity * $item->unit_price) - ($item->discount_amount ?? 0);
                         @endphp
                         <tr>
-                            <td>{{ $item->description }}</td>
+                            <td style="white-space: pre-wrap;">{!! nl2br(e($item->description)) !!}</td>
                             <td class="text-right">{{ number_format($item->unit_price, 2) }}</td>
                             <td class="text-center">{{ number_format($item->quantity, 0) }}</td>
                             <td class="text-center">{{ number_format($item->tax_rate, 2) }}%</td>
@@ -319,6 +322,12 @@
                     Signature blocks are provided where acknowledgment is required.
                 @else
                     This is a computer-generated document. No physical signature required.
+                @endif
+                @if(!empty($invoice->lhdn_uuid))
+                    <br>MyInvois {{ $invoice->lhdn_status }} · UUID {{ $invoice->lhdn_uuid }}
+                    @if(!empty($invoice->lhdn_qr_url))
+                        <br>{{ $invoice->lhdn_qr_url }}
+                    @endif
                 @endif
             </div>
         </div>

@@ -22,6 +22,7 @@ class Plan extends Model
         'users_included',
         'client_cap',
         'extra_user_price',
+        'copilot_credits_monthly',
         'features',
         'is_active',
         'is_contact_sales',
@@ -32,6 +33,7 @@ class Plan extends Model
         'is_active' => 'boolean',
         'is_contact_sales' => 'boolean',
         'extra_user_price' => 'decimal:2',
+        'copilot_credits_monthly' => 'integer',
         // Stored unsigned int but null means "unlimited"; cast keeps
         // the contract explicit at every read site.
         'client_cap' => 'integer',

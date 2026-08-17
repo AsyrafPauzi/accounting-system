@@ -47,8 +47,10 @@ class InitializeTenancyByLoggedInUser
             return $next($request);
         }
 
-        // 1. Public invoice-download fast path
-        if ($request->is('public/invoices/*/download') && $request->has('tenant_id')) {
+        // 1. Public customer-facing links (PDF, tracking pixel, Pay Now return)
+        if ($request->has('tenant_id') && (
+            $request->is('public/*') || $request->is('pay/*')
+        )) {
             $tenant = Tenant::find($request->input('tenant_id'));
             if ($tenant) {
                 tenancy()->initialize($tenant);

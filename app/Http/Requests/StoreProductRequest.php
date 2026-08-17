@@ -24,6 +24,7 @@ class StoreProductRequest extends FormRequest
             'unit_price'    => 'required|numeric|min:0',
             'account_code'  => 'nullable|string|max:20|exists:accounts,code',
             'tax_rate'      => 'nullable|numeric|min:0|max:100',
+            'classification_code' => 'nullable|string|max:10',
             'is_active'     => 'nullable|boolean',
             'display_order' => 'nullable|integer|min:0',
         ];

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Estimate;
 use App\Models\Invoice;
+use App\Support\DocumentNumber;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -24,15 +25,7 @@ class EstimateService
      */
     public function nextNumber(): string
     {
-        $last = Estimate::where('estimate_number', 'like', 'EST-%')
-            ->orderBy('id', 'desc')
-            ->first();
-
-        if ($last && preg_match('/^EST-(\d+)$/', $last->estimate_number, $m)) {
-            return 'EST-' . ((int) $m[1] + 1);
-        }
-
-        return 'EST-1';
+        return DocumentNumber::next('estimates', 'estimate_number', 'EST');
     }
 
     /**
@@ -164,6 +157,7 @@ class EstimateService
 
         return DB::transaction(function () use ($estimate, $overrides) {
             $items = $estimate->items->map(fn ($i) => [
+                'product_id'          => $i->product_id,
                 'description'         => $i->description,
                 'quantity'            => (float) $i->quantity,
                 'unit_price'          => (float) $i->unit_price,
@@ -184,6 +178,7 @@ class EstimateService
                 'customer_notes'  => $estimate->customer_notes,
                 'show_signature'  => true,
                 'created_by'      => $overrides['created_by'] ?? null,
+                'estimate_id'     => $estimate->id,
             ], $items);
 
             $estimate->update([
@@ -209,6 +204,37 @@ class EstimateService
             ->update(['status' => 'expired']);
     }
 
+    public function duplicate(Estimate $source, ?int $createdBy = null): Estimate
+    {
+        $source->loadMissing('items');
+        $items = $source->items->map(fn ($i) => [
+            'product_id'          => $i->product_id,
+            'description'         => $i->description,
+            'quantity'            => (float) $i->quantity,
+            'unit_price'          => (float) $i->unit_price,
+            'tax_rate'            => (float) $i->tax_rate,
+            'discount_amount'     => (float) ($i->discount_amount ?? 0),
+            'item_classification' => $i->item_classification ?: '022',
+        ])->all();
+
+        $expiry = $source->expiry_date && $source->issue_date
+            ? now()->addDays(max(1, $source->issue_date->diffInDays($source->expiry_date)))
+            : now()->addDays(30);
+
+        return $this->create([
+            'estimate_number' => $this->nextNumber(),
+            'currency'        => $source->currency,
+            'exchange_rate'   => $source->exchange_rate,
+            'customer_id'     => $source->customer_id,
+            'issue_date'      => now()->toDateString(),
+            'expiry_date'     => $expiry->toDateString(),
+            'shipping_amount' => $source->shipping_amount,
+            'customer_notes'  => $source->customer_notes,
+            'private_notes'   => $source->private_notes,
+            'created_by'      => $createdBy,
+        ], $items);
+    }
+
     private function syncItems(Estimate $estimate, array $items): void
     {
         foreach (array_values($items) as $idx => $item) {
@@ -228,11 +254,6 @@ class EstimateService
 
     private function nextInvoiceNumber(): string
     {
-        $last = Invoice::where('invoice_number', 'like', 'INV-%')->orderBy('id', 'desc')->first();
-        if ($last && preg_match('/^INV-(\d+)$/', $last->invoice_number, $m)) {
-            return 'INV-' . ((int) $m[1] + 1);
-        }
-
-        return 'INV-1';
+        return DocumentNumber::next('invoices', 'invoice_number', 'INV');
     }
 }

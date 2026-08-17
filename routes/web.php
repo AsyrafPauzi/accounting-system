@@ -39,6 +39,18 @@ Route::get('/public/invoices/{uuid}/download', [InvoiceController::class, 'publi
     ->name('public.invoices.download')
     ->middleware('signed');
 
+Route::get('/public/invoices/{uuid}/open.gif', [InvoiceController::class, 'publicPixel'])
+    ->name('public.invoices.pixel')
+    ->middleware('signed');
+
+Route::get('/public/invoices/{uuid}/pay-return', [InvoiceController::class, 'publicPayReturn'])
+    ->name('public.invoices.pay.return')
+    ->middleware('signed');
+
+Route::get('/public/credit-notes/{uuid}/download', [CreditNoteController::class, 'publicDownloadPdf'])
+    ->name('public.credit-notes.download')
+    ->middleware('signed');
+
 Route::get('/public/estimates/{uuid}/download', [\App\Http\Controllers\EstimateController::class, 'publicDownloadPdf'])
     ->name('public.estimates.download')
     ->middleware('signed');
@@ -46,6 +58,10 @@ Route::get('/public/estimates/{uuid}/download', [\App\Http\Controllers\EstimateC
 // --- Toyyibpay Webhook (Server-to-Server) ---
 Route::post('/subscription/webhook', [SubscriptionController::class, 'webhook'])->name('subscription.webhook');
 Route::post('/subscription/webhook/extra-user', [SubscriptionController::class, 'webhookExtraUser'])->name('subscription.webhook.extra_user');
+Route::post('/subscription/webhook/copilot-credits', [SubscriptionController::class, 'webhookCopilotCredits'])->name('subscription.webhook.copilot_credits');
+Route::post('/pay/toyyibpay/callback', [InvoiceController::class, 'toyyibpayCallback'])->name('pay.toyyibpay.callback');
+Route::post('/pay/billplz/callback', [InvoiceController::class, 'billplzCallback'])->name('pay.billplz.callback');
+Route::post('/pay/commercepay/callback', [InvoiceController::class, 'commercepayCallback'])->name('pay.commercepay.callback');
 
 // --- Self-hosted publisher API ---
 // Customer installs ping this once a day with their license + stats.
@@ -96,6 +112,7 @@ Route::middleware(['auth'])->group(function () {
     // (i.e. self-hosted Enterprise tier).
     Route::middleware(['feature.practice', 'permission:practice.access'])->prefix('practice')->name('practice.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Practice\PracticeDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/ar', [\App\Http\Controllers\Practice\PracticeArController::class, 'index'])->name('ar');
         // Switcher — sets `acting_tenant_id` and bounces to the client
         // dashboard. Posting (not GET) prevents accidental switching
         // via prefetch / link previews.
@@ -185,6 +202,14 @@ Route::middleware(['auth'])->group(function () {
     // Dashboard (paid-only via EnsureSubscribed)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    Route::middleware(['permission:copilot.use', 'plan.permission:copilot.use'])->group(function () {
+        Route::get('/copilot/chat', [\App\Http\Controllers\CopilotController::class, 'show'])->name('copilot.show');
+        Route::post('/copilot/chat', [\App\Http\Controllers\CopilotController::class, 'chat'])->name('copilot.chat');
+        Route::post('/copilot/confirm/{id}', [\App\Http\Controllers\CopilotController::class, 'confirm'])->whereNumber('id')->name('copilot.confirm');
+        Route::post('/copilot/cancel/{id}', [\App\Http\Controllers\CopilotController::class, 'cancel'])->whereNumber('id')->name('copilot.cancel');
+        Route::post('/copilot/clear', [\App\Http\Controllers\CopilotController::class, 'clear'])->name('copilot.clear');
+    });
+
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -194,7 +219,11 @@ Route::middleware(['auth'])->group(function () {
     // Company settings (tenant-level)
     Route::get('/settings/company', [CompanySettingsController::class, 'edit'])->name('settings.company');
     Route::patch('/settings/company', [CompanySettingsController::class, 'update'])->name('settings.company.update');
+    Route::post('/settings/company/myinvois-test', [CompanySettingsController::class, 'testMyInvois'])->name('settings.company.myinvois-test');
     Route::get('/settings/plan', [SubscriptionController::class, 'planSettings'])->name('settings.plan.index');
+    Route::post('/settings/plan/copilot-credits', [SubscriptionController::class, 'buyCopilotCredits'])
+        ->middleware(['permission:copilot.use', 'plan.permission:copilot.use', 'throttle:sensitive'])
+        ->name('settings.plan.copilot_credits');
 
     // API & Integrations — generate and revoke tenant API keys. Plan-gated by
     // `api.access` (Solo+); Spatie permission `integrations.view` is
@@ -327,17 +356,31 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // --- Invoices ---
-    Route::middleware('permission:invoices.view')->group(function () {
-        Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
-        Route::get('/invoices/{id}/edit', [InvoiceController::class, 'edit'])->name('invoices.edit');
-        Route::get('/invoices/{id}/pdf', [InvoiceController::class, 'downloadPdf'])->name('invoices.pdf');
-        Route::get('/invoices/{id}/preview', [InvoiceController::class, 'previewPdf'])->name('invoices.preview');
-    });
     Route::middleware('permission:invoices.create')->group(function () {
         Route::get('/invoices/create', [InvoiceController::class, 'create'])->name('invoices.create');
+        Route::get('/invoices/cash-sale', [InvoiceController::class, 'cashSaleCreate'])->name('invoices.cash-sale');
+        Route::get('/invoices/batch', [InvoiceController::class, 'batchCreate'])->name('invoices.batch');
         Route::post('/invoices', [InvoiceController::class, 'store'])
             ->middleware('throttle:creation')
             ->name('invoices.store');
+        Route::post('/invoices/cash-sale', [InvoiceController::class, 'cashSaleStore'])
+            ->middleware('throttle:creation')
+            ->name('invoices.cash-sale.store');
+        Route::post('/invoices/batch', [InvoiceController::class, 'batchStore'])
+            ->middleware('throttle:creation')
+            ->name('invoices.batch.store');
+        Route::post('/invoices/{id}/duplicate', [InvoiceController::class, 'duplicate'])
+            ->whereNumber('id')
+            ->name('invoices.duplicate');
+    });
+    Route::middleware('permission:invoices.view')->group(function () {
+        Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+        Route::get('/invoices/bulk-pdf', [InvoiceController::class, 'bulkPdf'])->name('invoices.bulk-pdf');
+        Route::get('/invoices/{id}', [InvoiceController::class, 'show'])->whereNumber('id')->name('invoices.show');
+        Route::get('/invoices/{id}/edit', [InvoiceController::class, 'edit'])->whereNumber('id')->name('invoices.edit');
+        Route::get('/invoices/{id}/pdf', [InvoiceController::class, 'downloadPdf'])->whereNumber('id')->name('invoices.pdf');
+        Route::get('/invoices/{id}/preview', [InvoiceController::class, 'previewPdf'])->whereNumber('id')->name('invoices.preview');
+        Route::get('/invoices/{id}/payments/{paymentId}/receipt', [InvoiceController::class, 'paymentReceipt'])->whereNumber('id')->name('invoices.payment-receipt');
     });
     Route::middleware('permission:invoices.edit')->group(function () {
         Route::put('/invoices/{id}', [InvoiceController::class, 'update'])->name('invoices.update');
@@ -352,21 +395,122 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/invoices/{id}/void', [InvoiceController::class, 'voidInvoice'])->name('invoices.void');
     });
     Route::middleware(['permission:invoices.email', 'plan.permission:invoices.email', \App\Http\Middleware\EnsureEmailVerifiedForOutbound::class])->group(function () {
+        Route::post('/invoices/bulk-email', [InvoiceController::class, 'bulkEmail'])->name('invoices.bulk-email');
         Route::post('/invoices/{id}/email', [InvoiceController::class, 'emailPdf'])->name('invoices.email');
     });
     Route::middleware(['permission:invoices.record-payment', 'plan.permission:invoices.record-payment'])->group(function () {
         Route::post('/invoices/{id}/payments', [InvoiceController::class, 'recordPayment'])->name('invoices.record-payment');
+        Route::post('/invoices/{id}/payments/{paymentId}/reverse', [InvoiceController::class, 'reversePayment'])->whereNumber(['id', 'paymentId'])->name('invoices.reverse-payment');
+    });
+    Route::middleware('permission:invoices.edit')->group(function () {
+        Route::post('/invoices/{id}/attachments', [InvoiceController::class, 'attach'])->whereNumber('id')->name('invoices.attach');
+        Route::delete('/invoices/{id}/attachments/{attachmentId}', [InvoiceController::class, 'detach'])->whereNumber('id')->name('invoices.detach');
+        Route::post('/invoices/{id}/recurring', [InvoiceController::class, 'createRecurring'])->whereNumber('id')->name('invoices.create-recurring');
+        Route::post('/invoices/{id}/late-fee', [InvoiceController::class, 'issueLateFee'])->whereNumber('id')->name('invoices.late-fee');
+        Route::post('/invoices/{id}/pay-now', [InvoiceController::class, 'payNow'])->whereNumber('id')->name('invoices.pay-now');
+        Route::post('/invoices/{id}/reminders', [InvoiceController::class, 'updateReminders'])->whereNumber('id')->name('invoices.reminders');
+    });
+    Route::middleware(['permission:myinvois.submit', 'plan.permission:myinvois.submit'])->group(function () {
+        Route::post('/invoices/{id}/myinvois', [InvoiceController::class, 'submitMyInvois'])->whereNumber('id')->name('invoices.myinvois.submit');
+        Route::post('/invoices/{id}/myinvois/refresh', [InvoiceController::class, 'refreshMyInvois'])->whereNumber('id')->name('invoices.myinvois.refresh');
+        Route::post('/invoices/{id}/myinvois/cancel', [InvoiceController::class, 'cancelMyInvois'])->whereNumber('id')->name('invoices.myinvois.cancel');
+        Route::get('/myinvois/consolidated', [\App\Http\Controllers\ConsolidatedEInvoiceController::class, 'index'])->name('myinvois.consolidated.index');
+        Route::post('/myinvois/consolidated', [\App\Http\Controllers\ConsolidatedEInvoiceController::class, 'store'])->name('myinvois.consolidated.store');
+        Route::post('/myinvois/consolidated/{id}/cancel', [\App\Http\Controllers\ConsolidatedEInvoiceController::class, 'cancel'])->name('myinvois.consolidated.cancel');
     });
 
     // --- Credit Notes ---
-    // Solo+ on the SaaS pricing page. Startup can view invoices but
-    // can't issue credit notes — `plan.permission:` enforces that.
     Route::middleware(['permission:credit-notes.view', 'plan.permission:credit-notes.view'])->group(function () {
         Route::get('/credit-notes', [CreditNoteController::class, 'index'])->name('credit-notes.index');
+        Route::get('/credit-notes/{id}', [CreditNoteController::class, 'show'])->whereNumber('id')->name('credit-notes.show');
+        Route::get('/credit-notes/{id}/pdf', [CreditNoteController::class, 'downloadPdf'])->whereNumber('id')->name('credit-notes.pdf');
     });
     Route::middleware(['permission:credit-notes.create', 'plan.permission:credit-notes.view'])->group(function () {
+        Route::get('/credit-notes/create', [CreditNoteController::class, 'createStandalone'])->name('credit-notes.create-standalone');
         Route::get('/credit-notes/create/{invoice_id}', [CreditNoteController::class, 'create'])->name('credit-notes.create');
         Route::post('/credit-notes', [CreditNoteController::class, 'store'])->name('credit-notes.store');
+        Route::get('/credit-notes/{id}/edit', [CreditNoteController::class, 'edit'])->whereNumber('id')->name('credit-notes.edit');
+        Route::put('/credit-notes/{id}', [CreditNoteController::class, 'update'])->whereNumber('id')->name('credit-notes.update');
+        Route::post('/credit-notes/{id}/apply', [CreditNoteController::class, 'apply'])->whereNumber('id')->name('credit-notes.apply');
+        Route::post('/credit-notes/{id}/refund', [CreditNoteController::class, 'refund'])->whereNumber('id')->name('credit-notes.refund');
+        Route::post('/credit-notes/{id}/void', [CreditNoteController::class, 'void'])->whereNumber('id')->name('credit-notes.void');
+        Route::post('/credit-notes/{id}/myinvois', [CreditNoteController::class, 'submitMyInvois'])->whereNumber('id')->name('credit-notes.myinvois.submit');
+        Route::post('/credit-notes/{id}/myinvois/refresh', [CreditNoteController::class, 'refreshMyInvois'])->whereNumber('id')->name('credit-notes.myinvois.refresh');
+        Route::post('/credit-notes/{id}/myinvois/cancel', [CreditNoteController::class, 'cancelMyInvois'])->whereNumber('id')->name('credit-notes.myinvois.cancel');
+    });
+    Route::middleware(['permission:invoices.email', 'plan.permission:invoices.email', \App\Http\Middleware\EnsureEmailVerifiedForOutbound::class])->group(function () {
+        Route::post('/credit-notes/{id}/email', [CreditNoteController::class, 'emailPdf'])->whereNumber('id')->name('credit-notes.email');
+        Route::post('/debit-notes/{id}/email', [\App\Http\Controllers\DebitNoteController::class, 'emailPdf'])->whereNumber('id')->name('debit-notes.email');
+        Route::post('/sales-orders/{id}/email', [\App\Http\Controllers\SalesOrderController::class, 'emailPdf'])->whereNumber('id')->name('sales-orders.email');
+        Route::post('/delivery-orders/{id}/email', [\App\Http\Controllers\DeliveryOrderController::class, 'emailPdf'])->whereNumber('id')->name('delivery-orders.email');
+        Route::post('/ar-deposits/{id}/email', [\App\Http\Controllers\ArDepositController::class, 'emailPdf'])->whereNumber('id')->name('ar-deposits.email');
+        Route::post('/purchase-orders/{id}/email', [\App\Http\Controllers\PurchaseOrderController::class, 'emailPdf'])->whereNumber('id')->name('purchase-orders.email');
+        Route::post('/goods-receipts/{id}/email', [\App\Http\Controllers\GoodsReceiptController::class, 'emailPdf'])->whereNumber('id')->name('goods-receipts.email');
+    });
+
+    // --- Debit Notes ---
+    Route::middleware(['permission:debit-notes.view', 'plan.permission:credit-notes.view'])->group(function () {
+        Route::get('/debit-notes', [\App\Http\Controllers\DebitNoteController::class, 'index'])->name('debit-notes.index');
+        Route::get('/debit-notes/{id}', [\App\Http\Controllers\DebitNoteController::class, 'show'])->whereNumber('id')->name('debit-notes.show');
+        Route::get('/debit-notes/{id}/pdf', [\App\Http\Controllers\DebitNoteController::class, 'downloadPdf'])->whereNumber('id')->name('debit-notes.pdf');
+    });
+    Route::middleware(['permission:debit-notes.create', 'plan.permission:credit-notes.view'])->group(function () {
+        Route::get('/debit-notes/create', [\App\Http\Controllers\DebitNoteController::class, 'create'])->name('debit-notes.create');
+        Route::post('/debit-notes', [\App\Http\Controllers\DebitNoteController::class, 'store'])->name('debit-notes.store');
+        Route::get('/debit-notes/{id}/edit', [\App\Http\Controllers\DebitNoteController::class, 'edit'])->whereNumber('id')->name('debit-notes.edit');
+        Route::put('/debit-notes/{id}', [\App\Http\Controllers\DebitNoteController::class, 'update'])->whereNumber('id')->name('debit-notes.update');
+        Route::post('/debit-notes/{id}/void', [\App\Http\Controllers\DebitNoteController::class, 'void'])->whereNumber('id')->name('debit-notes.void');
+        Route::post('/debit-notes/{id}/myinvois', [\App\Http\Controllers\DebitNoteController::class, 'submitMyInvois'])->whereNumber('id')->name('debit-notes.myinvois.submit');
+        Route::post('/debit-notes/{id}/myinvois/refresh', [\App\Http\Controllers\DebitNoteController::class, 'refreshMyInvois'])->whereNumber('id')->name('debit-notes.myinvois.refresh');
+    });
+
+    // --- Sales Orders ---
+    Route::middleware(['permission:sales-orders.view', 'plan.permission:estimates.view', 'goods.flow'])->group(function () {
+        Route::get('/sales-orders', [\App\Http\Controllers\SalesOrderController::class, 'index'])->name('sales-orders.index');
+        Route::get('/sales-orders/{id}', [\App\Http\Controllers\SalesOrderController::class, 'show'])->whereNumber('id')->name('sales-orders.show');
+        Route::get('/sales-orders/{id}/pdf', [\App\Http\Controllers\SalesOrderController::class, 'downloadPdf'])->whereNumber('id')->name('sales-orders.pdf');
+    });
+    Route::middleware(['permission:sales-orders.create', 'plan.permission:estimates.view', 'goods.flow'])->group(function () {
+        Route::get('/sales-orders/batch', [\App\Http\Controllers\SalesOrderController::class, 'batchCreate'])->name('sales-orders.batch');
+        Route::post('/sales-orders/batch', [\App\Http\Controllers\SalesOrderController::class, 'batchStore'])
+            ->middleware('throttle:creation')
+            ->name('sales-orders.batch.store');
+        Route::get('/sales-orders/create', [\App\Http\Controllers\SalesOrderController::class, 'create'])->name('sales-orders.create');
+        Route::post('/sales-orders', [\App\Http\Controllers\SalesOrderController::class, 'store'])->name('sales-orders.store');
+        Route::post('/sales-orders/{id}/deliver', [\App\Http\Controllers\SalesOrderController::class, 'deliver'])->whereNumber('id')->name('sales-orders.deliver');
+        Route::post('/sales-orders/{id}/invoice', [\App\Http\Controllers\SalesOrderController::class, 'convertToInvoice'])->whereNumber('id')->name('sales-orders.invoice');
+    });
+    Route::middleware(['permission:sales-orders.edit', 'plan.permission:estimates.view', 'goods.flow'])->group(function () {
+        Route::get('/sales-orders/{id}/edit', [\App\Http\Controllers\SalesOrderController::class, 'edit'])->whereNumber('id')->name('sales-orders.edit');
+        Route::put('/sales-orders/{id}', [\App\Http\Controllers\SalesOrderController::class, 'update'])->whereNumber('id')->name('sales-orders.update');
+        Route::post('/sales-orders/{id}/cancel', [\App\Http\Controllers\SalesOrderController::class, 'cancel'])->whereNumber('id')->name('sales-orders.cancel');
+    });
+
+    // --- Delivery Orders ---
+    Route::middleware(['permission:delivery-orders.view', 'plan.permission:estimates.view', 'goods.flow'])->group(function () {
+        Route::get('/delivery-orders', [\App\Http\Controllers\DeliveryOrderController::class, 'index'])->name('delivery-orders.index');
+        Route::get('/delivery-orders/{id}', [\App\Http\Controllers\DeliveryOrderController::class, 'show'])->whereNumber('id')->name('delivery-orders.show');
+        Route::get('/delivery-orders/{id}/pdf', [\App\Http\Controllers\DeliveryOrderController::class, 'downloadPdf'])->whereNumber('id')->name('delivery-orders.pdf');
+        Route::post('/delivery-orders/{id}/invoice', [\App\Http\Controllers\DeliveryOrderController::class, 'convertToInvoice'])->whereNumber('id')->name('delivery-orders.invoice');
+    });
+    Route::middleware(['permission:delivery-orders.edit', 'plan.permission:estimates.view', 'goods.flow'])->group(function () {
+        Route::get('/delivery-orders/{id}/edit', [\App\Http\Controllers\DeliveryOrderController::class, 'edit'])->whereNumber('id')->name('delivery-orders.edit');
+        Route::put('/delivery-orders/{id}', [\App\Http\Controllers\DeliveryOrderController::class, 'update'])->whereNumber('id')->name('delivery-orders.update');
+        Route::post('/delivery-orders/{id}/return', [\App\Http\Controllers\DeliveryOrderController::class, 'returnFull'])->whereNumber('id')->name('delivery-orders.return');
+    });
+
+    // --- Customer deposits (AR) ---
+    Route::middleware(['permission:invoices.record-payment', 'plan.permission:invoices.record-payment'])->group(function () {
+        Route::get('/ar-deposits', [\App\Http\Controllers\ArDepositController::class, 'index'])->name('ar-deposits.index');
+        Route::get('/ar-deposits/create', [\App\Http\Controllers\ArDepositController::class, 'create'])->name('ar-deposits.create');
+        Route::post('/ar-deposits', [\App\Http\Controllers\ArDepositController::class, 'store'])->name('ar-deposits.store');
+        Route::get('/ar-deposits/{id}/edit', [\App\Http\Controllers\ArDepositController::class, 'edit'])->whereNumber('id')->name('ar-deposits.edit');
+        Route::put('/ar-deposits/{id}', [\App\Http\Controllers\ArDepositController::class, 'update'])->whereNumber('id')->name('ar-deposits.update');
+        Route::get('/ar-deposits/{id}/pdf', [\App\Http\Controllers\ArDepositController::class, 'downloadPdf'])->whereNumber('id')->name('ar-deposits.pdf');
+        Route::get('/ar-deposits/{id}', [\App\Http\Controllers\ArDepositController::class, 'show'])->whereNumber('id')->name('ar-deposits.show');
+        Route::post('/ar-deposits/{id}/apply', [\App\Http\Controllers\ArDepositController::class, 'apply'])->whereNumber('id')->name('ar-deposits.apply');
+        Route::post('/ar-deposits/{id}/refund', [\App\Http\Controllers\ArDepositController::class, 'refund'])->whereNumber('id')->name('ar-deposits.refund');
+        Route::post('/ar-deposits/{id}/forfeit', [\App\Http\Controllers\ArDepositController::class, 'forfeit'])->whereNumber('id')->name('ar-deposits.forfeit');
     });
 
     // --- Suppliers ---
@@ -395,9 +539,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/bills', [BillController::class, 'index'])->name('bills.index');
         Route::get('/bills/{id}/edit', [BillController::class, 'edit'])->name('bills.edit');
         Route::get('/bills/{id?}/receipt', [BillController::class, 'showReceipt'])->name('bills.receipt');
+        Route::get('/bills/{id}', [BillController::class, 'show'])->whereNumber('id')->name('bills.show');
     });
     Route::middleware(['permission:bills.create', 'plan.permission:bills.view'])->group(function () {
         Route::get('/bills/create', [BillController::class, 'create'])->name('bills.create');
+        Route::get('/bills/batch', [BillController::class, 'batchCreate'])->name('bills.batch');
+        Route::post('/bills/batch', [BillController::class, 'batchStore'])
+            ->middleware('throttle:creation')
+            ->name('bills.batch.store');
         Route::post('/bills', [BillController::class, 'store'])
             ->middleware('throttle:creation')
             ->name('bills.store');
@@ -422,7 +571,61 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['permission:bills.record-payment', 'plan.permission:bills.view'])->group(function () {
         Route::post('/bills/{id}/payments', [BillController::class, 'recordPayment'])->name('bills.record-payment');
     });
+    Route::middleware(['permission:myinvois.submit', 'plan.permission:myinvois.submit'])->group(function () {
+        Route::post('/bills/{id}/myinvois', [BillController::class, 'submitMyInvois'])->whereNumber('id')->name('bills.myinvois.submit');
+        Route::post('/bills/{id}/myinvois/refresh', [BillController::class, 'refreshMyInvois'])->whereNumber('id')->name('bills.myinvois.refresh');
+        Route::post('/bills/{id}/myinvois/cancel', [BillController::class, 'cancelMyInvois'])->whereNumber('id')->name('bills.myinvois.cancel');
+    });
 
+    Route::middleware(['permission:bills.view', 'plan.permission:bills.view'])->group(function () {
+        Route::get('/purchase-orders', [\App\Http\Controllers\PurchaseOrderController::class, 'index'])->name('purchase-orders.index');
+        Route::get('/purchase-orders/{id}', [\App\Http\Controllers\PurchaseOrderController::class, 'show'])->whereNumber('id')->name('purchase-orders.show');
+        Route::get('/purchase-orders/{id}/pdf', [\App\Http\Controllers\PurchaseOrderController::class, 'downloadPdf'])->whereNumber('id')->name('purchase-orders.pdf');
+        Route::get('/goods-receipts', [\App\Http\Controllers\GoodsReceiptController::class, 'index'])->name('goods-receipts.index');
+        Route::get('/goods-receipts/{id}', [\App\Http\Controllers\GoodsReceiptController::class, 'show'])->whereNumber('id')->name('goods-receipts.show');
+        Route::get('/goods-receipts/{id}/pdf', [\App\Http\Controllers\GoodsReceiptController::class, 'downloadPdf'])->whereNumber('id')->name('goods-receipts.pdf');
+        Route::get('/supplier-credit-notes', [\App\Http\Controllers\SupplierCreditNoteController::class, 'index'])->name('supplier-credit-notes.index');
+        Route::get('/supplier-credit-notes/{id}', [\App\Http\Controllers\SupplierCreditNoteController::class, 'show'])->whereNumber('id')->name('supplier-credit-notes.show');
+        Route::get('/supplier-credit-notes/{id}/pdf', [\App\Http\Controllers\SupplierCreditNoteController::class, 'downloadPdf'])->whereNumber('id')->name('supplier-credit-notes.pdf');
+        Route::get('/supplier-debit-notes', [\App\Http\Controllers\SupplierDebitNoteController::class, 'index'])->name('supplier-debit-notes.index');
+        Route::get('/supplier-debit-notes/{id}', [\App\Http\Controllers\SupplierDebitNoteController::class, 'show'])->whereNumber('id')->name('supplier-debit-notes.show');
+        Route::get('/supplier-debit-notes/{id}/pdf', [\App\Http\Controllers\SupplierDebitNoteController::class, 'downloadPdf'])->whereNumber('id')->name('supplier-debit-notes.pdf');
+        Route::get('/recurring-bills', [\App\Http\Controllers\RecurringBillController::class, 'index'])->name('recurring-bills.index');
+        Route::get('/recurring-bills/{id}', [\App\Http\Controllers\RecurringBillController::class, 'show'])->whereNumber('id')->name('recurring-bills.show');
+        Route::get('/supplier-statements', [\App\Http\Controllers\SupplierStatementController::class, 'index'])->name('supplier-statements.index');
+        Route::get('/supplier-statements/{supplierId}', [\App\Http\Controllers\SupplierStatementController::class, 'show'])->whereNumber('supplierId')->name('supplier-statements.show');
+    });
+    Route::middleware(['permission:bills.create', 'plan.permission:bills.view'])->group(function () {
+        Route::get('/purchase-orders/{id}/edit', [\App\Http\Controllers\PurchaseOrderController::class, 'edit'])->whereNumber('id')->name('purchase-orders.edit');
+        Route::put('/purchase-orders/{id}', [\App\Http\Controllers\PurchaseOrderController::class, 'update'])->whereNumber('id')->name('purchase-orders.update');
+        Route::post('/purchase-orders/{id}/cancel', [\App\Http\Controllers\PurchaseOrderController::class, 'cancel'])->whereNumber('id')->name('purchase-orders.cancel');
+        Route::put('/goods-receipts/{id}', [\App\Http\Controllers\GoodsReceiptController::class, 'update'])->whereNumber('id')->name('goods-receipts.update');
+        Route::post('/goods-receipts/{id}/return', [\App\Http\Controllers\GoodsReceiptController::class, 'returnFull'])->whereNumber('id')->name('goods-receipts.return');
+        Route::get('/purchase-orders/create', [\App\Http\Controllers\PurchaseOrderController::class, 'create'])->name('purchase-orders.create');
+        Route::post('/purchase-orders', [\App\Http\Controllers\PurchaseOrderController::class, 'store'])->name('purchase-orders.store');
+        Route::post('/purchase-orders/{id}/receive', [\App\Http\Controllers\PurchaseOrderController::class, 'receive'])->whereNumber('id')->name('purchase-orders.receive');
+        Route::post('/purchase-orders/{id}/bill', [\App\Http\Controllers\PurchaseOrderController::class, 'convertToBill'])->whereNumber('id')->name('purchase-orders.bill');
+        Route::post('/goods-receipts/{id}/bill', [\App\Http\Controllers\GoodsReceiptController::class, 'convertToBill'])->whereNumber('id')->name('goods-receipts.bill');
+        Route::get('/supplier-credit-notes/create', [\App\Http\Controllers\SupplierCreditNoteController::class, 'create'])->name('supplier-credit-notes.create');
+        Route::post('/supplier-credit-notes', [\App\Http\Controllers\SupplierCreditNoteController::class, 'store'])->name('supplier-credit-notes.store');
+        Route::post('/supplier-credit-notes/{id}/apply', [\App\Http\Controllers\SupplierCreditNoteController::class, 'apply'])->whereNumber('id')->name('supplier-credit-notes.apply');
+        Route::post('/supplier-credit-notes/{id}/refund', [\App\Http\Controllers\SupplierCreditNoteController::class, 'refund'])->whereNumber('id')->name('supplier-credit-notes.refund');
+        Route::post('/supplier-credit-notes/{id}/void', [\App\Http\Controllers\SupplierCreditNoteController::class, 'void'])->whereNumber('id')->name('supplier-credit-notes.void');
+        Route::get('/supplier-debit-notes/create', [\App\Http\Controllers\SupplierDebitNoteController::class, 'create'])->name('supplier-debit-notes.create');
+        Route::post('/supplier-debit-notes', [\App\Http\Controllers\SupplierDebitNoteController::class, 'store'])->name('supplier-debit-notes.store');
+        Route::post('/supplier-debit-notes/{id}/void', [\App\Http\Controllers\SupplierDebitNoteController::class, 'void'])->whereNumber('id')->name('supplier-debit-notes.void');
+        Route::get('/recurring-bills/create', [\App\Http\Controllers\RecurringBillController::class, 'create'])->name('recurring-bills.create');
+        Route::post('/recurring-bills', [\App\Http\Controllers\RecurringBillController::class, 'store'])->name('recurring-bills.store');
+        Route::post('/recurring-bills/{id}/run', [\App\Http\Controllers\RecurringBillController::class, 'runNow'])->whereNumber('id')->name('recurring-bills.run');
+        Route::post('/recurring-bills/{id}/toggle', [\App\Http\Controllers\RecurringBillController::class, 'toggle'])->whereNumber('id')->name('recurring-bills.toggle');
+    });
+    Route::middleware(['permission:bills.record-payment', 'plan.permission:bills.view'])->group(function () {
+        Route::get('/ap-deposits', [\App\Http\Controllers\ApDepositController::class, 'index'])->name('ap-deposits.index');
+        Route::get('/ap-deposits/create', [\App\Http\Controllers\ApDepositController::class, 'create'])->name('ap-deposits.create');
+        Route::post('/ap-deposits', [\App\Http\Controllers\ApDepositController::class, 'store'])->name('ap-deposits.store');
+        Route::get('/ap-deposits/{id}', [\App\Http\Controllers\ApDepositController::class, 'show'])->whereNumber('id')->name('ap-deposits.show');
+        Route::post('/ap-deposits/{id}/apply', [\App\Http\Controllers\ApDepositController::class, 'apply'])->whereNumber('id')->name('ap-deposits.apply');
+    });
 
     // --- Chart of Accounts ---
     Route::middleware(['permission:accounts.view', 'plan.permission:accounts.view'])->group(function () {
@@ -650,12 +853,17 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/estimates', [\App\Http\Controllers\EstimateController::class, 'index'])->name('estimates.index');
     });
     Route::middleware(['permission:estimates.create', 'plan.permission:estimates.view'])->group(function () {
+        Route::get('/estimates/batch', [\App\Http\Controllers\EstimateController::class, 'batchCreate'])->name('estimates.batch');
+        Route::post('/estimates/batch', [\App\Http\Controllers\EstimateController::class, 'batchStore'])
+            ->middleware('throttle:creation')
+            ->name('estimates.batch.store');
         Route::get('/estimates/create', [\App\Http\Controllers\EstimateController::class, 'create'])->name('estimates.create');
         Route::post('/estimates', [\App\Http\Controllers\EstimateController::class, 'store'])
             ->middleware('throttle:creation')
             ->name('estimates.store');
     });
     Route::middleware(['permission:estimates.view', 'plan.permission:estimates.view'])->group(function () {
+        Route::get('/estimates/bulk-pdf', [\App\Http\Controllers\EstimateController::class, 'bulkPdf'])->name('estimates.bulk-pdf');
         Route::get('/estimates/{id}', [\App\Http\Controllers\EstimateController::class, 'show'])->name('estimates.show');
         Route::get('/estimates/{id}/pdf', [\App\Http\Controllers\EstimateController::class, 'downloadPdf'])->name('estimates.pdf');
     });
@@ -668,10 +876,17 @@ Route::middleware(['auth'])->group(function () {
     // we can sell it as the "Email estimates" bullet on Solo+ without
     // also selling estimate viewing/editing as paid features.
     Route::middleware(['permission:estimates.email', 'plan.permission:estimates.email', \App\Http\Middleware\EnsureEmailVerifiedForOutbound::class])->group(function () {
+        Route::post('/estimates/bulk-email', [\App\Http\Controllers\EstimateController::class, 'bulkEmail'])->name('estimates.bulk-email');
         Route::post('/estimates/{id}/email', [\App\Http\Controllers\EstimateController::class, 'email'])->name('estimates.email');
     });
     Route::middleware(['permission:estimates.convert', 'plan.permission:estimates.view'])->group(function () {
         Route::post('/estimates/{id}/convert', [\App\Http\Controllers\EstimateController::class, 'convert'])->name('estimates.convert');
+    });
+    Route::middleware(['permission:estimates.convert', 'plan.permission:estimates.view', 'goods.flow'])->group(function () {
+        Route::post('/estimates/{id}/convert-so', [\App\Http\Controllers\EstimateController::class, 'convertToSalesOrder'])->name('estimates.convert-so');
+    });
+    Route::middleware(['permission:estimates.create', 'plan.permission:estimates.view'])->group(function () {
+        Route::post('/estimates/{id}/duplicate', [\App\Http\Controllers\EstimateController::class, 'duplicate'])->name('estimates.duplicate');
     });
     Route::middleware(['permission:estimates.delete', 'plan.permission:estimates.view'])->group(function () {
         Route::delete('/estimates/{id}', [\App\Http\Controllers\EstimateController::class, 'destroy'])->name('estimates.destroy');

@@ -13,8 +13,11 @@ const Icons = {
 
 const eventBadge = {
     invoice:     { label: 'Invoice',     classes: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+    debit_note:  { label: 'Debit note',  classes: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300' },
     payment:     { label: 'Payment',     classes: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' },
+    deposit_application: { label: 'Knock-off', classes: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' },
     credit_note: { label: 'Credit note', classes: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' },
+    credit_note_refund: { label: 'CN refund', classes: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300' },
 };
 
 function formatDate(value) {
@@ -24,7 +27,7 @@ function formatDate(value) {
     return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-export default function Show({ auth, customer, statement, base_currency = 'MYR' }) {
+export default function Show({ auth, customer, statement, base_currency = 'MYR', open_invoices = [], pay_now_configured = false }) {
     const [from, setFrom] = useState(statement.from);
     const [to, setTo] = useState(statement.to);
     const [emailing, setEmailing] = useState(false);
@@ -153,6 +156,29 @@ export default function Show({ auth, customer, statement, base_currency = 'MYR' 
                         <div className={`mt-2 text-xl font-bold tabular-nums ${closingClass}`}>{formatCurrency(statement.closing_balance, base_currency)}</div>
                     </div>
                 </div>
+
+                {open_invoices.length > 0 && (
+                    <div className="bg-surface rounded-2xl border border-border-warm shadow-sm p-5 space-y-3">
+                        <h3 className="text-sm font-display font-semibold text-ink uppercase tracking-wider">Open invoices</h3>
+                        {open_invoices.map((inv) => (
+                            <div key={inv.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                                <Link href={route('invoices.show', inv.id)} className="font-semibold text-terracotta hover:underline">
+                                    {inv.invoice_number}
+                                </Link>
+                                <span className="font-mono">{formatCurrency(inv.balance, inv.currency || base_currency)}</span>
+                                {pay_now_configured && (
+                                    <button
+                                        type="button"
+                                        className="px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-terracotta"
+                                        onClick={() => router.post(route('invoices.pay-now', inv.id))}
+                                    >
+                                        Pay Now
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
 
                 <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-border-warm flex items-center justify-between">

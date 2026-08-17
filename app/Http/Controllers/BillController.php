@@ -7,13 +7,17 @@ use App\Http\Requests\UpdateBillRequest;
 use App\Models\Account;
 use App\Models\Bill;
 use App\Models\Supplier;
+use App\Support\DocumentNumber;
 use App\Services\BillService;
 use App\Services\ImageMetadataStripper;
+use App\Services\MyInvoisService;
 use App\Services\OCRService;
+use App\Services\PurchasesDocumentTrail;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class BillController extends Controller
@@ -56,17 +60,16 @@ class BillController extends Controller
     public function create(Request $request): Response
     {
         $supplierId = $request->query('supplier_id');
-        $lastBill = Bill::where('bill_number', 'like', 'BILL-%')->orderBy('id', 'desc')->first();
-        $nextNumber = 'BILL-1';
-        if ($lastBill && preg_match('/^BILL-(\d+)$/', $lastBill->bill_number, $m)) {
-            $nextNumber = 'BILL-' . ((int) $m[1] + 1);
-        }
+        $nextNumber = DocumentNumber::next('bills', 'bill_number', 'BILL');
 
         $expenseAccounts = Account::where('type', 'expense')->active()->orderBy('code')->get(['code', 'name'])->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->code} — {$a->name}"])->values()->all();
+
+        $bankAccounts = Account::bankOrCash()->active()->orderBy('code')->get(['code', 'name'])->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->name} ({$a->code})"])->values()->all();
 
         return Inertia::render('Bills/Create', [
             'suppliers'           => Supplier::where('is_active', true)->orderBy('name')->get(['id', 'name', 'code']),
             'expenseAccounts'     => $expenseAccounts,
+            'bankAccounts'        => $bankAccounts,
             'nextBillNumber'      => $nextNumber,
             'preselectedSupplierId' => $supplierId ? (int) $supplierId : null,
         ]);
@@ -74,10 +77,19 @@ class BillController extends Controller
 
     public function store(StoreBillRequest $request): RedirectResponse
     {
+        $validated = $request->validated();
+        $kind = $this->billService->normalizeKind($validated['purchase_kind'] ?? 'credit');
         $bill = $this->billService->create(
-            array_merge($request->validated(), ['created_by' => $request->user()?->id]),
+            array_merge($validated, ['created_by' => $request->user()?->id, 'purchase_kind' => $kind]),
             $request->input('items')
         );
+
+        if ($kind === 'cash') {
+            return redirect()->route('bills.show', $bill->id)->with('success', 'Cash purchase recorded and paid.');
+        }
+        if ($kind === 'claim') {
+            return redirect()->route('bills.show', $bill->id)->with('success', 'Expense claim saved as draft. Reimburse later from the claim page.');
+        }
 
         return redirect()->route('bills.edit', $bill->id)->with('success', 'Bill created as draft.');
     }
@@ -159,13 +171,128 @@ class BillController extends Controller
                 $bill,
                 (float) $validated['amount'],
                 $validated['payment_date'],
-                $validated['bank_account_code']
+                $validated['bank_account_code'],
+                $validated['reference'] ?? null,
+                $request->user()?->id
             );
         } catch (\LogicException $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }
 
-        return redirect()->route('bills.index')->with('success', 'Payment recorded.');
+        return redirect()->route('bills.show', $id)->with(
+            'success',
+            $bill->purchase_kind === 'claim' ? 'Reimbursement recorded.' : 'Payment recorded.'
+        );
+    }
+
+    public function show(int $id): Response
+    {
+        $with = ['supplier', 'items'];
+        if (Schema::hasTable('bill_payments')) {
+            $with[] = 'payments';
+        }
+        if (Schema::hasTable('supplier_credit_note_applications')) {
+            $with[] = 'creditNoteApplications.creditNote:id,scn_number,status';
+        }
+        if (Schema::hasTable('ap_deposit_applications')) {
+            $with[] = 'depositApplications.deposit:id,reference,status';
+        }
+        $bill = Bill::with($with)->findOrFail($id);
+
+        $bankAccounts = Account::bankOrCash()->active()->orderBy('code')->get(['code', 'name']);
+
+        return Inertia::render('Bills/Show', [
+            'bill'         => array_merge($bill->toArray(), ['balance_due' => $this->billService->remainingBalance($bill)]),
+            'bankAccounts' => $bankAccounts,
+            'myinvois_gaps'=> app(MyInvoisService::class)->selfBilledReadiness($bill),
+            'trail'        => app(PurchasesDocumentTrail::class)->forBill($bill),
+        ]);
+    }
+
+    public function batchCreate(): Response
+    {
+        $expenseAccounts = Account::where('type', 'expense')->active()->orderBy('code')->get(['code', 'name']);
+        $bankAccounts = Account::bankOrCash()->active()->orderBy('code')->get(['code', 'name'])->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->name} ({$a->code})"])->values()->all();
+
+        return Inertia::render('Bills/Batch', [
+            'suppliers' => Supplier::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'expenseAccounts' => $expenseAccounts,
+            'bankAccounts' => $bankAccounts,
+        ]);
+    }
+
+    public function batchStore(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'rows'                      => 'required|array|min:1|max:200',
+            'rows.*.supplier_id'        => 'required|exists:suppliers,id',
+            'rows.*.purchase_kind'      => 'nullable|in:credit,cash,claim',
+            'rows.*.description'        => 'required|string|max:255',
+            'rows.*.quantity'           => 'required|numeric|min:0.01',
+            'rows.*.unit_amount'        => 'required|numeric|min:0',
+            'rows.*.account_code'       => 'nullable|string|exists:accounts,code',
+            'rows.*.bill_date'          => 'nullable|date',
+            'rows.*.bank_account_code'  => 'nullable|required_if:rows.*.purchase_kind,cash|string|exists:accounts,code',
+        ]);
+
+        $created = 0;
+        foreach ($request->input('rows') as $row) {
+            $kind = $this->billService->normalizeKind($row['purchase_kind'] ?? 'credit');
+            $qty = (float) $row['quantity'];
+            $unit = (float) $row['unit_amount'];
+            $this->billService->create([
+                'bill_number'       => $this->billService->nextNumber(),
+                'supplier_id'       => $row['supplier_id'],
+                'bill_date'         => $row['bill_date'] ?? now()->toDateString(),
+                'purchase_kind'     => $kind,
+                'bank_account_code' => $row['bank_account_code'] ?? null,
+                'created_by'        => $request->user()?->id,
+            ], [[
+                'account_code' => $row['account_code'] ?? '5000',
+                'description'  => $row['description'],
+                'quantity'     => $qty,
+                'unit_amount'  => $unit,
+                'amount'       => round($qty * $unit, 2),
+            ]]);
+            $created++;
+        }
+
+        return redirect()->route('bills.index')->with('success', "{$created} bill(s) created.");
+    }
+
+    public function submitMyInvois(int $id): RedirectResponse
+    {
+        $bill = Bill::with(['supplier', 'items'])->findOrFail($id);
+        try {
+            app(MyInvoisService::class)->submitSelfBilled($bill);
+        } catch (\LogicException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->back()->with('success', 'Self-billed e-invoice submitted to MyInvois.');
+    }
+
+    public function refreshMyInvois(int $id): RedirectResponse
+    {
+        try {
+            app(MyInvoisService::class)->refreshStatus(Bill::findOrFail($id));
+        } catch (\LogicException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->back()->with('success', 'MyInvois status refreshed.');
+    }
+
+    public function cancelMyInvois(Request $request, int $id): RedirectResponse
+    {
+        $request->validate(['reason' => 'required|string|max:500']);
+        try {
+            app(MyInvoisService::class)->cancel(Bill::findOrFail($id), $request->input('reason'));
+        } catch (\LogicException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->back()->with('success', 'Self-billed e-invoice cancelled.');
     }
 
     /**
@@ -253,6 +380,15 @@ class BillController extends Controller
             abort(404);
         }
 
+        // Legacy copilot attachments lived on the local disk.
+        if (str_starts_with($path, 'copilot-receipts/')) {
+            if (! Storage::disk('local')->exists($path)) {
+                abort(404);
+            }
+
+            return Storage::disk('local')->response($path);
+        }
+
         if (! Storage::disk('public')->exists($path)) {
             abort(404);
         }
@@ -288,9 +424,8 @@ class BillController extends Controller
             return null;
         }
 
-        // Receipts are the only thing this route serves. If a future flow
-        // needs to expose a different prefix, add it here explicitly.
-        if (! str_starts_with($path, 'receipts/')) {
+        // Bill uploads use receipts/; older copilot drafts used copilot-receipts/.
+        if (! str_starts_with($path, 'receipts/') && ! str_starts_with($path, 'copilot-receipts/')) {
             return null;
         }
 

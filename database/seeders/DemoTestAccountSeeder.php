@@ -80,11 +80,13 @@ class DemoTestAccountSeeder extends Seeder
         $adminRole = Role::where('name', 'admin')->where('guard_name', 'web')->first();
 
         $user = User::create([
-            'name'      => self::TENANT_DISPLAY_NAME,
-            'email'     => self::EMAIL,
-            'password'  => Hash::make(self::PASSWORD),
-            'tenant_id' => $companyId,
-            'role_id'   => $adminRole?->id,
+            'name'                     => self::TENANT_DISPLAY_NAME,
+            'email'                    => self::EMAIL,
+            'password'                 => Hash::make(self::PASSWORD),
+            'tenant_id'                => $companyId,
+            'role_id'                  => $adminRole?->id,
+            'privacy_accepted_at'      => now(),
+            'privacy_accepted_version' => config('privacy.current_version'),
         ]);
 
         if ($adminRole) {
@@ -134,8 +136,9 @@ class DemoTestAccountSeeder extends Seeder
         // demo tenant — an operator can always re-run the expansion seeder.
         try {
             (new DemoRevenueExpansionSeeder())->setCommand($this->command)->run();
+            (new DemoSalesParitySeeder())->setCommand($this->command)->run();
         } catch (\Throwable $e) {
-            $this->command?->warn('DemoRevenueExpansionSeeder failed: ' . $e->getMessage());
+            $this->command?->warn('Demo revenue/sales seeders failed: ' . $e->getMessage());
         }
 
         $this->command->info(sprintf(
@@ -355,8 +358,19 @@ class DemoTestAccountSeeder extends Seeder
     {
         do {
             $id = Str::slug($tenantDisplayName) . '_' . random_int(100, 999);
-        } while (Tenant::where('id', $id)->exists());
+        } while (Tenant::where('id', $id)->exists() || $this->tenantDatabaseExists($id));
 
         return $id;
+    }
+
+    private function tenantDatabaseExists(string $tenantId): bool
+    {
+        $dbName = 'tenant'.$tenantId;
+
+        return \Illuminate\Support\Facades\DB::connection(config('tenancy.database.central_connection', 'mysql'))
+            ->selectOne(
+                'SELECT 1 FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ? LIMIT 1',
+                [$dbName]
+            ) !== null;
     }
 }

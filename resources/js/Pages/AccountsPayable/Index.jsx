@@ -96,7 +96,7 @@ export default function Index({ auth, bills = [], summary = {}, bankAccounts = [
                             <div key={key} className="bg-surface rounded-2xl p-6 border border-border-warm shadow-sm">
                                 <div className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">{bucket.label}</div>
                                 <p className="text-xl font-display font-medium text-ink font-mono tabular-nums">RM {formatMoney(bucket.amount)}</p>
-                                <p className="text-xs text-ink-muted mt-0.5">{bucket.count} bill{bucket.count !== 1 ? 's' : ''}</p>
+                                <p className="text-xs text-ink-muted mt-0.5">{`${bucket.count} ${bucket.count === 1 ? 'bill' : 'bills'}`}</p>
                             </div>
                         )
                     ))}

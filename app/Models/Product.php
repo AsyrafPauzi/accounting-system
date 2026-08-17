@@ -27,6 +27,7 @@ class Product extends Model
         'unit_price',
         'account_code',
         'tax_rate',
+        'classification_code',
         'is_active',
         'display_order',
     ];

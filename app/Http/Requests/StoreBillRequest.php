@@ -15,7 +15,9 @@ class StoreBillRequest extends FormRequest
     {
         return [
             'bill_number'          => 'required|string|max:50|unique:bills,bill_number',
-            'supplier_id'          => 'nullable|exists:suppliers,id',
+            'purchase_kind'        => 'nullable|in:credit,cash,claim',
+            'supplier_id'          => 'nullable|required_if:purchase_kind,cash,claim|exists:suppliers,id',
+            'bank_account_code'    => 'nullable|required_if:purchase_kind,cash|string|exists:accounts,code',
             'bill_date'            => 'required|date',
             'due_date'             => 'nullable|date|after_or_equal:bill_date',
             'tax_amount'           => 'nullable|numeric|min:0',

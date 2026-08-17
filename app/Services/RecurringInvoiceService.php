@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Jobs\SendInvoiceEmail;
 use App\Models\Invoice;
 use App\Models\RecurringInvoice;
+use App\Support\DocumentNumber;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
@@ -16,8 +18,8 @@ use Illuminate\Support\Facades\Log;
  *
  * 1. CRUD on the template: create, update, sync line items.
  * 2. Daily generation: walk every active template whose `next_run_date <= today`
- *    and materialise a fresh DRAFT invoice from it. The user posts those
- *    drafts manually — nothing auto-emails or auto-posts.
+ *    and materialise a fresh DRAFT invoice from it. Templates with
+ *    `auto_email` also queue the draft PDF to the customer.
  */
 class RecurringInvoiceService
 {
@@ -50,6 +52,8 @@ class RecurringInvoiceService
                 'msic_code'           => $data['msic_code'] ?? '00000',
                 'customer_notes'      => $data['customer_notes'] ?? null,
                 'private_notes'       => $data['private_notes'] ?? null,
+                'auto_email'          => (bool) ($data['auto_email'] ?? false),
+                'auto_post'           => (bool) ($data['auto_post'] ?? false),
                 'created_by'          => $data['created_by'] ?? null,
             ]);
 
@@ -85,6 +89,8 @@ class RecurringInvoiceService
                 'msic_code'           => $data['msic_code'] ?? '00000',
                 'customer_notes'      => $data['customer_notes'] ?? null,
                 'private_notes'       => $data['private_notes'] ?? null,
+                'auto_email'          => (bool) ($data['auto_email'] ?? $template->auto_email ?? false),
+                'auto_post'           => (bool) ($data['auto_post'] ?? $template->auto_post ?? false),
             ]);
 
             $template->items()->delete();
@@ -143,7 +149,7 @@ class RecurringInvoiceService
             throw new \LogicException('This recurring invoice has ended.');
         }
 
-        return DB::transaction(function () use ($template, $asOf) {
+        $invoice = DB::transaction(function () use ($template, $asOf) {
             $issueDate = $template->next_run_date && $template->next_run_date->lessThanOrEqualTo($asOf)
                 ? $template->next_run_date->copy()
                 : $asOf->copy();
@@ -151,6 +157,7 @@ class RecurringInvoiceService
             $dueDate = $issueDate->copy()->addDays((int) $template->payment_terms_days);
 
             $items = $template->items->map(fn ($i) => [
+                'product_id'          => $i->product_id,
                 'description'         => $i->description,
                 'quantity'            => (float) $i->quantity,
                 'unit_price'          => (float) $i->unit_price,
@@ -194,6 +201,60 @@ class RecurringInvoiceService
 
             return $invoice;
         });
+
+        if ($template->auto_post) {
+            try {
+                $this->invoices->post($invoice->fresh(['items', 'customer']));
+                $invoice = $invoice->fresh();
+            } catch (\LogicException $e) {
+                Log::warning('Recurring auto-post skipped', [
+                    'recurring_invoice_id' => $template->id,
+                    'invoice_id'           => $invoice->id,
+                    'error'                => $e->getMessage(),
+                ]);
+            }
+        }
+
+        if ($template->auto_email) {
+            $this->queueGeneratedEmail($invoice->fresh(['customer.contacts']));
+        }
+
+        return $invoice;
+    }
+
+    /**
+     * Wave-style: start a recurring template from an existing invoice.
+     */
+    public function createFromInvoice(Invoice $invoice, array $schedule, ?int $createdBy = null): RecurringInvoice
+    {
+        $invoice->loadMissing('items');
+        $items = $invoice->items->map(fn ($i) => [
+            'product_id'          => $i->product_id,
+            'description'         => $i->description,
+            'quantity'            => (float) $i->quantity,
+            'unit_price'          => (float) $i->unit_price,
+            'tax_rate'            => (float) $i->tax_rate,
+            'discount_amount'     => (float) ($i->discount_amount ?? 0),
+            'item_classification' => $i->item_classification ?: '022',
+        ])->all();
+
+        return $this->create([
+            'name'               => $schedule['name'] ?? 'Recurring from '.$invoice->invoice_number,
+            'customer_id'        => $invoice->customer_id,
+            'cadence'            => $schedule['cadence'] ?? 'monthly',
+            'interval'           => $schedule['interval'] ?? 1,
+            'start_date'         => $schedule['start_date'] ?? now()->toDateString(),
+            'end_date'           => $schedule['end_date'] ?? null,
+            'currency'           => $invoice->currency,
+            'exchange_rate'      => $invoice->exchange_rate,
+            'shipping_amount'    => $invoice->shipping_amount,
+            'payment_terms_days' => $invoice->payment_terms_days ?: 30,
+            'msic_code'          => $invoice->msic_code ?: '00000',
+            'customer_notes'     => $invoice->customer_notes,
+            'auto_email'         => (bool) ($schedule['auto_email'] ?? false),
+            'auto_post'          => (bool) ($schedule['auto_post'] ?? false),
+            'created_by'         => $createdBy,
+        ], $items);
     }
 
     private function syncItems(RecurringInvoice $template, array $items): void
@@ -214,11 +275,28 @@ class RecurringInvoiceService
 
     private function nextInvoiceNumber(): string
     {
-        $last = Invoice::where('invoice_number', 'like', 'INV-%')->orderBy('id', 'desc')->first();
-        if ($last && preg_match('/^INV-(\d+)$/', $last->invoice_number, $m)) {
-            return 'INV-' . ((int) $m[1] + 1);
-        }
+        return DocumentNumber::next('invoices', 'invoice_number', 'INV');
+    }
 
-        return 'INV-1';
+    private function queueGeneratedEmail(Invoice $invoice): void
+    {
+        $invoice->loadMissing(['customer.contacts']);
+        $customer = $invoice->customer;
+        if (! $customer || ($customer->invoice_delivery_method ?? 'email') === 'none') {
+            return;
+        }
+        $recipients = [];
+        $billing = $customer->contacts?->where('type', 'billing')->filter(fn ($c) => $c->email && filter_var($c->email, FILTER_VALIDATE_EMAIL));
+        if ($billing && $billing->isNotEmpty()) {
+            $recipients = $billing->pluck('email')->unique()->values()->all();
+        }
+        if ($recipients === [] && $customer->email && filter_var($customer->email, FILTER_VALIDATE_EMAIL)) {
+            $recipients = [$customer->email];
+        }
+        if ($recipients === []) {
+            return;
+        }
+        $company = tenant()?->getCompanyDetails() ?? config('invoice.company');
+        SendInvoiceEmail::dispatch($invoice->id, $recipients, $company);
     }
 }

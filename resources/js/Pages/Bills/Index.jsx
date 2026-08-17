@@ -114,12 +114,20 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                         <p className="text-ink-muted text-sm font-medium mt-1">Record expenses and track payables</p>
                     </div>
                     {auth.permissions.includes('bills.create') && (
-                        <Link
-                            href={route('bills.create')}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta shadow-lg  transition-all duration-200"
-                        >
-                            <Icons.Plus /> Create bill
-                        </Link>
+                        <div className="flex flex-wrap gap-2">
+                            <Link
+                                href={route('bills.batch')}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:bg-cream"
+                            >
+                                Batch
+                            </Link>
+                            <Link
+                                href={route('bills.create')}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta shadow-lg  transition-all duration-200"
+                            >
+                                <Icons.Plus /> Create bill
+                            </Link>
+                        </div>
                     )}
                 </div>
             }
@@ -225,7 +233,7 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                                     return (
                                         <tr key={bill.id} className={`border-b border-border-warm last:border-0 hover:bg-cream/80 transition-colors group ${bill.status === 'void' ? 'opacity-60' : ''}`}>
                                             <td className="px-6 py-4">
-                                                <Link href={route('bills.edit', bill.id)} className="block group/link">
+                                                <Link href={route('bills.show', bill.id)} className="block group/link">
                                                     <span className="font-semibold text-ink group-hover/link:text-terracotta transition-colors">{bill.bill_number}</span>
                                                     <p className="text-xs text-ink-muted mt-0.5">
                                                         {bill.bill_date && new Date(bill.bill_date).toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -328,8 +336,14 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                             {(() => {
                                 const path = selectedBillForReceipt?.receipt_path || '';
                                 const url = selectedBillForReceipt?.receipt_url;
-                                const isPdf = /\.pdf($|\?)/i.test(path);
-                                if (!url) return null;
+                                const isPdf = /\.pdf($|\?)/i.test(path) || /\.pdf($|\?)/i.test(url || '');
+                                if (!url) {
+                                    return (
+                                        <p className="text-sm text-ink-muted px-6 text-center">
+                                            No receipt file is linked to this bill.
+                                        </p>
+                                    );
+                                }
                                 return isPdf ? (
                                     <iframe
                                         src={`${url}#view=FitH&toolbar=1`}

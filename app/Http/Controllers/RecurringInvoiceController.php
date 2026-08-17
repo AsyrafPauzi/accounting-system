@@ -147,8 +147,10 @@ class RecurringInvoiceController extends Controller
         }
 
         return redirect()
-            ->route('invoices.edit', $invoice->id)
-            ->with('success', "Draft invoice {$invoice->invoice_number} created from recurring template. Review and post when ready.");
+            ->route($invoice->status === 'draft' ? 'invoices.edit' : 'invoices.show', $invoice->id)
+            ->with('success', $invoice->status === 'draft'
+                ? "Draft invoice {$invoice->invoice_number} created from recurring template. Review and post when ready."
+                : "Invoice {$invoice->invoice_number} generated and posted.");
     }
 
     private function customerOptions(): \Illuminate\Support\Collection
@@ -163,7 +165,7 @@ class RecurringInvoiceController extends Controller
     {
         return Product::query()
             ->active()
-            ->select(['id', 'code', 'name', 'description', 'unit_price', 'account_code', 'tax_rate'])
+            ->select(['id', 'code', 'name', 'description', 'unit_price', 'account_code', 'tax_rate', 'classification_code'])
             ->orderBy('display_order')
             ->orderBy('name')
             ->get();

@@ -54,6 +54,20 @@ export default function Index({ auth, estimates, filters = {}, counts = {}, base
         && Boolean(planPermissions['estimates.email']);
 
     const [emailingId, setEmailingId] = useState(null);
+    const [selectedIds, setSelectedIds] = useState([]);
+    const pageIds = items.map((e) => e.id);
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+    const toggleId = (id) => setSelectedIds((cur) => cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]);
+    const toggleAll = () => setSelectedIds(allSelected ? selectedIds.filter((id) => !pageIds.includes(id)) : [...new Set([...selectedIds, ...pageIds])]);
+    const bulkEmail = async () => {
+        const ok = await confirm({ title: `Email ${selectedIds.length} estimate PDF(s)?`, text: 'Queued to each customer email on file. Rows without email are skipped.', confirmText: 'Send', icon: 'question' });
+        if (ok) router.post(route('estimates.bulk-email'), { ids: selectedIds });
+    };
+    const bulkPdf = () => {
+        const params = new URLSearchParams();
+        selectedIds.forEach((id) => params.append('ids[]', id));
+        window.open(`${route('estimates.bulk-pdf')}?${params.toString()}`, '_blank');
+    };
     const handleEmail = async (estimate) => {
         if (!estimate.customer_email) {
             window.alert('This customer has no email on file. Add one to the customer record first.');
@@ -101,12 +115,20 @@ export default function Index({ auth, estimates, filters = {}, counts = {}, base
                         </div>
                     </div>
                     {auth.permissions.includes('estimates.create') && (
-                        <Link
-                            href={route('estimates.create')}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta shadow-lg transition-all duration-200"
-                        >
-                            <Icons.Plus /> New estimate
-                        </Link>
+                        <div className="flex flex-wrap gap-2">
+                            <Link
+                                href={route('estimates.batch')}
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:bg-cream"
+                            >
+                                Batch
+                            </Link>
+                            <Link
+                                href={route('estimates.create')}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta shadow-lg transition-all duration-200"
+                            >
+                                <Icons.Plus /> New estimate
+                            </Link>
+                        </div>
                     )}
                 </div>
             }
@@ -151,11 +173,22 @@ export default function Index({ auth, estimates, filters = {}, counts = {}, base
                             ))}
                         </div>
                     </div>
+                    {selectedIds.length > 0 && (
+                        <div className="px-4 sm:px-6 py-3 border-b border-border-warm bg-cream flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-semibold text-ink">{selectedIds.length} selected</span>
+                            <button type="button" onClick={bulkPdf} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-border-warm bg-surface hover:bg-cream">Download PDFs</button>
+                            {canEmail && (
+                                <button type="button" onClick={bulkEmail} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-border-warm bg-surface hover:bg-cream">Email selected</button>
+                            )}
+                            <button type="button" onClick={() => setSelectedIds([])} className="text-xs text-ink-muted">Clear</button>
+                        </div>
+                    )}
 
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="bg-cream/80 border-b border-border-warm text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest">
+                                    <th className="px-3 py-3 w-10"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-border-warm" /></th>
                                     <th className="px-6 py-3">Estimate #</th>
                                     <th className="px-6 py-3">Customer</th>
                                     <th className="px-6 py-3">Issued</th>
@@ -168,6 +201,9 @@ export default function Index({ auth, estimates, filters = {}, counts = {}, base
                             <tbody className="divide-y divide-border-warm">
                                 {items.length > 0 ? items.map((e) => (
                                     <tr key={e.id} className="hover:bg-cream/40 transition-colors">
+                                        <td className="px-3 py-4">
+                                            <input type="checkbox" checked={selectedIds.includes(e.id)} onChange={() => toggleId(e.id)} className="rounded border-border-warm" />
+                                        </td>
                                         <td className="px-6 py-4">
                                             <Link href={route('estimates.show', e.id)} className="font-semibold text-ink hover:text-terracotta">
                                                 {e.estimate_number}
@@ -218,6 +254,11 @@ export default function Index({ auth, estimates, filters = {}, counts = {}, base
                                                         <Icons.Mail />
                                                     </button>
                                                 )}
+                                                {auth.permissions.includes('estimates.create') && (
+                                                    <button type="button" onClick={() => router.post(route('estimates.duplicate', e.id))} className="p-2 text-ink-muted hover:text-terracotta hover:bg-cream rounded-lg text-xs font-semibold" title="Duplicate">
+                                                        Copy
+                                                    </button>
+                                                )}
                                                 {auth.permissions.includes('estimates.edit') && e.status !== 'converted' && (
                                                     <Link href={route('estimates.edit', e.id)} className="p-2 text-ink-muted hover:text-terracotta hover:bg-cream rounded-lg" title="Edit">
                                                         <Icons.Pencil />
@@ -233,7 +274,7 @@ export default function Index({ auth, estimates, filters = {}, counts = {}, base
                                     </tr>
                                 )) : (
                                     <tr>
-                                        <td colSpan="7" className="px-6 py-16 text-center">
+                                        <td colSpan="8" className="px-6 py-16 text-center">
                                             <div className="flex flex-col items-center gap-3 text-ink-muted">
                                                 <span className="p-4 bg-surface-alt rounded-xl text-terracotta">
                                                     <Icons.Quote />

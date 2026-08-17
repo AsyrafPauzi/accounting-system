@@ -42,6 +42,8 @@ class RecurringInvoice extends Model
         'msic_code',
         'customer_notes',
         'private_notes',
+        'auto_email',
+        'auto_post',
         'created_by',
     ];
 
@@ -53,6 +55,8 @@ class RecurringInvoice extends Model
             'next_run_date'     => 'date',
             'last_run_date'     => 'date',
             'is_active'         => 'boolean',
+            'auto_email'        => 'boolean',
+            'auto_post'         => 'boolean',
             'interval'          => 'integer',
             'generated_count'   => 'integer',
             'payment_terms_days'=> 'integer',

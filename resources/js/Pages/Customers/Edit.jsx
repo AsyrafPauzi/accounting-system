@@ -43,6 +43,7 @@ export default function Edit({ auth, customer, users = [], can_delete_customer =
         // Compliance
         tin: customer.tin || '',
         brn: customer.brn || '',
+        identification_type: customer.identification_type || 'BRN',
         
         // Contact
         contact_person: customer.contact_person || '',
@@ -272,7 +273,16 @@ export default function Edit({ auth, customer, users = [], can_delete_customer =
                             {errors.tin && <p className="text-terracotta text-xs font-medium mt-1">{errors.tin}</p>}
                         </div>
                         <div>
-                            <label className={labelClass}>SSM BRN</label>
+                            <label className={labelClass}>ID type (MyInvois)</label>
+                            <select value={data.identification_type} onChange={e => setData('identification_type', e.target.value)} className={inputClass}>
+                                <option value="BRN">BRN (SSM)</option>
+                                <option value="NRIC">NRIC</option>
+                                <option value="PASSPORT">Passport</option>
+                                <option value="ARMY">Army</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className={labelClass}>{data.identification_type === 'NRIC' ? 'NRIC' : data.identification_type === 'PASSPORT' ? 'Passport no.' : data.identification_type === 'ARMY' ? 'Army ID' : 'SSM BRN'}</label>
                             <input type="text" value={data.brn} onChange={e => setData('brn', e.target.value)} className={inputClass} />
                             {errors.brn && <p className="text-terracotta text-xs font-medium mt-1">{errors.brn}</p>}
                         </div>

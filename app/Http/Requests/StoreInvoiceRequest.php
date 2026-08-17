@@ -20,7 +20,7 @@ class StoreInvoiceRequest extends FormRequest
             $this->merge(['exchange_rate' => 1]);
         }
         $this->merge([
-            'show_signature' => filter_var($this->input('show_signature', true), FILTER_VALIDATE_BOOLEAN),
+            'show_signature' => filter_var($this->input('show_signature', false), FILTER_VALIDATE_BOOLEAN),
         ]);
     }
 
@@ -48,6 +48,7 @@ class StoreInvoiceRequest extends FormRequest
             'items.*.tax_rate'            => 'required|numeric',
             'items.*.item_classification' => 'required|string',
             'items.*.discount_amount'     => 'nullable|numeric',
+            'items.*.product_id'          => 'nullable|integer|exists:products,id',
             'shipping_amount'             => 'nullable|numeric',
             'customer_notes'              => 'nullable|string',
             'show_signature'              => 'boolean',

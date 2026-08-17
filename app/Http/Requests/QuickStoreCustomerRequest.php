@@ -18,6 +18,7 @@ class QuickStoreCustomerRequest extends FormRequest
             'email'          => ['required', 'email'],
             'tin'            => ['nullable', 'string', 'max:50'],
             'brn'            => ['nullable', 'string', 'max:50'],
+            'identification_type' => ['nullable', 'string', 'in:BRN,NRIC,PASSPORT,ARMY'],
             'code'           => ['nullable', 'string', 'unique:customers,code'],
             'billing_street' => ['nullable', 'string', 'max:500'],
             'billing_city'   => ['nullable', 'string', 'max:100'],

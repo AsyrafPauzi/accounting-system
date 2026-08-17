@@ -1,8 +1,10 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { confirm } from '@/utils/swal';
 import { formatCurrency, currencyDecimals } from '@/utils/currency';
+import DocumentTrail from '@/Components/DocumentTrail';
+import ShareButtons from '@/Components/ShareButtons';
 
 const Icons = {
     ChevronLeft: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>,
@@ -41,7 +43,9 @@ const TONE_CLASSES = {
     neutral: 'bg-surface text-ink border border-border-warm hover:bg-cream',
 };
 
-export default function Show({ auth, estimate, base_currency = 'MYR' }) {
+export default function Show({ auth, estimate, base_currency = 'MYR', document_trail = [], public_pdf_url = null, whatsapp_url = null }) {
+    const { company_flags } = usePage().props;
+    const showGoods = company_flags?.show_goods_flow !== false;
     const decimals = currencyDecimals(estimate.currency || base_currency);
     const transitions = TRANSITIONS[estimate.status] || [];
     const canEdit = auth.permissions.includes('estimates.edit') && estimate.status !== 'converted';
@@ -93,6 +97,20 @@ export default function Show({ auth, estimate, base_currency = 'MYR' }) {
                                     <Icons.Pencil /> Edit
                                 </Link>
                             )}
+                            {auth.permissions.includes('estimates.create') && (
+                                <button type="button" onClick={() => router.post(route('estimates.duplicate', estimate.id))} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">
+                                    Duplicate
+                                </button>
+                            )}
+                            <a href={route('estimates.pdf', estimate.id)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">
+                                PDF
+                            </a>
+                            <ShareButtons publicUrl={public_pdf_url} whatsappUrl={whatsapp_url} />
+                            {auth.permissions.includes('estimates.email') && estimate.customer?.email && (
+                                <button type="button" onClick={() => router.post(route('estimates.email', estimate.id))} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">
+                                    Email
+                                </button>
+                            )}
                             {transitions.map(t => (
                                 <button
                                     key={t.to}
@@ -112,9 +130,20 @@ export default function Show({ auth, estimate, base_currency = 'MYR' }) {
                                     <Icons.ArrowsRight /> Convert to Invoice
                                 </button>
                             )}
+                            {canConvert && showGoods && auth.permissions.includes('sales-orders.create') && (
+                                <button
+                                    type="button"
+                                    onClick={() => router.post(route('estimates.convert-so', estimate.id))}
+                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream"
+                                >
+                                    Convert to sales order
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
+
+                <DocumentTrail steps={document_trail} />
 
                 {/* Conversion banner */}
                 {estimate.status === 'converted' && estimate.converted_invoice && (
@@ -125,7 +154,7 @@ export default function Show({ auth, estimate, base_currency = 'MYR' }) {
                                 This estimate became invoice <span className="font-mono">{estimate.converted_invoice.invoice_number}</span> ({estimate.converted_invoice.status}). Editing is locked.
                             </p>
                         </div>
-                        <Link href={route('invoices.edit', estimate.converted_invoice.id)} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-violet-600 hover:bg-violet-700 shrink-0">
+                        <Link href={route('invoices.show', estimate.converted_invoice.id)} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-violet-600 hover:bg-violet-700 shrink-0">
                             Open invoice <Icons.ArrowsRight />
                         </Link>
                     </div>

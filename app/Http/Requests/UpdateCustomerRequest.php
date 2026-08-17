@@ -22,6 +22,7 @@ class UpdateCustomerRequest extends FormRequest
             'email' => 'required|email',
             'tin' => 'nullable|string',
             'brn' => 'nullable|string',
+            'identification_type' => 'nullable|string|in:BRN,NRIC,PASSPORT,ARMY',
             'billing_street' => 'nullable|string',
             'billing_city' => 'nullable|string',
             'billing_state' => 'nullable|string',

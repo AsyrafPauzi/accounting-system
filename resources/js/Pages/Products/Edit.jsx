@@ -11,6 +11,7 @@ export default function Edit({ auth, product, incomeAccounts = [] }) {
         unit_price: product.unit_price ?? 0,
         account_code: product.account_code || '',
         tax_rate: product.tax_rate ?? 0,
+        classification_code: product.classification_code || '022',
         is_active: !!product.is_active,
     });
 
@@ -22,8 +23,8 @@ export default function Edit({ auth, product, incomeAccounts = [] }) {
     return (
         <AuthenticatedLayout user={auth.user}>
             <Head title={`Edit · ${product.name}`} />
-            <div className="mb-2 max-w-3xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
-                <h1 className="text-2xl sm:text-3xl font-display font-medium text-ink">Edit product</h1>
+            <div className="mb-3">
+                <h1 className="text-2xl font-display font-medium text-ink">Edit product</h1>
                 <p className="text-sm text-ink-muted mt-1">Changes apply to new invoice lines only — past invoices keep the values they had at the time.</p>
             </div>
             <ProductForm

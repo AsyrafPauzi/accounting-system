@@ -21,6 +21,9 @@ const Icons = {
 const inputClass = "w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta focus:border-terracotta transition-colors";
 const inputReadonlyClass = "w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink-muted bg-cream";
 const labelClass = "block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5";
+const lineControlClass = "w-full h-8 border border-border-warm rounded-lg py-1 px-1.5 text-xs font-medium text-ink bg-surface focus:ring-1 focus:ring-terracotta";
+const lineNumberClass = `${lineControlClass} font-mono tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`;
+const lineTaxClass = `${lineControlClass} px-0.5 pr-5 text-center tabular-nums`;
 
 function currencyPrefix(currency) {
     return currencySymbol(currency);
@@ -113,6 +116,7 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
             unit_price: parseFloat(product.unit_price) || 0,
             tax_rate: parseFloat(product.tax_rate) || 0,
             product_id: product.id,
+            item_classification: product.classification_code || newItems[index].item_classification,
         };
         setData('items', newItems);
     };
@@ -328,58 +332,63 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                         </div>
 
                         {/* Section 2: Line Items */}
-                        <div className="bg-surface rounded-2xl shadow-sm border border-border-warm/80 overflow-x-auto">
-                            <table className="w-full text-left border-collapse min-w-[1000px]">
+                        <div className="bg-surface rounded-2xl shadow-sm border border-border-warm/80 overflow-hidden min-w-0">
+                            <div className="overflow-x-auto overscroll-x-contain">
+                            <table className="w-full table-fixed text-left border-collapse">
                                 <colgroup>
-                                    <col className="w-[14%]" />
-                                    <col className="w-[40%]" />
-                                    <col className="w-[8%]" />
-                                    <col className="w-[10%]" />
-                                    <col className="w-[8%]" />
-                                    <col className="w-[8%]" />
-                                    <col className="w-[10%]" />
-                                    <col className="w-[4%]" />
+                                    <col className="w-[9.5rem]" />
+                                    <col />
+                                    <col className="w-16" />
+                                    <col className="w-[4.75rem]" />
+                                    <col className="w-[4.5rem]" />
+                                    <col className="w-16" />
+                                    <col className="w-[5.25rem]" />
+                                    <col className="w-9" />
                                 </colgroup>
                                 <thead>
                                     <tr className="bg-cream/80 border-b border-border-warm text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest">
-                                        <th className="p-4">LHDN classification</th>
-                                        <th className="p-4">Description</th>
-                                        <th className="p-4 text-center">Qty</th>
-                                        <th className="p-4 text-right">Price ({invCur})</th>
-                                        <th className="p-4 text-right">Disc ({invCur})</th>
-                                        <th className="p-4 text-center">Tax</th>
-                                        <th className="p-4 text-right">Total</th>
-                                        <th className="p-4"></th>
+                                        <th className="px-2 py-2">LHDN</th>
+                                        <th className="px-2 py-2">Description</th>
+                                        <th className="px-1 py-2 text-center">Qty</th>
+                                        <th className="px-1 py-2 text-right">Price</th>
+                                        <th className="px-1 py-2 text-right">Disc</th>
+                                        <th className="px-1 py-2 text-center">Tax</th>
+                                        <th className="px-2 py-2 text-right">Total</th>
+                                        <th className="px-1 py-2"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border-warm">
                                     {data.items.map((item, index) => (
                                         <tr key={index} className="group hover:bg-surface-alt/20 transition-all duration-200">
-                                            <td className="p-4">
-                                                <select 
-                                                    value={item.item_classification} 
+                                            <td className="px-2 py-2 align-top">
+                                                <select
+                                                    value={item.item_classification}
                                                     onChange={e => updateItem(index, 'item_classification', e.target.value)}
-                                                    className="w-full border-border-warm rounded-xl text-[10px] font-display font-medium text-ink-muted focus:ring-terracotta py-2"
+                                                    className={lineControlClass}
+                                                    title={(() => {
+                                                        const selected = lhdn_codes.find((code) => String(code.id) === String(item.item_classification));
+                                                        return selected ? `${selected.id} — ${selected.name}` : '';
+                                                    })()}
                                                 >
                                                     {lhdn_codes.map(code => (
-                                                        <option key={code.id} value={code.id}>{code.id} - {code.name}</option>
+                                                        <option key={code.id} value={code.id}>{code.id} — {code.name}</option>
                                                     ))}
                                                 </select>
                                             </td>
-                                            <td className="p-4 align-middle">
-                                                <div className="flex items-stretch gap-2">
-                                                    <input
-                                                        type="text"
+                                            <td className="px-2 py-2 align-top">
+                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                    <textarea
                                                         value={item.description}
                                                         onChange={e => updateItem(index, 'description', e.target.value)}
-                                                        className="flex-1 min-w-0 border border-border-warm rounded-xl py-2 px-3 text-sm font-display font-medium text-ink bg-surface focus:ring-1 focus:ring-terracotta"
+                                                        rows={1}
+                                                        className="flex-1 min-w-0 h-8 border border-border-warm rounded-lg py-1 px-1.5 text-xs font-medium text-ink bg-surface focus:ring-1 focus:ring-terracotta resize-y"
                                                         required
                                                     />
                                                     {products.length > 0 && (
                                                         <select
                                                             value=""
                                                             onChange={e => { applyProduct(index, e.target.value); e.target.value = ''; }}
-                                                            className="shrink-0 w-[110px] border border-border-warm rounded-lg text-[10px] font-semibold text-ink-muted bg-cream/50 hover:bg-cream py-2 px-2 focus:ring-1 focus:ring-terracotta uppercase tracking-wider cursor-pointer"
+                                                            className="shrink-0 w-[4.25rem] h-8 border border-border-warm rounded-lg text-[10px] font-medium text-ink-muted bg-cream/50 hover:bg-cream px-1 focus:ring-1 focus:ring-terracotta cursor-pointer"
                                                             title="Pick a saved product to auto-fill this line"
                                                         >
                                                             <option value="">+ Pick</option>
@@ -390,38 +399,39 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="p-4">
-                                                <input type="number" value={item.quantity} onChange={e => updateItem(index, 'quantity', e.target.value)} className="w-full border-border-warm rounded-xl text-sm text-center py-2 focus:ring-terracotta font-bold" />
+                                            <td className="px-1 py-2 align-top">
+                                                <input type="number" value={item.quantity} onChange={e => updateItem(index, 'quantity', e.target.value)} className={`${lineNumberClass} text-center font-semibold`} />
                                             </td>
-                                            <td className="p-4">
-                                                <input type="number" value={item.unit_price} onChange={e => updateItem(index, 'unit_price', e.target.value)} className="w-full border-border-warm rounded-xl text-sm py-2 focus:ring-terracotta font-mono font-bold" />
+                                            <td className="px-1 py-2 align-top">
+                                                <input type="number" value={item.unit_price} onChange={e => updateItem(index, 'unit_price', e.target.value)} className={`${lineNumberClass} text-right font-semibold`} />
                                             </td>
-                                            <td className="p-4">
-                                                <input type="number" value={item.discount_amount} onChange={e => updateItem(index, 'discount_amount', e.target.value)} className="w-full border-border-warm rounded-xl text-sm py-2 focus:ring-terracotta font-mono text-terracotta font-bold" />
+                                            <td className="px-1 py-2 align-top">
+                                                <input type="number" value={item.discount_amount} onChange={e => updateItem(index, 'discount_amount', e.target.value)} className={`${lineNumberClass} text-right text-terracotta font-semibold`} />
                                             </td>
-                                            <td className="p-4">
-                                                <select value={item.tax_rate} onChange={e => updateItem(index, 'tax_rate', e.target.value)} className="w-full border-border-warm rounded-xl text-sm font-display font-medium text-ink focus:ring-terracotta py-2.5">
+                                            <td className="px-1 py-2 align-top">
+                                                <select value={item.tax_rate} onChange={e => updateItem(index, 'tax_rate', e.target.value)} className={lineTaxClass}>
                                                     <option value="0">0%</option>
                                                     <option value="6">6%</option>
                                                     <option value="8">8%</option>
                                                     <option value="16">16%</option>
                                                 </select>
                                             </td>
-                                            <td className="p-4 align-middle">
-                                                <div className="w-full text-right py-2 px-2 text-sm font-display font-semibold text-ink font-mono tabular-nums border border-transparent">
+                                            <td className="px-2 py-2 align-middle">
+                                                <div className="h-8 flex items-center justify-end text-xs font-semibold text-ink font-mono tabular-nums whitespace-nowrap">
                                                     {((parseFloat(item.quantity || 0) * parseFloat(item.unit_price || 0)) - (parseFloat(item.discount_amount || 0))).toLocaleString('en-MY', {minimumFractionDigits: 2})}
                                                 </div>
                                             </td>
-                                            <td className="p-4 text-center">
-                                                <button type="button" onClick={() => removeItem(index)} className="text-ink-muted hover:text-terracotta transition-colors opacity-0 group-hover:opacity-100">
-                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            <td className="px-1 py-2 align-middle text-center">
+                                                <button type="button" onClick={() => removeItem(index)} className="inline-flex items-center justify-center h-8 w-8 text-ink-muted hover:text-terracotta transition-colors opacity-0 group-hover:opacity-100">
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                                 </button>
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
-                            <div className="p-6 bg-cream/80 border-t border-border-warm">
+                            </div>
+                            <div className="p-4 bg-cream/80 border-t border-border-warm">
                                 <button type="button" onClick={addItem} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt border border-border-warm transition-colors">
                                     <Icons.Plus /> Add Line Item
                                 </button>
@@ -461,8 +471,8 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                                 </div>
                             </div>
 
-                            <div className="space-y-4">
-                                <div className="bg-surface p-6 rounded-2xl border border-border-warm shadow-sm space-y-3">
+                            <div className="space-y-4 min-w-0">
+                                <div className="bg-surface p-6 rounded-2xl border border-border-warm shadow-sm space-y-3 overflow-hidden min-w-0">
                                     <div className="flex justify-between items-baseline">
                                         <span className="text-eyebrow font-semibold text-ink-muted uppercase">Subtotal (Gross)</span>
                                         <span className="text-sm font-mono font-tabular text-ink">{curSym} {subtotal.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
@@ -475,13 +485,13 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                                         <span className="text-eyebrow font-semibold text-ink-muted uppercase">SST (Tax)</span>
                                         <span className="text-sm font-mono font-tabular text-ink">+ {curSym} {totalTax.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
                                     </div>
-                                    <div className="flex justify-between items-center pt-3 border-t border-border-warm">
-                                        <span className="text-eyebrow font-semibold text-ink-muted uppercase">Shipping</span>
+                                    <div className="flex items-center gap-2 min-w-0 pt-3 border-t border-border-warm">
+                                        <span className="text-eyebrow font-semibold text-ink-muted uppercase min-w-0 flex-1 leading-tight">Shipping</span>
                                         <input
                                             type="number"
                                             value={data.shipping_amount}
                                             onChange={e => setData('shipping_amount', e.target.value)}
-                                            className="w-28 text-right text-sm border-border-warm rounded-xl font-mono font-tabular text-ink"
+                                            className="w-20 max-w-[45%] shrink-0 text-right text-sm border-border-warm rounded-xl font-mono font-tabular text-ink px-2 py-1.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                         />
                                     </div>
                                     <div className="flex justify-between text-xs text-ink-muted">

@@ -60,9 +60,13 @@ class Tenant extends BaseTenant implements TenantWithDatabase
             'phone'    => $this->phone ?: config('invoice.company.phone'),
             'email'    => $this->email ?: config('invoice.company.email'),
             'website'  => $this->website ?: config('invoice.company.website'),
-            'tin'      => $this->tin ?: config('invoice.company.tin'),
-            'brn'      => $this->brn ?: config('invoice.company.brn'),
-            'currency' => $this->base_currency ?: config('invoice.company.currency', 'MYR'),
+            'tin'         => $this->tin ?: config('invoice.company.tin'),
+            'brn'         => $this->brn ?: config('invoice.company.brn'),
+            'sst'         => $this->sst_number ?: '',
+            'msic'        => $this->msic_code ?: '',
+            'currency'    => $this->base_currency ?: config('invoice.company.currency', 'MYR'),
+            'brand_color' => $this->invoice_brand_color ?: '#0f172a',
+            'logo_url'    => $this->invoice_logo_url ?: '',
         ];
     }
 

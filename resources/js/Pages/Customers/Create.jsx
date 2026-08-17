@@ -36,6 +36,7 @@ export default function Create({ auth, users = [] }) {
         // Compliance
         tin: '',
         brn: '',
+        identification_type: 'BRN',
         
         // Contact
         contact_person: '',
@@ -194,12 +195,21 @@ export default function Create({ auth, users = [] }) {
                         </div>
                         <div>
                             <label className={labelClass}>LHDN TIN</label>
-                            <input type="text" value={data.tin} onChange={e => setData('tin', e.target.value)} className={inputClass} placeholder="C1234567890" />
+                            <input type="text" value={data.tin} onChange={e => setData('tin', e.target.value)} className={inputClass} placeholder="C1234567890 or EI00000000010" />
                             {errors.tin && <p className="text-terracotta text-xs font-medium mt-1">{errors.tin}</p>}
                         </div>
                         <div>
-                            <label className={labelClass}>SSM BRN</label>
-                            <input type="text" value={data.brn} onChange={e => setData('brn', e.target.value)} className={inputClass} placeholder="202401021234" />
+                            <label className={labelClass}>ID type (MyInvois)</label>
+                            <select value={data.identification_type} onChange={e => setData('identification_type', e.target.value)} className={inputClass}>
+                                <option value="BRN">BRN (SSM)</option>
+                                <option value="NRIC">NRIC</option>
+                                <option value="PASSPORT">Passport</option>
+                                <option value="ARMY">Army</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className={labelClass}>{data.identification_type === 'NRIC' ? 'NRIC' : data.identification_type === 'PASSPORT' ? 'Passport no.' : data.identification_type === 'ARMY' ? 'Army ID' : 'SSM BRN'}</label>
+                            <input type="text" value={data.brn} onChange={e => setData('brn', e.target.value)} className={inputClass} placeholder={data.identification_type === 'BRN' ? '202401021234' : 'As shown on MyInvois'} />
                             {errors.brn && <p className="text-terracotta text-xs font-medium mt-1">{errors.brn}</p>}
                         </div>
                     </div>

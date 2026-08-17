@@ -50,6 +50,12 @@ export default function PracticeLayout({ children, header }) {
                         >
                             Dashboard
                         </Link>
+                        <Link
+                            href={route('practice.ar')}
+                            className="text-sm text-ink-muted hover:text-ink transition-colors"
+                        >
+                            AR aging
+                        </Link>
                         {/*
                           * Lands on the rich firm Plan & usage page
                           * (Settings/PlanFirm.jsx) so the firm-owner

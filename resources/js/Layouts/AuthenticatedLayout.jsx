@@ -3,6 +3,7 @@ import ApplicationLogo from '@/Components/ApplicationLogo';
 import { Link, usePage } from '@inertiajs/react';
 import MobileQuickAction from '@/Components/MobileQuickAction';
 import WelcomeModal from '@/Components/WelcomeModal';
+import AccountantCopilot from '@/Components/AccountantCopilot';
 import VerifyEmailReminderModal from '@/Components/VerifyEmailReminderModal';
 import { shouldShowVerifyReminder } from '@/utils/verifyReminder';
 
@@ -27,6 +28,7 @@ const Icons = {
     Menu: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>,
     X: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>,
     ChevronDown: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>,
+    ChevronLeft: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>,
     ChevronRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
     Audit: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
     Scan: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7V5a1 1 0 011-1h2M4 17v2a1 1 0 001 1h2M20 7V5a1 1 0 00-1-1h-2M20 17v2a1 1 0 01-1 1h-2M4 12h16" /></svg>,
@@ -38,19 +40,46 @@ const Icons = {
 
 const navConfig = [
     { group: 'Main', links: [{ name: 'Dashboard', route: 'dashboard', Icon: Icons.ChartBar }] },
-    { group: 'Sales (Revenue)', links: [
-        { name: 'Estimates', route: 'estimates.index', Icon: Icons.ClipboardList, planPermission: 'estimates.view', userPermission: 'estimates.view', subtitle: 'Quotations sent to customers' },
-        { name: 'Invoices', route: 'invoices.index', Icon: Icons.Document, planPermission: 'invoices.view', userPermission: 'invoices.view' },
-        { name: 'Recurring Invoices', route: 'recurring-invoices.index', Icon: Icons.ArrowPath, planPermission: 'recurring-invoices.view', userPermission: 'recurring-invoices.view', subtitle: 'Auto-generate drafts on a schedule' },
-        { name: 'Credit Notes', route: 'credit-notes.index', Icon: Icons.ReceiptRefund, planPermission: 'credit-notes.view', userPermission: 'credit-notes.view' },
-        { name: 'Customers', route: 'customers.index', Icon: Icons.Users, planPermission: 'customers.view', userPermission: 'customers.view' },
-        { name: 'Customer Statements', route: 'customer-statements.index', Icon: Icons.DocumentChart, planPermission: 'customer-statements.view', userPermission: 'customers.view', subtitle: 'Balance forward report per customer' },
-        { name: 'Products & Services', route: 'products.index', Icon: Icons.Tag, planPermission: 'products.view', userPermission: 'products.view', subtitle: 'Reusable invoice line items' },
+    { group: 'Sales (Revenue)', subgroups: [
+        { name: 'Quotes & orders', links: [
+            { name: 'Estimates', route: 'estimates.index', Icon: Icons.ClipboardList, planPermission: 'estimates.view', userPermission: 'estimates.view', subtitle: 'Quotations sent to customers' },
+            { name: 'Sales Orders', route: 'sales-orders.index', Icon: Icons.ClipboardList, planPermission: 'estimates.view', userPermission: 'sales-orders.view', requiresGoodsFlow: true },
+            { name: 'Delivery Orders', route: 'delivery-orders.index', Icon: Icons.ClipboardList, planPermission: 'estimates.view', userPermission: 'delivery-orders.view', requiresGoodsFlow: true },
+        ]},
+        { name: 'Billing', links: [
+            { name: 'Invoices', route: 'invoices.index', Icon: Icons.Document, planPermission: 'invoices.view', userPermission: 'invoices.view' },
+            { name: 'Recurring Invoices', route: 'recurring-invoices.index', Icon: Icons.ArrowPath, planPermission: 'recurring-invoices.view', userPermission: 'recurring-invoices.view', subtitle: 'Auto-generate, post, and email on a schedule' },
+            { name: 'Credit Notes', route: 'credit-notes.index', Icon: Icons.ReceiptRefund, planPermission: 'credit-notes.view', userPermission: 'credit-notes.view' },
+            { name: 'Debit Notes', route: 'debit-notes.index', Icon: Icons.Document, planPermission: 'credit-notes.view', userPermission: 'debit-notes.view', subtitle: 'Additional charges to customers' },
+        ]},
+        { name: 'Collections', links: [
+            { name: 'Customer Deposits', route: 'ar-deposits.index', Icon: Icons.CreditCard, planPermission: 'invoices.record-payment', userPermission: 'invoices.record-payment', subtitle: 'Receipts and knock-off across invoices' },
+            { name: 'Customer Statements', route: 'customer-statements.index', Icon: Icons.DocumentChart, planPermission: 'customer-statements.view', userPermission: 'customers.view', subtitle: 'Balance forward report per customer' },
+        ]},
+        { name: 'Masters', links: [
+            { name: 'Customers', route: 'customers.index', Icon: Icons.Users, planPermission: 'customers.view', userPermission: 'customers.view' },
+            { name: 'Products & Services', route: 'products.index', Icon: Icons.Tag, planPermission: 'products.view', userPermission: 'products.view', subtitle: 'Reusable invoice line items' },
+        ]},
     ]},
-    { group: 'Purchases (Expenses)', links: [
-        { name: 'Suppliers', route: 'suppliers.index', Icon: Icons.BuildingOffice, planPermission: 'suppliers.view', userPermission: 'suppliers.view' },
-        { name: 'Bills / Purchases', route: 'bills.index', Icon: Icons.ShoppingCart, planPermission: 'bills.view', userPermission: 'bills.view' },
-        { name: 'Accounts Payable', route: 'accounts-payable.index', Icon: Icons.Document, planPermission: 'reports.aged-reports', userPermission: 'reports.aged-reports', subtitle: 'Outstanding and aging' },
+    { group: 'Purchases (Expenses)', subgroups: [
+        { name: 'Ordering', links: [
+            { name: 'Purchase Orders', route: 'purchase-orders.index', Icon: Icons.ClipboardList, planPermission: 'bills.view', userPermission: 'bills.view' },
+            { name: 'Goods Receipts', route: 'goods-receipts.index', Icon: Icons.ClipboardList, planPermission: 'bills.view', userPermission: 'bills.view' },
+        ]},
+        { name: 'Bills', links: [
+            { name: 'Bills / Purchases', route: 'bills.index', Icon: Icons.ShoppingCart, planPermission: 'bills.view', userPermission: 'bills.view' },
+            { name: 'Recurring Bills', route: 'recurring-bills.index', Icon: Icons.ArrowPath, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Auto-generate supplier bills on a schedule' },
+            { name: 'Supplier Credit Notes', route: 'supplier-credit-notes.index', Icon: Icons.ReceiptRefund, planPermission: 'bills.view', userPermission: 'bills.view' },
+            { name: 'Supplier Debit Notes', route: 'supplier-debit-notes.index', Icon: Icons.Document, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Additional charges from suppliers' },
+        ]},
+        { name: 'Payments', links: [
+            { name: 'Supplier Deposits', route: 'ap-deposits.index', Icon: Icons.CreditCard, planPermission: 'bills.record-payment', userPermission: 'bills.record-payment', subtitle: 'Prepaid and knock-off across bills' },
+            { name: 'Supplier Statements', route: 'supplier-statements.index', Icon: Icons.DocumentChart, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Balance forward report per supplier' },
+            { name: 'Accounts Payable', route: 'accounts-payable.index', Icon: Icons.Document, planPermission: 'reports.aged-reports', userPermission: 'reports.aged-reports', subtitle: 'Outstanding and aging' },
+        ]},
+        { name: 'Masters', links: [
+            { name: 'Suppliers', route: 'suppliers.index', Icon: Icons.BuildingOffice, planPermission: 'suppliers.view', userPermission: 'suppliers.view' },
+        ]},
     ]},
     { group: 'Accounting', links: [
         { name: 'Transactions', route: 'transactions.index', Icon: Icons.CreditCard, planPermission: 'journal.view', userPermission: 'journal.view', subtitle: 'Bank & cash movements feed', activeRoutes: ['transactions.index', 'transactions.deposit.create', 'transactions.withdrawal.create'] },
@@ -65,9 +94,23 @@ const navConfig = [
     ]},
 ];
 
+const subgroupKey = (group, subgroup) => `${group}::${subgroup}`;
+
+const sectionAllLinks = (section) =>
+    section.subgroups
+        ? section.subgroups.flatMap((sg) => sg.links)
+        : (section.links ?? []);
+
+const linkIsActive = (link, isRouteActive) =>
+    link.activeRoutes
+        ? link.activeRoutes.some((r) => isRouteActive(r))
+        : isRouteActive(link.route);
+
 // Shared classNames for nav links — terracotta active state, ink-muted resting
-const linkClasses = (active, disabled) =>
+const linkClasses = (active, disabled, rail = false) =>
     `flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-150 ${
+        rail ? 'lg:justify-center lg:px-2' : ''
+    } ${
         active
             ? 'bg-terracotta text-white shadow-sm'
             : disabled
@@ -75,11 +118,13 @@ const linkClasses = (active, disabled) =>
                 : 'text-ink hover:bg-surface-alt hover:text-ink'
     }`;
 
+const navLabelClass = (rail) => `flex-1 min-w-0 ${rail ? 'lg:hidden' : ''}`;
+
 const iconWrapClasses = (active) => (active ? 'text-white' : 'text-terracotta/80');
 
 export default function Authenticated({ user: propUser, header, children }) {
     const page = usePage();
-    const { flash, auth } = page.props;
+    const { flash, auth, company_flags } = page.props;
     const url = page.url;
     const user = propUser || auth?.user || {};
     const hasActiveSubscription = auth?.hasActiveSubscription ?? false;
@@ -97,7 +142,51 @@ export default function Authenticated({ user: propUser, header, children }) {
 
     const hasPermission = (p) => permissions.includes(p) || isAdmin;
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+        if (typeof window === 'undefined') {
+            return false;
+        }
+        try {
+            return window.localStorage.getItem('bukucloud.sidebarCollapsed') === '1';
+        } catch {
+            return false;
+        }
+    });
     const [openGroups, setOpenGroups] = useState({});
+    const [railTip, setRailTip] = useState(null);
+
+    const persistSidebarCollapsed = (next) => {
+        setSidebarCollapsed(next);
+        setRailTip(null);
+        try {
+            window.localStorage.setItem('bukucloud.sidebarCollapsed', next ? '1' : '0');
+        } catch {
+            /* ignore quota / private mode */
+        }
+    };
+
+    const showRailTip = (label, event, subtitle = '') => {
+        if (!sidebarCollapsed) {
+            return;
+        }
+        const rect = event.currentTarget.getBoundingClientRect();
+        setRailTip({
+            label,
+            subtitle: subtitle || '',
+            top: rect.top + rect.height / 2,
+            left: rect.right + 10,
+        });
+    };
+
+    const hideRailTip = () => setRailTip(null);
+
+    const railProps = (label, subtitle = '') => ({
+        'aria-label': label,
+        onMouseEnter: (e) => showRailTip(label, e, subtitle),
+        onMouseLeave: hideRailTip,
+        onFocus: (e) => showRailTip(label, e, subtitle),
+        onBlur: hideRailTip,
+    });
 
     // Post-signup welcome tour. Shows on the first authenticated page
     // load after a freshly-registered user verifies their email — i.e.
@@ -116,24 +205,48 @@ export default function Authenticated({ user: propUser, header, children }) {
         shouldShowVerifyReminder(user, isImpersonating)
     );
 
+    const isRouteActive = (routeName) => {
+        try {
+            return route().current(routeName);
+        } catch (e) {
+            return false;
+        }
+    };
+
+    const getSafeRoute = (routeName) => {
+        try {
+            return route(routeName);
+        } catch (e) {
+            return '#';
+        }
+    };
+
     const toggleGroup = (groupName) => {
-        setOpenGroups(prev => ({
-            ...prev,
-            [groupName]: !prev[groupName]
-        }));
+        setOpenGroups((prev) => {
+            const isSubgroup = groupName.includes('::');
+            // Subgroups default open (undefined → open); top-level groups default closed.
+            const currentlyOpen = isSubgroup
+                ? prev[groupName] !== false
+                : Boolean(prev[groupName]);
+            return {
+                ...prev,
+                [groupName]: !currentlyOpen,
+            };
+        });
     };
 
     useEffect(() => {
         const initialOpenGroups = {};
-        navConfig.forEach(section => {
-            const hasActive = section.links.some(link =>
-                link.activeRoutes
-                    ? link.activeRoutes.some(r => isRouteActive(r))
-                    : isRouteActive(link.route)
-            );
+        navConfig.forEach((section) => {
+            const hasActive = sectionAllLinks(section).some((link) => linkIsActive(link, isRouteActive));
             if (hasActive) {
                 initialOpenGroups[section.group] = true;
             }
+            (section.subgroups ?? []).forEach((sg) => {
+                if (sg.links.some((link) => linkIsActive(link, isRouteActive))) {
+                    initialOpenGroups[subgroupKey(section.group, sg.name)] = true;
+                }
+            });
         });
 
         if (
@@ -161,6 +274,7 @@ export default function Authenticated({ user: propUser, header, children }) {
 
     useEffect(() => {
         setSidebarOpen(false);
+        setRailTip(null);
     }, [url]);
 
     useEffect(() => {
@@ -171,22 +285,6 @@ export default function Authenticated({ user: propUser, header, children }) {
         }
         return () => { document.body.style.overflow = ''; };
     }, [sidebarOpen]);
-
-    const isRouteActive = (routeName) => {
-        try {
-            return route().current(routeName);
-        } catch (e) {
-            return false;
-        }
-    };
-
-    const getSafeRoute = (routeName) => {
-        try {
-            return route(routeName);
-        } catch (e) {
-            return '#';
-        }
-    };
 
     useEffect(() => {
         if (flash?.success || flash?.error || flash?.info) {
@@ -204,20 +302,29 @@ export default function Authenticated({ user: propUser, header, children }) {
             />
 
             <aside
-                className={`fixed inset-y-0 left-0 z-50 w-72 flex flex-col border-r border-border-warm bg-surface custom-scrollbar transform transition-transform duration-200 ease-out lg:relative lg:z-auto lg:translate-x-0 lg:flex-shrink-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+                className={`fixed inset-y-0 left-0 z-50 w-72 flex flex-col border-r border-border-warm bg-surface custom-scrollbar transform transition-[width,transform] duration-200 ease-out lg:relative lg:z-auto lg:translate-x-0 lg:flex-shrink-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${sidebarCollapsed ? 'lg:w-[4.75rem]' : 'lg:w-72'}`}
             >
-                <div className="p-4 sm:p-6 flex items-center justify-between gap-3 border-b border-border-warm bg-surface">
+                <div className={`p-4 sm:p-6 flex items-center justify-between gap-3 border-b border-border-warm bg-surface ${sidebarCollapsed ? 'lg:flex-col lg:p-3 lg:gap-2' : ''}`}>
                     <div className="flex items-center gap-3 min-w-0">
                         <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-cream">
                             <ApplicationLogo className="block h-9 w-9" />
                         </div>
-                        <div className="min-w-0">
+                        <div className={`min-w-0 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
                             <span className="font-display font-medium text-ink tracking-tight text-base block truncate">{page.props.product_name}</span>
                             {String(page.props.product_tagline ?? '').trim() !== '' && (
                                 <span className="block text-eyebrow text-ink-muted uppercase truncate">{page.props.product_tagline}</span>
                             )}
                         </div>
                     </div>
+                    <button
+                        type="button"
+                        onClick={() => persistSidebarCollapsed(!sidebarCollapsed)}
+                        className="hidden lg:flex p-2 rounded-xl text-ink-muted hover:text-ink hover:bg-surface-alt transition-colors"
+                        aria-label={sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'}
+                        {...railProps(sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation')}
+                    >
+                        {sidebarCollapsed ? <Icons.ChevronRight /> : <Icons.ChevronLeft />}
+                    </button>
                     <button
                         type="button"
                         onClick={() => setSidebarOpen(false)}
@@ -228,12 +335,12 @@ export default function Authenticated({ user: propUser, header, children }) {
                     </button>
                 </div>
 
-                <nav className="flex-1 py-5 overflow-y-auto px-3 bg-surface">
+                <nav className={`flex-1 py-5 overflow-y-auto bg-surface ${sidebarCollapsed ? 'px-3 lg:px-1.5' : 'px-3'}`}>
                     {/* SME plan nag — only for tenant users on free, never for
                         firm users (they have their own practice plan badge
                         below) and never for super-admins or self-hosted. */}
                     {!hasActiveSubscription && !isAdmin && !isSelfHosted && !practice && (
-                        <div className="mb-4 mx-1 px-3 py-2 rounded-xl bg-mustard/15 border border-mustard/40 text-ink text-[11px] font-medium flex items-center justify-between">
+                        <div className={`mb-4 mx-1 px-3 py-2 rounded-xl bg-mustard/15 border border-mustard/40 text-ink text-[11px] font-medium flex items-center justify-between ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
                             <span>You&apos;re on the Free tier.</span>
                             <Link
                                 href={getSafeRoute('subscription.index')}
@@ -249,7 +356,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                         tenant's. The Upgrade link lands on /practice/plan, the
                         firm-specific billing page. */}
                     {practice?.subscription && !isAdmin && (
-                        <div className={`mb-4 mx-1 px-3 py-2 rounded-xl text-[11px] font-medium flex items-center justify-between ${
+                        <div className={`mb-4 mx-1 px-3 py-2 rounded-xl text-[11px] font-medium flex items-center justify-between ${sidebarCollapsed ? 'lg:hidden' : ''} ${
                             practice.subscription.is_free
                                 ? 'bg-mustard/15 border border-mustard/40 text-ink'
                                 : 'bg-forest/10 border border-forest/30 text-ink'
@@ -274,20 +381,130 @@ export default function Authenticated({ user: propUser, header, children }) {
                     {navConfig.map((section, idx) => {
                         if (isAdmin && section.group !== 'Admin') return null;
 
-                        const visibleLinks = section.links.filter(link => {
+                        const linkVisible = (link) => {
                             const planOk = !link.planPermission || planPermissions[link.planPermission];
                             const userOk = !link.userPermission || hasPermission(link.userPermission);
-                            return planOk && userOk;
-                        });
+                            const goodsOk = !link.requiresGoodsFlow || company_flags?.show_goods_flow !== false;
+                            return planOk && userOk && goodsOk;
+                        };
+
+                        const renderNavLink = (link) => {
+                            const Icon = link.Icon;
+                            const active = linkIsActive(link, isRouteActive);
+                            const isPaidOnly = link.requirePaid;
+                            const disabled = isPaidOnly && !hasActiveSubscription;
+                            return (
+                                <Link
+                                    key={link.name}
+                                    href={disabled ? route('subscription.index') : getSafeRoute(link.route)}
+                                    className={linkClasses(active, disabled, sidebarCollapsed)}
+                                    {...railProps(link.name, link.subtitle)}
+                                >
+                                    <span className={iconWrapClasses(active)}>
+                                        <Icon />
+                                    </span>
+                                    <span className={navLabelClass(sidebarCollapsed)}>
+                                        <span className="block truncate">{link.name}</span>
+                                        {link.subtitle && (
+                                            <span className={`block text-[10px] font-normal mt-0.5 truncate ${active ? 'text-white/80' : 'text-ink-muted'}`}>
+                                                {link.subtitle}
+                                            </span>
+                                        )}
+                                    </span>
+                                    {active && (
+                                        <span className={`w-1.5 h-1.5 rounded-full bg-white/90 flex-shrink-0 ${sidebarCollapsed ? 'lg:hidden' : ''}`} />
+                                    )}
+                                </Link>
+                            );
+                        };
+
+                        if (section.subgroups) {
+                            const visibleSubgroups = section.subgroups
+                                .map((sg) => ({ ...sg, links: sg.links.filter(linkVisible) }))
+                                .filter((sg) => sg.links.length > 0);
+
+                            if (visibleSubgroups.length === 0) return null;
+
+                            const isOpen = Boolean(openGroups[section.group]) || sidebarCollapsed;
+
+                            return (
+                                <div key={idx} className="mb-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleGroup(section.group)}
+                                        className={`w-full flex items-center justify-between px-3 py-2 text-eyebrow font-semibold text-ink-muted uppercase hover:bg-surface-alt rounded-lg transition-colors ${sidebarCollapsed ? 'lg:hidden' : ''}`}
+                                    >
+                                        <span>{section.group}</span>
+                                        <span className={`transition-transform duration-200 ${isOpen ? 'rotate-0' : '-rotate-90 text-ink-muted/60'}`}>
+                                            <Icons.ChevronDown />
+                                        </span>
+                                    </button>
+
+                                    <div className={`mt-1 space-y-1 overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                        {visibleSubgroups.map((sg) => {
+                                            const sgKey = subgroupKey(section.group, sg.name);
+                                            // Default open; only collapse when user toggles off.
+                                            const sgOpen = sidebarCollapsed || openGroups[sgKey] !== false;
+
+                                            if (sidebarCollapsed) {
+                                                return (
+                                                    <React.Fragment key={sgKey}>
+                                                        <div className="space-y-0.5 hidden lg:block">
+                                                            {sg.links.map(renderNavLink)}
+                                                        </div>
+                                                        <div className="mb-0.5 lg:hidden">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => toggleGroup(sgKey)}
+                                                                className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold text-ink-muted/80 hover:text-ink hover:bg-surface-alt rounded-lg transition-colors"
+                                                            >
+                                                                <span>{sg.name}</span>
+                                                                <span className={`transition-transform duration-200 ${openGroups[sgKey] !== false ? 'rotate-0' : '-rotate-90 text-ink-muted/50'}`}>
+                                                                    <Icons.ChevronDown />
+                                                                </span>
+                                                            </button>
+                                                            <div className={`mt-0.5 space-y-0.5 pl-1 overflow-hidden transition-all duration-300 ${openGroups[sgKey] !== false ? 'max-h-[1200px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                                                {sg.links.map(renderNavLink)}
+                                                            </div>
+                                                        </div>
+                                                    </React.Fragment>
+                                                );
+                                            }
+
+                                            return (
+                                                <div key={sgKey} className="mb-0.5">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleGroup(sgKey)}
+                                                        className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold text-ink-muted/80 hover:text-ink hover:bg-surface-alt rounded-lg transition-colors"
+                                                    >
+                                                        <span>{sg.name}</span>
+                                                        <span className={`transition-transform duration-200 ${sgOpen ? 'rotate-0' : '-rotate-90 text-ink-muted/50'}`}>
+                                                            <Icons.ChevronDown />
+                                                        </span>
+                                                    </button>
+                                                    <div className={`mt-0.5 space-y-0.5 pl-1 overflow-hidden transition-all duration-300 ${sgOpen ? 'max-h-[1200px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                                        {sg.links.map(renderNavLink)}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        const visibleLinks = (section.links ?? []).filter(linkVisible);
 
                         if (visibleLinks.length === 0) return null;
-                        const isOpen = openGroups[section.group];
+                        const isOpen = Boolean(openGroups[section.group]) || sidebarCollapsed;
 
                         return (
                             <div key={idx} className="mb-2">
                                 <button
+                                    type="button"
                                     onClick={() => toggleGroup(section.group)}
-                                    className="w-full flex items-center justify-between px-3 py-2 text-eyebrow font-semibold text-ink-muted uppercase hover:bg-surface-alt rounded-lg transition-colors"
+                                    className={`w-full flex items-center justify-between px-3 py-2 text-eyebrow font-semibold text-ink-muted uppercase hover:bg-surface-alt rounded-lg transition-colors ${sidebarCollapsed ? 'lg:hidden' : ''}`}
                                 >
                                     <span>{section.group}</span>
                                     <span className={`transition-transform duration-200 ${isOpen ? 'rotate-0' : '-rotate-90 text-ink-muted/60'}`}>
@@ -295,37 +512,8 @@ export default function Authenticated({ user: propUser, header, children }) {
                                     </span>
                                 </button>
 
-                                <div className={`mt-1 space-y-0.5 overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                                    {visibleLinks.map((link) => {
-                                        const Icon = link.Icon;
-                                        const active = link.activeRoutes
-                                            ? link.activeRoutes.some((r) => isRouteActive(r))
-                                            : isRouteActive(link.route);
-                                        const isPaidOnly = link.requirePaid;
-                                        const disabled = isPaidOnly && !hasActiveSubscription;
-                                        return (
-                                            <Link
-                                                key={link.name}
-                                                href={disabled ? route('subscription.index') : getSafeRoute(link.route)}
-                                                className={linkClasses(active, disabled)}
-                                            >
-                                                <span className={iconWrapClasses(active)}>
-                                                    <Icon />
-                                                </span>
-                                                <span className="flex-1 min-w-0">
-                                                    <span className="block truncate">{link.name}</span>
-                                                    {link.subtitle && (
-                                                        <span className={`block text-[10px] font-normal mt-0.5 truncate ${active ? 'text-white/80' : 'text-ink-muted'}`}>
-                                                            {link.subtitle}
-                                                        </span>
-                                                    )}
-                                                </span>
-                                                {active && (
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-white/90 flex-shrink-0" />
-                                                )}
-                                            </Link>
-                                        );
-                                    })}
+                                <div className={`mt-1 space-y-0.5 overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                    {visibleLinks.map(renderNavLink)}
                                 </div>
                             </div>
                         );
@@ -335,14 +523,14 @@ export default function Authenticated({ user: propUser, header, children }) {
                         <div className="mb-2">
                             <button
                                 onClick={() => toggleGroup('Admin')}
-                                className="w-full flex items-center justify-between px-3 py-2 text-eyebrow font-semibold text-ink-muted uppercase hover:bg-surface-alt rounded-lg transition-colors"
+                                className={`w-full flex items-center justify-between px-3 py-2 text-eyebrow font-semibold text-ink-muted uppercase hover:bg-surface-alt rounded-lg transition-colors ${sidebarCollapsed ? 'lg:hidden' : ''}`}
                             >
                                 <span>Admin</span>
-                                <span className={`transition-transform duration-200 ${openGroups['Admin'] ? 'rotate-0' : '-rotate-90 text-ink-muted/60'}`}>
+                                <span className={`transition-transform duration-200 ${openGroups['Admin'] || sidebarCollapsed ? 'rotate-0' : '-rotate-90 text-ink-muted/60'}`}>
                                     <Icons.ChevronDown />
                                 </span>
                             </button>
-                            <div className={`mt-1 space-y-0.5 overflow-hidden transition-all duration-300 ${openGroups['Admin'] ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                            <div className={`mt-1 space-y-0.5 overflow-hidden transition-all duration-300 ${openGroups['Admin'] || sidebarCollapsed ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                 {[
                                     { name: 'Tenants', route: 'admin.tenants.index', Icon: Icons.BuildingOffice },
                                     { name: 'Plan Catalog', route: 'admin.plans.index', Icon: Icons.Sparkles },
@@ -358,13 +546,14 @@ export default function Authenticated({ user: propUser, header, children }) {
                                         <Link
                                             key={link.name}
                                             href={getSafeRoute(link.route)}
-                                            className={linkClasses(active, false)}
+                                            className={linkClasses(active, false, sidebarCollapsed)}
+                                            {...railProps(link.name)}
                                         >
                                             <span className={iconWrapClasses(active)}>
                                                 <link.Icon />
                                             </span>
-                                            <span className="flex-1">{link.name}</span>
-                                            {active && <span className="w-1.5 h-1.5 rounded-full bg-white/90" />}
+                                            <span className={navLabelClass(sidebarCollapsed)}>{link.name}</span>
+                                            {active && <span className={`w-1.5 h-1.5 rounded-full bg-white/90 ${sidebarCollapsed ? 'lg:hidden' : ''}`} />}
                                         </Link>
                                     );
                                 })}
@@ -376,22 +565,23 @@ export default function Authenticated({ user: propUser, header, children }) {
                         <div className="mb-2">
                             <button
                                 onClick={() => toggleGroup('Company')}
-                                className="w-full flex items-center justify-between px-3 py-2 text-eyebrow font-semibold text-ink-muted uppercase hover:bg-surface-alt rounded-lg transition-colors"
+                                className={`w-full flex items-center justify-between px-3 py-2 text-eyebrow font-semibold text-ink-muted uppercase hover:bg-surface-alt rounded-lg transition-colors ${sidebarCollapsed ? 'lg:hidden' : ''}`}
                             >
                                 <span>Company</span>
-                                <span className={`transition-transform duration-200 ${openGroups['Company'] ? 'rotate-0' : '-rotate-90 text-ink-muted/60'}`}>
+                                <span className={`transition-transform duration-200 ${openGroups['Company'] || sidebarCollapsed ? 'rotate-0' : '-rotate-90 text-ink-muted/60'}`}>
                                     <Icons.ChevronDown />
                                 </span>
                             </button>
-                            <div className={`mt-1 space-y-0.5 overflow-hidden transition-all duration-300 ${openGroups['Company'] ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                            <div className={`mt-1 space-y-0.5 overflow-hidden transition-all duration-300 ${openGroups['Company'] || sidebarCollapsed ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                 <Link
                                     href={getSafeRoute('settings.company')}
-                                    className={linkClasses(isRouteActive('settings.company'), false)}
+                                    className={linkClasses(isRouteActive('settings.company'), false, sidebarCollapsed)}
+                                    {...railProps('Company settings')}
                                 >
                                     <span className={iconWrapClasses(isRouteActive('settings.company'))}>
                                         <Icons.BuildingOffice />
                                     </span>
-                                    <span className="flex-1">Company settings</span>
+                                    <span className={navLabelClass(sidebarCollapsed)}>Company settings</span>
                                 </Link>
                                 {/* Tenant admins can hand the books to a firm here. Hidden when
                                     the user is themselves a firm/accountant user — they're the
@@ -399,47 +589,51 @@ export default function Authenticated({ user: propUser, header, children }) {
                                 {!practice && (
                                     <Link
                                         href={getSafeRoute('settings.invite-firm.show')}
-                                        className={linkClasses(isRouteActive('settings.invite-firm.show'), false)}
+                                        className={linkClasses(isRouteActive('settings.invite-firm.show'), false, sidebarCollapsed)}
+                                        {...railProps('Invite my accountant')}
                                     >
                                         <span className={iconWrapClasses(isRouteActive('settings.invite-firm.show'))}>
                                             <Icons.Users />
                                         </span>
-                                        <span className="flex-1">Invite my accountant</span>
+                                        <span className={navLabelClass(sidebarCollapsed)}>Invite my accountant</span>
                                     </Link>
                                 )}
                                 {hasPermission('audit.view') && planPermissions['audit-logs.view'] && (
                                     <Link
                                         href={getSafeRoute('audit.index')}
-                                        className={linkClasses(isRouteActive('audit.index'), false)}
+                                        className={linkClasses(isRouteActive('audit.index'), false, sidebarCollapsed)}
+                                        {...railProps('Audit Compliance')}
                                     >
                                         <span className={iconWrapClasses(isRouteActive('audit.index'))}>
                                             <Icons.Audit />
                                         </span>
-                                        <span className="flex-1">Audit Compliance</span>
+                                        <span className={navLabelClass(sidebarCollapsed)}>Audit Compliance</span>
                                     </Link>
                                 )}
                                 {hasPermission('users.view') && planPermissions['users.view'] && (
                                     <Link
                                         href={getSafeRoute('settings.team.index')}
-                                        className={linkClasses(isRouteActive('settings.team.index'), false)}
+                                        className={linkClasses(isRouteActive('settings.team.index'), false, sidebarCollapsed)}
+                                        {...railProps('Team & Roles')}
                                     >
                                         <span className={iconWrapClasses(isRouteActive('settings.team.index'))}>
                                             <Icons.Users />
                                         </span>
-                                        <span className="flex-1">Team & Roles</span>
+                                        <span className={navLabelClass(sidebarCollapsed)}>Team & Roles</span>
                                     </Link>
                                 )}
                                 {hasPermission('audit-logs.view') && planPermissions['audit-logs.view'] && (
                                     <Link
                                         href={getSafeRoute('audit-logs.index')}
-                                        className={linkClasses(isRouteActive('audit-logs.index'), false)}
+                                        className={linkClasses(isRouteActive('audit-logs.index'), false, sidebarCollapsed)}
+                                        {...railProps('Audit Logs')}
                                     >
                                         <span className={iconWrapClasses(isRouteActive('audit-logs.index'))}>
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                             </svg>
                                         </span>
-                                        <span className="flex-1">Audit Logs</span>
+                                        <span className={navLabelClass(sidebarCollapsed)}>Audit Logs</span>
                                     </Link>
                                 )}
                                 {/* API & Integrations — visible to admins on Solo+ tenants
@@ -448,14 +642,15 @@ export default function Authenticated({ user: propUser, header, children }) {
                                 {hasPermission('integrations.view') && planPermissions['api.access'] && (
                                     <Link
                                         href={getSafeRoute('settings.integrations.index')}
-                                        className={linkClasses(isRouteActive('settings.integrations.index'), false)}
+                                        className={linkClasses(isRouteActive('settings.integrations.index'), false, sidebarCollapsed)}
+                                        {...railProps('API & Integrations')}
                                     >
                                         <span className={iconWrapClasses(isRouteActive('settings.integrations.index'))}>
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                                             </svg>
                                         </span>
-                                        <span className="flex-1">API & Integrations</span>
+                                        <span className={navLabelClass(sidebarCollapsed)}>API & Integrations</span>
                                     </Link>
                                 )}
                                 {/* Plan & Usage:
@@ -467,12 +662,13 @@ export default function Authenticated({ user: propUser, header, children }) {
                                 {(user.role_name === 'admin' || user.role_name === 'super-admin' || (isSelfHosted && user.role_name === 'firm-owner')) && (
                                     <Link
                                         href={getSafeRoute('settings.plan.index')}
-                                        className={linkClasses(isRouteActive('settings.plan.index'), false)}
+                                        className={linkClasses(isRouteActive('settings.plan.index'), false, sidebarCollapsed)}
+                                        {...railProps(isSelfHosted ? 'License & Usage' : 'Plan & Usage')}
                                     >
                                         <span className={iconWrapClasses(isRouteActive('settings.plan.index'))}>
                                             <Icons.Sparkles />
                                         </span>
-                                        <span className="flex-1">{isSelfHosted ? 'License & Usage' : 'Plan & Usage'}</span>
+                                        <span className={navLabelClass(sidebarCollapsed)}>{isSelfHosted ? 'License & Usage' : 'Plan & Usage'}</span>
                                     </Link>
                                 )}
                                 {/* Two-factor auth, Download my data, and Delete account
@@ -486,36 +682,63 @@ export default function Authenticated({ user: propUser, header, children }) {
                     )}
                 </nav>
 
-                <div className="p-4 pb-15 lg:pb-4 border-t border-border-warm bg-surface">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="h-10 w-10 rounded-xl bg-terracotta flex items-center justify-center text-white text-sm font-semibold">
+                <div className={`p-4 pb-15 lg:pb-4 border-t border-border-warm bg-surface ${sidebarCollapsed ? 'lg:px-2' : ''}`}>
+                    <div className={`flex items-center gap-3 mb-3 ${sidebarCollapsed ? 'lg:justify-center lg:mb-2' : ''}`}>
+                        <div
+                            className="h-10 w-10 rounded-xl bg-terracotta flex items-center justify-center text-white text-sm font-semibold"
+                            {...railProps(user.name || 'User')}
+                        >
                             {(user.name || 'U').charAt(0)}
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className={`flex-1 min-w-0 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
                             <p className="text-sm font-medium text-ink truncate">{user.name || 'User'}</p>
                             <p className="text-eyebrow font-semibold text-ink-muted uppercase truncate">
                                 {isImpersonating ? 'Impersonating' : (user.role_name?.replace('-', ' ') || 'User')}
                             </p>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className={`grid gap-2 ${sidebarCollapsed ? 'grid-cols-2 lg:grid-cols-1' : 'grid-cols-2'}`}>
                         <Link
                             href={route('profile.edit')}
                             className="py-2 rounded-lg text-center text-xs font-semibold text-ink bg-cream border border-border-warm hover:bg-surface-alt transition-colors"
+                            {...railProps('Settings')}
                         >
-                            Settings
+                            <span className={sidebarCollapsed ? 'lg:hidden' : ''}>Settings</span>
+                            <span className={`hidden ${sidebarCollapsed ? 'lg:inline' : ''}`} aria-hidden="true">
+                                <svg className="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            </span>
                         </Link>
                         <Link
                             href={route('logout')}
                             method="post"
                             as="button"
                             className="py-2 rounded-lg text-center text-xs font-semibold text-terracotta bg-cream border border-border-warm hover:bg-terracotta/10 transition-colors"
+                            {...railProps('Logout')}
                         >
-                            Logout
+                            <span className={sidebarCollapsed ? 'lg:hidden' : ''}>Logout</span>
+                            <span className={`hidden ${sidebarCollapsed ? 'lg:inline' : ''}`} aria-hidden="true">
+                                <svg className="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                            </span>
                         </Link>
                     </div>
                 </div>
             </aside>
+
+            {railTip && (
+                <div
+                    role="tooltip"
+                    className="hidden lg:block fixed z-[80] pointer-events-none -translate-y-1/2 rounded-lg bg-ink text-cream px-2.5 py-1.5 shadow-lg max-w-[16rem]"
+                    style={{ top: railTip.top, left: railTip.left }}
+                >
+                    <div className="relative">
+                        <span className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-ink" />
+                        <div className="text-xs font-semibold leading-tight">{railTip.label}</div>
+                        {railTip.subtitle ? (
+                            <div className="text-[10px] font-normal text-cream/70 mt-0.5 leading-snug">{railTip.subtitle}</div>
+                        ) : null}
+                    </div>
+                </div>
+            )}
 
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-transparent pb-20 lg:pb-0">
                 <div className="lg:hidden flex-shrink-0 flex items-center justify-between px-4 py-3 bg-surface/90 backdrop-blur-lg border-b border-border-warm z-20 sticky top-0">
@@ -540,9 +763,9 @@ export default function Authenticated({ user: propUser, header, children }) {
                     </header>
                 )}
 
-                <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 relative">
+                <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6 relative">
                     {isImpersonating && (
-                        <div className="max-w-7xl mx-auto mb-4 px-4 py-3 rounded-xl bg-mustard/15 border border-mustard/40 text-ink text-sm font-medium flex items-center justify-between">
+                        <div className="max-w-[90rem] mx-auto mb-4 px-4 py-3 rounded-xl bg-mustard/15 border border-mustard/40 text-ink text-sm font-medium flex items-center justify-between">
                             <span>
                                 You&apos;re impersonating another user. Actions affect that tenant only.
                             </span>
@@ -558,7 +781,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                     )}
 
                     {isFirmActingOnClient && (
-                        <div className="max-w-7xl mx-auto mb-4 px-4 py-3 rounded-xl bg-terracotta/10 border border-terracotta/30 text-ink text-sm font-medium flex items-center justify-between gap-3">
+                        <div className="max-w-[90rem] mx-auto mb-4 px-4 py-3 rounded-xl bg-terracotta/10 border border-terracotta/30 text-ink text-sm font-medium flex items-center justify-between gap-3">
                             <span>
                                 <span className="text-eyebrow uppercase font-semibold text-terracotta mr-2">Practice</span>
                                 Working in <strong>{practice.acting_client?.name}</strong>{' '}
@@ -581,7 +804,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                         banner is informational — the actual upgrade
                         happens via `docker compose pull` outside the app. */}
                     {page.props.self_hosted_update && (
-                        <div className="max-w-7xl mx-auto mb-4 px-4 py-3 rounded-xl bg-mustard/15 border border-mustard/40 text-ink text-sm font-medium flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="max-w-[90rem] mx-auto mb-4 px-4 py-3 rounded-xl bg-mustard/15 border border-mustard/40 text-ink text-sm font-medium flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <span>
                                 <span className="text-eyebrow uppercase font-semibold text-mustard-dark dark:text-mustard mr-2">Update available</span>
                                 BukuCloud <strong>{page.props.self_hosted_update.available_version}</strong> is now released.
@@ -605,7 +828,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                         </div>
                     )}
 
-                    <div className="max-w-7xl mx-auto min-w-0">
+                    <div className="max-w-[90rem] mx-auto min-w-0">
                         {flash?.success && (
                             <div className="mb-6 p-4 rounded-2xl bg-forest/10 border border-forest/30 flex items-center gap-3 text-forest dark:text-forest-light animate-in fade-in slide-in-from-top-4 duration-300">
                                 <div className="p-1.5 bg-forest/15 rounded-lg text-forest dark:text-forest-light">
@@ -683,6 +906,8 @@ export default function Authenticated({ user: propUser, header, children }) {
                 isFirm={Boolean(user?.firm_id)}
                 onClose={() => setWelcomeOpen(false)}
             />
+
+            <AccountantCopilot />
 
             <VerifyEmailReminderModal
                 show={verifyReminderOpen}

@@ -102,6 +102,7 @@ class PlanPermissionAlignmentTest extends TestCase
         // payment recording (invoices.record-payment, Solo+).
         $this->assertNotContains('invoices.record-payment', $perms);
         $this->assertNotContains('ocr.use', $perms);
+        $this->assertNotContains('copilot.use', $perms);
     }
 
     public function test_startup_does_not_grant_solo_or_growth_features(): void
@@ -114,6 +115,7 @@ class PlanPermissionAlignmentTest extends TestCase
         $this->assertNotContains('recurring-invoices.view', $perms, 'Recurring invoices is a Solo+ bullet');
         $this->assertNotContains('estimates.view', $perms, 'Estimates is a Solo+ bullet');
         $this->assertNotContains('ocr.use', $perms, 'OCR is a Solo+ bullet');
+        $this->assertNotContains('copilot.use', $perms, 'Accountant copilot is a Solo+ feature');
         $this->assertNotContains('invoices.email', $perms, 'Email invoices is a Solo+ bullet');
         $this->assertNotContains('bills.view', $perms, 'Bills is a Solo+ bullet');
 
@@ -140,6 +142,7 @@ class PlanPermissionAlignmentTest extends TestCase
         $this->assertContains('credit-notes.view', $perms);
         // "OCR receipt capture"
         $this->assertContains('ocr.use', $perms);
+        $this->assertContains('copilot.use', $perms);
         // "P&L and sales reports" — direct grants for the two reports
         // currently in the system. Bank reconciliation lives on the
         // roadmap; if anyone re-adds the bullet without shipping the
@@ -273,12 +276,12 @@ class PlanPermissionAlignmentTest extends TestCase
         $this->assertStringContainsStringIgnoringCase('coming soon', $matched);
     }
 
-    public function test_corporate_plan_marks_myinvois_as_coming_soon(): void
+    public function test_corporate_plan_mentions_myinvois(): void
     {
         $plan = Plan::where('slug', 'corporate')->firstOrFail();
         $matched = collect($plan->features)->first(fn ($b) => stripos($b, 'myinvois') !== false);
         $this->assertNotNull($matched, 'Corporate plan must mention MyInvois.');
-        $this->assertStringContainsStringIgnoringCase('coming soon', $matched);
+        $this->assertStringNotContainsStringIgnoringCase('coming soon', $matched);
     }
 
     public function test_enterprise_plan_marks_branding_self_hosted_only(): void

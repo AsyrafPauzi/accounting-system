@@ -15,7 +15,7 @@ class Customer extends Model
 
     protected $fillable = [
         'name', 'code', 'industry', 'website', 'contact_person', 'phone', 'email',
-        'tin', 'brn', 'credit_limit', 'credit_hold', 'payment_terms', 'currency',
+        'tin', 'brn', 'identification_type', 'credit_limit', 'credit_hold', 'payment_terms', 'currency',
         'risk_rating', 'segment', 'region', 'account_manager_id', 'parent_id',
         'billing_street', 'billing_city', 'billing_state', 'billing_zip', 'billing_country',
         'shipping_street', 'shipping_city', 'shipping_state', 'shipping_zip', 'shipping_country',

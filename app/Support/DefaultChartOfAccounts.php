@@ -34,11 +34,13 @@ final class DefaultChartOfAccounts
             ['code' => '1100', 'name' => 'Accounts Receivable', 'type' => 'asset',     'display_order' => 2,  'description' => 'Outstanding amounts from customers (auto-posted by invoices).'],
             ['code' => '1200', 'name' => 'Bank',                'type' => 'asset',     'sub_type' => 'bank', 'display_order' => 3, 'description' => 'Default bank account — receives invoice payments and pays bills.'],
             ['code' => '1210', 'name' => 'Petty Cash',          'type' => 'asset',     'sub_type' => 'cash', 'display_order' => 4, 'description' => 'Cash on hand for small expenses.'],
+            ['code' => '1300', 'name' => 'Supplier Prepayments','type' => 'asset',     'display_order' => 4,  'description' => 'Deposits paid to suppliers waiting to knock off bills.'],
 
             // Liabilities
             ['code' => '2000', 'name' => 'Liabilities',         'type' => 'liability', 'display_order' => 5,  'description' => 'Top-level header for all liability accounts.'],
             ['code' => '2100', 'name' => 'Tax Payable',         'type' => 'liability', 'display_order' => 6,  'description' => 'SST / output tax owed to LHDN.'],
             ['code' => '2110', 'name' => 'Accounts Payable',    'type' => 'liability', 'display_order' => 7,  'description' => 'Outstanding amounts owed to suppliers (auto-posted by bills).'],
+            ['code' => '2200', 'name' => 'Customer Deposits',   'type' => 'liability', 'display_order' => 8,  'description' => 'Unapplied customer deposits waiting to knock off invoices.'],
 
             // Equity
             ['code' => '3000', 'name' => 'Equity',              'type' => 'equity',    'display_order' => 8,  'description' => 'Owner equity / retained earnings.'],

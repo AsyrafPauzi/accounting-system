@@ -13,13 +13,15 @@ const Icons = {
 const inputClass = 'w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta focus:border-terracotta transition-colors';
 const labelClass = 'block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5';
 
-export default function Create({ auth, suppliers = [], expenseAccounts = [], nextBillNumber = 'BILL-1', preselectedSupplierId = null }) {
+export default function Create({ auth, suppliers = [], expenseAccounts = [], bankAccounts = [], nextBillNumber = 'BILL-1', preselectedSupplierId = null }) {
     const today = new Date().toISOString().split('T')[0];
     const dueDefault = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
     const { data, setData, post, processing, errors } = useForm({
         bill_number: nextBillNumber,
+        purchase_kind: 'credit',
         supplier_id: preselectedSupplierId ? String(preselectedSupplierId) : '',
+        bank_account_code: (bankAccounts && bankAccounts[0]?.value) || '',
         bill_date: today,
         due_date: dueDefault,
         tax_amount: 0,
@@ -140,8 +142,12 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
                             <Icons.ChevronLeft />
                         </Link>
                         <div>
-                            <h2 className="text-2xl font-display font-medium text-ink">Create bill</h2>
-                            <p className="text-ink-muted text-sm">Add a new bill or expense</p>
+                            <h2 className="text-2xl font-display font-medium text-ink">
+                                {data.purchase_kind === 'cash' ? 'Cash purchase' : data.purchase_kind === 'claim' ? 'Expense claim' : 'Create bill'}
+                            </h2>
+                            <p className="text-ink-muted text-sm">
+                                {data.purchase_kind === 'cash' ? 'Paid immediately from bank or cash' : data.purchase_kind === 'claim' ? 'Staff or owner paid personally — reimburse later' : 'Add a new bill or expense'}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -158,6 +164,25 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
                         <h3 className="text-sm font-display font-medium text-ink">Bill details</h3>
                     </div>
                     <div className="p-6 space-y-4">
+                        <div>
+                            <label className={labelClass}>Type</label>
+                            <div className="flex flex-wrap gap-2">
+                                {[
+                                    { id: 'credit', label: 'Credit purchase' },
+                                    { id: 'cash', label: 'Cash purchase' },
+                                    { id: 'claim', label: 'Expense claim' },
+                                ].map((opt) => (
+                                    <button
+                                        key={opt.id}
+                                        type="button"
+                                        onClick={() => setData('purchase_kind', opt.id)}
+                                        className={`px-4 py-2 rounded-xl text-sm font-semibold border ${data.purchase_kind === opt.id ? 'bg-terracotta text-white border-terracotta' : 'bg-surface border-border-warm text-ink hover:bg-cream'}`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className={labelClass}>Bill number</label>
@@ -165,15 +190,27 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
                                 {errors.bill_number && <p className="text-terracotta text-xs mt-1">{errors.bill_number}</p>}
                             </div>
                             <div>
-                                <label className={labelClass}>Supplier (optional)</label>
-                                <select value={data.supplier_id} onChange={(e) => setData('supplier_id', e.target.value)} className={inputClass}>
-                                    <option value="">— No supplier —</option>
+                                <label className={labelClass}>{data.purchase_kind === 'claim' ? 'Claimant' : 'Supplier'}{data.purchase_kind !== 'credit' ? ' *' : ' (optional)'}</label>
+                                <select value={data.supplier_id} onChange={(e) => setData('supplier_id', e.target.value)} className={inputClass} required={data.purchase_kind !== 'credit'}>
+                                    <option value="">{data.purchase_kind === 'claim' ? '— Select claimant —' : '— No supplier —'}</option>
                                     {suppliers.map((s) => (
                                         <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
                                     ))}
                                 </select>
+                                {errors.supplier_id && <p className="text-terracotta text-xs mt-1">{errors.supplier_id}</p>}
                             </div>
                         </div>
+                        {data.purchase_kind === 'cash' && (
+                            <div>
+                                <label className={labelClass}>Pay from *</label>
+                                <select value={data.bank_account_code} onChange={(e) => setData('bank_account_code', e.target.value)} className={inputClass} required>
+                                    {(bankAccounts || []).map((a) => (
+                                        <option key={a.value} value={a.value}>{a.label}</option>
+                                    ))}
+                                </select>
+                                {errors.bank_account_code && <p className="text-terracotta text-xs mt-1">{errors.bank_account_code}</p>}
+                            </div>
+                        )}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className={labelClass}>Bill date</label>
@@ -294,7 +331,7 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [], nex
                         Cancel
                     </Link>
                     <button type="submit" disabled={processing} className="btn-app-primary">
-                        {processing ? 'Saving…' : 'Save as draft'}
+                        {processing ? 'Saving…' : data.purchase_kind === 'cash' ? 'Save and pay' : data.purchase_kind === 'claim' ? 'Save claim' : 'Save as draft'}
                     </button>
                 </div>
                 </form>

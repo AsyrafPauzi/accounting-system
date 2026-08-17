@@ -39,6 +39,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             '/subscription/webhook',
             '/subscription/webhook/extra-user',
+            '/subscription/webhook/copilot-credits',
+            '/pay/toyyibpay/callback',
+            '/pay/billplz/callback',
+            '/pay/commercepay/callback',
             // Self-hosted heartbeat is a public API endpoint
             // authenticated by the license signature, not a session.
             '/api/self-hosted/heartbeat',
@@ -81,6 +85,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => CheckPermission::class,
             'role'       => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'plan.permission' => \App\Http\Middleware\CheckPlanPermission::class,
+            'goods.flow' => \App\Http\Middleware\EnsureGoodsSalesFlow::class,
             'log.sensitive' => \App\Http\Middleware\LogSensitiveAccess::class,
             // Returns 404 in self-hosted single-tenant mode. Used to
             // hide multi-tenant SaaS surface (Practice console, super-

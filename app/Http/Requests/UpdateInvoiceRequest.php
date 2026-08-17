@@ -55,6 +55,7 @@ class UpdateInvoiceRequest extends FormRequest
             'items.*.tax_rate'            => 'required|numeric',
             'items.*.item_classification' => 'required|string',
             'items.*.discount_amount'     => 'nullable|numeric',
+            'items.*.product_id'          => 'nullable|integer|exists:products,id',
             'shipping_amount'             => 'nullable|numeric',
             'customer_notes'              => 'nullable|string',
             'show_signature'              => 'boolean',

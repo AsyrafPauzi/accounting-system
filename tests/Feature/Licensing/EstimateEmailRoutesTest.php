@@ -67,6 +67,17 @@ class EstimateEmailRoutesTest extends TestCase
         $this->assertContains('signed', $route->gatherMiddleware());
     }
 
+    public function test_bulk_email_and_pdf_and_batch_quote_routes_are_registered(): void
+    {
+        $this->assertTrue(Route::has('estimates.batch'));
+        $this->assertTrue(Route::has('estimates.batch.store'));
+        $this->assertTrue(Route::has('estimates.bulk-email'));
+        $this->assertTrue(Route::has('estimates.bulk-pdf'));
+        $this->assertTrue(Route::has('invoices.bulk-email'));
+        $this->assertTrue(Route::has('invoices.bulk-pdf'));
+        $this->assertTrue(Route::has('bills.myinvois.submit'));
+    }
+
     public function test_estimates_email_permission_exists_in_central_registry(): void
     {
         $this->assertTrue(

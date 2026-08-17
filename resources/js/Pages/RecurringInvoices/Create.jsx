@@ -31,6 +31,8 @@ export default function Create({
         items: [{ description: '', quantity: 1, unit_price: 0, discount_amount: 0, tax_rate: 0, product_id: null, item_classification: '022' }],
         customer_notes: '',
         private_notes: '',
+        auto_email: false,
+        auto_post: false,
     });
 
     const submit = (e) => {
@@ -43,7 +45,7 @@ export default function Create({
             <Head title="New recurring invoice" />
             <div className="mb-2 max-w-6xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
                 <h1 className="text-2xl sm:text-3xl font-display font-medium text-ink">New recurring invoice</h1>
-                <p className="text-sm text-ink-muted mt-1">Set it up once. Each cycle creates a fresh <strong>draft</strong> invoice for you to review and post — no auto-send, no auto-post.</p>
+                <p className="text-sm text-ink-muted mt-1">Set it up once. Each cycle creates a fresh <strong>draft</strong> invoice. Turn on auto-email if you want the draft PDF sent to the customer.</p>
             </div>
             <div className="max-w-6xl mx-auto p-4 sm:p-6">
                 <RecurringInvoiceForm

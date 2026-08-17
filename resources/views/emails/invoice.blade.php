@@ -56,6 +56,9 @@
             <p style="font-size: 12px; color: #94a3b8; margin: 0;">
                 &copy; {{ date('Y') }} {{ $company['name'] }}. All rights reserved.
             </p>
+            @if(!empty($pixel_url))
+                <img src="{{ $pixel_url }}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;" />
+            @endif
         </div>
     </div>
 </body>

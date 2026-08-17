@@ -39,13 +39,21 @@ class InvoiceEmail extends Mailable
             ':company' => $company['name'] ?? config('app.name'),
         ]);
 
-        // Generate a secure signed URL for public download
         $downloadUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
             'public.invoices.download',
             now()->addDays(30),
             [
                 'uuid' => $invoice->uuid,
-                'tenant_id' => function_exists('tenant') && tenant() ? tenant('id') : auth()->user()->tenant_id,
+                'tenant_id' => function_exists('tenant') && tenant() ? tenant('id') : auth()->user()?->tenant_id,
+            ]
+        );
+
+        $pixelUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'public.invoices.pixel',
+            now()->addDays(30),
+            [
+                'uuid' => $invoice->uuid,
+                'tenant_id' => function_exists('tenant') && tenant() ? tenant('id') : auth()->user()?->tenant_id,
             ]
         );
 
@@ -56,6 +64,7 @@ class InvoiceEmail extends Mailable
                 'customer' => $customer,
                 'company' => $company,
                 'download_url' => $downloadUrl,
+                'pixel_url' => $pixelUrl,
             ]);
     }
 }

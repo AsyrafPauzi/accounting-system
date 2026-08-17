@@ -6,6 +6,7 @@ use App\Models\Customer;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Builds a Balance Forward customer statement.
@@ -103,7 +104,20 @@ class CustomerStatementService
             ->whereNull('deleted_at')
             ->sum('total_amount');
 
-        return $invoicesBefore - $paymentsBefore - $creditsBefore;
+        $debitNotesBefore = 0.0;
+        if (Schema::hasTable('debit_notes')) {
+            $debitNotesBefore = (float) DB::table('debit_notes')
+                ->where('customer_id', $customer->id)
+                ->where('status', '!=', 'void')
+                ->whereDate('issue_date', '<', $from->toDateString())
+                ->whereNull('deleted_at')
+                ->sum('total_amount');
+        }
+
+        $depositAppsBefore = $this->journalArMovement($customer, 'AR Deposit Application', 'credit', '<', $from->toDateString());
+        $refundsBefore = $this->journalArMovement($customer, 'Credit Note Refund', 'debit', '<', $from->toDateString());
+
+        return $invoicesBefore + $debitNotesBefore + $refundsBefore - $paymentsBefore - $creditsBefore - $depositAppsBefore;
     }
 
     /**
@@ -196,12 +210,161 @@ class CustomerStatementService
 
         // Sort all events by date, then put charges before payments on the same day.
         // (Conventional accounting style: invoices listed first, then payments / credits applied.)
-        $sortKey = ['invoice' => 0, 'credit_note' => 1, 'payment' => 2];
+        $sortKey = [
+            'invoice' => 0,
+            'debit_note' => 1,
+            'credit_note' => 2,
+            'payment' => 3,
+            'deposit_application' => 4,
+            'credit_note_refund' => 5,
+        ];
 
-        return $invoices->concat($payments)->concat($credits)
+        return $invoices
+            ->concat($this->debitNoteActivity($customer, $from, $to))
+            ->concat($payments)
+            ->concat($this->depositApplicationActivity($customer, $from, $to))
+            ->concat($credits)
+            ->concat($this->creditRefundActivity($customer, $from, $to))
             ->sortBy(fn ($e) => Carbon::parse($e['date'])->timestamp . '-' . ($sortKey[$e['type']] ?? 9))
             ->values()
             ->all();
+    }
+
+    private function debitNoteActivity(Customer $customer, CarbonInterface $from, CarbonInterface $to)
+    {
+        if (! Schema::hasTable('debit_notes')) {
+            return collect();
+        }
+
+        return DB::table('debit_notes')
+            ->select(['id', 'dn_number', 'issue_date', 'invoice_id', 'total_amount'])
+            ->where('customer_id', $customer->id)
+            ->where('status', '!=', 'void')
+            ->whereBetween('issue_date', [$from->toDateString(), $to->toDateString()])
+            ->whereNull('deleted_at')
+            ->get()
+            ->map(fn ($d) => [
+                'type'        => 'debit_note',
+                'date'        => $d->issue_date,
+                'reference'   => $d->dn_number,
+                'description' => 'Debit note '.$d->dn_number,
+                'charge'      => (float) $d->total_amount,
+                'payment'     => 0.0,
+                'credit'      => 0.0,
+                'currency'    => null,
+                'invoice_id'  => $d->invoice_id,
+                'status'      => null,
+            ]);
+    }
+
+    private function depositApplicationActivity(Customer $customer, CarbonInterface $from, CarbonInterface $to)
+    {
+        return $this->journalEvents($customer, 'AR Deposit Application', $from, $to, 'credit')
+            ->map(fn ($p) => [
+                'type'        => 'deposit_application',
+                'date'        => $p['date'],
+                'reference'   => 'Knock-off',
+                'description' => $p['description'] ?: 'Deposit applied',
+                'charge'      => 0.0,
+                'payment'     => $p['amount'],
+                'credit'      => 0.0,
+                'currency'    => null,
+                'invoice_id'  => $p['invoice_id'],
+                'status'      => null,
+            ]);
+    }
+
+    private function creditRefundActivity(Customer $customer, CarbonInterface $from, CarbonInterface $to)
+    {
+        return $this->journalEvents($customer, 'Credit Note Refund', $from, $to, 'debit')
+            ->map(fn ($p) => [
+                'type'        => 'credit_note_refund',
+                'date'        => $p['date'],
+                'reference'   => 'Refund',
+                'description' => $p['description'] ?: 'Credit note refund',
+                'charge'      => $p['amount'],
+                'payment'     => 0.0,
+                'credit'      => 0.0,
+                'currency'    => null,
+                'invoice_id'  => $p['invoice_id'],
+                'status'      => null,
+            ]);
+    }
+
+    /**
+     * AR (1100) movement from a journal type. Refunds debit AR; payments credit it.
+     */
+    private function journalArMovement(Customer $customer, string $referenceType, string $side, string $operator, string $date): float
+    {
+        if ($referenceType === 'AR Deposit Application' && ! Schema::hasTable('ar_deposits')) {
+            return 0.0;
+        }
+        if ($referenceType === 'Credit Note Refund' && ! Schema::hasTable('credit_note_refunds')) {
+            return 0.0;
+        }
+
+        $query = DB::table('journal_entries as je')
+            ->join('journal_items as ji', 'ji.journal_entry_id', '=', 'je.id')
+            ->where('je.reference_type', $referenceType)
+            ->where('ji.account_code', '1100')
+            ->whereDate('je.date', $operator, $date)
+            ->whereNull('je.deleted_at');
+
+        $query = $this->constrainJournalToCustomer($query, $customer, $referenceType);
+
+        return (float) $query->sum($side === 'debit' ? 'ji.debit' : 'ji.credit');
+    }
+
+    private function journalEvents(Customer $customer, string $referenceType, CarbonInterface $from, CarbonInterface $to, string $side)
+    {
+        if ($referenceType === 'AR Deposit Application' && ! Schema::hasTable('ar_deposits')) {
+            return collect();
+        }
+        if ($referenceType === 'Credit Note Refund' && ! Schema::hasTable('credit_note_refunds')) {
+            return collect();
+        }
+
+        $amountExpr = $side === 'debit' ? 'SUM(ji.debit) as amount' : 'SUM(ji.credit) as amount';
+        $query = DB::table('journal_entries as je')
+            ->select([
+                'je.id as journal_entry_id',
+                'je.date',
+                'je.description',
+                'je.reference_id',
+                DB::raw($amountExpr),
+            ])
+            ->join('journal_items as ji', 'ji.journal_entry_id', '=', 'je.id')
+            ->where('je.reference_type', $referenceType)
+            ->where('ji.account_code', '1100')
+            ->whereBetween('je.date', [$from->toDateString(), $to->toDateString()])
+            ->whereNull('je.deleted_at')
+            ->groupBy('je.id', 'je.date', 'je.description', 'je.reference_id');
+
+        $query = $this->constrainJournalToCustomer($query, $customer, $referenceType);
+
+        return $query->get()->map(fn ($row) => [
+            'date'        => $row->date,
+            'description' => $row->description,
+            'amount'      => (float) $row->amount,
+            'invoice_id'  => $referenceType === 'AR Deposit Application' ? null : $row->reference_id,
+        ]);
+    }
+
+    private function constrainJournalToCustomer($query, Customer $customer, string $referenceType)
+    {
+        if ($referenceType === 'AR Deposit Application' && Schema::hasTable('ar_deposits')) {
+            return $query
+                ->join('ar_deposits as d', 'd.id', '=', 'je.reference_id')
+                ->where('d.customer_id', $customer->id);
+        }
+        if ($referenceType === 'Credit Note Refund' && Schema::hasTable('credit_note_refunds')) {
+            return $query
+                ->join('credit_note_refunds as r', 'r.id', '=', 'je.reference_id')
+                ->join('credit_notes as cn', 'cn.id', '=', 'r.credit_note_id')
+                ->where('cn.customer_id', $customer->id);
+        }
+
+        return $query;
     }
 
     /**

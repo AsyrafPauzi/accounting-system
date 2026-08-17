@@ -31,6 +31,11 @@ class RolesAndPermissionsSeeder extends Seeder
             // Credit Notes
             'credit-notes.view', 'credit-notes.create',
 
+            // Debit notes, trading docs
+            'debit-notes.view', 'debit-notes.create',
+            'sales-orders.view', 'sales-orders.create', 'sales-orders.edit', 'sales-orders.delete',
+            'delivery-orders.view', 'delivery-orders.create', 'delivery-orders.edit', 'delivery-orders.delete',
+
             // Products & Services (line-item catalogue)
             'products.view', 'products.create', 'products.edit', 'products.delete',
 
@@ -60,6 +65,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'dashboard.basic', 'dashboard.standard', 'dashboard.advanced',
             'audit-logs.view', 'integrations.view',
             'audit.view',
+            'myinvois.submit',
+            'ocr.use',
+            'copilot.use',
 
             // Practice (Accountant track) — gate access to /practice
             // and to firm-level billing / client linking. firm-staff
@@ -95,6 +103,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'customers.view', 'customers.create', 'customers.edit', 'customers.delete', 'customers.edit-credit-risk',
             'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
             'credit-notes.view', 'credit-notes.create',
+            'debit-notes.view', 'debit-notes.create',
+            'sales-orders.view', 'sales-orders.create', 'sales-orders.edit', 'sales-orders.delete',
+            'delivery-orders.view', 'delivery-orders.create', 'delivery-orders.edit', 'delivery-orders.delete',
             'products.view', 'products.create', 'products.edit', 'products.delete',
             'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert', 'estimates.email',
             'recurring-invoices.view', 'recurring-invoices.create', 'recurring-invoices.edit', 'recurring-invoices.delete', 'recurring-invoices.run',
@@ -103,7 +114,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'general-ledger.view',
             'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet', 'reports.cashflow', 'reports.aged-reports', 'reports.export.full',
             'reports.sales-tax', 'reports.customer-credits', 'reports.purchases-by-vendor',
-            'settings.view', 'audit-logs.view', 'integrations.view',
+            'settings.view', 'audit-logs.view', 'integrations.view', 'myinvois.submit',
+            'ocr.use', 'copilot.use',
             'dashboard.basic', 'dashboard.standard', 'dashboard.advanced',
         ]);
 
@@ -114,6 +126,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.post', 'invoices.void', 'invoices.record-payment', 'invoices.email',
             'customers.view', 'customers.create', 'customers.edit',
             'credit-notes.view', 'credit-notes.create',
+            'debit-notes.view', 'debit-notes.create',
+            'sales-orders.view', 'sales-orders.create', 'sales-orders.edit',
+            'delivery-orders.view', 'delivery-orders.create',
             'products.view', 'products.create', 'products.edit',
             'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert', 'estimates.email',
             'recurring-invoices.view', 'recurring-invoices.create', 'recurring-invoices.edit', 'recurring-invoices.run',
@@ -127,6 +142,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'reports.view', 'reports.profit-loss', 'reports.sales',
             'settings.view',
             'dashboard.basic', 'dashboard.standard',
+            'ocr.use', 'copilot.use',
         ]);
 
         // Viewer — read-only everywhere
@@ -137,6 +153,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'customers.view',
             'suppliers.view',
             'credit-notes.view',
+            'debit-notes.view',
+            'sales-orders.view',
+            'delivery-orders.view',
             'products.view',
             'estimates.view',
             'recurring-invoices.view',

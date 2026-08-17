@@ -57,4 +57,9 @@ return [
             'env'           => env('TOYYIBPAY_ENV', 'sandbox'),
         ],
 
+    'commercepay' => [
+        'staging_url'    => env('COMMERCEPAY_STAGING_URL', 'https://staging-payments.commerce.asia'),
+        'production_url' => env('COMMERCEPAY_PRODUCTION_URL', 'https://payments.commerce.asia'),
+    ],
+
 ];

@@ -22,6 +22,30 @@ Schedule::command('invoices:generate-recurring')
     ->onOneServer()
     ->appendOutputTo(storage_path('logs/recurring-invoices.log'));
 
+Schedule::command('bills:generate-recurring')
+    ->dailyAt('06:05')
+    ->withoutOverlapping(60)
+    ->onOneServer()
+    ->appendOutputTo(storage_path('logs/recurring-bills.log'));
+
+Schedule::command('estimates:expire')
+    ->dailyAt('06:15')
+    ->withoutOverlapping(30)
+    ->onOneServer()
+    ->appendOutputTo(storage_path('logs/estimates-expire.log'));
+
+Schedule::command('invoices:send-reminders')
+    ->dailyAt('08:00')
+    ->withoutOverlapping(60)
+    ->onOneServer()
+    ->appendOutputTo(storage_path('logs/invoice-reminders.log'));
+
+Schedule::command('statements:send-monthly')
+    ->monthlyOn(1, '07:00')
+    ->withoutOverlapping(60)
+    ->onOneServer()
+    ->appendOutputTo(storage_path('logs/monthly-statements.log'));
+
 /*
  * Daily 02:00 — flip any subscription whose current period has ended and has
  * a queued downgrade (`pending_plan_id`) onto the new plan. Runs *before*

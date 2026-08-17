@@ -22,6 +22,8 @@ class UpdateRecurringInvoiceRequest extends FormRequest
         }
         $this->merge([
             'is_active' => filter_var($this->input('is_active', true), FILTER_VALIDATE_BOOLEAN),
+            'auto_email' => filter_var($this->input('auto_email', false), FILTER_VALIDATE_BOOLEAN),
+            'auto_post' => filter_var($this->input('auto_post', false), FILTER_VALIDATE_BOOLEAN),
         ]);
     }
 
@@ -58,6 +60,8 @@ class UpdateRecurringInvoiceRequest extends FormRequest
             'items.*.item_classification' => 'nullable|string|max:20',
             'customer_notes'              => 'nullable|string|max:5000',
             'private_notes'               => 'nullable|string|max:5000',
+            'auto_email'                  => 'nullable|boolean',
+            'auto_post'                   => 'nullable|boolean',
         ];
     }
 

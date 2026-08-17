@@ -49,6 +49,7 @@ export default function RecurringInvoiceForm({
             unit_price: parseFloat(product.unit_price) || 0,
             tax_rate: parseFloat(product.tax_rate) || 0,
             product_id: product.id,
+            item_classification: product.classification_code || next[index].item_classification,
         };
         setData('items', next);
     };
@@ -146,6 +147,24 @@ export default function RecurringInvoiceForm({
                     </label>
                 </div>
                 <div className="p-6 space-y-4">
+                    <label className="inline-flex items-center gap-2 text-sm text-ink cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={!!data.auto_email}
+                            onChange={e => setData('auto_email', e.target.checked)}
+                            className="w-4 h-4 rounded border-border-warm text-terracotta focus:ring-terracotta"
+                        />
+                        Email the customer when an invoice is generated
+                    </label>
+                    <label className="inline-flex items-center gap-2 text-sm text-ink cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={!!data.auto_post}
+                            onChange={e => setData('auto_post', e.target.checked)}
+                            className="w-4 h-4 rounded border-border-warm text-terracotta focus:ring-terracotta"
+                        />
+                        Post generated invoices to the ledger automatically
+                    </label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                             <label className={labelClass}>Cadence *</label>
@@ -315,14 +334,14 @@ export default function RecurringInvoiceForm({
                                 const lineTotal = (parseFloat(item.quantity || 0) * parseFloat(item.unit_price || 0)) - parseFloat(item.discount_amount || 0);
                                 return (
                                     <tr key={index}>
-                                        <td className="px-3 py-3 align-middle">
+                                        <td className="px-3 py-3 align-top">
                                             <div className="flex items-stretch gap-2">
-                                                <input
-                                                    type="text"
+                                                <textarea
                                                     value={item.description}
                                                     onChange={e => updateItem(index, 'description', e.target.value)}
                                                     placeholder="What are you billing every cycle?"
-                                                    className="flex-1 min-w-0 border border-border-warm rounded-lg py-2 px-3 text-sm focus:ring-1 focus:ring-terracotta"
+                                                    rows={2}
+                                                    className="flex-1 min-w-0 min-h-[42px] border border-border-warm rounded-lg py-2 px-3 text-sm focus:ring-1 focus:ring-terracotta resize-y"
                                                     required
                                                 />
                                                 {products.length > 0 && (

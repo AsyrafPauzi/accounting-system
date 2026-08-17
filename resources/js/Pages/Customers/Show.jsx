@@ -58,7 +58,7 @@ const Icons = {
     ),
 };
 
-export default function Show({ auth, customer, invoices = [], stats, auditLogs = [], can_delete_customer = false, delete_blocked_reason = null }) {
+export default function Show({ auth, customer, invoices = [], stats, auditLogs = [], can_delete_customer = false, delete_blocked_reason = null, myinvois_gaps = [] }) {
     const formatAddress = (street, city, state, zip, country) => {
         if (!street && !city) return <span className="text-ink-muted italic">No address provided</span>;
         return (
@@ -113,6 +113,11 @@ export default function Show({ auth, customer, invoices = [], stats, auditLogs =
                                     {customer.risk_rating && <span className={`px-2 py-0.5 rounded-md text-eyebrow font-semibold uppercase ${
                                         customer.risk_rating === 'high' ? 'bg-terracotta/10 text-terracotta' : customer.risk_rating === 'medium' ? 'bg-mustard/15 text-ink' : 'bg-surface-alt text-ink-muted'
                                     }`}>{customer.risk_rating} risk</span>}
+                                    {myinvois_gaps.length === 0 ? (
+                                        <span className="px-2 py-0.5 rounded-md text-eyebrow font-semibold uppercase bg-forest/10 text-forest">MyInvois-ready</span>
+                                    ) : (
+                                        <span className="px-2 py-0.5 rounded-md text-eyebrow font-semibold uppercase bg-mustard/15 text-ink">MyInvois incomplete</span>
+                                    )}
                                 </div>
                                 <p className="text-ink-muted text-xs mt-1 font-mono font-tabular">
                                     {customer.code} · <span className="font-sans">{customer.industry || 'General'}</span>
@@ -252,7 +257,11 @@ export default function Show({ auth, customer, invoices = [], stats, auditLogs =
                                     <p className="text-sm font-medium text-ink">{customer.tin || '—'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-0.5">SSM BRN</p>
+                                    <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-0.5">ID type</p>
+                                    <p className="text-sm font-medium text-ink">{customer.identification_type || 'BRN'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-0.5">ID number</p>
                                     <p className="text-sm font-medium text-ink">{customer.brn || '—'}</p>
                                 </div>
                                 <div>

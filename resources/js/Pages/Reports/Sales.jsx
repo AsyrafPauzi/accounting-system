@@ -11,7 +11,7 @@ function formatMoney(n) {
     return (Number(n) || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function Sales({ auth, sales = [], total_sales = 0, filters = {} }) {
+export default function Sales({ auth, sales = [], sales_by_product = [], total_sales = 0, filters = {} }) {
     const { start_date = '', end_date = '' } = filters;
 
     return (
@@ -115,6 +115,44 @@ export default function Sales({ auth, sales = [], total_sales = 0, filters = {} 
                                     <td className="px-6 py-4 text-right font-mono tabular-nums">RM {formatMoney(total_sales)}</td>
                                 </tr>
                             </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-border-warm bg-cream/80">
+                        <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Sales by Product</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead>
+                                <tr className="text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
+                                    <th className="px-6 py-4">Product / service</th>
+                                    <th className="px-6 py-4 text-center">Qty</th>
+                                    <th className="px-6 py-4 text-center">Invoices</th>
+                                    <th className="px-6 py-4 text-right">Total sales</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sales_by_product.length > 0 ? (
+                                    sales_by_product.map((item, idx) => (
+                                        <tr key={idx} className="border-b border-border-warm last:border-0 hover:bg-cream/80">
+                                            <td className="px-6 py-4 font-medium text-ink">{item.product_name}</td>
+                                            <td className="px-6 py-4 text-center text-ink">{item.quantity}</td>
+                                            <td className="px-6 py-4 text-center text-ink">{item.invoice_count}</td>
+                                            <td className="px-6 py-4 text-right font-mono tabular-nums text-terracotta font-semibold">
+                                                RM {formatMoney(item.total_sales)}
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={4} className="px-6 py-8 text-center text-ink-muted text-sm">
+                                            No product sales for this period. Link products on invoice lines to see this breakdown.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
                         </table>
                     </div>
                 </div>

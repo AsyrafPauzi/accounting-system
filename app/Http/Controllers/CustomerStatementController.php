@@ -62,12 +62,15 @@ class CustomerStatementController extends Controller
         [$from, $to] = $this->resolveRange($request);
 
         $statement = $this->statements->build($customer, Carbon::parse($from), Carbon::parse($to));
+        $openInvoices = app(\App\Services\InvoiceService::class)->openInvoicesForCustomer($customer->id);
 
         return Inertia::render('CustomerStatements/Show', [
-            'customer'      => $customer,
-            'statement'     => $statement,
-            'company'       => $this->companyDetails(),
-            'base_currency' => $this->tenantBaseCurrency(),
+            'customer'           => $customer,
+            'statement'          => $statement,
+            'company'            => $this->companyDetails(),
+            'base_currency'      => $this->tenantBaseCurrency(),
+            'open_invoices'      => $openInvoices,
+            'pay_now_configured' => app(\App\Services\InvoicePayNowService::class)->isConfigured(),
         ]);
     }
 

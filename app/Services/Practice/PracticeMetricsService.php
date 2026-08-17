@@ -160,7 +160,15 @@ class PracticeMetricsService
                     ->whereDate('bill_date', '>=', $monthStart->toDateString())
                     ->sum('total_amount')
                 : 0.0;
-            $headline['cash_balance']  = $this->computeCashBalance();
+            try {
+                $headline['cash_balance'] = $this->computeCashBalance();
+            } catch (\Throwable $e) {
+                Log::warning('PracticeMetricsService: cash balance failed', [
+                    'tenant_id' => $tenant->id,
+                    'err'       => $e->getMessage(),
+                ]);
+                $headline['cash_balance'] = 0.0;
+            }
 
             return $headline;
         } catch (\Throwable $e) {
@@ -255,9 +263,35 @@ class PracticeMetricsService
             return 0.0;
         }
 
-        $balance = (float) DB::table('accounts')
-            ->where('sub_type', 'bank')
-            ->sum('current_balance');
+        if (Schema::hasColumn('accounts', 'current_balance')) {
+            return round((float) DB::table('accounts')
+                ->whereIn('sub_type', ['bank', 'cash'])
+                ->sum('current_balance'), 2);
+        }
+
+        if (! Schema::hasTable('journal_items') || ! Schema::hasTable('journal_entries')) {
+            return 0.0;
+        }
+
+        $query = DB::table('journal_items as ji')
+            ->join('journal_entries as je', 'je.id', '=', 'ji.journal_entry_id')
+            ->join('accounts as a', 'a.id', '=', 'ji.account_id')
+            ->whereIn('a.sub_type', ['bank', 'cash']);
+
+        // Invoice/bill posters leave status at the column default (draft).
+        // Count those system rows; only skip explicit voids.
+        if (Schema::hasColumn('journal_entries', 'status')) {
+            $query->where('je.status', '!=', 'void');
+        }
+
+        if (Schema::hasColumn('journal_items', 'deleted_at')) {
+            $query->whereNull('ji.deleted_at');
+        }
+        if (Schema::hasColumn('journal_entries', 'deleted_at')) {
+            $query->whereNull('je.deleted_at');
+        }
+
+        $balance = (float) $query->selectRaw('COALESCE(SUM(ji.debit - ji.credit), 0) as bal')->value('bal');
 
         return round($balance, 2);
     }

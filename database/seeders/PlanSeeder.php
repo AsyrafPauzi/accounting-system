@@ -79,6 +79,9 @@ class PlanSeeder extends Seeder
             'customers.view', 'customers.create', 'customers.edit', 'customers.delete',
             'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
             'credit-notes.view', 'credit-notes.create',
+            'debit-notes.view', 'debit-notes.create',
+            'sales-orders.view', 'sales-orders.create', 'sales-orders.edit', 'sales-orders.delete',
+            'delivery-orders.view', 'delivery-orders.create', 'delivery-orders.edit', 'delivery-orders.delete',
             'products.view', 'products.create', 'products.edit', 'products.delete',
             'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert', 'estimates.email',
             'recurring-invoices.view', 'recurring-invoices.create', 'recurring-invoices.edit', 'recurring-invoices.delete', 'recurring-invoices.run',
@@ -101,11 +104,12 @@ class PlanSeeder extends Seeder
             // gated by a route check. Re-add the permission only if you
             // also wire the matching middleware on the invoice POST.
             'ocr.use',                   // Solo+   ("OCR receipt capture")
+            'copilot.use',               // Solo+   Accountant copilot (ILMU)
             'payroll.run',               // Corporate+ ("Payroll module")
             // Coming-soon Corporate / Enterprise features. The permission
             // exists so we can wire the future controller behind it without
             // a migration; today no route consumes it.
-            'myinvois.submit',           // Corporate+ ("LHDN MyInvois e-Invoicing — coming soon")
+            'myinvois.submit',           // Corporate+ LHDN MyInvois e-Invoicing
             'sso.configure',             // Enterprise ("Single sign-on — coming soon")
             // Practice (Accountant track)
             'practice.access', 'practice.clients.view', 'practice.clients.invite',
@@ -129,6 +133,7 @@ class PlanSeeder extends Seeder
                 'price_yearly'  => 0.00,
                 'users_included' => 1,
                 'extra_user_price' => 0.00,
+                'copilot_credits_monthly' => 0,
                 'features' => [
                     // Honest copy: Startup can issue invoices but not
                     // record payments (Solo+) and not OCR receipts
@@ -156,6 +161,7 @@ class PlanSeeder extends Seeder
                 'price_yearly'  => 490.00, // ~17% off
                 'users_included' => 1,
                 'extra_user_price' => 0.00,
+                'copilot_credits_monthly' => 70,
                 'features' => [
                     // "Bank-reconciliation reports" was historically
                     // listed here but the feature is on the roadmap,
@@ -186,6 +192,7 @@ class PlanSeeder extends Seeder
                 'price_yearly'  => 990.00,
                 'users_included' => 3,
                 'extra_user_price' => 12.00,
+                'copilot_credits_monthly' => 140,
                 'features' => [
                     // Bullets reconciled June 2026 against actual
                     // shipping features:
@@ -216,12 +223,13 @@ class PlanSeeder extends Seeder
                 'price_yearly'  => 2190.00,
                 'users_included' => 5,
                 'extra_user_price' => 15.00,
+                'copilot_credits_monthly' => 320,
                 'features' => [
                     'Everything in Growth',
                     'Up to 5 team members included',
                     'Audit log & compliance pack',
                     'Payroll module',
-                    'LHDN MyInvois e-Invoicing — coming soon',
+                    'LHDN MyInvois e-Invoicing',
                     'Dedicated account manager',
                 ],
                 'is_active' => true,
@@ -242,6 +250,7 @@ class PlanSeeder extends Seeder
                 'price_yearly'  => 0.00,
                 'users_included' => 9999, // effectively unlimited; UI shows "Unlimited"
                 'extra_user_price' => 0.00,
+                'copilot_credits_monthly' => 320,
                 'features' => [
                     'Everything in Corporate',
                     'Unlimited team members',
@@ -480,9 +489,13 @@ class PlanSeeder extends Seeder
             'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
             'bills.view', 'bills.create', 'bills.edit', 'bills.delete', 'bills.post', 'bills.void', 'bills.record-payment',
             'credit-notes.view', 'credit-notes.create',
+            'debit-notes.view', 'debit-notes.create',
+            'sales-orders.view', 'sales-orders.create', 'sales-orders.edit', 'sales-orders.delete',
+            'delivery-orders.view', 'delivery-orders.create', 'delivery-orders.edit', 'delivery-orders.delete',
             'estimates.view', 'estimates.create', 'estimates.edit', 'estimates.delete', 'estimates.convert', 'estimates.email',
             'recurring-invoices.view', 'recurring-invoices.create', 'recurring-invoices.edit', 'recurring-invoices.delete', 'recurring-invoices.run',
             'ocr.use',
+            'copilot.use',
             'accounts.view',
             'general-ledger.view',
             'journal.view',

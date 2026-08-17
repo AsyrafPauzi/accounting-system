@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreEstimateRequest;
 use App\Http\Requests\UpdateEstimateRequest;
-use App\Jobs\SendEstimateEmail;
 use App\Models\Customer;
 use App\Models\Estimate;
 use App\Models\Product;
 use App\Models\Tenant;
+use App\Services\DocumentBulkService;
 use App\Services\EstimateService;
+use App\Services\SalesDocumentTrail;
+use App\Support\ShareLink;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -94,6 +96,75 @@ class EstimateController extends Controller
             ->with('success', "Estimate {$estimate->estimate_number} saved as draft.");
     }
 
+    public function batchCreate(): Response
+    {
+        $this->authorize('estimates.create');
+
+        return Inertia::render('Estimates/Batch', [
+            'customers' => $this->customerOptions(),
+        ]);
+    }
+
+    public function batchStore(Request $request): RedirectResponse
+    {
+        $this->authorize('estimates.create');
+        $request->validate([
+            'rows'                       => 'required|array|min:1|max:200',
+            'rows.*.customer_id'         => 'required|exists:customers,id',
+            'rows.*.description'         => 'required|string',
+            'rows.*.quantity'            => 'required|numeric|min:0.01',
+            'rows.*.unit_price'          => 'required|numeric',
+            'rows.*.tax_rate'            => 'nullable|numeric',
+            'rows.*.issue_date'          => 'nullable|date',
+        ]);
+
+        $created = 0;
+        foreach ($request->input('rows') as $row) {
+            $this->estimates->create([
+                'estimate_number' => $this->estimates->nextNumber(),
+                'customer_id'     => $row['customer_id'],
+                'issue_date'      => $row['issue_date'] ?? now()->toDateString(),
+                'expiry_date'     => $row['expiry_date'] ?? now()->addDays(14)->toDateString(),
+                'currency'        => $row['currency'] ?? 'MYR',
+                'created_by'      => $request->user()->id,
+            ], [[
+                'description'         => $row['description'],
+                'quantity'            => $row['quantity'],
+                'unit_price'          => $row['unit_price'],
+                'tax_rate'            => $row['tax_rate'] ?? 0,
+                'item_classification' => $row['item_classification'] ?? '022',
+                'discount_amount'     => 0,
+            ]]);
+            $created++;
+        }
+
+        return redirect()->route('estimates.index')->with('success', "{$created} draft estimate(s) created.");
+    }
+
+    public function bulkEmail(Request $request): RedirectResponse
+    {
+        $this->authorize('estimates.email');
+        $request->validate(['ids' => 'required|array|min:1|max:'.DocumentBulkService::MAX_IDS, 'ids.*' => 'integer']);
+        $bulk = app(DocumentBulkService::class);
+        $result = $bulk->queueEstimateEmails($request->input('ids'), $bulk->companyDetails());
+
+        return redirect()->back()->with('success', "{$result['queued']} estimate email(s) queued.".($result['skipped'] ? " {$result['skipped']} skipped (no email)." : ''));
+    }
+
+    public function bulkPdf(Request $request)
+    {
+        $this->authorize('estimates.view');
+        $request->validate(['ids' => 'required|array|min:1|max:'.DocumentBulkService::MAX_IDS, 'ids.*' => 'integer']);
+        $bulk = app(DocumentBulkService::class);
+        try {
+            $path = $bulk->zipEstimatePdfs($request->input('ids'), $bulk->companyDetails());
+        } catch (\LogicException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+
+        return response()->download($path, 'estimates-'.now()->format('Ymd').'.zip')->deleteFileAfterSend(true);
+    }
+
     public function show(int $id): Response
     {
         $this->authorize('estimates.view');
@@ -101,9 +172,19 @@ class EstimateController extends Controller
         $estimate = Estimate::with(['items', 'customer', 'convertedInvoice:id,invoice_number,status'])
             ->findOrFail($id);
 
+        $tenantId = function_exists('tenant') && tenant() ? tenant('id') : null;
+        $share = $estimate->uuid ? ShareLink::publicSigned(
+            'public.estimates.download',
+            ['uuid' => $estimate->uuid, 'tenant_id' => $tenantId],
+            'Estimate '.$estimate->estimate_number
+        ) : ['public_url' => null, 'whatsapp_url' => null];
+
         return Inertia::render('Estimates/Show', [
-            'estimate'     => $estimate,
-            'base_currency'=> $this->tenantBaseCurrency(),
+            'estimate'      => $estimate,
+            'base_currency' => $this->tenantBaseCurrency(),
+            'document_trail'=> app(SalesDocumentTrail::class)->forEstimate($estimate),
+            'public_pdf_url'=> $share['public_url'],
+            'whatsapp_url'  => $share['whatsapp_url'],
         ]);
     }
 
@@ -198,8 +279,33 @@ class EstimateController extends Controller
             return redirect()->back()->with('error', $e->getMessage());
         }
 
-        return redirect()->route('invoices.edit', $invoice->id)
+        return redirect()->route('invoices.show', $invoice->id)
             ->with('success', "Estimate {$estimate->estimate_number} converted to invoice {$invoice->invoice_number}. Review and post when ready.");
+    }
+
+    public function duplicate($id)
+    {
+        $this->authorize('estimates.create');
+        $copy = $this->estimates->duplicate(Estimate::with('items')->findOrFail($id), auth()->id());
+
+        return redirect()->route('estimates.edit', $copy->id)
+            ->with('success', "Draft {$copy->estimate_number} created.");
+    }
+
+    public function convertToSalesOrder($id)
+    {
+        $this->authorize('estimates.convert');
+        try {
+            $so = app(\App\Services\SalesOrderService::class)->fromEstimate(
+                Estimate::with('items')->findOrFail($id),
+                auth()->id()
+            );
+        } catch (\LogicException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('sales-orders.show', $so->id)
+            ->with('success', 'Sales order created from estimate.');
     }
 
     /**
@@ -240,50 +346,14 @@ class EstimateController extends Controller
     {
         $this->authorize('estimates.email');
 
-        $estimate = Estimate::with(['customer.contacts'])->findOrFail($id);
-
-        if (! $estimate->customer) {
-            return redirect()->back()->with('error', 'Customer not found on this estimate.');
-        }
-
-        $customer = $estimate->customer;
-
-        // Reuse the customer's invoice-delivery preference here too —
-        // a customer who has opted out of automated emails for invoices
-        // will not want estimates either. Saves us a second toggle in
-        // the customer form.
-        if (($customer->invoice_delivery_method ?? 'email') === 'none') {
+        $bulk = app(DocumentBulkService::class);
+        $result = $bulk->queueEstimateEmails([(int) $id], $this->resolveCompany());
+        if ($result['queued'] === 0) {
             return redirect()->back()->with(
                 'error',
-                'Customer has invoice delivery set to Do not email. Update the customer record to enable estimate emails.'
+                'Customer has no valid email, or delivery is set to Do not email.'
             );
         }
-
-        $recipients = [];
-        $billingContacts = $customer->contacts
-            ->where('type', 'billing')
-            ->filter(fn ($c) => $c->email && filter_var($c->email, FILTER_VALIDATE_EMAIL));
-        if ($billingContacts->isNotEmpty()) {
-            $recipients = $billingContacts->pluck('email')->unique()->values()->all();
-        }
-        if (empty($recipients) && $customer->email && filter_var($customer->email, FILTER_VALIDATE_EMAIL)) {
-            $recipients = [$customer->email];
-        }
-        if (empty($recipients)) {
-            return redirect()->back()->with(
-                'error',
-                'Customer does not have a valid email address or billing contact.'
-            );
-        }
-
-        $estimate->forceFill([
-            'last_emailed_status' => 'pending',
-            'last_emailed_at'     => now(),
-            'last_emailed_error'  => null,
-            'last_emailed_to'     => implode(',', $recipients),
-        ])->save();
-
-        SendEstimateEmail::dispatch($estimate->id, $recipients, $this->resolveCompany());
 
         return redirect()->back()->with('success', 'Estimate email queued for delivery.');
     }

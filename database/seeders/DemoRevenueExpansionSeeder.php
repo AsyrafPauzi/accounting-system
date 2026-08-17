@@ -4,14 +4,12 @@ namespace Database\Seeders;
 
 use App\Models\CreditNote;
 use App\Models\Customer;
-use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\EstimateService;
 use App\Services\RecurringInvoiceService;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Top-up seeder for the testdemo@bukucloud.com tenant.
@@ -313,11 +311,9 @@ class DemoRevenueExpansionSeeder extends Seeder
     // ─── Credit notes ────────────────────────────────────────────────
 
     /**
-     * 2 credit notes against the first 2 paid invoices, so the dashboard's
-     * Customer Credits and Sales Tax reports have something to show.
-     *
-     * Schema: credit_notes(invoice_id, customer_id, cn_number, issue_date,
-     * reason_code, reason_description, total_amount, status). No items table.
+     * Credit notes issued through CreditNoteService so SST reverse and
+     * leftover open credit show on the new Credit Note Show page.
+     * Paid invoices have no remaining AR, so these stay unapplied.
      */
     private function seedCreditNotes(): void
     {
@@ -326,39 +322,27 @@ class DemoRevenueExpansionSeeder extends Seeder
             return;
         }
 
-        $invoices = Invoice::where('status', 'paid')
-            ->orderBy('id')
-            ->take(2)
-            ->get(['id', 'customer_id', 'total_amount']);
-
-        if ($invoices->count() < 2) {
-            $this->command?->warn('Not enough paid invoices to attach credit notes to.');
+        $customer = Customer::query()->orderBy('id')->first();
+        if (! $customer) {
+            $this->command?->warn('No customers to attach credit notes to.');
             return;
         }
 
-        $cnNo = 1;
-        $reasons = [
-            ['code' => 'RETURN',  'desc' => 'Partial return — 1 unit damaged on arrival.', 'pct' => 0.10],
-            ['code' => 'DISCOUNT', 'desc' => 'Goodwill discount — late delivery on prior order.', 'pct' => 0.05],
-        ];
-
-        DB::transaction(function () use ($invoices, $reasons, &$cnNo) {
-            foreach ($invoices as $i => $invoice) {
-                $reason = $reasons[$i];
-                $amount = round((float) $invoice->total_amount * $reason['pct'], 2);
-
-                CreditNote::create([
-                    'invoice_id'         => $invoice->id,
-                    'customer_id'        => $invoice->customer_id,
-                    'cn_number'          => 'CN-DEMO-' . str_pad((string) $cnNo, 4, '0', STR_PAD_LEFT),
-                    'issue_date'         => now()->subDays(2 + $i)->toDateString(),
-                    'reason_code'        => $reason['code'],
-                    'reason_description' => $reason['desc'],
-                    'total_amount'       => $amount,
-                    'status'             => 'posted',
-                ]);
-                $cnNo++;
-            }
-        });
+        $service = app(\App\Services\CreditNoteService::class);
+        $service->issue([
+            'customer_id'        => $customer->id,
+            'cn_number'          => 'CN-DEMO-0001',
+            'issue_date'         => now()->subDays(3)->toDateString(),
+            'reason_code'        => '01',
+            'reason_description' => 'Partial return — 1 unit damaged on arrival.',
+            'currency'           => 'MYR',
+        ], [[
+            'description'         => 'Partial return',
+            'quantity'            => 1,
+            'unit_price'          => 90,
+            'tax_rate'            => 8,
+            'discount_amount'     => 0,
+            'item_classification' => '022',
+        ]]);
     }
 }

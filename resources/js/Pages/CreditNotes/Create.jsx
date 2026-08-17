@@ -84,7 +84,7 @@ export default function Create({ auth, invoice, lhdn_reasons }) {
             }
         >
             <Head title="Issue Credit Note" />
-            <form id="credit-note-create-form" onSubmit={submit} className="space-y-6 max-w-4xl">
+            <form id="credit-note-create-form" onSubmit={submit} className="space-y-6 min-w-0">
                 {/* Reference Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">

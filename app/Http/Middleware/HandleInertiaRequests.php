@@ -175,6 +175,19 @@ class HandleInertiaRequests extends Middleware
             ],
             'theme' => fn () => $user?->theme_preference ?? 'light',
             'deployment_mode' => config('deployment.mode', 'saas'),
+            'copilot_credits' => function () use ($user, $tenant) {
+                if (! $user || ! $tenant) {
+                    return null;
+                }
+                if (! ($user->can('copilot.use') ?? false)) {
+                    return null;
+                }
+                try {
+                    return app(\App\Services\Copilot\CopilotCreditService::class)->snapshot($tenant);
+                } catch (\Throwable) {
+                    return null;
+                }
+            },
             // Self-hosted update notification. Populated only when:
             //   1. We're running in self_hosted mode
             //   2. The publisher's heartbeat response has advertised a
@@ -266,6 +279,9 @@ class HandleInertiaRequests extends Middleware
                 }
                 return config('app.name');
             },
+            'company_flags' => [
+                'show_goods_flow' => ! $tenant || $tenant->show_goods_flow !== false,
+            ],
         ];
     }
 

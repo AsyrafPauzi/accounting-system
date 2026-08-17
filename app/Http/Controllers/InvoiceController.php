@@ -5,12 +5,15 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Http\Requests\UpdateInvoiceRequest;
 use App\Services\InvoiceService;
+use App\Services\SalesDocumentTrail;
+use App\Support\ShareLink;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Account;
 use App\Models\Invoice;
+use App\Models\InvoicePayment;
 use App\Models\Customer;
 use App\Models\Product;
-use App\Jobs\SendInvoiceEmail;
+use App\Services\DocumentBulkService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -141,11 +144,7 @@ class InvoiceController extends Controller
      */
     public function create(Request $request)
     {
-        $lastInv = Invoice::where('invoice_number', 'like', 'INV-%')->orderBy('id', 'desc')->first();
-        $nextNumber = 'INV-1';
-        if ($lastInv && preg_match('/^INV-(\d+)$/', $lastInv->invoice_number, $m)) {
-            $nextNumber = 'INV-' . ((int) $m[1] + 1);
-        }
+        $nextNumber = $this->invoiceService->nextNumber();
 
         return Inertia::render('Invoices/Create', [
             'customers' => $this->customerOptions(),
@@ -165,7 +164,7 @@ class InvoiceController extends Controller
     {
         return Product::query()
             ->active()
-            ->select(['id', 'code', 'name', 'description', 'unit_price', 'account_code', 'tax_rate'])
+            ->select(['id', 'code', 'name', 'description', 'unit_price', 'account_code', 'tax_rate', 'classification_code'])
             ->orderBy('display_order')
             ->orderBy('name')
             ->get();
@@ -189,12 +188,12 @@ class InvoiceController extends Controller
      */
     public function store(StoreInvoiceRequest $request)
     {
-        $this->invoiceService->create(
+        $invoice = $this->invoiceService->create(
             array_merge($request->except('items'), ['created_by' => auth()->id()]),
             $request->input('items')
         );
 
-        return redirect()->route('invoices.index')->with('success', 'Invoice draft created successfully.');
+        return redirect()->route('invoices.show', $invoice->id)->with('success', 'Invoice draft created successfully.');
     }
 
     /**
@@ -317,6 +316,7 @@ class InvoiceController extends Controller
     public function publicDownloadPdf($uuid)
     {
         $invoice = Invoice::with(['items', 'customer'])->where('uuid', $uuid)->firstOrFail();
+        $this->invoiceService->markViewed($invoice);
 
         $company = config('invoice.company');
         if (function_exists('tenant') && tenant()) {
@@ -352,43 +352,35 @@ class InvoiceController extends Controller
      */
     public function emailPdf($id)
     {
-        $invoice = Invoice::with(['customer.contacts'])->findOrFail($id);
-
-        if (!$invoice->customer) {
-            return redirect()->back()->with('error', 'Customer not found.');
+        $bulk = app(DocumentBulkService::class);
+        $result = $bulk->queueInvoiceEmails([(int) $id], $bulk->companyDetails());
+        if ($result['queued'] === 0) {
+            return redirect()->back()->with('error', 'Customer does not have a valid email, or delivery is set to Do not email.');
         }
-
-        $customer = $invoice->customer;
-        if (($customer->invoice_delivery_method ?? 'email') === 'none') {
-            return redirect()->back()->with('error', 'Customer has invoice delivery set to Do not email.');
-        }
-
-        $recipients = [];
-        $billingContacts = $customer->contacts->where('type', 'billing')->filter(fn ($c) => $c->email && filter_var($c->email, FILTER_VALIDATE_EMAIL));
-        if ($billingContacts->isNotEmpty()) {
-            $recipients = $billingContacts->pluck('email')->unique()->values()->all();
-        }
-        if (empty($recipients) && $customer->email && filter_var($customer->email, FILTER_VALIDATE_EMAIL)) {
-            $recipients = [$customer->email];
-        }
-        if (empty($recipients)) {
-            return redirect()->back()->with('error', 'Customer does not have a valid email address or billing contact.');
-        }
-
-        $invoice->forceFill([
-            'last_emailed_status' => 'pending',
-            'last_emailed_at'     => now(),
-            'last_emailed_error'  => null,
-            'last_emailed_to'     => implode(',', $recipients),
-        ])->save();
-
-        /** @var \App\Models\Tenant $tenant */
-        $tenant = \App\Models\Tenant::find(auth()->user()->tenant_id);
-        $company = $tenant ? $tenant->getCompanyDetails() : config('invoice.company');
-
-        SendInvoiceEmail::dispatch($invoice->id, $recipients, $company);
 
         return redirect()->back()->with('success', 'Invoice email queued for delivery.');
+    }
+
+    public function bulkEmail(Request $request)
+    {
+        $request->validate(['ids' => 'required|array|min:1|max:'.DocumentBulkService::MAX_IDS, 'ids.*' => 'integer']);
+        $bulk = app(DocumentBulkService::class);
+        $result = $bulk->queueInvoiceEmails($request->input('ids'), $bulk->companyDetails());
+
+        return redirect()->back()->with('success', "{$result['queued']} invoice email(s) queued.".($result['skipped'] ? " {$result['skipped']} skipped (no email)." : ''));
+    }
+
+    public function bulkPdf(Request $request)
+    {
+        $request->validate(['ids' => 'required|array|min:1|max:'.DocumentBulkService::MAX_IDS, 'ids.*' => 'integer']);
+        $bulk = app(DocumentBulkService::class);
+        try {
+            $path = $bulk->zipInvoicePdfs($request->input('ids'), $bulk->companyDetails());
+        } catch (\LogicException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+
+        return response()->download($path, 'invoices-'.now()->format('Ymd').'.zip')->deleteFileAfterSend(true);
     }
 
     /**
@@ -404,12 +396,420 @@ class InvoiceController extends Controller
                 $invoice,
                 (float) $validated['amount'],
                 $validated['payment_date'],
-                $validated['bank_account_code']
+                $validated['bank_account_code'],
+                $validated['reference'] ?? null,
+                auth()->id()
             );
         } catch (\LogicException $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }
 
-        return redirect()->route('invoices.index')->with('success', 'Payment recorded.');
+        return redirect()->back()->with('success', 'Payment recorded.');
+    }
+
+    public function reversePayment($id, $paymentId)
+    {
+        $invoice = Invoice::findOrFail($id);
+        $payment = InvoicePayment::query()
+            ->where('invoice_id', $invoice->id)
+            ->findOrFail($paymentId);
+        try {
+            $this->invoiceService->reversePayment($payment, auth()->id());
+        } catch (\LogicException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->back()->with('success', 'Payment reversed.');
+    }
+
+    public function show($id)
+    {
+        $invoice = Invoice::with([
+            'items',
+            'customer',
+            'payments',
+            'attachments',
+            'creditNoteApplications.creditNote:id,cn_number,total_amount,status',
+        ])->findOrFail($id);
+
+        $journalEntryId = DB::table('journal_entries')
+            ->where('reference_type', 'Invoice')
+            ->where('reference_id', $invoice->id)
+            ->latest()
+            ->value('id');
+
+        $bankAccounts = Account::bankOrCash()
+            ->active()
+            ->orderBy('code')
+            ->get(['code', 'name'])
+            ->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->name} ({$a->code})"])
+            ->values()
+            ->all();
+
+        $openCredits = \App\Models\CreditNote::query()
+            ->where('customer_id', $invoice->customer_id)
+            ->where('status', '!=', 'void')
+            ->get()
+            ->filter(fn ($cn) => $cn->openAmount() > 0)
+            ->values();
+
+        $openDeposits = \App\Models\ArDeposit::query()
+            ->where('customer_id', $invoice->customer_id)
+            ->where('status', 'open')
+            ->get()
+            ->filter(fn ($d) => $d->openAmount() > 0)
+            ->values();
+
+        $balance = $this->invoiceService->remainingBalance($invoice);
+        $myinvois = app(\App\Services\MyInvoisService::class);
+
+        $tenantId = function_exists('tenant') && tenant() ? tenant('id') : null;
+        $share = $invoice->uuid ? ShareLink::publicSigned(
+            'public.invoices.download',
+            ['uuid' => $invoice->uuid, 'tenant_id' => $tenantId],
+            'Invoice '.$invoice->invoice_number
+        ) : ['public_url' => null, 'whatsapp_url' => null];
+
+        return Inertia::render('Invoices/Show', [
+            'invoice'             => $invoice,
+            'balance'             => $balance,
+            'journal_entry_id'    => $journalEntryId,
+            'bankAccounts'        => $bankAccounts,
+            'openCredits'         => $openCredits,
+            'openDeposits'        => $openDeposits,
+            'document_trail'      => app(SalesDocumentTrail::class)->forInvoice($invoice),
+            'myinvois_gaps'       => $myinvois->readiness($invoice),
+            'can_cancel_einvoice' => $invoice->lhdn_uuid && $invoice->lhdn_submitted_at && now()->diffInHours($invoice->lhdn_submitted_at) <= 72,
+            'pay_now_configured'  => app(\App\Services\InvoicePayNowService::class)->isConfigured(),
+            'public_pdf_url'      => $share['public_url'],
+            'whatsapp_url'        => $share['whatsapp_url'],
+            'base_currency'       => $this->tenantBaseCurrency(),
+            'reminder_offsets'    => app(\App\Services\InvoiceReminderService::class)->offsetsFor($invoice),
+            'late_fee_percent'    => (float) (tenant()?->late_fee_percent ?? 1.5),
+            'can_issue_late_fee'  => $invoice->status !== 'draft'
+                && $invoice->status !== 'void'
+                && $invoice->status !== 'paid'
+                && $invoice->due_date
+                && $invoice->due_date->copy()->startOfDay()->lt(now()->startOfDay())
+                && $balance > 0,
+        ]);
+    }
+
+    public function updateReminders(Request $request, $id)
+    {
+        $request->validate([
+            'offsets'   => 'nullable|array',
+            'offsets.*' => 'integer',
+        ]);
+        $invoice = Invoice::findOrFail($id);
+        $invoice->forceFill([
+            'reminder_overrides' => [
+                'offsets' => array_values(array_map('intval', $request->input('offsets', []))),
+            ],
+        ])->save();
+
+        return redirect()->back()->with('success', 'Reminder schedule saved.');
+    }
+
+    public function duplicate($id)
+    {
+        $source = Invoice::with('items')->findOrFail($id);
+        $copy = $this->invoiceService->duplicate($source, auth()->id());
+
+        return redirect()->route('invoices.edit', $copy->id)
+            ->with('success', "Draft {$copy->invoice_number} created from {$source->invoice_number}.");
+    }
+
+    public function cashSaleCreate(Request $request)
+    {
+        return Inertia::render('Invoices/Create', [
+            'customers' => $this->customerOptions(),
+            'lhdn_codes' => $this->getLhdnCodes(),
+            'customer_id' => $request->query('customer_id'),
+            'next_invoice_number' => $this->invoiceService->nextNumber(),
+            'base_currency' => $this->tenantBaseCurrency(),
+            'products' => $this->productOptions(),
+            'cash_sale' => true,
+            'bankAccounts' => Account::bankOrCash()->active()->orderBy('code')->get(['code', 'name']),
+        ]);
+    }
+
+    public function cashSaleStore(StoreInvoiceRequest $request)
+    {
+        $request->validate([
+            'bank_account_code' => 'required|string',
+            'payment_date'      => 'required|date',
+        ]);
+        $invoice = $this->invoiceService->cashSale(
+            array_merge($request->except('items'), ['created_by' => auth()->id()]),
+            $request->input('items'),
+            $request->input('bank_account_code'),
+            $request->input('payment_date')
+        );
+
+        return redirect()->route('invoices.show', $invoice->id)->with('success', 'Cash sale recorded.');
+    }
+
+    public function submitMyInvois($id)
+    {
+        $invoice = Invoice::with(['items', 'customer'])->findOrFail($id);
+        try {
+            app(\App\Services\MyInvoisService::class)->submit($invoice);
+        } catch (\LogicException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->back()->with('success', 'Submitted to MyInvois.');
+    }
+
+    public function refreshMyInvois($id)
+    {
+        try {
+            app(\App\Services\MyInvoisService::class)->refreshStatus(Invoice::findOrFail($id));
+        } catch (\LogicException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->back()->with('success', 'MyInvois status refreshed.');
+    }
+
+    public function issueLateFee($id)
+    {
+        $invoice = Invoice::findOrFail($id);
+        try {
+            $fee = $this->invoiceService->issueLateFee($invoice, null, auth()->id());
+        } catch (\LogicException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('invoices.edit', $fee->id)
+            ->with('success', "Draft {$fee->invoice_number} created as late interest on {$invoice->invoice_number}.");
+    }
+
+    public function cancelMyInvois(Request $request, $id)
+    {
+        $request->validate(['reason' => 'required|string|max:500']);
+        try {
+            app(\App\Services\MyInvoisService::class)->cancel(Invoice::findOrFail($id), $request->input('reason'));
+        } catch (\LogicException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->back()->with('success', 'MyInvois document cancelled.');
+    }
+
+    public function attach(Request $request, $id)
+    {
+        $request->validate(['file' => 'required|file|max:10240']);
+        $invoice = Invoice::findOrFail($id);
+        $file = $request->file('file');
+        $path = $file->store('invoice-attachments/'.$invoice->id, 'local');
+        $invoice->attachments()->create([
+            'original_name' => $file->getClientOriginalName(),
+            'path'          => $path,
+            'mime'          => $file->getClientMimeType(),
+            'size_bytes'    => $file->getSize(),
+            'uploaded_by'   => auth()->id(),
+        ]);
+
+        return redirect()->back()->with('success', 'Attachment added.');
+    }
+
+    public function detach($id, $attachmentId)
+    {
+        $invoice = Invoice::findOrFail($id);
+        $attachment = $invoice->attachments()->where('id', $attachmentId)->firstOrFail();
+        \Illuminate\Support\Facades\Storage::disk('local')->delete($attachment->path);
+        $attachment->delete();
+
+        return redirect()->back()->with('success', 'Attachment removed.');
+    }
+
+    public function createRecurring(Request $request, $id)
+    {
+        $request->validate([
+            'cadence'    => 'required|in:weekly,monthly,quarterly,yearly',
+            'interval'   => 'nullable|integer|min:1',
+            'start_date' => 'nullable|date',
+            'auto_email' => 'nullable|boolean',
+            'auto_post'  => 'nullable|boolean',
+        ]);
+        $invoice = Invoice::with('items')->findOrFail($id);
+        $template = app(\App\Services\RecurringInvoiceService::class)->createFromInvoice($invoice, $request->only([
+            'name', 'cadence', 'interval', 'start_date', 'end_date', 'auto_email', 'auto_post',
+        ]), auth()->id());
+
+        return redirect()->route('recurring-invoices.edit', $template->id)
+            ->with('success', 'Recurring invoice created from '.$invoice->invoice_number.'.');
+    }
+
+    public function paymentReceipt($id, $paymentId)
+    {
+        $invoice = Invoice::with('customer')->findOrFail($id);
+        $payment = $invoice->payments()->findOrFail($paymentId);
+        $company = tenant()?->getCompanyDetails() ?? config('invoice.company');
+        $pdf = Pdf::loadView('pdf.payment-receipt', [
+            'invoice'  => $invoice,
+            'payment'  => $payment,
+            'customer' => $invoice->customer,
+            'company'  => $company,
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->stream("Receipt-{$invoice->invoice_number}-{$payment->id}.pdf", ['Attachment' => false]);
+    }
+
+    public function publicPixel($uuid)
+    {
+        $invoice = Invoice::where('uuid', $uuid)->firstOrFail();
+        $this->invoiceService->markViewed($invoice);
+        $gif = base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+
+        return response($gif, 200, [
+            'Content-Type'  => 'image/gif',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+        ]);
+    }
+
+    public function payNow($id)
+    {
+        $invoice = Invoice::with('customer')->findOrFail($id);
+        $url = app(\App\Services\InvoicePayNowService::class)->paymentUrl($invoice);
+        if (! $url) {
+            return redirect()->back()->with('error', 'Pay Now is not configured or this invoice has no balance.');
+        }
+
+        return redirect()->away($url);
+    }
+
+    public function publicPayReturn($uuid)
+    {
+        $invoice = Invoice::where('uuid', $uuid)->first();
+
+        return response()->view('public.invoice-paid', [
+            'invoice' => $invoice,
+        ]);
+    }
+
+    public function batchCreate()
+    {
+        return Inertia::render('Invoices/Batch', [
+            'customers'  => $this->customerOptions(),
+            'lhdn_codes' => $this->getLhdnCodes(),
+        ]);
+    }
+
+    public function batchStore(Request $request)
+    {
+        $request->validate([
+            'rows'                       => 'required|array|min:1|max:200',
+            'rows.*.customer_id'         => 'required|exists:customers,id',
+            'rows.*.description'         => 'required|string',
+            'rows.*.quantity'            => 'required|numeric|min:0.01',
+            'rows.*.unit_price'          => 'required|numeric',
+            'rows.*.tax_rate'            => 'nullable|numeric',
+            'rows.*.issue_date'          => 'nullable|date',
+        ]);
+
+        $created = 0;
+        foreach ($request->input('rows') as $row) {
+            $this->invoiceService->create([
+                'invoice_number' => $this->invoiceService->nextNumber(),
+                'msic_code'      => $row['msic_code'] ?? '00000',
+                'customer_id'    => $row['customer_id'],
+                'issue_date'     => $row['issue_date'] ?? now()->toDateString(),
+                'due_date'       => $row['due_date'] ?? now()->addDays(30)->toDateString(),
+                'currency'       => $row['currency'] ?? 'MYR',
+                'created_by'     => auth()->id(),
+            ], [[
+                'description'         => $row['description'],
+                'quantity'            => $row['quantity'],
+                'unit_price'          => $row['unit_price'],
+                'tax_rate'            => $row['tax_rate'] ?? 0,
+                'item_classification' => $row['item_classification'] ?? '022',
+                'discount_amount'     => 0,
+            ]]);
+            $created++;
+        }
+
+        return redirect()->route('invoices.index')->with('success', "{$created} draft invoice(s) created.");
+    }
+
+    public function toyyibpayCallback(Request $request)
+    {
+        $ref = (string) $request->input('order_id', $request->input('billExternalReferenceNo', ''));
+        $status = $request->input('status_id', $request->input('status'));
+        if ((string) $status !== '1') {
+            return response('unpaid', 200);
+        }
+
+        return $this->settlePayNow($ref, 'ToyyibPay '.$request->input('billcode'));
+    }
+
+    public function billplzCallback(Request $request)
+    {
+        $payload = $request->all();
+        $ref = (string) ($payload['reference_1'] ?? '');
+        $tenant = $this->tenantFromPayRef($ref);
+        if (! $tenant) {
+            return response('unknown tenant', 200);
+        }
+        tenancy()->initialize($tenant);
+        $service = \App\Services\BillplzService::forTenant($tenant);
+        if (! $service || ! $service->callbackIsPaid($payload)) {
+            return response('unpaid', 200);
+        }
+
+        return $this->settlePayNow($ref, 'Billplz '.($payload['id'] ?? ''));
+    }
+
+    public function commercepayCallback(Request $request)
+    {
+        $payload = $request->all();
+        $ref = (string) ($payload['referenceCode'] ?? $payload['reference_code'] ?? '');
+        $tenant = $this->tenantFromPayRef($ref);
+        if (! $tenant) {
+            return response('unknown tenant', 200);
+        }
+        tenancy()->initialize($tenant);
+        $service = \App\Services\CommercePayService::forTenant($tenant);
+        if (! $service || ! $service->callbackIsPaid($payload)) {
+            return response('unpaid', 200);
+        }
+
+        return $this->settlePayNow($ref, 'CommercePay '.($payload['transactionNumber'] ?? ''));
+    }
+
+    private function tenantFromPayRef(string $ref): ?\App\Models\Tenant
+    {
+        if (! preg_match('/^inv-(\d+)-(.+)$/', $ref, $m)) {
+            return null;
+        }
+
+        return \App\Models\Tenant::find($m[2]);
+    }
+
+    private function settlePayNow(string $ref, string $paymentRef)
+    {
+        if (! preg_match('/^inv-(\d+)-(.+)$/', $ref, $m)) {
+            return response('ignored', 200);
+        }
+        $tenant = \App\Models\Tenant::find($m[2]);
+        if (! $tenant) {
+            return response('unknown tenant', 200);
+        }
+        if (! tenancy()->initialized || tenant('id') !== $tenant->id) {
+            tenancy()->initialize($tenant);
+        }
+        $invoice = Invoice::find($m[1]);
+        if (! $invoice || in_array($invoice->status, ['paid', 'void', 'draft'], true)) {
+            return response('ok', 200);
+        }
+        $bank = Account::bankOrCash()->active()->orderBy('code')->value('code') ?? '1200';
+        $balance = $this->invoiceService->remainingBalance($invoice);
+        if ($balance > 0) {
+            $this->invoiceService->recordPayment($invoice, $balance, now()->toDateString(), $bank, $paymentRef);
+        }
+
+        return response('ok', 200);
     }
 }

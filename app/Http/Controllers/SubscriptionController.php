@@ -482,7 +482,126 @@ class SubscriptionController extends Controller
             'subscription' => $subscription,
             'userCount' => $userCount,
             'history' => app(BillingHistoryService::class)->forSubscription($subscription),
+            'copilotCredits' => app(\App\Services\Copilot\CopilotCreditService::class)->snapshot(
+                \App\Models\Tenant::find($tenantId)
+            ),
         ]);
+    }
+
+    public function buyCopilotCredits(Request $request, ToyyibpayService $toyyibpay)
+    {
+        $user = $request->user();
+        $tenantId = $user?->tenant_id;
+        abort_if(! $tenantId, 404);
+
+        $validated = $request->validate([
+            'pack' => ['required', 'string', 'in:starter,standard,power'],
+        ]);
+
+        $pack = \App\Models\CopilotCreditPurchase::PACKS[$validated['pack']];
+        $subscription = Subscription::where('tenant_id', $tenantId)->active()->first();
+
+        $purchase = \App\Models\CopilotCreditPurchase::create([
+            'tenant_id' => $tenantId,
+            'subscription_id' => $subscription?->id,
+            'user_id' => $user->id,
+            'pack' => $validated['pack'],
+            'credits' => $pack['credits'],
+            'amount' => $pack['amount'],
+            'currency' => 'MYR',
+            'status' => \App\Models\CopilotCreditPurchase::STATUS_PENDING,
+            'gateway' => 'toyyibpay',
+        ]);
+
+        $paymentUrl = $toyyibpay->createBill([
+            'billName' => 'Copilot credits '.$pack['label'],
+            'billDescription' => 'BukuCloud Accountant copilot · '.$pack['credits'].' credits',
+            'billAmount' => (float) $pack['amount'],
+            'billTo' => $user->name,
+            'billEmail' => $user->email,
+            'billPhone' => $user->phone ?? '0123456789',
+            'billCallbackUrl' => route('subscription.webhook.copilot_credits'),
+            'billReturnUrl' => route('settings.plan.index'),
+            'billExternalReferenceNo' => 'credits-'.$purchase->id,
+        ]);
+
+        if (! $paymentUrl) {
+            $purchase->update([
+                'status' => \App\Models\CopilotCreditPurchase::STATUS_FAILED,
+                'failure_reason' => 'Could not create ToyyibPay bill.',
+            ]);
+
+            return redirect()->route('settings.plan.index')->with('error', 'Payment gateway unavailable. Try again shortly.');
+        }
+
+        return Inertia::location($paymentUrl);
+    }
+
+    public function webhookCopilotCredits(Request $request)
+    {
+        Log::info('Toyyibpay Copilot Credits Webhook Received', [
+            'order_id' => $request->post('order_id'),
+            'status_id' => $request->post('status_id'),
+        ]);
+
+        $statusId = (int) $request->post('status_id');
+        $externalRef = (string) $request->post('order_id', '');
+        $billCode = (string) $request->post('billcode', '');
+
+        if (! preg_match('/^credits-(\d+)$/', $externalRef, $m)) {
+            Log::warning('Copilot-credits webhook ignored: malformed reference', ['ref' => $externalRef]);
+
+            return response('OK');
+        }
+
+        $purchase = \App\Models\CopilotCreditPurchase::find((int) $m[1]);
+        if (! $purchase) {
+            return response('OK');
+        }
+
+        if ($purchase->status === \App\Models\CopilotCreditPurchase::STATUS_PAID) {
+            return response('OK');
+        }
+
+        if ($statusId !== 1) {
+            $purchase->update([
+                'status' => \App\Models\CopilotCreditPurchase::STATUS_FAILED,
+                'gateway_bill_code' => $billCode ?: $purchase->gateway_bill_code,
+                'failure_reason' => 'Toyyibpay reported status_id='.$statusId,
+            ]);
+
+            return response('OK');
+        }
+
+        $tenant = \App\Models\Tenant::find($purchase->tenant_id);
+        if (! $tenant) {
+            $purchase->update([
+                'status' => \App\Models\CopilotCreditPurchase::STATUS_FAILED,
+                'failure_reason' => 'Tenant missing.',
+            ]);
+
+            return response('OK');
+        }
+
+        tenancy()->initialize($tenant);
+        try {
+            app(\App\Services\Copilot\CopilotCreditService::class)->grantPurchased(
+                (int) $purchase->credits,
+                null,
+                $purchase->id
+            );
+            $purchase->update([
+                'status' => \App\Models\CopilotCreditPurchase::STATUS_PAID,
+                'gateway_bill_code' => $billCode ?: $purchase->gateway_bill_code,
+                'paid_at' => now(),
+            ]);
+        } finally {
+            if (tenancy()->initialized) {
+                tenancy()->end();
+            }
+        }
+
+        return response('OK');
     }
 
     /**

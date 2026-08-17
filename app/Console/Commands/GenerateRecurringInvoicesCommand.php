@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\Schema;
  * service to materialise drafts for whichever templates are due, and prints
  * a summary.
  *
- * Generated invoices are always DRAFT — never auto-posted, never auto-emailed.
+ * Generated invoices are always DRAFT. Templates with auto_email also
+ * queue the PDF to the customer.
  */
 class GenerateRecurringInvoicesCommand extends Command
 {

@@ -56,6 +56,21 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
     const [searchInput, setSearchInput] = useState(search);
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [emailingId, setEmailingId] = useState(null);
+    const [selectedIds, setSelectedIds] = useState([]);
+    const pageIds = invoices.map((i) => i.id);
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+    const toggleId = (id) => setSelectedIds((cur) => cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]);
+    const toggleAll = () => setSelectedIds(allSelected ? selectedIds.filter((id) => !pageIds.includes(id)) : [...new Set([...selectedIds, ...pageIds])]);
+    const canEmail = Boolean(auth.planPermissions?.['invoices.email']) && (auth.permissions || []).includes('invoices.email');
+    const bulkEmail = async () => {
+        const ok = await confirm({ title: `Email ${selectedIds.length} invoice PDF(s)?`, text: 'Queued to each customer email on file. Rows without email are skipped.', confirmText: 'Send', icon: 'question' });
+        if (ok) router.post(route('invoices.bulk-email'), { ids: selectedIds });
+    };
+    const bulkPdf = () => {
+        const params = new URLSearchParams();
+        selectedIds.forEach((id) => params.append('ids[]', id));
+        window.open(`${route('invoices.bulk-pdf')}?${params.toString()}`, '_blank');
+    };
 
     const defaultBankCode = (bankAccounts && bankAccounts[0]?.value) || '';
 
@@ -97,8 +112,11 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
 
     const InvoiceRow = ({ invoice }) => (
         <>
+            <td className="px-3 py-3 sm:py-4">
+                <input type="checkbox" checked={selectedIds.includes(invoice.id)} onChange={() => toggleId(invoice.id)} className="rounded border-border-warm" />
+            </td>
             <td className="px-4 sm:px-6 py-3 sm:py-4">
-                <Link href={route('invoices.edit', invoice.id)} className="block group/link">
+                <Link href={route('invoices.show', invoice.id)} className="block group/link">
                     <span className="font-semibold text-ink group-hover/link:text-terracotta">{invoice.invoice_number}</span>
                     <p className="text-xs text-ink-muted mt-0.5">{new Date(invoice.issue_date).toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                 </Link>
@@ -108,7 +126,8 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
                 <p className="text-xs text-ink-muted truncate max-w-[140px] sm:max-w-none">{invoice.customer_email || 'No email'}</p>
             </td>
             <td className="px-4 sm:px-6 py-3 sm:py-4">
-                <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${getStatusBadge(invoice.status)}`}>{invoice.status}</span>
+                    <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${getStatusBadge(invoice.status)}`}>{invoice.status}</span>
+                    {invoice.last_viewed_at && <p className="text-[10px] text-ink-muted mt-1">Viewed</p>}
             </td>
             <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
                 <div className="font-mono text-sm font-semibold text-ink">{formatInvoiceAmount(invoice)}</div>
@@ -130,9 +149,17 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
                     <p className="text-ink-muted text-sm font-medium mt-1">Create, manage and track revenue documents</p>
                 </div>
                 {auth.permissions.includes('invoices.create') && (
-                    <Link href={route('invoices.create')} className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta shadow-lg  transition-all duration-200">
-                        <Icons.Plus /> Create Invoice
-                    </Link>
+                    <div className="flex flex-wrap gap-2">
+                        <Link href={route('invoices.cash-sale')} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">
+                            Cash sale
+                        </Link>
+                        <Link href={route('invoices.batch')} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">
+                            Batch
+                        </Link>
+                        <Link href={route('invoices.create')} className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta shadow-lg  transition-all duration-200">
+                            <Icons.Plus /> Create Invoice
+                        </Link>
+                    </div>
                 )}
             </div>
         }>
@@ -167,6 +194,16 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
                 </div>
 
                 <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
+                    {selectedIds.length > 0 && (
+                        <div className="px-4 sm:px-6 py-3 border-b border-border-warm bg-cream flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-semibold text-ink">{selectedIds.length} selected</span>
+                            <button type="button" onClick={bulkPdf} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-border-warm bg-surface hover:bg-cream">Download PDFs</button>
+                            {canEmail && (
+                                <button type="button" onClick={bulkEmail} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-border-warm bg-surface hover:bg-cream">Email selected</button>
+                            )}
+                            <button type="button" onClick={() => setSelectedIds([])} className="text-xs text-ink-muted">Clear</button>
+                        </div>
+                    )}
                     <form onSubmit={(e) => { e.preventDefault(); applyFilters({ page: 1 }); }} className="px-4 sm:px-6 py-4 border-b border-border-warm flex flex-wrap items-center gap-3 bg-cream/50">
                         <div className="relative flex-1 min-w-0 max-w-full sm:max-w-xs">
                             <span className="absolute inset-y-0 left-3 flex items-center text-ink-muted"><Icons.MagnifyingGlass /></span>
@@ -197,6 +234,7 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
                         <table className="w-full min-w-0">
                             <thead>
                                 <tr className="text-left text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
+                                    <th className="px-3 py-3 w-10"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-border-warm" /></th>
                                     <th className="px-4 sm:px-6 py-3">Invoice</th>
                                     <th className="px-4 sm:px-6 py-3">Customer</th>
                                     <th className="px-4 sm:px-6 py-3">Status</th>
@@ -210,7 +248,7 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
                                         <InvoiceRow invoice={invoice} />
                                     </tr>
                                 )) : (
-                                    <tr><td colSpan={5} className="px-6 py-16 text-center text-ink-muted text-sm">{totalCount === 0 ? 'No invoices yet. Create your first invoice to get started.' : 'No invoices match your filters.'}</td></tr>
+                                    <tr><td colSpan={6} className="px-6 py-16 text-center text-ink-muted text-sm">{totalCount === 0 ? 'No invoices yet. Create your first invoice to get started.' : 'No invoices match your filters.'}</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -221,8 +259,9 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
                         {invoices.length > 0 ? invoices.map((invoice) => (
                             <div key={invoice.id} className={`p-4 ${invoice.status === 'void' ? 'opacity-60' : ''}`}>
                                 <div className="flex items-start justify-between gap-3">
+                                    <input type="checkbox" className="mt-1 rounded border-border-warm" checked={selectedIds.includes(invoice.id)} onChange={() => toggleId(invoice.id)} />
                                     <div className="min-w-0 flex-1">
-                                        <Link href={route('invoices.edit', invoice.id)} className="font-semibold text-ink hover:text-terracotta">{invoice.invoice_number}</Link>
+                                        <Link href={route('invoices.show', invoice.id)} className="font-semibold text-ink hover:text-terracotta">{invoice.invoice_number}</Link>
                                         <p className="text-xs text-ink-muted mt-0.5">{invoice.customer_name || 'Walk-in'}</p>
                                         <p className="text-sm font-mono font-semibold text-ink mt-1">{formatInvoiceAmount(invoice)}</p>
                                         <span className={`inline-flex mt-2 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${getStatusBadge(invoice.status)}`}>{invoice.status}</span>
@@ -317,10 +356,17 @@ function ActionsCell({ auth, invoice, setSelectedInvoice, setData, defaultBankCo
                 className="z-[100] mt-2 w-52 origin-top-right rounded-xl bg-surface shadow-xl ring-1 ring-black/5 focus:outline-none py-1 transition duration-100 ease-out data-[closed]:scale-95 data-[closed]:opacity-0"
             >
                 <MenuItem>
-                    <Link href={route('invoices.edit', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-cream">
+                    <Link href={route('invoices.show', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-cream">
                         <Icons.ChevronRight className="w-4 h-4" /> Open
                     </Link>
                 </MenuItem>
+                {auth.permissions.includes('invoices.create') && (
+                    <MenuItem>
+                        <button type="button" onClick={() => router.post(route('invoices.duplicate', invoice.id))} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-cream">
+                            Duplicate
+                        </button>
+                    </MenuItem>
+                )}
                 <MenuItem>
                     <a href={route('invoices.preview', invoice.id)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-cream">
                         <Icons.Eye /> Preview PDF

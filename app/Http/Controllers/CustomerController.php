@@ -184,6 +184,7 @@ class CustomerController extends Controller
             'auditLogs' => $auditLogs,
             'can_delete_customer' => $deleteBlockedReason === null,
             'delete_blocked_reason' => $deleteBlockedReason,
+            'myinvois_gaps' => \App\Services\MyInvoisService::customerGaps($customer),
         ]);
     }
 

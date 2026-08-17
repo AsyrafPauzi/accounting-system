@@ -43,6 +43,36 @@ class CompanySettingsController extends Controller
             'base_currency' => $tenant->base_currency ?? 'MYR',
             'financial_year_start_month' => $tenant->financial_year_start_month ?? 1,
             'language' => $tenant->language ?? 'en',
+            'msic_code' => $tenant->msic_code ?? '',
+            'sst_number' => $tenant->sst_number ?? '',
+            'invoice_brand_color' => $tenant->invoice_brand_color ?? '#0f172a',
+            'invoice_logo_url' => $tenant->invoice_logo_url ?? '',
+            'reminder_offsets' => is_array($tenant->reminder_offsets) && $tenant->reminder_offsets !== []
+                ? $tenant->reminder_offsets
+                : \App\Services\InvoiceReminderService::DEFAULT_OFFSETS,
+            'myinvois_client_id' => $tenant->myinvois_client_id ?? '',
+            'myinvois_secret_set' => filled($tenant->myinvois_client_secret ?? null),
+            'myinvois_environment' => in_array($tenant->myinvois_environment ?? '', ['preprod', 'production'], true)
+                ? $tenant->myinvois_environment
+                : 'preprod',
+            'myinvois_id_type' => in_array(strtoupper((string) ($tenant->myinvois_id_type ?? '')), ['BRN', 'NRIC', 'PASSPORT', 'ARMY'], true)
+                ? strtoupper($tenant->myinvois_id_type)
+                : (str_starts_with(strtoupper((string) ($tenant->tin ?? '')), 'IG') ? 'PASSPORT' : 'BRN'),
+            'myinvois_id_value' => $tenant->myinvois_id_value ?? '',
+            'myinvois_cert_set' => filled($tenant->myinvois_cert ?? null),
+            'toyyibpay_category_code' => $tenant->toyyibpay_category_code ?? '',
+            'toyyibpay_secret_set' => filled($tenant->toyyibpay_secret_key ?? null),
+            'late_fee_percent' => (float) ($tenant->late_fee_percent ?? 1.5),
+            'show_goods_flow' => $tenant->show_goods_flow !== false,
+            'invoice_gateway' => $tenant->invoice_gateway ?? 'toyyibpay',
+            'billplz_collection_id' => $tenant->billplz_collection_id ?? '',
+            'billplz_secret_set' => filled($tenant->billplz_secret_key ?? null),
+            'billplz_xsignature_set' => filled($tenant->billplz_xsignature_key ?? null),
+            'billplz_sandbox' => $tenant->billplz_sandbox !== false,
+            'commercepay_username' => $tenant->commercepay_username ?? '',
+            'commercepay_password_set' => filled($tenant->commercepay_password ?? null),
+            'commercepay_secret_set' => filled($tenant->commercepay_secret_key ?? null),
+            'commercepay_live' => (bool) ($tenant->commercepay_live ?? false),
         ];
 
         return Inertia::render('Settings/Company', [
@@ -91,15 +121,123 @@ class CompanySettingsController extends Controller
             'base_currency' => ['required', 'string', 'max:10'],
             'financial_year_start_month' => ['required', 'integer', 'min:1', 'max:12'],
             'language' => ['nullable', 'string', 'in:en,ms'],
+            'msic_code' => ['nullable', 'string', 'max:10'],
+            'sst_number' => ['nullable', 'string', 'max:50'],
+            'invoice_brand_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'invoice_logo_url' => ['nullable', 'string', 'max:500'],
+            'reminder_offsets' => ['nullable', 'array'],
+            'reminder_offsets.*' => ['integer'],
+            'myinvois_client_id' => ['nullable', 'string', 'max:255'],
+            'myinvois_client_secret' => ['nullable', 'string', 'max:500'],
+            'myinvois_environment' => ['nullable', 'string', 'in:preprod,production'],
+            'myinvois_id_type' => ['nullable', 'string', 'in:BRN,NRIC,PASSPORT,ARMY'],
+            'myinvois_id_value' => ['nullable', 'string', 'max:50'],
+            'myinvois_cert' => ['nullable', 'file', 'max:2048'],
+            'myinvois_cert_password' => ['nullable', 'string', 'max:500'],
+            'toyyibpay_category_code' => ['nullable', 'string', 'max:80'],
+            'toyyibpay_secret_key' => ['nullable', 'string', 'max:500'],
+            'late_fee_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'show_goods_flow' => ['nullable', 'boolean'],
+            'invoice_gateway' => ['nullable', 'string', 'in:toyyibpay,billplz,commercepay'],
+            'billplz_collection_id' => ['nullable', 'string', 'max:80'],
+            'billplz_secret_key' => ['nullable', 'string', 'max:500'],
+            'billplz_xsignature_key' => ['nullable', 'string', 'max:500'],
+            'billplz_sandbox' => ['nullable', 'boolean'],
+            'commercepay_username' => ['nullable', 'string', 'max:120'],
+            'commercepay_password' => ['nullable', 'string', 'max:500'],
+            'commercepay_secret_key' => ['nullable', 'string', 'max:500'],
+            'commercepay_live' => ['nullable', 'boolean'],
         ]);
 
+        $secret = $validated['myinvois_client_secret'] ?? null;
+        $certPassword = $validated['myinvois_cert_password'] ?? null;
+        $toyyibSecret = $validated['toyyibpay_secret_key'] ?? null;
+        $billplzSecret = $validated['billplz_secret_key'] ?? null;
+        $billplzXsig = $validated['billplz_xsignature_key'] ?? null;
+        $commercePassword = $validated['commercepay_password'] ?? null;
+        $commerceSecret = $validated['commercepay_secret_key'] ?? null;
+        unset(
+            $validated['myinvois_client_secret'],
+            $validated['myinvois_cert'],
+            $validated['myinvois_cert_password'],
+            $validated['toyyibpay_secret_key'],
+            $validated['billplz_secret_key'],
+            $validated['billplz_xsignature_key'],
+            $validated['commercepay_password'],
+            $validated['commercepay_secret_key']
+        );
+
+        if (isset($validated['reminder_offsets'])) {
+            $validated['reminder_offsets'] = array_values(array_map('intval', $validated['reminder_offsets']));
+        }
+        if (array_key_exists('show_goods_flow', $validated)) {
+            $validated['show_goods_flow'] = filter_var($validated['show_goods_flow'], FILTER_VALIDATE_BOOLEAN);
+        }
+        if (array_key_exists('billplz_sandbox', $validated)) {
+            $validated['billplz_sandbox'] = filter_var($validated['billplz_sandbox'], FILTER_VALIDATE_BOOLEAN);
+        }
+        if (array_key_exists('commercepay_live', $validated)) {
+            $validated['commercepay_live'] = filter_var($validated['commercepay_live'], FILTER_VALIDATE_BOOLEAN);
+        }
+
         $tenant->fill($validated);
+        if (filled($secret)) {
+            $tenant->myinvois_client_secret = encrypt($secret);
+        }
+        if ($request->hasFile('myinvois_cert')) {
+            $tenant->myinvois_cert = encrypt(base64_encode($request->file('myinvois_cert')->get()));
+        }
+        if (filled($certPassword)) {
+            $tenant->myinvois_cert_password = encrypt($certPassword);
+        }
+        if (filled($toyyibSecret)) {
+            $tenant->toyyibpay_secret_key = encrypt($toyyibSecret);
+        }
+        if (filled($billplzSecret)) {
+            $tenant->billplz_secret_key = encrypt($billplzSecret);
+        }
+        if (filled($billplzXsig)) {
+            $tenant->billplz_xsignature_key = encrypt($billplzXsig);
+        }
+        if (filled($commercePassword)) {
+            $tenant->commercepay_password = encrypt($commercePassword);
+        }
+        if (filled($commerceSecret)) {
+            $tenant->commercepay_secret_key = encrypt($commerceSecret);
+        }
         $tenant->save();
 
         // Translations are now memoised per-request only (see HandleInertiaRequests),
         // so there's no cross-request cache to bust — the next page load picks up the new locale.
 
         return redirect()->route('settings.company')->with('success', 'Company settings updated.');
+    }
+
+    public function testMyInvois(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        if (! $user || ! $user->canAdminCurrentTenant()) {
+            return redirect()->back()->with('error', 'You don\'t have permission to test MyInvois.');
+        }
+
+        $tenant = $this->resolveTenant($request);
+        $env = $request->validate([
+            'myinvois_environment' => ['nullable', 'string', 'in:preprod,production'],
+        ])['myinvois_environment'] ?? null;
+        if ($env) {
+            $tenant->myinvois_environment = $env;
+        }
+
+        if (! tenancy()->initialized) {
+            tenancy()->initialize($tenant);
+        }
+
+        $result = app(\App\Services\MyInvoisService::class)->probeAuth();
+
+        return redirect()->back()->with(
+            $result['ok'] ? 'success' : 'error',
+            $result['message']
+        );
     }
 
     /**

@@ -12,6 +12,8 @@ class InvoiceItem extends Model
     use SoftDeletes, HasUuid, Auditable;
     protected $fillable = [
         'invoice_id',
+        'product_id',
+        'account_code',
         'description',
         'quantity',
         'unit_price',
@@ -20,4 +22,9 @@ class InvoiceItem extends Model
         'item_classification',
         'amount',
     ];
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
 }

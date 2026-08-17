@@ -35,6 +35,8 @@ export default function Edit({ auth, template, customers = [], products = [], ba
         })),
         customer_notes: template.customer_notes || '',
         private_notes: template.private_notes || '',
+        auto_email: !!template.auto_email,
+        auto_post: !!template.auto_post,
     });
 
     const submit = (e) => {

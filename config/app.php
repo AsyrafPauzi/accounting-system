@@ -69,6 +69,12 @@ return [
     'url' => env('APP_URL', 'http://localhost'),
 
     /*
+    | Public origin for gateway callbacks (ToyyibPay, etc.) when APP_URL
+    | is localhost. Local: cloudflared / ngrok. Production: leave empty.
+    */
+    'public_url' => env('APP_PUBLIC_URL'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------

@@ -90,8 +90,10 @@ class DemoAccountantSeeder extends Seeder
 
     public function run(): void
     {
-        if (User::where('email', self::FIRM_OWNER_EMAIL)->exists()) {
+        $existing = User::where('email', self::FIRM_OWNER_EMAIL)->first();
+        if ($existing) {
             $this->command?->info(self::FIRM_OWNER_EMAIL . ' already exists; demo accountant seed skipped (idempotent).');
+            $this->ensureSalesDemoLinked($existing);
             return;
         }
 
@@ -203,12 +205,43 @@ class DemoAccountantSeeder extends Seeder
             $this->command?->info("  • {$client['display']} ({$tenantId}) provisioned and linked.");
         }
 
+        $this->ensureSalesDemoLinked($owner);
+
         $this->command?->info(sprintf(
             'Provisioned firm "%s" with 2 clients. Login: %s / %s',
             self::FIRM_NAME,
             self::FIRM_OWNER_EMAIL,
             self::PASSWORD
         ));
+    }
+
+    /**
+     * The sales demo tenant (testdemo@…) is seeded separately. Link it
+     * so Practice AR includes INV-DEMO-* / late-fee / SO invoices.
+     */
+    private function ensureSalesDemoLinked(User $owner): void
+    {
+        $firm = $owner->firm_id
+            ? Firm::find($owner->firm_id)
+            : Firm::where('owner_user_id', $owner->id)->first();
+        $demo = User::where('email', 'testdemo@bukucloud.com')->first();
+        if (! $firm || ! $demo?->tenant_id) {
+            return;
+        }
+        if (FirmClient::where('tenant_id', $demo->tenant_id)->exists()) {
+            return;
+        }
+
+        FirmClient::create([
+            'firm_id'           => $firm->id,
+            'tenant_id'         => $demo->tenant_id,
+            'permission_level'  => 'admin',
+            'status'            => 'active',
+            'linked_at'         => now(),
+            'linked_by_user_id' => $owner->id,
+        ]);
+
+        $this->command?->info('Linked sales demo tenant '.$demo->tenant_id.' to firm '.$firm->name.'.');
     }
 
     private function seedChartOfAccounts(): void

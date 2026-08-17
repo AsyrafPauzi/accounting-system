@@ -28,6 +28,11 @@ export default function Index({ auth, creditNotes = [] }) {
                         <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Credit Notes</h2>
                         <p className="text-ink-muted text-sm font-medium mt-1">Refunds and invoice adjustments</p>
                     </div>
+                    {auth.permissions.includes('credit-notes.create') && (
+                        <Link href={route('credit-notes.create-standalone')} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-white bg-mustard hover:bg-mustard/90 text-sm">
+                            Standalone credit
+                        </Link>
+                    )}
                 </div>
             }
         >
@@ -92,7 +97,7 @@ export default function Index({ auth, creditNotes = [] }) {
                                 {filteredNotes.length > 0 ? filteredNotes.map((cn) => (
                                     <tr key={cn.id} className="border-b border-border-warm last:border-0 hover:bg-cream/80 transition-colors group">
                                         <td className="px-6 py-4">
-                                            <div className="font-semibold text-ink">{cn.cn_number}</div>
+                                            <Link href={route('credit-notes.show', cn.id)} className="font-semibold text-ink hover:text-terracotta">{cn.cn_number}</Link>
                                             <p className="text-xs text-ink-muted mt-0.5">
                                                 {cn.issue_date ? new Date(cn.issue_date).toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                                             </p>
@@ -110,14 +115,12 @@ export default function Index({ auth, creditNotes = [] }) {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            {cn.invoice_id && (
-                                                <Link 
-                                                    href={route('invoices.edit', cn.invoice_id)} 
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt transition-colors"
-                                                >
-                                                    View Invoice <Icons.ChevronRight />
-                                                </Link>
-                                            )}
+                                            <Link
+                                                href={route('credit-notes.show', cn.id)}
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt transition-colors"
+                                            >
+                                                Open <Icons.ChevronRight />
+                                            </Link>
                                         </td>
                                     </tr>
                                 )) : (
