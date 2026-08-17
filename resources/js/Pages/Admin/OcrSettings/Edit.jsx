@@ -5,6 +5,7 @@ import { useState, useMemo, useRef } from 'react';
 const PROVIDER_DISABLED = 'disabled';
 const PROVIDER_TESSERACT = 'tesseract';
 const PROVIDER_GEMINI = 'gemini';
+const PROVIDER_ILMU = 'ilmu';
 
 function ProviderCard({ option, selected, onSelect }) {
     const isSelected = selected === option.id;
@@ -39,7 +40,7 @@ function ProviderCard({ option, selected, onSelect }) {
     );
 }
 
-export default function OcrSettingsEdit({ settings, providerOptions, modelOptions, languageOptions }) {
+export default function OcrSettingsEdit({ settings, providerOptions, modelOptions, ilmuModelOptions, languageOptions }) {
     const initialLanguages = useMemo(
         () => (settings.tesseract_languages || 'eng+msa').split('+').filter(Boolean),
         [settings.tesseract_languages],
@@ -49,13 +50,17 @@ export default function OcrSettingsEdit({ settings, providerOptions, modelOption
         provider: settings.provider,
         gemini_api_key: '',
         gemini_model: settings.gemini_model || 'gemini-1.5-flash',
+        ilmu_api_key: '',
+        ilmu_model: settings.ilmu_model || 'ilmu-v3.1',
         tesseract_languages: settings.tesseract_languages || 'eng+msa',
         max_image_mb: settings.max_image_mb || 10,
         clear_api_key: false,
+        clear_ilmu_api_key: false,
     });
 
     const [selectedLanguages, setSelectedLanguages] = useState(initialLanguages);
     const [showApiKeyInput, setShowApiKeyInput] = useState(!settings.has_gemini_api_key);
+    const [showIlmuKeyInput, setShowIlmuKeyInput] = useState(!settings.has_ilmu_api_key);
 
     const [testRunning, setTestRunning] = useState(false);
     const [testResult, setTestResult] = useState(null);
@@ -70,8 +75,11 @@ export default function OcrSettingsEdit({ settings, providerOptions, modelOption
             preserveScroll: true,
             onSuccess: () => {
                 setData('gemini_api_key', '');
+                setData('ilmu_api_key', '');
                 setData('clear_api_key', false);
+                setData('clear_ilmu_api_key', false);
                 setShowApiKeyInput(!settings.has_gemini_api_key);
+                setShowIlmuKeyInput(!settings.has_ilmu_api_key);
             },
         });
     };
@@ -214,6 +222,75 @@ export default function OcrSettingsEdit({ settings, providerOptions, modelOption
                         {errors.tesseract_languages && (
                             <p className="text-terracotta text-xs">{errors.tesseract_languages}</p>
                         )}
+                    </div>
+                )}
+
+                {data.provider === PROVIDER_ILMU && (
+                    <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-border-warm space-y-4">
+                        <div>
+                            <h2 className="font-display text-xl font-medium text-ink">ILMU configuration</h2>
+                            <p className="text-sm text-ink-muted mt-1">
+                                Malaysia-hosted model <span className="font-mono">ilmu-v3.1</span> for receipt OCR and Accountant copilot.
+                                Rotate the API key if it was ever pasted in chat or committed. The key is encrypted at rest and shared by OCR and copilot.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label className="block text-eyebrow font-semibold uppercase text-ink-muted">API Key</label>
+                            {settings.has_ilmu_api_key && !showIlmuKeyInput && (
+                                <div className="mt-1.5 flex items-center gap-3 rounded-xl border border-border-warm bg-cream px-4 py-2.5">
+                                    <span className="font-mono text-sm text-ink flex-1">
+                                        {settings.ilmu_api_key_masked || '••••••••••••'}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowIlmuKeyInput(true)}
+                                        className="text-xs font-semibold text-terracotta hover:text-terracotta-dark"
+                                    >
+                                        Change
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setData('clear_ilmu_api_key', true);
+                                            setShowIlmuKeyInput(true);
+                                        }}
+                                        className="text-xs font-semibold text-ink-muted hover:text-ink"
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            )}
+                            {showIlmuKeyInput && (
+                                <input
+                                    type="password"
+                                    autoComplete="new-password"
+                                    placeholder="sk-••••••••••••••••"
+                                    value={data.ilmu_api_key}
+                                    onChange={(e) => setData('ilmu_api_key', e.target.value)}
+                                    className="mt-1.5 w-full rounded-xl border-border-warm bg-surface text-sm font-mono text-ink placeholder-ink-muted/60 focus:border-terracotta focus:ring-terracotta"
+                                />
+                            )}
+                            {errors.ilmu_api_key && (
+                                <p className="text-terracotta text-xs mt-1">{errors.ilmu_api_key}</p>
+                            )}
+                        </div>
+
+                        <div>
+                            <label className="block text-eyebrow font-semibold uppercase text-ink-muted">Model</label>
+                            <select
+                                value={data.ilmu_model}
+                                onChange={(e) => setData('ilmu_model', e.target.value)}
+                                className="mt-1.5 w-full rounded-xl border-border-warm bg-surface text-sm text-ink focus:border-terracotta focus:ring-terracotta"
+                            >
+                                {(ilmuModelOptions || [{ id: 'ilmu-v3.1', name: 'ilmu-v3.1' }]).map((m) => (
+                                    <option key={m.id} value={m.id}>
+                                        {m.name}
+                                    </option>
+                                ))}
+                            </select>
+                            {errors.ilmu_model && <p className="text-terracotta text-xs mt-1">{errors.ilmu_model}</p>}
+                        </div>
                     </div>
                 )}
 

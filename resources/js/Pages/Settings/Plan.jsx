@@ -1,8 +1,8 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import BillingHistory from '@/Components/BillingHistory';
 
-export default function PlanSettings({ auth, subscription, userCount, history = [] }) {
+export default function PlanSettings({ auth, subscription, userCount, history = [], copilotCredits = null }) {
     const plan = subscription?.plan;
     const isCorporate = plan?.slug === 'corporate';
     const isTrialing = subscription?.status === 'trialing';
@@ -231,6 +231,47 @@ export default function PlanSettings({ auth, subscription, userCount, history = 
                         </div>
                     </div>
                 </div>
+
+                {copilotCredits?.metering && (
+                    <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-border-warm/80 shadow-sm">
+                        <h3 className="text-sm font-semibold text-ink uppercase tracking-wider mb-2">Accountant copilot</h3>
+                        <p className="text-sm text-ink-muted mb-6">
+                            1 credit = 1 message. Included resets monthly. Purchased credits never expire.
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                            <div className="rounded-xl border border-border-warm p-4">
+                                <p className="text-[10px] uppercase tracking-widest text-ink-muted font-semibold">Remaining</p>
+                                <p className="text-2xl font-display font-medium text-ink mt-1">{copilotCredits.remaining}</p>
+                            </div>
+                            <div className="rounded-xl border border-border-warm p-4">
+                                <p className="text-[10px] uppercase tracking-widest text-ink-muted font-semibold">Included left</p>
+                                <p className="text-2xl font-display font-medium text-ink mt-1">
+                                    {copilotCredits.included}{' '}
+                                    <span className="text-sm text-ink-muted">/ {copilotCredits.quota}</span>
+                                </p>
+                            </div>
+                            <div className="rounded-xl border border-border-warm p-4">
+                                <p className="text-[10px] uppercase tracking-widest text-ink-muted font-semibold">Purchased</p>
+                                <p className="text-2xl font-display font-medium text-ink mt-1">{copilotCredits.purchased}</p>
+                            </div>
+                        </div>
+                        <p className="text-xs text-ink-muted mb-4">
+                            Included resets on {copilotCredits.resets_on}. Used this month: {copilotCredits.used_this_month}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                            {(copilotCredits.packs || []).map((pack) => (
+                                <button
+                                    key={pack.slug}
+                                    type="button"
+                                    onClick={() => router.post(route('settings.plan.copilot_credits'), { pack: pack.slug })}
+                                    className="px-4 py-2.5 rounded-xl text-sm font-semibold border border-border-warm bg-cream hover:bg-surface-alt"
+                                >
+                                    Buy {pack.credits} · RM{Number(pack.amount).toFixed(0)}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Features List */}
                 <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">

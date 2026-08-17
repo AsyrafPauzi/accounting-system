@@ -53,6 +53,8 @@ class ScrubSensitive implements ProcessorInterface
         'gemini',          // Gemini API key shows up in OCR settings traces
         'stripe',
         'toyyibpay_secret',
+        'billplz',
+        'commercepay',
         'tin',             // Malaysian Tax Identification Number — PDPA sensitive
     ];
 

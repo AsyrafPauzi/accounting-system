@@ -33,6 +33,10 @@ class OcrProviderResolver
                 'App\\Services\\Ocr\\Providers\\GeminiProvider',
                 'Gemini OCR provider is not yet wired up.',
             ),
+            OcrSettings::PROVIDER_ILMU => $this->resolveProvider(
+                'App\\Services\\Ocr\\Providers\\IlmuProvider',
+                'ILMU OCR provider is not yet wired up.',
+            ),
             default => new NullProvider(),
         };
     }

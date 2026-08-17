@@ -17,11 +17,13 @@ class OcrSettings extends Model
     public const PROVIDER_DISABLED = 'disabled';
     public const PROVIDER_TESSERACT = 'tesseract';
     public const PROVIDER_GEMINI = 'gemini';
+    public const PROVIDER_ILMU = 'ilmu';
 
     public const PROVIDERS = [
         self::PROVIDER_DISABLED,
         self::PROVIDER_TESSERACT,
         self::PROVIDER_GEMINI,
+        self::PROVIDER_ILMU,
     ];
 
     protected $table = 'ocr_settings';
@@ -30,6 +32,8 @@ class OcrSettings extends Model
         'provider',
         'gemini_api_key',
         'gemini_model',
+        'ilmu_api_key',
+        'ilmu_model',
         'tesseract_languages',
         'max_image_mb',
     ];
@@ -78,15 +82,23 @@ class OcrSettings extends Model
 
     public function getDecryptedApiKey(): ?string
     {
-        if (! $this->gemini_api_key) {
+        return $this->decryptStored($this->gemini_api_key);
+    }
+
+    public function getDecryptedIlmuApiKey(): ?string
+    {
+        return $this->decryptStored($this->ilmu_api_key);
+    }
+
+    private function decryptStored(?string $stored): ?string
+    {
+        if (! $stored) {
             return null;
         }
 
         try {
-            return Crypt::decryptString($this->gemini_api_key);
+            return Crypt::decryptString($stored);
         } catch (\Throwable $e) {
-            // Stored value is corrupt or was written without encryption.
-            // Return null rather than crashing — the admin can re-enter.
             return null;
         }
     }
@@ -102,19 +114,34 @@ class OcrSettings extends Model
             : Crypt::encryptString($plain);
     }
 
+    public function setIlmuApiKey(?string $plain): void
+    {
+        $this->ilmu_api_key = ($plain === null || $plain === '')
+            ? null
+            : Crypt::encryptString($plain);
+    }
+
     /**
      * Convenience accessor: last 4 characters of the stored key for masked UI display.
      * Returns null when no key is set.
      */
     public function maskedApiKey(): ?string
     {
-        $plain = $this->getDecryptedApiKey();
+        return $this->maskKey($this->getDecryptedApiKey());
+    }
+
+    public function maskedIlmuApiKey(): ?string
+    {
+        return $this->maskKey($this->getDecryptedIlmuApiKey());
+    }
+
+    private function maskKey(?string $plain): ?string
+    {
         if (! $plain) {
             return null;
         }
 
-        $last4 = substr($plain, -4);
-        return str_repeat('•', 12) . $last4;
+        return str_repeat('•', 12).substr($plain, -4);
     }
 
     public function isEnabled(): bool

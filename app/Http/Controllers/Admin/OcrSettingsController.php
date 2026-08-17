@@ -30,6 +30,9 @@ class OcrSettingsController extends Controller
                 'gemini_model' => $settings->gemini_model,
                 'gemini_api_key_masked' => $settings->maskedApiKey(),
                 'has_gemini_api_key' => (bool) $settings->getDecryptedApiKey(),
+                'ilmu_model' => $settings->ilmu_model ?: 'ilmu-v3.1',
+                'ilmu_api_key_masked' => $settings->maskedIlmuApiKey(),
+                'has_ilmu_api_key' => (bool) $settings->getDecryptedIlmuApiKey(),
                 'tesseract_languages' => $settings->tesseract_languages,
                 'max_image_mb' => $settings->max_image_mb,
             ],
@@ -52,6 +55,15 @@ class OcrSettingsController extends Controller
                     'tag' => 'Cloud · Pay-per-use',
                     'description' => 'Google\'s AI model. Highest accuracy, multilingual (English + Bahasa Malaysia native), ~$0.0003 per receipt. Requires a Gemini API key.',
                 ],
+                [
+                    'id' => OcrSettings::PROVIDER_ILMU,
+                    'name' => 'ILMU (ilmu-v3.1)',
+                    'tag' => 'Recommended · Malaysia-hosted',
+                    'description' => 'YTL ILMU. Same model powers receipt OCR and Accountant copilot (tools + vision). Paste a rotated API key — never reuse a leaked key. Gemini and Tesseract remain available as fallbacks.',
+                ],
+            ],
+            'ilmuModelOptions' => [
+                ['id' => 'ilmu-v3.1', 'name' => 'ilmu-v3.1 (recommended — chat, tools, vision)'],
             ],
             'modelOptions' => [
                 ['id' => 'gemini-1.5-flash', 'name' => 'Gemini 1.5 Flash (recommended — fastest, cheapest)'],
@@ -77,6 +89,7 @@ class OcrSettingsController extends Controller
 
         $settings->provider = $validated['provider'];
         $settings->gemini_model = $validated['gemini_model'] ?: 'gemini-1.5-flash';
+        $settings->ilmu_model = $validated['ilmu_model'] ?: 'ilmu-v3.1';
         $settings->tesseract_languages = $validated['tesseract_languages'] ?: 'eng+msa';
         $settings->max_image_mb = (int) ($validated['max_image_mb'] ?? 10);
 
@@ -85,7 +98,12 @@ class OcrSettingsController extends Controller
         } elseif (! empty($validated['gemini_api_key'])) {
             $settings->setApiKey($validated['gemini_api_key']);
         }
-        // If neither flag is set, the existing key is preserved.
+
+        if (! empty($validated['clear_ilmu_api_key'])) {
+            $settings->setIlmuApiKey(null);
+        } elseif (! empty($validated['ilmu_api_key'])) {
+            $settings->setIlmuApiKey($validated['ilmu_api_key']);
+        }
 
         $settings->save();
 

@@ -19,9 +19,12 @@ class OcrSettingsRequest extends FormRequest
             'provider' => ['required', Rule::in(OcrSettings::PROVIDERS)],
             'gemini_api_key' => ['nullable', 'string', 'max:255'],
             'gemini_model' => ['nullable', 'string', 'max:50'],
+            'ilmu_api_key' => ['nullable', 'string', 'max:255'],
+            'ilmu_model' => ['nullable', 'string', 'max:50'],
             'tesseract_languages' => ['nullable', 'string', 'max:100', 'regex:/^[a-z_+]+$/'],
             'max_image_mb' => ['nullable', 'integer', 'min:1', 'max:50'],
             'clear_api_key' => ['nullable', 'boolean'],
+            'clear_ilmu_api_key' => ['nullable', 'boolean'],
         ];
     }
 
