@@ -1,6 +1,7 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm } from '@inertiajs/react';
+import DocumentFormHeader from '@/Components/DocumentFormHeader';
 import ProductForm from './_Form';
 
 export default function Create({ auth, incomeAccounts = [] }) {
@@ -21,20 +22,27 @@ export default function Create({ auth, incomeAccounts = [] }) {
     };
 
     return (
-        <AuthenticatedLayout user={auth.user}>
+        <AuthenticatedLayout
+            user={auth.user}
+            header={
+                <DocumentFormHeader
+                    backHref={route('products.index')}
+                    title="New product"
+                    subtitle="Save it once, then pick it on invoice lines"
+                    formId="product-form"
+                    processing={processing}
+                    submitLabel="Save product"
+                />
+            }
+        >
             <Head title="New product" />
-            <div className="mb-3">
-                <h1 className="text-2xl font-display font-medium text-ink">New product or service</h1>
-                <p className="text-sm text-ink-muted mt-1">Save it once, then pick it from the dropdown on every invoice line.</p>
-            </div>
             <ProductForm
+                formId="product-form"
                 data={data}
                 setData={setData}
                 errors={errors}
-                processing={processing}
                 onSubmit={submit}
                 incomeAccounts={incomeAccounts}
-                submitLabel="Save product"
             />
         </AuthenticatedLayout>
     );

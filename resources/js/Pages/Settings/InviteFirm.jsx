@@ -30,7 +30,12 @@ export default function InviteFirm({ currentFirm, pending, incoming = [], flash 
 
     return (
         <AuthenticatedLayout
-            header={<h2 className="font-display text-xl font-medium text-ink">Invite my accountant</h2>}
+            header={
+                <div>
+                    <h2 className="text-xl sm:text-2xl font-display font-medium text-ink tracking-tight">Invite my accountant</h2>
+                    <p className="text-ink-muted text-sm font-medium mt-1">Give a firm access to manage your books</p>
+                </div>
+            }
         >
             <Head title="Invite my accountant" />
 

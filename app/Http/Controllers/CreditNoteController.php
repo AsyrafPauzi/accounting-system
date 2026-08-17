@@ -64,6 +64,7 @@ class CreditNoteController extends Controller
             'whatsapp_url' => $share['whatsapp_url'],
             'myinvois_gaps'=> $this->myinvois->readiness($cn),
             'can_cancel_einvoice' => $cn->lhdn_uuid && $cn->lhdn_submitted_at && now()->diffInHours($cn->lhdn_submitted_at) <= 72,
+            'company' => tenant()?->getCompanyDetails() ?? [],
         ]);
     }
 

@@ -13,7 +13,15 @@ export default function Consolidated({ auth, invoices = [], batches = [], gaps =
         setData('invoice_ids', ids);
     };
     return (
-        <AuthenticatedLayout user={auth.user} header={<h2 className="text-2xl font-display">Consolidated e-invoice</h2>}>
+        <AuthenticatedLayout
+            user={auth.user}
+            header={
+                <div>
+                    <h2 className="text-xl sm:text-2xl font-display font-medium text-ink tracking-tight">Consolidated e-invoice</h2>
+                    <p className="text-ink-muted text-sm font-medium mt-1">Bundle posted invoices for a single MyInvois submission</p>
+                </div>
+            }
+        >
             <Head title="Consolidated e-invoice" />
             {gaps.length > 0 && <p className="text-sm text-terracotta mb-4">Complete MyInvois profile first: {gaps.join(', ')}</p>}
             <form className="space-y-4 max-w-3xl" onSubmit={(e) => { e.preventDefault(); post(route('myinvois.consolidated.store')); }}>

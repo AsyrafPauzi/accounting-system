@@ -2,15 +2,13 @@ import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { confirm } from '@/utils/swal';
+import RowActionsMenu, { ActionIcons } from '@/Components/RowActionsMenu';
 
 const Icons = {
     Users: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>,
     Exclamation: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
     Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
-    Pencil: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>,
-    ChevronRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
     MagnifyingGlass: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
-    Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
 };
 
 export default function Index({ auth, customers = [] }) {
@@ -137,7 +135,7 @@ export default function Index({ auth, customers = [] }) {
                                     <th className="px-6 py-4 hidden md:table-cell">Tax / LHDN</th>
                                     <th className="px-6 py-4">Terms</th>
                                     <th className="px-6 py-4 text-right">Outstanding</th>
-                                    <th className="px-6 py-4 text-right">Actions</th>
+                                    <th className="px-6 py-4 text-right w-16">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -176,37 +174,18 @@ export default function Index({ auth, customers = [] }) {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                {auth.permissions.includes('customers.edit') && (
-                                                    <Link 
-                                                        href={route('customers.edit', customer.id)} 
-                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-ink-muted hover:text-ink hover:bg-surface-alt transition-colors"
-                                                    >
-                                                        <Icons.Pencil /> Edit
-                                                    </Link>
-                                                )}
-                                                {auth.permissions.includes('customers.delete') && (
-                                                    <button
-                                                        type="button"
-                                                        disabled={!customer.can_delete}
-                                                        title={customer.delete_blocked_reason || 'Delete customer'}
-                                                        onClick={() => handleDelete(customer)}
-                                                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                                                            customer.can_delete
-                                                                ? 'text-terracotta hover:bg-terracotta/10'
-                                                                : 'text-ink-muted cursor-not-allowed'
-                                                        }`}
-                                                    >
-                                                        <Icons.Trash /> Delete
-                                                    </button>
-                                                )}
-                                                <Link 
-                                                    href={route('customers.show', customer.id)} 
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt transition-colors"
-                                                >
-                                                    View <Icons.ChevronRight />
-                                                </Link>
-                                            </div>
+                                            <RowActionsMenu items={[
+                                                { label: 'View', href: route('customers.show', customer.id), icon: <ActionIcons.Open /> },
+                                                { label: 'Edit', href: route('customers.edit', customer.id), icon: <ActionIcons.Pencil />, show: auth.permissions.includes('customers.edit') },
+                                                {
+                                                    label: 'Delete',
+                                                    icon: <ActionIcons.Trash />,
+                                                    danger: true,
+                                                    show: auth.permissions.includes('customers.delete'),
+                                                    disabled: !customer.can_delete,
+                                                    onClick: () => handleDelete(customer),
+                                                },
+                                            ]} />
                                         </td>
                                     </tr>
                                 )) : (

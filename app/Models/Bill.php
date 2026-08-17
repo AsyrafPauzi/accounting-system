@@ -17,17 +17,17 @@ class Bill extends Model
 
     public function getReceiptUrlAttribute(): ?string
     {
-        if (!$this->receipt_path) {
+        $path = $this->getAttributes()['receipt_path'] ?? null;
+        if (! $path) {
             return null;
         }
 
         // If the path already starts with http, it's already a full URL (maybe from a previous bug)
-        if (str_starts_with($this->receipt_path, 'http')) {
-            return $this->receipt_path;
+        if (str_starts_with($path, 'http')) {
+            return $path;
         }
 
         // Clean up the path if it has /storage/ or storage/ at the beginning
-        $path = $this->receipt_path;
         $path = ltrim($path, '/');
         if (str_starts_with($path, 'storage/')) {
             $path = substr($path, 8);
@@ -113,6 +113,10 @@ class Bill extends Model
 
     public function getSupplierNameAttribute(): string
     {
+        if (! $this->relationLoaded('supplier')) {
+            return '—';
+        }
+
         return $this->supplier?->name ?? '—';
     }
 }

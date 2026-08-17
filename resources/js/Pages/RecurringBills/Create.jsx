@@ -1,10 +1,16 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import PurchasesDocLines, { blankPurchaseLine } from '@/Components/PurchasesDocLines';
+import DocumentFormHeader from '@/Components/DocumentFormHeader';
+import DocumentFormNotesTotals from '@/Components/DocumentFormNotesTotals';
 
-const inputClass = 'w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta focus:border-terracotta transition-colors';
-const labelClass = 'block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5';
+const Icons = {
+    Document: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+};
+
+const inputClass = 'w-full h-11 border border-border-warm rounded-xl px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta focus:border-terracotta transition-colors';
+const labelClass = 'block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5 leading-none h-4';
 
 export default function Create({ auth, suppliers = [], expenseAccounts = [] }) {
     const form = useForm({
@@ -15,6 +21,7 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [] }) {
         start_date: new Date().toISOString().split('T')[0],
         payment_terms_days: 30,
         auto_post: false,
+        notes: '',
         items: [blankPurchaseLine(expenseAccounts[0]?.code || '5000')],
     });
 
@@ -37,116 +44,85 @@ export default function Create({ auth, suppliers = [], expenseAccounts = [] }) {
     };
 
     return (
-        <AuthenticatedLayout user={auth.user} header={
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-                <div>
-                    <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">New recurring bill</h2>
-                    <p className="text-ink-muted text-sm font-medium mt-1">Set it up once. Each cycle creates a draft bill.</p>
-                </div>
-                <div className="flex gap-2">
-                    <Link href={route('recurring-bills.index')} className="inline-flex items-center px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">Cancel</Link>
-                    <button type="submit" form="recurring-bill-create-form" disabled={processing} className="inline-flex items-center px-6 py-2.5 rounded-xl font-semibold text-white bg-terracotta disabled:opacity-50 shadow-lg">
-                        {processing ? 'Saving…' : 'Save recurring bill'}
-                    </button>
-                </div>
-            </div>
-        }>
+        <AuthenticatedLayout
+            user={auth.user}
+            header={
+                <DocumentFormHeader
+                    backHref={route('recurring-bills.index')}
+                    title="New recurring bill"
+                    subtitle="Set it up once. Each cycle creates a draft bill."
+                    formId="recurring-bill-create-form"
+                    processing={processing}
+                    submitLabel="Save recurring bill"
+                />
+            }
+        >
             <Head title="New recurring bill" />
-            <div className="max-w-6xl mx-auto p-4 sm:p-6">
-                <form id="recurring-bill-create-form" className="space-y-6" onSubmit={submit}>
-                    <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-border-warm bg-cream/50">
-                            <h2 className="text-sm font-display font-medium text-ink">Template details</h2>
-                        </div>
-                        <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div className="sm:col-span-2">
-                                <label className={labelClass}>Internal label</label>
-                                <input
-                                    className={inputClass}
-                                    placeholder="e.g. Office rent — monthly"
-                                    value={data.name}
-                                    onChange={(e) => setData('name', e.target.value)}
-                                />
-                                {errors.name && <p className="mt-1 text-xs text-terracotta">{errors.name}</p>}
-                            </div>
-                            <div>
-                                <label className={labelClass}>Supplier *</label>
-                                <select
-                                    className={inputClass}
-                                    value={data.supplier_id}
-                                    onChange={(e) => setData('supplier_id', e.target.value)}
-                                    required
-                                >
-                                    <option value="">— Select a supplier —</option>
-                                    {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
-                                </select>
-                                {errors.supplier_id && <p className="mt-1 text-xs text-terracotta">{errors.supplier_id}</p>}
-                            </div>
-                            <div>
-                                <label className={labelClass}>Cadence *</label>
-                                <select className={inputClass} value={data.cadence} onChange={(e) => setData('cadence', e.target.value)}>
-                                    <option value="weekly">Weekly</option>
-                                    <option value="monthly">Monthly</option>
-                                    <option value="quarterly">Quarterly</option>
-                                    <option value="yearly">Yearly</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className={labelClass}>Repeat every *</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="36"
-                                    className={`${inputClass} font-mono text-right`}
-                                    value={data.interval}
-                                    onChange={(e) => setData('interval', e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label className={labelClass}>Start date *</label>
-                                <input
-                                    type="date"
-                                    className={inputClass}
-                                    value={data.start_date}
-                                    onChange={(e) => setData('start_date', e.target.value)}
-                                    required
-                                />
-                                {errors.start_date && <p className="mt-1 text-xs text-terracotta">{errors.start_date}</p>}
-                            </div>
-                            <div>
-                                <label className={labelClass}>Payment terms (days) *</label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    max="365"
-                                    className={`${inputClass} font-mono text-right`}
-                                    value={data.payment_terms_days}
-                                    onChange={(e) => setData('payment_terms_days', e.target.value)}
-                                />
-                            </div>
-                            <label className="sm:col-span-2 inline-flex items-center gap-2 self-end min-h-[42px] text-sm text-ink cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={data.auto_post}
-                                    onChange={(e) => setData('auto_post', e.target.checked)}
-                                    className="w-4 h-4 rounded border-border-warm text-terracotta focus:ring-terracotta"
-                                />
-                                Post generated bills to the ledger automatically
-                            </label>
-                        </div>
+            <form id="recurring-bill-create-form" className="space-y-6 pb-12 min-w-0" onSubmit={submit}>
+                <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
+                    <div className="flex items-center gap-2 mb-6">
+                        <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Document /></span>
+                        <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Template details</h3>
                     </div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-x-6 gap-y-5 items-start">
+                        <div className="md:col-span-2 min-w-0">
+                            <label className={labelClass}>Internal label</label>
+                            <input className={inputClass} placeholder="e.g. Office rent — monthly" value={data.name} onChange={(e) => setData('name', e.target.value)} />
+                            {errors.name && <p className="mt-1 text-xs text-terracotta">{errors.name}</p>}
+                        </div>
+                        <div className="md:col-span-2 min-w-0">
+                            <label className={labelClass}>Supplier</label>
+                            <select className={inputClass} value={data.supplier_id} onChange={(e) => setData('supplier_id', e.target.value)} required>
+                                <option value="">Select supplier...</option>
+                                {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
+                            </select>
+                            {errors.supplier_id && <p className="mt-1 text-xs text-terracotta">{errors.supplier_id}</p>}
+                        </div>
+                        <div className="min-w-0">
+                            <label className={labelClass}>Cadence</label>
+                            <select className={inputClass} value={data.cadence} onChange={(e) => setData('cadence', e.target.value)}>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="quarterly">Quarterly</option>
+                                <option value="yearly">Yearly</option>
+                            </select>
+                        </div>
+                        <div className="min-w-0">
+                            <label className={labelClass}>Repeat every</label>
+                            <input type="number" min="1" max="36" className={`${inputClass} font-mono`} value={data.interval} onChange={(e) => setData('interval', e.target.value)} />
+                        </div>
+                        <div className="min-w-0">
+                            <label className={labelClass}>Start date</label>
+                            <input type="date" className={inputClass} value={data.start_date} onChange={(e) => setData('start_date', e.target.value)} required />
+                            {errors.start_date && <p className="mt-1 text-xs text-terracotta">{errors.start_date}</p>}
+                        </div>
+                        <div className="min-w-0">
+                            <label className={labelClass}>Payment terms (days)</label>
+                            <input type="number" min="0" max="365" className={`${inputClass} font-mono`} value={data.payment_terms_days} onChange={(e) => setData('payment_terms_days', e.target.value)} />
+                        </div>
+                        <label className="md:col-span-4 inline-flex items-center gap-2 text-sm text-ink cursor-pointer">
+                            <input type="checkbox" checked={data.auto_post} onChange={(e) => setData('auto_post', e.target.checked)} className="w-4 h-4 rounded border-border-warm text-terracotta focus:ring-terracotta" />
+                            Post generated bills to the ledger automatically
+                        </label>
+                    </div>
+                </div>
 
-                    <div className="space-y-2 min-w-0">
-                        <h2 className="text-sm font-display font-medium text-ink">Line items</h2>
-                        <PurchasesDocLines
-                            items={data.items}
-                            onChange={(items) => setData('items', items)}
-                            expenseAccounts={expenseAccounts}
-                        />
-                        {errors.items && <p className="text-xs text-terracotta">{errors.items}</p>}
-                    </div>
-                </form>
-            </div>
+                <PurchasesDocLines
+                    items={data.items}
+                    onChange={(items) => setData('items', items)}
+                    expenseAccounts={expenseAccounts}
+                />
+                {errors.items && <p className="text-xs text-terracotta">{errors.items}</p>}
+
+                <DocumentFormNotesTotals
+                    bannerTitle="Draft each cycle"
+                    bannerText="Each cycle creates a fresh draft bill. Review and post it when you are ready."
+                    notesLabel="Notes (on PDF)"
+                    notesValue={data.notes}
+                    onNotesChange={(value) => setData('notes', value)}
+                    items={data.items}
+                />
+            </form>
         </AuthenticatedLayout>
     );
 }

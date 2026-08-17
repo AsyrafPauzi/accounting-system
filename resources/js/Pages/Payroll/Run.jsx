@@ -1,10 +1,9 @@
 import React, { useMemo, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
+import DocumentFormHeader from '@/Components/DocumentFormHeader';
 
 const Icons = {
-    ChevronLeft: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>,
-    Users: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>,
     Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
     Warning: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4a2 2 0 00-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z" /></svg>,
 };
@@ -101,25 +100,23 @@ export default function Run({ auth, bankAccounts = [], accounts = {}, todayIso }
     }, [data.period_date]);
 
     return (
-        <AuthenticatedLayout user={auth?.user}>
+        <AuthenticatedLayout
+            user={auth?.user}
+            header={
+                <DocumentFormHeader
+                    backHref={route('journal.index')}
+                    title="Record a payroll run"
+                    subtitle="Key in totals from your payroll system. We post one balanced journal using standard Malaysian payroll codes."
+                    formId="payroll-run-form"
+                    processing={processing}
+                    submitLabel="Post payroll entry"
+                    submitDisabled={!balanced || num(data.gross_salaries) <= 0}
+                />
+            }
+        >
             <Head title="Run Payroll" />
 
-            <div className="max-w-4xl mx-auto p-4 sm:p-6">
-                <Link href={route('journal.index')} className="inline-flex items-center gap-1 text-xs font-semibold text-ink-muted hover:text-ink mb-4">
-                    <Icons.ChevronLeft /> Back to journals
-                </Link>
-
-                <div className="mb-6">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-terracotta/10 text-terracotta text-xs font-semibold uppercase tracking-wider mb-3">
-                        <Icons.Users /> Payroll
-                    </div>
-                    <h1 className="text-2xl sm:text-3xl font-display font-medium text-ink">Record a payroll run</h1>
-                    <p className="text-sm text-ink-muted mt-2 max-w-2xl">
-                        Key in the totals from your payroll system. We'll post a single balanced journal entry to the General Ledger using the standard Malaysian payroll account codes — no need to set up accounts first.
-                    </p>
-                </div>
-
-                <form onSubmit={submit} className="space-y-6">
+            <form id="payroll-run-form" onSubmit={submit} className="max-w-4xl mx-auto space-y-6 pb-12 min-w-0">
                     {/* Period */}
                     <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
                         <div className="px-6 py-4 border-b border-border-warm bg-cream/50">
@@ -243,22 +240,7 @@ export default function Run({ auth, bankAccounts = [], accounts = {}, todayIso }
                             </div>
                         </div>
                     </div>
-
-                    {/* Actions */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
-                        <Link href={route('journal.index')} className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:bg-cream transition-colors">
-                            Cancel
-                        </Link>
-                        <button
-                            type="submit"
-                            disabled={processing || !balanced || num(data.gross_salaries) <= 0}
-                            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            {processing ? 'Posting…' : 'Post payroll entry'}
-                        </button>
-                    </div>
-                </form>
-            </div>
+            </form>
         </AuthenticatedLayout>
     );
 }

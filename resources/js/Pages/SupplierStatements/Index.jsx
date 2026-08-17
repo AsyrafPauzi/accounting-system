@@ -2,129 +2,184 @@ import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { formatCurrency } from '@/utils/currency';
+import IndexFilterBar from '@/Components/IndexFilterBar';
+import IndexPagination from '@/Components/IndexPagination';
+import RowActionsMenu, { ActionIcons } from '@/Components/RowActionsMenu';
 
 const Icons = {
     Statement: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 014-4h4a4 4 0 014 4v2M3 7h2m0 0h2M5 7v2m0-2V5m9 4a2 2 0 11-4 0 2 2 0 014 0zM7 13H4a1 1 0 00-1 1v6a1 1 0 001 1h3" /></svg>,
-    MagnifyingGlass: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
-    ArrowRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>,
+    Exclamation: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+    Check: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
 };
 
-export default function Index({ auth, suppliers, filters = {}, base_currency = 'MYR' }) {
-    const items = suppliers?.data || [];
-    const [search, setSearch] = useState(filters.search || '');
-    const filteredItems = items.filter((supplier) =>
-        (supplier.name || '').toLowerCase().includes(search.toLowerCase())
-    );
+const STATUSES = [
+    { value: 'outstanding', label: 'Outstanding' },
+    { value: 'settled', label: 'Settled' },
+];
 
-    const apply = () => {
-        router.get(route('supplier-statements.index'), { search }, { preserveState: true, replace: true });
+export default function Index({
+    auth,
+    suppliers,
+    filters = {},
+    base_currency = 'MYR',
+    totalCount = 0,
+    outstandingCount = 0,
+    settledCount = 0,
+    outstandingTotal = 0,
+}) {
+    const items = suppliers?.data || [];
+    const { search = '', status: statusFilter = '', per_page: perPageFilter = 10 } = filters;
+    const [searchInput, setSearchInput] = useState(search);
+    const from = suppliers?.from || 0;
+    const to = suppliers?.to || 0;
+    const total = suppliers?.total || 0;
+
+    const applyFilters = (overrides = {}) => {
+        router.get(route('supplier-statements.index'), {
+            search: overrides.search ?? searchInput,
+            status: overrides.status ?? statusFilter,
+            per_page: overrides.per_page ?? perPageFilter,
+            page: overrides.page ?? 1,
+        }, { preserveState: false });
     };
+
+    const emptyMessage = totalCount === 0
+        ? 'No suppliers yet. Add suppliers under Purchases, then come back here.'
+        : 'No suppliers match your filters.';
 
     return (
         <AuthenticatedLayout
             user={auth.user}
             header={
-                <div className="flex items-center gap-3">
-                    <span className="p-2.5 rounded-xl bg-surface-alt text-terracotta">
-                        <Icons.Statement />
-                    </span>
-                    <div>
-                        <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Supplier Statements</h2>
-                        <p className="text-ink-muted text-sm font-medium mt-1">Pick a supplier to see bills and payments over a date range</p>
-                    </div>
+                <div>
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Supplier Statements</h2>
+                    <p className="text-ink-muted text-sm font-medium mt-1">Open a supplier to see bills and payments over a date range</p>
                 </div>
             }
         >
             <Head title="Supplier Statements" />
 
-            <div className="space-y-6">
-                <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
-                    <div className="p-4 sm:p-6 border-b border-border-warm">
-                        <div className="max-w-md relative">
-                            <span className="absolute inset-y-0 left-3 flex items-center text-ink-muted">
-                                <Icons.MagnifyingGlass />
-                            </span>
-                            <input
-                                type="text"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && apply()}
-                                onBlur={apply}
-                                placeholder="Search by supplier name"
-                                className="w-full pl-10 pr-4 py-2.5 border border-border-warm rounded-xl text-sm focus:ring-2 focus:ring-terracotta focus:border-terracotta"
-                            />
+            <div className="space-y-4 sm:space-y-6 min-w-0">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                    <div className="relative overflow-hidden bg-terracotta text-white rounded-2xl p-4 sm:p-6 shadow-lg">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Suppliers</span>
+                            <span className="p-2 rounded-xl bg-surface/10"><Icons.Statement /></span>
                         </div>
+                        <p className="text-xl sm:text-2xl font-bold tabular-nums">{totalCount}</p>
+                        <p className="text-xs text-terracotta mt-1">Outstanding · Settled</p>
                     </div>
+                    <div className="bg-surface rounded-2xl p-4 sm:p-6 border border-border-warm shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Outstanding (AP)</span>
+                            <span className="p-2 rounded-xl bg-terracotta/10 text-terracotta"><Icons.Exclamation /></span>
+                        </div>
+                        <p className="text-lg sm:text-xl font-bold text-terracotta font-mono tabular-nums">{formatCurrency(outstandingTotal, base_currency)}</p>
+                        <p className="text-xs text-ink-muted mt-1">{outstandingCount} with open bills</p>
+                    </div>
+                    <div className="bg-surface rounded-2xl p-4 sm:p-6 border border-border-warm shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Settled</span>
+                            <span className="p-2 rounded-xl bg-forest/10 text-forest"><Icons.Check /></span>
+                        </div>
+                        <p className="text-lg sm:text-xl font-bold text-forest font-mono tabular-nums">{settledCount}</p>
+                        <p className="text-xs text-ink-muted mt-1">No open balance</p>
+                    </div>
+                </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
+                <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
+                    <IndexFilterBar
+                        search={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder="Search by supplier, email, or TIN..."
+                        status={statusFilter}
+                        statuses={STATUSES}
+                        perPage={perPageFilter}
+                        onApply={applyFilters}
+                        from={from}
+                        to={to}
+                        total={total}
+                    />
+
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full min-w-0">
                             <thead>
-                                <tr className="bg-cream/80 border-b border-border-warm text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest">
-                                    <th className="px-6 py-3">Supplier</th>
-                                    <th className="px-6 py-3 text-right">Outstanding</th>
-                                    <th className="px-6 py-3 text-right">Statement</th>
+                                <tr className="text-left text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
+                                    <th className="px-4 sm:px-6 py-3">Supplier</th>
+                                    <th className="px-4 sm:px-6 py-3">Status</th>
+                                    <th className="px-4 sm:px-6 py-3 text-right">Outstanding</th>
+                                    <th className="px-4 sm:px-6 py-3 text-right w-28">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-border-warm">
-                                {filteredItems.length > 0 ? filteredItems.map((supplier) => (
-                                    <tr key={supplier.id} className="hover:bg-cream/40 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <p className="font-semibold text-ink">{supplier.name}</p>
-                                            <div className="flex items-center gap-2 mt-0.5 text-[11px] text-ink-muted">
-                                                {supplier.email && <span>{supplier.email}</span>}
-                                                {supplier.tin && <span className="font-mono">· TIN {supplier.tin}</span>}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-right font-mono tabular-nums">
-                                            <span className={Number(supplier.outstanding_amount || 0) > 0 ? 'text-terracotta font-semibold' : 'text-ink-muted'}>
-                                                {formatCurrency(supplier.outstanding_amount || 0, base_currency)}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <Link
-                                                href={route('supplier-statements.show', supplier.id)}
-                                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-terracotta hover:bg-terracotta-dark transition-colors"
-                                            >
-                                                View statement <Icons.ArrowRight />
-                                            </Link>
-                                        </td>
-                                    </tr>
-                                )) : (
-                                    <tr>
-                                        <td colSpan="3" className="px-6 py-16 text-center">
-                                            <div className="flex flex-col items-center gap-3 text-ink-muted">
-                                                <span className="p-4 bg-surface-alt rounded-xl text-terracotta">
-                                                    <Icons.Statement />
+                            <tbody>
+                                {items.length > 0 ? items.map((supplier) => {
+                                    const due = Number(supplier.outstanding_amount || 0);
+                                    const open = Number(supplier.outstanding_bills_count || 0);
+                                    return (
+                                        <tr key={supplier.id} className="border-b border-border-warm last:border-0 hover:bg-cream/80 transition-colors">
+                                            <td className="px-4 sm:px-6 py-3 sm:py-4">
+                                                <Link href={route('supplier-statements.show', supplier.id)} className="block group/link">
+                                                    <span className="font-semibold text-ink group-hover/link:text-terracotta">{supplier.name}</span>
+                                                    <p className="text-xs text-ink-muted mt-0.5 truncate max-w-[220px]">{supplier.email || 'No email'}</p>
+                                                </Link>
+                                            </td>
+                                            <td className="px-4 sm:px-6 py-3 sm:py-4">
+                                                <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${due > 0 ? 'bg-terracotta/10 text-terracotta' : 'bg-forest/10 text-forest'}`}>
+                                                    {due > 0 ? 'Outstanding' : 'Settled'}
                                                 </span>
-                                                <div>
-                                                    <p className="font-semibold text-ink">No suppliers found</p>
-                                                    <p className="text-sm mt-1">Add suppliers under Purchases → Suppliers, then come back here.</p>
+                                                {open > 0 && <p className="text-[10px] text-ink-muted mt-1">{open} open bill{open === 1 ? '' : 's'}</p>}
+                                            </td>
+                                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
+                                                <div className={`font-mono text-sm font-semibold tabular-nums ${due > 0 ? 'text-terracotta' : 'text-ink'}`}>
+                                                    {formatCurrency(due, base_currency)}
                                                 </div>
-                                            </div>
-                                        </td>
+                                            </td>
+                                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
+                                                <RowActionsMenu items={[
+                                                    { label: 'Open', href: route('supplier-statements.show', supplier.id), icon: <ActionIcons.Open /> },
+                                                ]} />
+                                            </td>
+                                        </tr>
+                                    );
+                                }) : (
+                                    <tr>
+                                        <td colSpan={4} className="px-6 py-16 text-center text-ink-muted text-sm">{emptyMessage}</td>
                                     </tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
 
-                    {suppliers?.last_page > 1 && (
-                        <div className="px-6 py-4 border-t border-border-warm flex items-center justify-between text-xs text-ink-muted">
-                            <span>Showing {suppliers.from || 0}–{suppliers.to || 0} of {suppliers.total}</span>
-                            <div className="flex items-center gap-2">
-                                {suppliers.links?.filter((link) => link.url).map((link, idx) => (
-                                    <button
-                                        key={idx}
-                                        type="button"
-                                        onClick={() => router.visit(link.url, { preserveState: true })}
-                                        disabled={link.active}
-                                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold ${link.active ? 'bg-terracotta text-white' : 'bg-surface-alt text-ink hover:bg-cream'}`}
-                                        dangerouslySetInnerHTML={{ __html: link.label }}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    <div className="md:hidden divide-y divide-border-warm">
+                        {items.length > 0 ? items.map((supplier) => {
+                            const due = Number(supplier.outstanding_amount || 0);
+                            return (
+                                <div key={supplier.id} className="p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0 flex-1">
+                                            <Link href={route('supplier-statements.show', supplier.id)} className="font-semibold text-ink hover:text-terracotta">{supplier.name}</Link>
+                                            <p className="text-xs text-ink-muted mt-0.5">{supplier.email || 'No email'}</p>
+                                            <p className={`text-sm font-mono font-semibold mt-1 ${due > 0 ? 'text-terracotta' : 'text-ink'}`}>{formatCurrency(due, base_currency)}</p>
+                                            <span className={`inline-flex mt-2 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${due > 0 ? 'bg-terracotta/10 text-terracotta' : 'bg-forest/10 text-forest'}`}>
+                                                {due > 0 ? 'Outstanding' : 'Settled'}
+                                            </span>
+                                        </div>
+                                        <RowActionsMenu items={[
+                                            { label: 'Open', href: route('supplier-statements.show', supplier.id), icon: <ActionIcons.Open /> },
+                                        ]} />
+                                    </div>
+                                </div>
+                            );
+                        }) : (
+                            <div className="px-4 py-16 text-center text-ink-muted text-sm">{emptyMessage}</div>
+                        )}
+                    </div>
+
+                    <IndexPagination
+                        currentPage={suppliers?.current_page || 1}
+                        lastPage={suppliers?.last_page || 1}
+                        onPage={(page) => applyFilters({ page })}
+                    />
                 </div>
             </div>
         </AuthenticatedLayout>

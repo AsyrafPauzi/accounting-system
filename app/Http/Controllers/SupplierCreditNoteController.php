@@ -25,7 +25,7 @@ class SupplierCreditNoteController extends Controller
 
     public function show($id)
     {
-        $cn = SupplierCreditNote::with(['items', 'supplier', 'bill:id,bill_number,status', 'applications.bill:id,bill_number', 'refunds'])->findOrFail($id);
+        $cn = SupplierCreditNote::with(['items', 'supplier', 'bill:id,bill_number,status,total_amount,amount_paid', 'applications.bill:id,bill_number,status,total_amount,amount_paid', 'refunds'])->findOrFail($id);
         $openBills = Bill::query()
             ->where('supplier_id', $cn->supplier_id)
             ->whereNotIn('status', ['draft', 'void', 'paid'])
@@ -35,6 +35,7 @@ class SupplierCreditNoteController extends Controller
             'creditNote'   => array_merge($cn->toArray(), ['open_amount' => $cn->openAmount()]),
             'openBills'    => $openBills,
             'bankAccounts' => Account::bankOrCash()->active()->orderBy('code')->get(['code', 'name']),
+            'company'      => tenant()?->getCompanyDetails() ?? [],
         ]);
     }
 

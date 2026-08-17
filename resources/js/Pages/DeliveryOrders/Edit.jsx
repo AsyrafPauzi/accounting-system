@@ -1,9 +1,14 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
+import DocumentFormHeader from '@/Components/DocumentFormHeader';
 
-const inputClass = 'w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta';
-const labelClass = 'block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5';
+const inputClass = 'w-full h-11 border border-border-warm rounded-xl px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta focus:border-terracotta transition-colors disabled:bg-cream disabled:text-ink-muted';
+const labelClass = 'block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5 leading-none h-4';
+
+const Icons = {
+    Document: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+};
 
 export default function Edit({ auth, order, editable = true, lock_reason = null }) {
     const { data, setData, put, processing } = useForm({
@@ -13,54 +18,58 @@ export default function Edit({ auth, order, editable = true, lock_reason = null 
     });
 
     return (
-        <AuthenticatedLayout user={auth.user} header={
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-                <div>
-                    <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Edit {order.do_number}</h2>
-                    <p className="text-ink-muted text-sm font-medium mt-1">Header and notes only — line quantities stay as delivered</p>
-                </div>
-                <div className="flex gap-2">
-                    <Link href={route('delivery-orders.show', order.id)} className="inline-flex items-center px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">Cancel</Link>
-                    {editable && (
-                        <button type="submit" form="do-edit-form" disabled={processing} className="inline-flex items-center px-6 py-2.5 rounded-xl font-semibold text-white bg-terracotta disabled:opacity-50 shadow-lg">
-                            {processing ? 'Saving…' : 'Save changes'}
-                        </button>
-                    )}
-                </div>
-            </div>
-        }>
+        <AuthenticatedLayout
+            user={auth.user}
+            header={
+                <DocumentFormHeader
+                    backHref={route('delivery-orders.show', order.id)}
+                    title={`Edit ${order.do_number}`}
+                    subtitle="Header and notes only — line quantities stay as delivered"
+                    formId="do-edit-form"
+                    processing={processing}
+                    submitLabel="Save changes"
+                    showSubmit={editable}
+                />
+            }
+        >
             <Head title={`Edit ${order.do_number}`} />
             {!editable && lock_reason && (
                 <div className="mb-4 rounded-xl border border-terracotta/30 bg-terracotta/10 px-4 py-3 text-sm text-terracotta">{lock_reason}</div>
             )}
-            <form id="do-edit-form" className="space-y-4 pb-8 min-w-0 max-w-2xl" onSubmit={(e) => { e.preventDefault(); if (editable) put(route('delivery-orders.update', order.id)); }}>
-                <div className="bg-surface p-4 sm:p-5 rounded-2xl border border-border-warm/80 shadow-sm space-y-4">
-                    <div>
-                        <label className={labelClass}>Issue date</label>
-                        <input type="date" className={inputClass} value={data.issue_date} onChange={(e) => setData('issue_date', e.target.value)} disabled={!editable} />
+            <form id="do-edit-form" className="space-y-6 pb-12 min-w-0" onSubmit={(e) => { e.preventDefault(); if (editable) put(route('delivery-orders.update', order.id)); }}>
+                <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
+                    <div className="flex items-center gap-2 mb-6">
+                        <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Document /></span>
+                        <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Delivery details</h3>
                     </div>
-                    <div>
-                        <label className={labelClass}>Delivery date</label>
-                        <input type="date" className={inputClass} value={data.delivery_date} onChange={(e) => setData('delivery_date', e.target.value)} disabled={!editable} />
-                    </div>
-                    <div>
-                        <label className={labelClass}>Notes</label>
-                        <textarea className={inputClass} rows={3} value={data.customer_notes} onChange={(e) => setData('customer_notes', e.target.value)} disabled={!editable} />
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-x-6 gap-y-5 items-start">
+                        <div className="min-w-0">
+                            <label className={labelClass}>Issue date</label>
+                            <input type="date" className={inputClass} value={data.issue_date} onChange={(e) => setData('issue_date', e.target.value)} disabled={!editable} />
+                        </div>
+                        <div className="min-w-0">
+                            <label className={labelClass}>Delivery date</label>
+                            <input type="date" className={inputClass} value={data.delivery_date} onChange={(e) => setData('delivery_date', e.target.value)} disabled={!editable} />
+                        </div>
+                        <div className="md:col-span-2 min-w-0">
+                            <label className={labelClass}>Notes (on PDF)</label>
+                            <input className={inputClass} value={data.customer_notes} onChange={(e) => setData('customer_notes', e.target.value)} disabled={!editable} />
+                        </div>
                     </div>
                 </div>
-                <div className="bg-surface rounded-2xl border overflow-hidden">
-                    <table className="w-full text-sm">
-                        <thead className="bg-cream/50 text-[10px] uppercase text-ink-muted">
-                            <tr>
+                <div className="bg-surface rounded-2xl shadow-sm border border-border-warm/80 min-w-0 overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-cream/80 border-b border-border-warm text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest">
                                 <th className="px-4 py-3 text-left">Item</th>
                                 <th className="px-4 py-3 text-right">Qty</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-border-warm">
                             {(order.items || []).map((i) => (
-                                <tr key={i.id} className="border-t">
-                                    <td className="px-4 py-3">{i.description}</td>
-                                    <td className="px-4 py-3 text-right font-mono">{i.quantity}</td>
+                                <tr key={i.id}>
+                                    <td className="px-4 py-3 text-sm font-medium text-ink">{i.description}</td>
+                                    <td className="px-4 py-3 text-right font-mono tabular-nums text-sm">{i.quantity}</td>
                                 </tr>
                             ))}
                         </tbody>

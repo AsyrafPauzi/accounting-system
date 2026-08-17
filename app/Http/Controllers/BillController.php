@@ -6,6 +6,7 @@ use App\Http\Requests\StoreBillRequest;
 use App\Http\Requests\UpdateBillRequest;
 use App\Models\Account;
 use App\Models\Bill;
+use App\Models\Product;
 use App\Models\Supplier;
 use App\Support\DocumentNumber;
 use App\Services\BillService;
@@ -72,6 +73,7 @@ class BillController extends Controller
             'suppliers'           => Supplier::where('is_active', true)->orderBy('name')->get(['id', 'name', 'code']),
             'expenseAccounts'     => $expenseAccounts,
             'bankAccounts'        => $bankAccounts,
+            'products'            => Product::query()->active()->orderBy('name')->get(['id', 'name', 'code', 'unit_price', 'tax_rate', 'account_code']),
             'nextBillNumber'      => $nextNumber,
             'preselectedSupplierId' => $supplierId ? (int) $supplierId : null,
         ]);
@@ -113,6 +115,7 @@ class BillController extends Controller
             'suppliers'       => Supplier::orderBy('name')->get(['id', 'name', 'code']),
             'expenseAccounts' => $expenseAccounts,
             'bankAccounts'    => $bankAccounts,
+            'products'        => Product::query()->active()->orderBy('name')->get(['id', 'name', 'code', 'unit_price', 'tax_rate', 'account_code']),
             'journal_entry_id' => $journalEntryId,
         ]);
     }
@@ -204,10 +207,11 @@ class BillController extends Controller
         $bankAccounts = Account::bankOrCash()->active()->orderBy('code')->get(['code', 'name']);
 
         return Inertia::render('Bills/Show', [
-            'bill'         => array_merge($bill->toArray(), ['balance_due' => $this->billService->remainingBalance($bill)]),
+            'bill' => array_merge($bill->toArray(), ['balance_due' => $this->billService->remainingBalance($bill)]),
             'bankAccounts' => $bankAccounts,
-            'myinvois_gaps'=> app(MyInvoisService::class)->selfBilledReadiness($bill),
-            'trail'        => app(PurchasesDocumentTrail::class)->forBill($bill),
+            'myinvois_gaps' => app(MyInvoisService::class)->selfBilledReadiness($bill),
+            'trail' => app(PurchasesDocumentTrail::class)->forBill($bill),
+            'company' => tenant()?->getCompanyDetails() ?? [],
         ]);
     }
 
@@ -226,36 +230,48 @@ class BillController extends Controller
     public function batchStore(Request $request): RedirectResponse
     {
         $request->validate([
-            'rows'                      => 'required|array|min:1|max:200',
-            'rows.*.supplier_id'        => 'required|exists:suppliers,id',
-            'rows.*.purchase_kind'      => 'nullable|in:credit,cash,claim',
-            'rows.*.description'        => 'required|string|max:255',
-            'rows.*.quantity'           => 'required|numeric|min:0.01',
-            'rows.*.unit_amount'        => 'required|numeric|min:0',
-            'rows.*.account_code'       => 'nullable|string|exists:accounts,code',
-            'rows.*.bill_date'          => 'nullable|date',
-            'rows.*.bank_account_code'  => 'nullable|required_if:rows.*.purchase_kind,cash|string|exists:accounts,code',
+            'rows'                         => 'required|array|min:1|max:200',
+            'rows.*.supplier_id'           => 'required|exists:suppliers,id',
+            'rows.*.purchase_kind'         => 'nullable|in:credit,cash,claim',
+            'rows.*.bill_date'             => 'nullable|date',
+            'rows.*.due_date'              => 'nullable|date',
+            'rows.*.tax_amount'            => 'nullable|numeric|min:0',
+            'rows.*.private_notes'         => 'nullable|string',
+            'rows.*.bank_account_code'     => 'nullable|required_if:rows.*.purchase_kind,cash|string|exists:accounts,code',
+            'rows.*.items'                 => 'required|array|min:1',
+            'rows.*.items.*.description'   => 'required|string|max:255',
+            'rows.*.items.*.quantity'      => 'required|numeric|min:0.01',
+            'rows.*.items.*.unit_price'    => 'required|numeric|min:0',
+            'rows.*.items.*.account_code'  => 'nullable|string|exists:accounts,code',
         ]);
 
         $created = 0;
         foreach ($request->input('rows') as $row) {
             $kind = $this->billService->normalizeKind($row['purchase_kind'] ?? 'credit');
-            $qty = (float) $row['quantity'];
-            $unit = (float) $row['unit_amount'];
+            $items = collect($row['items'] ?? [])->map(function ($item) {
+                $qty = (float) $item['quantity'];
+                $unit = (float) ($item['unit_price'] ?? $item['unit_amount'] ?? 0);
+
+                return [
+                    'account_code' => $item['account_code'] ?? '5000',
+                    'description'  => $item['description'],
+                    'quantity'     => $qty,
+                    'unit_amount'  => $unit,
+                    'amount'       => round($qty * $unit, 2),
+                ];
+            })->all();
+
             $this->billService->create([
                 'bill_number'       => $this->billService->nextNumber(),
                 'supplier_id'       => $row['supplier_id'],
                 'bill_date'         => $row['bill_date'] ?? now()->toDateString(),
+                'due_date'          => $row['due_date'] ?? null,
+                'tax_amount'        => $row['tax_amount'] ?? 0,
+                'private_notes'     => $row['private_notes'] ?? null,
                 'purchase_kind'     => $kind,
                 'bank_account_code' => $row['bank_account_code'] ?? null,
                 'created_by'        => $request->user()?->id,
-            ], [[
-                'account_code' => $row['account_code'] ?? '5000',
-                'description'  => $row['description'],
-                'quantity'     => $qty,
-                'unit_amount'  => $unit,
-                'amount'       => round($qty * $unit, 2),
-            ]]);
+            ], $items);
             $created++;
         }
 

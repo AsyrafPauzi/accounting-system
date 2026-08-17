@@ -1,7 +1,9 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm } from '@inertiajs/react';
+import DocumentFormHeader from '@/Components/DocumentFormHeader';
 import RecurringInvoiceForm from './_Form';
+import { blankSalesLine } from '@/Components/SalesDocLines';
 
 const todayString = () => new Date().toISOString().slice(0, 10);
 
@@ -28,7 +30,7 @@ export default function Create({
         shipping_amount: 0,
         payment_terms_days: 30,
         msic_code: '00000',
-        items: [{ description: '', quantity: 1, unit_price: 0, discount_amount: 0, tax_rate: 0, product_id: null, item_classification: '022' }],
+        items: [{ ...blankSalesLine(), tax_rate: 0 }],
         customer_notes: '',
         private_notes: '',
         auto_email: false,
@@ -41,25 +43,30 @@ export default function Create({
     };
 
     return (
-        <AuthenticatedLayout user={auth.user}>
-            <Head title="New recurring invoice" />
-            <div className="mb-2 max-w-6xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
-                <h1 className="text-2xl sm:text-3xl font-display font-medium text-ink">New recurring invoice</h1>
-                <p className="text-sm text-ink-muted mt-1">Set it up once. Each cycle creates a fresh <strong>draft</strong> invoice. Turn on auto-email if you want the draft PDF sent to the customer.</p>
-            </div>
-            <div className="max-w-6xl mx-auto p-4 sm:p-6">
-                <RecurringInvoiceForm
-                    data={data}
-                    setData={setData}
-                    errors={errors}
+        <AuthenticatedLayout
+            user={auth.user}
+            header={
+                <DocumentFormHeader
+                    backHref={route('recurring-invoices.index')}
+                    title="New recurring invoice"
+                    subtitle="Set it up once. Each cycle creates a fresh draft invoice. Turn on auto-email if you want the draft PDF sent to the customer."
+                    formId="recurring-invoice-form"
                     processing={processing}
-                    onSubmit={submit}
-                    customers={customers}
-                    products={products}
-                    base_currency={base_currency}
                     submitLabel="Save recurring invoice"
                 />
-            </div>
+            }
+        >
+            <Head title="New recurring invoice" />
+            <RecurringInvoiceForm
+                formId="recurring-invoice-form"
+                data={data}
+                setData={setData}
+                errors={errors}
+                onSubmit={submit}
+                customers={customers}
+                products={products}
+                base_currency={base_currency}
+            />
         </AuthenticatedLayout>
     );
 }

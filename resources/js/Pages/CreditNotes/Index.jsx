@@ -1,34 +1,37 @@
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import IndexFilterBar from '@/Components/IndexFilterBar';
+import IndexPagination from '@/Components/IndexPagination';
+import RowActionsMenu, { ActionIcons } from '@/Components/RowActionsMenu';
+import useClientIndexFilters from '@/hooks/useClientIndexFilters';
 
 const Icons = {
     Document: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
     Currency: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-    MagnifyingGlass: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
-    ChevronRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
 };
 
+const SEARCH_KEYS = ['cn_number', 'customer_name'];
+
 export default function Index({ auth, creditNotes = [] }) {
-    const [search, setSearch] = useState('');
-
-    const filteredNotes = creditNotes.filter(cn =>
-        (cn.cn_number || '').toLowerCase().includes(search.toLowerCase()) ||
-        (cn.customer_name || '').toLowerCase().includes(search.toLowerCase())
-    );
-
+    const permissions = auth.permissions || [];
+    const filters = useClientIndexFilters(creditNotes, { searchKeys: SEARCH_KEYS });
+    const statuses = useMemo(() => {
+        const seen = [...new Set(creditNotes.map((cn) => cn.status).filter(Boolean))];
+        return seen.map((value) => ({ value, label: String(value).replace(/_/g, ' ') }));
+    }, [creditNotes]);
     const totalValue = creditNotes.reduce((sum, cn) => sum + (parseFloat(cn.total_amount) || 0), 0);
 
     return (
-        <AuthenticatedLayout 
-            user={auth.user} 
+        <AuthenticatedLayout
+            user={auth.user}
             header={
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                     <div>
                         <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Credit Notes</h2>
                         <p className="text-ink-muted text-sm font-medium mt-1">Refunds and invoice adjustments</p>
                     </div>
-                    {auth.permissions.includes('credit-notes.create') && (
+                    {permissions.includes('credit-notes.create') && (
                         <Link href={route('credit-notes.create-standalone')} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-white bg-mustard hover:bg-mustard/90 text-sm">
                             Standalone credit
                         </Link>
@@ -39,7 +42,6 @@ export default function Index({ auth, creditNotes = [] }) {
             <Head title="Credit Notes" />
 
             <div className="space-y-6">
-                {/* KPI row */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="relative overflow-hidden bg-mustard text-white rounded-2xl p-6 shadow-lg">
                         <div className="flex items-center justify-between mb-2">
@@ -61,26 +63,19 @@ export default function Index({ auth, creditNotes = [] }) {
                     </div>
                 </div>
 
-                {/* Table Card */}
                 <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-border-warm flex items-center gap-3 bg-cream/50">
-                        <div className="relative flex-1 max-w-sm">
-                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-ink-muted">
-                                <Icons.MagnifyingGlass />
-                            </span>
-                            <input 
-                                type="text" 
-                                placeholder="Search by CN # or customer..." 
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                className="pl-10 w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink placeholder-ink-muted/60 focus:ring-2 focus:ring-terracotta focus:border-terracotta transition-colors"
-                            />
-                        </div>
-                        <span className="text-ink-muted text-sm font-medium">
-                            {filteredNotes.length} of {creditNotes.length}
-                        </span>
-                    </div>
-
+                    <IndexFilterBar
+                        search={filters.searchInput}
+                        onSearchChange={filters.setSearchInput}
+                        searchPlaceholder="Search by CN # or customer..."
+                        status={filters.status}
+                        statuses={statuses}
+                        perPage={filters.perPage}
+                        onApply={filters.apply}
+                        from={filters.from}
+                        to={filters.to}
+                        total={filters.total}
+                    />
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
@@ -90,11 +85,11 @@ export default function Index({ auth, creditNotes = [] }) {
                                     <th className="px-6 py-4 hidden md:table-cell">Reason</th>
                                     <th className="px-6 py-4 text-right">Value</th>
                                     <th className="px-6 py-4">Status</th>
-                                    <th className="px-6 py-4 text-right">Action</th>
+                                    <th className="px-6 py-4 text-right w-16">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredNotes.length > 0 ? filteredNotes.map((cn) => (
+                                {filters.items.length > 0 ? filters.items.map((cn) => (
                                     <tr key={cn.id} className="border-b border-border-warm last:border-0 hover:bg-cream/80 transition-colors group">
                                         <td className="px-6 py-4">
                                             <Link href={route('credit-notes.show', cn.id)} className="font-semibold text-ink hover:text-terracotta">{cn.cn_number}</Link>
@@ -115,19 +110,20 @@ export default function Index({ auth, creditNotes = [] }) {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <Link
-                                                href={route('credit-notes.show', cn.id)}
-                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt transition-colors"
-                                            >
-                                                Open <Icons.ChevronRight />
-                                            </Link>
+                                            <RowActionsMenu items={[
+                                                { label: 'Open', href: route('credit-notes.show', cn.id), icon: <ActionIcons.Open /> },
+                                                { label: 'Download PDF', href: route('credit-notes.pdf', cn.id), external: true, icon: <ActionIcons.Pdf /> },
+                                                { label: 'Email', icon: <ActionIcons.Mail />, show: permissions.includes('invoices.email'), onClick: () => router.post(route('credit-notes.email', cn.id)) },
+                                                { label: 'Edit', href: route('credit-notes.edit', cn.id), icon: <ActionIcons.Pencil />, show: permissions.includes('credit-notes.create') && cn.status !== 'void' },
+                                                { label: 'Void', icon: <ActionIcons.Trash />, danger: true, show: cn.status !== 'void', onClick: () => router.post(route('credit-notes.void', cn.id)) },
+                                            ]} />
                                         </td>
                                     </tr>
                                 )) : (
                                     <tr>
                                         <td colSpan={6} className="px-6 py-16 text-center">
                                             <p className="text-ink-muted text-sm font-medium">
-                                                {search ? 'No credit notes match your search.' : 'No credit notes issued yet. Create one from an invoice.'}
+                                                {filters.total === 0 && !filters.searchInput && !filters.status ? 'No credit notes issued yet. Create one from an invoice.' : 'No credit notes match your filters.'}
                                             </p>
                                         </td>
                                     </tr>
@@ -135,6 +131,7 @@ export default function Index({ auth, creditNotes = [] }) {
                             </tbody>
                         </table>
                     </div>
+                    <IndexPagination currentPage={filters.currentPage} lastPage={filters.lastPage} onPage={(page) => filters.apply({ page })} />
                 </div>
             </div>
         </AuthenticatedLayout>

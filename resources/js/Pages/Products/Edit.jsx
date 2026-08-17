@@ -1,6 +1,7 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm } from '@inertiajs/react';
+import DocumentFormHeader from '@/Components/DocumentFormHeader';
 import ProductForm from './_Form';
 
 export default function Edit({ auth, product, incomeAccounts = [] }) {
@@ -21,20 +22,27 @@ export default function Edit({ auth, product, incomeAccounts = [] }) {
     };
 
     return (
-        <AuthenticatedLayout user={auth.user}>
+        <AuthenticatedLayout
+            user={auth.user}
+            header={
+                <DocumentFormHeader
+                    backHref={route('products.index')}
+                    title={product.name || 'Edit product'}
+                    subtitle="Changes apply to new invoice lines only"
+                    formId="product-form"
+                    processing={processing}
+                    submitLabel="Update product"
+                />
+            }
+        >
             <Head title={`Edit · ${product.name}`} />
-            <div className="mb-3">
-                <h1 className="text-2xl font-display font-medium text-ink">Edit product</h1>
-                <p className="text-sm text-ink-muted mt-1">Changes apply to new invoice lines only — past invoices keep the values they had at the time.</p>
-            </div>
             <ProductForm
+                formId="product-form"
                 data={data}
                 setData={setData}
                 errors={errors}
-                processing={processing}
                 onSubmit={submit}
                 incomeAccounts={incomeAccounts}
-                submitLabel="Update product"
             />
         </AuthenticatedLayout>
     );

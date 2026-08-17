@@ -9,6 +9,7 @@ use App\Models\SalesOrder;
 use App\Services\DeliveryOrderService;
 use App\Services\SalesDocumentTrail;
 use App\Services\SalesOrderService;
+use App\Support\IndexFilters;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,19 +21,30 @@ class SalesOrderController extends Controller
         protected DeliveryOrderService $deliveries,
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
+        $filters = IndexFilters::from($request);
+
         $orders = SalesOrder::query()
             ->with([
                 'customer:id,name',
                 'deliveryOrders:id,sales_order_id,do_number,status',
                 'invoices:id,sales_order_id,invoice_number,status',
             ])
+            ->when($filters['search'] !== '', function ($q) use ($filters) {
+                $q->where(function ($qq) use ($filters) {
+                    $qq->where('so_number', 'like', '%'.$filters['search'].'%')
+                        ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', '%'.$filters['search'].'%'));
+                });
+            })
+            ->when($filters['status'] !== '' && in_array($filters['status'], SalesOrder::STATUSES, true), fn ($q) => $q->where('status', $filters['status']))
             ->orderByDesc('id')
-            ->paginate(20);
+            ->paginate($filters['per_page'])
+            ->withQueryString();
 
         return Inertia::render('SalesOrders/Index', [
             'orders'        => $orders,
+            'filters'       => $filters,
             'base_currency' => tenant()?->base_currency ?? 'MYR',
         ]);
     }
@@ -44,13 +56,14 @@ class SalesOrderController extends Controller
         return Inertia::render('SalesOrders/Show', [
             'order'          => $order,
             'document_trail' => app(SalesDocumentTrail::class)->forSalesOrder($order),
+            'company'        => tenant()?->getCompanyDetails() ?? [],
         ]);
     }
 
     public function create(Request $request)
     {
         return Inertia::render('SalesOrders/Create', [
-            'customers'   => Customer::query()->orderBy('name')->get(['id', 'name']),
+            'customers'   => Customer::query()->orderBy('name')->get(['id', 'name', 'tin']),
             'products'    => Product::query()->active()->orderBy('name')->get(['id', 'name', 'code', 'unit_price', 'tax_rate', 'account_code']),
             'next_number' => $this->orders->nextNumber(),
             'customer_id' => $request->query('customer_id'),
@@ -88,7 +101,7 @@ class SalesOrderController extends Controller
             'order'       => $order,
             'editable'    => $editable,
             'lock_reason' => $lockReason,
-            'customers'   => Customer::query()->orderBy('name')->get(['id', 'name']),
+            'customers'   => Customer::query()->orderBy('name')->get(['id', 'name', 'tin']),
             'products'    => Product::query()->active()->orderBy('name')->get(['id', 'name', 'code', 'unit_price', 'tax_rate', 'account_code']),
         ]);
     }

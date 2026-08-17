@@ -27,11 +27,12 @@ class ApDepositController extends Controller
 
     public function show($id)
     {
-        $deposit = ApDeposit::with(['supplier', 'applications.bill:id,bill_number,status'])->findOrFail($id);
+        $deposit = ApDeposit::with(['supplier', 'applications.bill:id,bill_number,status,total_amount,amount_paid'])->findOrFail($id);
 
         return Inertia::render('ApDeposits/Show', [
             'deposit'   => array_merge($deposit->toArray(), ['open_amount' => $deposit->openAmount()]),
             'openBills' => $this->bills->openBillsForSupplier((int) $deposit->supplier_id),
+            'company'   => tenant()?->getCompanyDetails() ?? [],
         ]);
     }
 

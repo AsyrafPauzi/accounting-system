@@ -10,6 +10,7 @@ use App\Models\Supplier;
 use App\Services\GoodsReceiptService;
 use App\Services\PurchaseOrderService;
 use App\Services\PurchasesDocumentTrail;
+use App\Support\IndexFilters;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -21,16 +22,35 @@ class PurchaseOrderController extends Controller
         protected GoodsReceiptService $receipts,
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
+        $filters = IndexFilters::from($request);
+        $statuses = ['draft', 'confirmed', 'partially_received', 'received', 'billed', 'cancelled'];
+
+        $orders = PurchaseOrder::query()
+            ->with('supplier:id,name')
+            ->when($filters['search'] !== '', function ($q) use ($filters) {
+                $q->where(function ($qq) use ($filters) {
+                    $qq->where('po_number', 'like', '%'.$filters['search'].'%')
+                        ->orWhereHas('supplier', fn ($s) => $s->where('name', 'like', '%'.$filters['search'].'%'));
+                });
+            })
+            ->when($filters['status'] !== '' && in_array($filters['status'], $statuses, true), fn ($q) => $q->where('status', $filters['status']))
+            ->orderByDesc('id')
+            ->paginate($filters['per_page'])
+            ->withQueryString();
+
         return Inertia::render('PurchaseOrders/Index', [
-            'orders' => PurchaseOrder::query()->with('supplier:id,name')->orderByDesc('id')->paginate(20),
+            'orders'        => $orders,
+            'filters'       => $filters,
+            'base_currency' => tenant()?->base_currency ?? 'MYR',
         ]);
     }
 
     public function show($id)
     {
-        $order = PurchaseOrder::with(['items', 'supplier', 'goodsReceipts', 'bills:id,bill_number,status,purchase_order_id'])->findOrFail($id);
+        // Load full bill rows — partial selects omit FKs and break document trail BelongsTo.
+        $order = PurchaseOrder::with(['items', 'supplier', 'goodsReceipts', 'bills'])->findOrFail($id);
         $lockReason = null;
         try {
             $this->orders->assertEditable($order);
@@ -43,6 +63,7 @@ class PurchaseOrderController extends Controller
             'trail' => app(PurchasesDocumentTrail::class)->forPurchaseOrder($order),
             'editable' => $lockReason === null,
             'lock_reason' => $lockReason,
+            'company' => tenant()?->getCompanyDetails() ?? [],
         ]);
     }
 

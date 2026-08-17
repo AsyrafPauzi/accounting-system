@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Read-only PO → GR → Bill → SCN chain. No posting.
+ *
+ * Intentionally avoids BelongsTo / loadMissing on Bill. Controllers often
+ * eager-load bills with a column subset; missing FKs throw
+ * MissingAttributeException under Laravel's preventAccessingMissingAttributes.
  */
 class PurchasesDocumentTrail
 {
@@ -19,15 +23,20 @@ class PurchasesDocumentTrail
      */
     public function forBill(Bill $bill): array
     {
-        $bill->loadMissing(['purchaseOrder', 'goodsReceipt']);
-        $po = $bill->purchaseOrder;
-        $grn = $bill->goodsReceipt;
-        if (! $po && $bill->purchase_order_id) {
-            $po = PurchaseOrder::query()->find($bill->purchase_order_id);
+        $row = Bill::query()
+            ->whereKey($bill->getKey())
+            ->first(['id', 'bill_number', 'status', 'purchase_order_id', 'goods_receipt_id']);
+
+        if (! $row) {
+            return [];
         }
-        if (! $grn && $bill->goods_receipt_id) {
-            $grn = GoodsReceipt::query()->find($bill->goods_receipt_id);
-        }
+
+        $po = $row->purchase_order_id
+            ? PurchaseOrder::query()->find($row->purchase_order_id, ['id', 'po_number', 'status'])
+            : null;
+        $grn = $row->goods_receipt_id
+            ? GoodsReceipt::query()->find($row->goods_receipt_id, ['id', 'grn_number', 'status'])
+            : null;
 
         $steps = [];
         if ($po) {
@@ -36,14 +45,14 @@ class PurchasesDocumentTrail
         if ($grn) {
             $steps[] = $this->step('goods_receipt', $grn->id, $grn->grn_number, 'goods-receipts.show', $grn->status);
         }
-        $steps[] = $this->step('bill', $bill->id, $bill->bill_number, 'bills.show', $bill->status);
+        $steps[] = $this->step('bill', $row->id, $row->bill_number, 'bills.show', $row->status);
 
         if (Schema::hasTable('supplier_credit_notes')) {
             $cns = SupplierCreditNote::query()
-                ->where(function ($q) use ($bill) {
-                    $q->where('bill_id', $bill->id);
+                ->where(function ($q) use ($row) {
+                    $q->where('bill_id', $row->id);
                     if (Schema::hasTable('supplier_credit_note_applications')) {
-                        $ids = $bill->creditNoteApplications()->pluck('supplier_credit_note_id');
+                        $ids = $row->creditNoteApplications()->pluck('supplier_credit_note_id');
                         if ($ids->isNotEmpty()) {
                             $q->orWhereIn('id', $ids);
                         }
@@ -64,12 +73,19 @@ class PurchasesDocumentTrail
      */
     public function forPurchaseOrder(PurchaseOrder $po): array
     {
-        $po->loadMissing(['goodsReceipts', 'bills']);
         $steps = [$this->step('purchase_order', $po->id, $po->po_number, 'purchase-orders.show', $po->status)];
-        foreach ($po->goodsReceipts as $grn) {
+
+        $receipts = GoodsReceipt::query()
+            ->where('purchase_order_id', $po->id)
+            ->get(['id', 'grn_number', 'status']);
+        foreach ($receipts as $grn) {
             $steps[] = $this->step('goods_receipt', $grn->id, $grn->grn_number, 'goods-receipts.show', $grn->status);
         }
-        foreach ($po->bills as $bill) {
+
+        $bills = Bill::query()
+            ->where('purchase_order_id', $po->id)
+            ->get(['id', 'bill_number', 'status', 'purchase_order_id', 'goods_receipt_id']);
+        foreach ($bills as $bill) {
             $steps = array_merge($steps, $this->forBill($bill));
         }
 
@@ -81,13 +97,21 @@ class PurchasesDocumentTrail
      */
     public function forGoodsReceipt(GoodsReceipt $grn): array
     {
-        $grn->loadMissing(['purchaseOrder', 'bills']);
         $steps = [];
-        if ($grn->purchaseOrder) {
-            $steps[] = $this->step('purchase_order', $grn->purchaseOrder->id, $grn->purchaseOrder->po_number, 'purchase-orders.show', $grn->purchaseOrder->status);
+
+        if ($grn->purchase_order_id) {
+            $po = PurchaseOrder::query()->find($grn->purchase_order_id, ['id', 'po_number', 'status']);
+            if ($po) {
+                $steps[] = $this->step('purchase_order', $po->id, $po->po_number, 'purchase-orders.show', $po->status);
+            }
         }
+
         $steps[] = $this->step('goods_receipt', $grn->id, $grn->grn_number, 'goods-receipts.show', $grn->status);
-        foreach ($grn->bills as $bill) {
+
+        $bills = Bill::query()
+            ->where('goods_receipt_id', $grn->id)
+            ->get(['id', 'bill_number', 'status', 'purchase_order_id', 'goods_receipt_id']);
+        foreach ($bills as $bill) {
             $steps = array_merge($steps, $this->forBill($bill));
         }
 

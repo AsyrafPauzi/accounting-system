@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
+import RowActionsMenu, { ActionIcons } from '@/Components/RowActionsMenu';
 
 const Icons = {
     BuildingOffice: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>,
     Exclamation: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
     Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
-    Pencil: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>,
-    ChevronRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
     MagnifyingGlass: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
 };
 
@@ -103,7 +102,7 @@ export default function Index({ auth, suppliers = [], totalAp = 0 }) {
                                     <th className="px-6 py-4 hidden md:table-cell">Contact</th>
                                     <th className="px-6 py-4">Terms</th>
                                     <th className="px-6 py-4 text-right">Balance due</th>
-                                    <th className="px-6 py-4 text-right">Actions</th>
+                                    <th className="px-6 py-4 text-right w-16">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -139,22 +138,10 @@ export default function Index({ auth, suppliers = [], totalAp = 0 }) {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                {auth.permissions.includes('suppliers.edit') && (
-                                                    <Link
-                                                        href={route('suppliers.edit', supplier.id)}
-                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-ink-muted hover:text-ink hover:bg-surface-alt transition-colors"
-                                                    >
-                                                        <Icons.Pencil /> Edit
-                                                    </Link>
-                                                )}
-                                                <Link
-                                                    href={route('suppliers.show', supplier.id)}
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt transition-colors"
-                                                >
-                                                    View <Icons.ChevronRight />
-                                                </Link>
-                                            </div>
+                                            <RowActionsMenu items={[
+                                                { label: 'View', href: route('suppliers.show', supplier.id), icon: <ActionIcons.Open /> },
+                                                { label: 'Edit', href: route('suppliers.edit', supplier.id), icon: <ActionIcons.Pencil />, show: auth.permissions.includes('suppliers.edit') },
+                                            ]} />
                                         </td>
                                     </tr>
                                 )) : (

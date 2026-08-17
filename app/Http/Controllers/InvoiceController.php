@@ -39,6 +39,23 @@ class InvoiceController extends Controller
 
         return 'MYR';
     }
+
+    /**
+     * Global default for the invoice PDF customer-notes box (Company settings).
+     */
+    protected function defaultInvoiceCustomerNotes(): string
+    {
+        if (function_exists('tenant') && tenant()) {
+            return (string) (tenant()->default_invoice_customer_notes ?? '');
+        }
+        if (auth()->check() && auth()->user()->tenant_id) {
+            $t = \App\Models\Tenant::find(auth()->user()->tenant_id);
+
+            return (string) ($t?->default_invoice_customer_notes ?? '');
+        }
+
+        return '';
+    }
     /**
      * Official LHDN Classification Codes for Malaysia
      */
@@ -153,6 +170,7 @@ class InvoiceController extends Controller
             'next_invoice_number' => $nextNumber,
             'base_currency' => $this->tenantBaseCurrency(),
             'products' => $this->productOptions(),
+            'default_customer_notes' => $this->defaultInvoiceCustomerNotes(),
         ]);
     }
 
@@ -286,6 +304,12 @@ class InvoiceController extends Controller
      */
     public function previewPdf($id)
     {
+        // Inertia <Link> fetches with X-Inertia and would dump the PDF bytes
+        // into the SPA as text. Send those visits to the invoice screen.
+        if (request()->header('X-Inertia')) {
+            return redirect()->route('invoices.show', $id);
+        }
+
         return $this->renderInvoicePdf($id, attachment: false);
     }
 
@@ -451,13 +475,25 @@ class InvoiceController extends Controller
             ->where('status', '!=', 'void')
             ->get()
             ->filter(fn ($cn) => $cn->openAmount() > 0)
+            ->map(fn ($cn) => [
+                'id'     => $cn->id,
+                'number' => $cn->cn_number,
+                'open'   => $cn->openAmount(),
+            ])
             ->values();
 
         $openDeposits = \App\Models\ArDeposit::query()
             ->where('customer_id', $invoice->customer_id)
             ->where('status', 'open')
+            ->orderByDesc('payment_date')
             ->get()
             ->filter(fn ($d) => $d->openAmount() > 0)
+            ->map(fn ($d) => [
+                'id'     => $d->id,
+                'number' => $d->reference ?: ('DEP-'.$d->id),
+                'date'   => optional($d->payment_date)->toDateString(),
+                'open'   => $d->openAmount(),
+            ])
             ->values();
 
         $balance = $this->invoiceService->remainingBalance($invoice);
@@ -483,6 +519,7 @@ class InvoiceController extends Controller
             'pay_now_configured'  => app(\App\Services\InvoicePayNowService::class)->isConfigured(),
             'public_pdf_url'      => $share['public_url'],
             'whatsapp_url'        => $share['whatsapp_url'],
+            'company'             => tenant()?->getCompanyDetails() ?? [],
             'base_currency'       => $this->tenantBaseCurrency(),
             'reminder_offsets'    => app(\App\Services\InvoiceReminderService::class)->offsetsFor($invoice),
             'late_fee_percent'    => (float) (tenant()?->late_fee_percent ?? 1.5),
@@ -531,6 +568,7 @@ class InvoiceController extends Controller
             'products' => $this->productOptions(),
             'cash_sale' => true,
             'bankAccounts' => Account::bankOrCash()->active()->orderBy('code')->get(['code', 'name']),
+            'default_customer_notes' => $this->defaultInvoiceCustomerNotes(),
         ]);
     }
 
@@ -693,25 +731,39 @@ class InvoiceController extends Controller
     public function batchCreate()
     {
         return Inertia::render('Invoices/Batch', [
-            'customers'  => $this->customerOptions(),
-            'lhdn_codes' => $this->getLhdnCodes(),
+            'customers'              => $this->customerOptions(),
+            'lhdn_codes'             => $this->getLhdnCodes(),
+            'default_customer_notes' => $this->defaultInvoiceCustomerNotes(),
         ]);
     }
 
     public function batchStore(Request $request)
     {
         $request->validate([
-            'rows'                       => 'required|array|min:1|max:200',
-            'rows.*.customer_id'         => 'required|exists:customers,id',
-            'rows.*.description'         => 'required|string',
-            'rows.*.quantity'            => 'required|numeric|min:0.01',
-            'rows.*.unit_price'          => 'required|numeric',
-            'rows.*.tax_rate'            => 'nullable|numeric',
-            'rows.*.issue_date'          => 'nullable|date',
+            'rows'                               => 'required|array|min:1|max:200',
+            'rows.*.customer_id'                 => 'required|exists:customers,id',
+            'rows.*.issue_date'                  => 'nullable|date',
+            'rows.*.due_date'                    => 'nullable|date',
+            'rows.*.customer_notes'              => 'nullable|string',
+            'rows.*.items'                       => 'required|array|min:1',
+            'rows.*.items.*.description'         => 'required|string|max:500',
+            'rows.*.items.*.quantity'            => 'required|numeric|min:0.01',
+            'rows.*.items.*.unit_price'          => 'required|numeric',
+            'rows.*.items.*.tax_rate'            => 'nullable|numeric',
+            'rows.*.items.*.item_classification' => 'nullable|string|max:20',
         ]);
 
         $created = 0;
         foreach ($request->input('rows') as $row) {
+            $items = collect($row['items'] ?? [])->map(fn ($item) => [
+                'description'         => $item['description'],
+                'quantity'            => $item['quantity'],
+                'unit_price'          => $item['unit_price'],
+                'tax_rate'            => $item['tax_rate'] ?? 0,
+                'item_classification' => $item['item_classification'] ?? '022',
+                'discount_amount'     => 0,
+            ])->all();
+
             $this->invoiceService->create([
                 'invoice_number' => $this->invoiceService->nextNumber(),
                 'msic_code'      => $row['msic_code'] ?? '00000',
@@ -719,15 +771,9 @@ class InvoiceController extends Controller
                 'issue_date'     => $row['issue_date'] ?? now()->toDateString(),
                 'due_date'       => $row['due_date'] ?? now()->addDays(30)->toDateString(),
                 'currency'       => $row['currency'] ?? 'MYR',
+                'customer_notes' => $row['customer_notes'] ?? ($this->defaultInvoiceCustomerNotes() ?: null),
                 'created_by'     => auth()->id(),
-            ], [[
-                'description'         => $row['description'],
-                'quantity'            => $row['quantity'],
-                'unit_price'          => $row['unit_price'],
-                'tax_rate'            => $row['tax_rate'] ?? 0,
-                'item_classification' => $row['item_classification'] ?? '022',
-                'discount_amount'     => 0,
-            ]]);
+            ], $items);
             $created++;
         }
 

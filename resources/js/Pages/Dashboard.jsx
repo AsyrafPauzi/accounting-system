@@ -240,7 +240,7 @@ export default function Dashboard({ auth, stats = {} }) {
                                         count={overdueInvoices.length}
                                         items={overdueInvoices.map(i => ({
                                             id: i.id,
-                                            href: route('invoices.preview', i.id),
+                                            href: route('invoices.show', i.id),
                                             title: i.customer_name,
                                             subtitle: `${i.invoice_number} · ${i.days_overdue} day${i.days_overdue === 1 ? '' : 's'} late`,
                                             amount: i.balance,
@@ -252,7 +252,7 @@ export default function Dashboard({ auth, stats = {} }) {
                                         count={overdueBills.length}
                                         items={overdueBills.map(b => ({
                                             id: b.id,
-                                            href: route('bills.edit', b.id),
+                                            href: route('bills.show', b.id),
                                             title: b.supplier_name,
                                             subtitle: `${b.bill_number} · ${b.days_overdue} day${b.days_overdue === 1 ? '' : 's'} late`,
                                             amount: b.balance,

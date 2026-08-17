@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { confirm } from '@/utils/swal';
 import Modal from '@/Components/Modal';
+import IndexFilterBar from '@/Components/IndexFilterBar';
+import IndexPagination from '@/Components/IndexPagination';
+import RowActionsMenu, { ActionIcons } from '@/Components/RowActionsMenu';
+import useClientIndexFilters from '@/hooks/useClientIndexFilters';
 
 const Icons = {
     Document: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
@@ -31,12 +35,25 @@ function getStatusBadge(status) {
     return styles[status] || 'bg-surface-alt text-ink';
 }
 
+const SEARCH_KEYS = ['bill_number', 'supplier_name'];
+const BILL_STATUSES = [
+    { value: 'draft', label: 'Draft' },
+    { value: 'unpaid', label: 'Unpaid' },
+    { value: 'partially paid', label: 'Partially paid' },
+    { value: 'paid', label: 'Paid' },
+    { value: 'void', label: 'Void' },
+];
+
 export default function Index({ auth, bills = [], suppliers = [], bankAccounts = [], totalOutstanding = 0, totalPaidPeriod = 0 }) {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('');
     const [supplierFilter, setSupplierFilter] = useState('');
     const [selectedBillForReceipt, setSelectedBillForReceipt] = useState(null);
     const [selectedBill, setSelectedBill] = useState(null);
+    const supplierFiltered = useMemo(
+        () => (supplierFilter ? bills.filter((bill) => String(bill.supplier_id) === supplierFilter) : bills),
+        [bills, supplierFilter]
+    );
+    const filters = useClientIndexFilters(supplierFiltered, { searchKeys: SEARCH_KEYS });
+    const permissions = auth.permissions || [];
 
     const { data, setData, post, processing, reset, errors } = useForm({
         amount: 0,
@@ -44,14 +61,7 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
         bank_account_code: (bankAccounts && bankAccounts[0]?.value) || '',
     });
 
-    const filteredBills = bills.filter((bill) => {
-        const matchesSearch =
-            (bill.bill_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (bill.supplier_name && bill.supplier_name.toLowerCase().includes(searchTerm.toLowerCase()));
-        const matchesStatus = statusFilter === '' || bill.status === statusFilter;
-        const matchesSupplier = supplierFilter === '' || String(bill.supplier_id) === supplierFilter;
-        return matchesSearch && matchesStatus && matchesSupplier;
-    });
+    const filteredBills = filters.items;
 
     const handlePost = async (id) => {
         const ok = await confirm({
@@ -164,54 +174,30 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                 </div>
 
                 <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-border-warm flex flex-wrap items-center gap-4 bg-cream/50">
-                        <div className="relative flex-1 min-w-[200px] max-w-sm">
-                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-ink-muted">
-                                <Icons.MagnifyingGlass />
-                            </span>
-                            <input
-                                type="text"
-                                placeholder="Search by bill # or supplier..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink placeholder-ink-muted/60 focus:ring-2 focus:ring-terracotta focus:border-terracotta transition-colors"
-                            />
-                        </div>
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="border border-border-warm rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta focus:border-terracotta min-w-[140px]"
-                        >
-                            <option value="">All statuses</option>
-                            <option value="draft">Draft</option>
-                            <option value="unpaid">Unpaid</option>
-                            <option value="partially paid">Partially paid</option>
-                            <option value="paid">Paid</option>
-                            <option value="void">Void</option>
-                        </select>
-                        <select
-                            value={supplierFilter}
-                            onChange={(e) => setSupplierFilter(e.target.value)}
-                            className="border border-border-warm rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta focus:border-terracotta min-w-[160px]"
-                        >
-                            <option value="">All suppliers</option>
-                            {(suppliers || []).map((s) => (
-                                <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
-                            ))}
-                        </select>
-                        {(searchTerm || statusFilter || supplierFilter) && (
-                            <button
-                                type="button"
-                                onClick={() => { setSearchTerm(''); setStatusFilter(''); setSupplierFilter(''); }}
-                                className="text-xs font-semibold text-terracotta hover:text-terracotta"
+                    <IndexFilterBar
+                        search={filters.searchInput}
+                        onSearchChange={filters.setSearchInput}
+                        searchPlaceholder="Search by bill # or supplier..."
+                        status={filters.status}
+                        statuses={BILL_STATUSES}
+                        extraFilters={
+                            <select
+                                value={supplierFilter}
+                                onChange={(e) => { setSupplierFilter(e.target.value); filters.apply({ page: 1 }); }}
+                                className="border border-border-warm rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta min-w-[160px]"
                             >
-                                Clear
-                            </button>
-                        )}
-                        <span className="text-ink-muted text-sm font-medium ml-auto">
-                            {filteredBills.length} of {bills.length}
-                        </span>
-                    </div>
+                                <option value="">All suppliers</option>
+                                {(suppliers || []).map((s) => (
+                                    <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
+                                ))}
+                            </select>
+                        }
+                        perPage={filters.perPage}
+                        onApply={filters.apply}
+                        from={filters.from}
+                        to={filters.to}
+                        total={filters.total}
+                    />
 
                     <div className="overflow-x-auto">
                         <table className="w-full">
@@ -269,52 +255,24 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                                             <td className="px-6 py-4 text-right font-mono text-sm text-terracotta tabular-nums">
                                                 {bill.status !== 'draft' && bill.status !== 'void' && balanceDue > 0 ? `RM ${formatMoney(balanceDue)}` : '—'}
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center justify-end gap-2 flex-wrap">
-                                                    {bill.status === 'draft' && (
-                                                        <>
-                                                            {auth.permissions.includes('bills.post') && (
-                                                                <button onClick={() => handlePost(bill.id)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-terracotta hover:bg-terracotta">
-                                                                    <Icons.Check /> Post
-                                                                </button>
-                                                            )}
-                                                            {auth.permissions.includes('bills.edit') && (
-                                                                <Link href={route('bills.edit', bill.id)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-ink hover:bg-surface-alt">
-                                                                    <Icons.Pencil /> Edit
-                                                                </Link>
-                                                            )}
-                                                            {auth.permissions.includes('bills.delete') && (
-                                                                <button onClick={() => handleDelete(bill.id)} className="inline-flex px-3 py-1.5 rounded-lg text-xs font-semibold text-ink-muted hover:text-terracotta hover:bg-terracotta/10">
-                                                                    Delete
-                                                                </button>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                    {bill.status !== 'draft' && bill.status !== 'void' && balanceDue > 0 && auth.permissions.includes('bills.record-payment') && (
-                                                        <button
-                                                            onClick={() => openPaymentModal(bill)}
-                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-forest bg-forest/10 hover:bg-forest/10"
-                                                        >
-                                                            <Icons.Currency /> Record payment
-                                                        </button>
-                                                    )}
-                                                    {bill.status !== 'draft' && bill.status !== 'void' && auth.permissions.includes('bills.void') && (
-                                                        <button onClick={() => handleVoid(bill.id)} className="inline-flex px-3 py-1.5 rounded-lg text-xs font-semibold text-ink-muted hover:text-terracotta hover:bg-terracotta/10">
-                                                            Void
-                                                        </button>
-                                                    )}
-                                                    <Link href={route('bills.edit', bill.id)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt">
-                                                        View <Icons.ChevronRight />
-                                                    </Link>
-                                                </div>
+                                            <td className="px-6 py-4 text-right">
+                                                <RowActionsMenu items={[
+                                                    { label: 'Open', href: route('bills.show', bill.id), icon: <ActionIcons.Open /> },
+                                                    { label: 'View receipt', icon: <ActionIcons.Pdf />, show: Boolean(bill.receipt_url), onClick: () => setSelectedBillForReceipt(bill) },
+                                                    { label: 'Post to ledger', icon: <ActionIcons.Check />, show: bill.status === 'draft' && permissions.includes('bills.post'), onClick: () => handlePost(bill.id) },
+                                                    { label: 'Edit', href: route('bills.edit', bill.id), icon: <ActionIcons.Pencil />, show: bill.status === 'draft' && permissions.includes('bills.edit') },
+                                                    { label: 'Record payment', icon: <ActionIcons.Currency />, show: bill.status !== 'draft' && bill.status !== 'void' && balanceDue > 0 && permissions.includes('bills.record-payment'), onClick: () => openPaymentModal(bill) },
+                                                    { label: 'Delete draft', icon: <ActionIcons.Trash />, danger: true, show: bill.status === 'draft' && permissions.includes('bills.delete'), onClick: () => handleDelete(bill.id) },
+                                                    { label: 'Void bill', icon: <ActionIcons.Trash />, danger: true, show: bill.status !== 'draft' && bill.status !== 'void' && permissions.includes('bills.void'), onClick: () => handleVoid(bill.id) },
+                                                ]} />
                                             </td>
                                         </tr>
                                     );
                                 }) : (
                                     <tr>
-                                        <td colSpan={7} className="px-6 py-16 text-center">
+                                        <td colSpan={8} className="px-6 py-16 text-center">
                                             <p className="text-ink-muted text-sm font-medium">
-                                                {searchTerm || statusFilter || supplierFilter ? 'No bills match your filters.' : 'No bills yet. Create your first bill to get started.'}
+                                                {filters.searchInput || filters.status || supplierFilter ? 'No bills match your filters.' : 'No bills yet. Create your first bill to get started.'}
                                             </p>
                                         </td>
                                     </tr>
@@ -322,6 +280,7 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                             </tbody>
                         </table>
                     </div>
+                    <IndexPagination currentPage={filters.currentPage} lastPage={filters.lastPage} onPage={(page) => filters.apply({ page })} />
                 </div>
 
                 <Modal show={selectedBillForReceipt !== null} onClose={() => setSelectedBillForReceipt(null)} maxWidth="2xl">

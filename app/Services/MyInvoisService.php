@@ -62,11 +62,30 @@ class MyInvoisService
             return ['Customer is missing.'];
         }
         $gaps = [];
+        if (! filled($customer->name)) {
+            $gaps[] = 'Customer name';
+        }
         if (! filled($customer->tin)) {
             $gaps[] = 'Customer TIN';
         }
-        if (! filled($customer->name)) {
-            $gaps[] = 'Customer name';
+        $tin = strtoupper((string) $customer->tin);
+        if ($tin !== 'EI00000000010' && ! filled($customer->brn)) {
+            $gaps[] = 'Customer ID number (BRN / NRIC / passport)';
+        }
+        if (! filled($customer->billing_street)) {
+            $gaps[] = 'Billing street';
+        }
+        if (! filled($customer->billing_city)) {
+            $gaps[] = 'Billing city';
+        }
+        if (! filled($customer->billing_zip)) {
+            $gaps[] = 'Billing postcode';
+        }
+        if (! filled($customer->billing_state)) {
+            $gaps[] = 'Billing state';
+        }
+        if (! filled($customer->phone)) {
+            $gaps[] = 'Customer phone';
         }
 
         return $gaps;
@@ -236,11 +255,30 @@ class MyInvoisService
             return ['Supplier is missing.'];
         }
         $gaps = [];
+        if (! filled($supplier->name)) {
+            $gaps[] = 'Supplier name';
+        }
         if (! filled($supplier->tin)) {
             $gaps[] = 'Supplier TIN';
         }
-        if (! filled($supplier->name)) {
-            $gaps[] = 'Supplier name';
+        $tin = strtoupper((string) $supplier->tin);
+        if ($tin !== 'EI00000000010' && ! filled($supplier->brn)) {
+            $gaps[] = 'Supplier ID number (BRN / NRIC / passport)';
+        }
+        if (! filled($supplier->billing_street)) {
+            $gaps[] = 'Supplier street';
+        }
+        if (! filled($supplier->billing_city)) {
+            $gaps[] = 'Supplier city';
+        }
+        if (! filled($supplier->billing_zip)) {
+            $gaps[] = 'Supplier postcode';
+        }
+        if (! filled($supplier->billing_state)) {
+            $gaps[] = 'Supplier state';
+        }
+        if (! filled($supplier->phone)) {
+            $gaps[] = 'Supplier phone';
         }
 
         return $gaps;
@@ -797,7 +835,7 @@ class MyInvoisService
 
         return [
             'Party' => [[
-                'PartyIdentification' => $this->partyIds($tin, $type, $value, ''),
+                'PartyIdentification' => $this->partyIds($tin, $type, $value, (string) ($customer?->sst_number ?? '')),
                 'PostalAddress' => [$this->postalAddress(
                     (string) ($customer?->billing_street ?: 'Lot 1'),
                     (string) ($customer?->billing_city ?: 'Kuala Lumpur'),
@@ -823,13 +861,18 @@ class MyInvoisService
     private function sellerPartyFromSupplier(?Supplier $supplier): array
     {
         $tin = (string) ($supplier?->tin ?? '');
-        $brn = (string) ($supplier?->brn ?? '');
-        [$type, $value] = $this->buyerId($tin, $brn);
+        $idNumber = (string) ($supplier?->brn ?: '');
+        $idType = strtoupper((string) ($supplier?->identification_type ?? ''));
+        if (in_array($idType, ['BRN', 'NRIC', 'PASSPORT', 'ARMY'], true) && $idNumber !== '') {
+            [$type, $value] = [$idType, $idNumber];
+        } else {
+            [$type, $value] = $this->buyerId($tin, $idNumber);
+        }
 
         return [
             'Party' => [[
                 'IndustryClassificationCode' => $this->ubl('00000', ['name' => $this->msicName('00000')]),
-                'PartyIdentification' => $this->partyIds($tin, $type, $value, ''),
+                'PartyIdentification' => $this->partyIds($tin, $type, $value, (string) ($supplier?->sst_number ?? '')),
                 'PostalAddress' => [$this->postalAddress(
                     (string) ($supplier?->billing_street ?: 'Lot 1'),
                     (string) ($supplier?->billing_city ?: 'Kuala Lumpur'),

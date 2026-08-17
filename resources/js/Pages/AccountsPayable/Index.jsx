@@ -1,16 +1,34 @@
 import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
+import IndexFilterBar from '@/Components/IndexFilterBar';
+import IndexPagination from '@/Components/IndexPagination';
+import RowActionsMenu, { ActionIcons } from '@/Components/RowActionsMenu';
+import useClientIndexFilters from '@/hooks/useClientIndexFilters';
 
 const Icons = {
+    Document: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
     Exclamation: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
     Currency: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-    DocumentText: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
-    ChevronRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
+    Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
 };
+
+const SEARCH_KEYS = ['bill_number', 'supplier_name'];
+const AGING_STATUSES = [
+    { value: 'current', label: 'Current' },
+    { value: '1-30', label: '1–30 days' },
+    { value: '31-60', label: '31–60 days' },
+    { value: '61-90', label: '61–90 days' },
+    { value: '90+', label: '90+ days' },
+];
 
 function formatMoney(n) {
     return (Number(n) || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatDate(value) {
+    if (!value) return '—';
+    return new Date(value).toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function getAgingBadge(bucket) {
@@ -26,6 +44,11 @@ function getAgingBadge(bucket) {
 
 export default function Index({ auth, bills = [], summary = {}, bankAccounts = [] }) {
     const { total_payable = 0, overdue_count = 0, aging_breakdown = {} } = summary;
+    const overdueAmount = Object.entries(aging_breakdown)
+        .filter(([key]) => key !== 'current')
+        .reduce((sum, [, bucket]) => sum + (Number(bucket?.amount) || 0), 0);
+    const permissions = auth.permissions || [];
+    const filters = useClientIndexFilters(bills, { searchKeys: SEARCH_KEYS, statusKey: 'aging_bucket' });
     const [selectedBill, setSelectedBill] = useState(null);
 
     const { data, setData, post, processing, reset } = useForm({
@@ -52,123 +75,173 @@ export default function Index({ auth, bills = [], summary = {}, bankAccounts = [
         });
     };
 
+    const rowActions = (bill) => [
+        { label: 'Open', href: route('bills.show', bill.id), icon: <ActionIcons.Open /> },
+        { label: 'Record payment', icon: <ActionIcons.Currency />, show: permissions.includes('bills.record-payment'), onClick: () => openPaymentModal(bill) },
+    ];
+
     return (
         <AuthenticatedLayout
             user={auth.user}
             header={
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                     <div>
-                        <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Accounts Payable</h2>
+                        <h2 className="text-xl sm:text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Accounts Payable</h2>
                         <p className="text-ink-muted text-sm font-medium mt-1">Track what you owe suppliers — outstanding and aging</p>
                     </div>
-                    <Link
-                        href={route('bills.index')}
-                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:bg-cream shadow-sm"
-                    >
-                        View all bills
-                    </Link>
+                    <div className="flex flex-wrap gap-2">
+                        <Link
+                            href={route('bills.index')}
+                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:bg-cream"
+                        >
+                            View all bills
+                        </Link>
+                        {permissions.includes('bills.create') && (
+                            <Link
+                                href={route('bills.create')}
+                                className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta shadow-lg transition-all duration-200"
+                            >
+                                <Icons.Plus /> Create bill
+                            </Link>
+                        )}
+                    </div>
                 </div>
             }
         >
             <Head title="Accounts Payable" />
 
-
-            <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="relative overflow-hidden bg-terracotta text-white rounded-2xl p-6 shadow-lg">
+            <div className="space-y-4 sm:space-y-6 min-w-0">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                    <div className="relative overflow-hidden bg-terracotta text-white rounded-2xl p-4 sm:p-6 shadow-lg">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Total payable</span>
-                            <span className="p-2 rounded-xl bg-surface/10"><Icons.Currency /></span>
+                            <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Unpaid bills</span>
+                            <span className="p-2 rounded-xl bg-surface/10"><Icons.Document /></span>
                         </div>
-                        <p className="text-2xl font-bold font-mono tabular-nums">RM {formatMoney(total_payable)}</p>
-                        <p className="text-xs text-terracotta mt-1">Outstanding to suppliers</p>
+                        <p className="text-xl sm:text-2xl font-bold tabular-nums">{bills.length}</p>
+                        <p className="text-xs text-terracotta mt-1">Unpaid · Partially paid</p>
                     </div>
-                    <div className="bg-surface rounded-2xl p-6 border border-border-warm shadow-sm">
+                    <div className="bg-surface rounded-2xl p-4 sm:p-6 border border-border-warm shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Outstanding (AP)</span>
+                            <span className="p-2 rounded-xl bg-terracotta/10 text-terracotta"><Icons.Currency /></span>
+                        </div>
+                        <p className="text-lg sm:text-xl font-bold text-terracotta font-mono tabular-nums">RM {formatMoney(total_payable)}</p>
+                        <p className="text-xs text-ink-muted mt-1">Outstanding to suppliers</p>
+                    </div>
+                    <div className="bg-surface rounded-2xl p-4 sm:p-6 border border-border-warm shadow-sm">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Overdue</span>
                             <span className="p-2 rounded-xl bg-terracotta/10 text-terracotta"><Icons.Exclamation /></span>
                         </div>
-                        <p className="text-2xl font-bold text-terracotta tabular-nums">{overdue_count}</p>
-                        <p className="text-xs text-ink-muted mt-1">Bills past due date</p>
+                        <p className="text-lg sm:text-xl font-bold text-terracotta font-mono tabular-nums">RM {formatMoney(overdueAmount)}</p>
+                        <p className="text-xs text-ink-muted mt-1">{overdue_count} {overdue_count === 1 ? 'bill' : 'bills'} past due date</p>
                     </div>
-                    {Object.entries(aging_breakdown).map(([key, bucket]) => (
-                        (bucket.count > 0 || bucket.amount > 0) && (
-                            <div key={key} className="bg-surface rounded-2xl p-6 border border-border-warm shadow-sm">
-                                <div className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">{bucket.label}</div>
-                                <p className="text-xl font-display font-medium text-ink font-mono tabular-nums">RM {formatMoney(bucket.amount)}</p>
-                                <p className="text-xs text-ink-muted mt-0.5">{`${bucket.count} ${bucket.count === 1 ? 'bill' : 'bills'}`}</p>
-                            </div>
-                        )
-                    ))}
                 </div>
 
                 <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-border-warm bg-cream/50">
-                        <h3 className="text-sm font-display font-medium text-ink">Unpaid bills</h3>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
+                    <IndexFilterBar
+                        search={filters.searchInput}
+                        onSearchChange={filters.setSearchInput}
+                        searchPlaceholder="Search by bill # or supplier..."
+                        status={filters.status}
+                        statuses={AGING_STATUSES}
+                        perPage={filters.perPage}
+                        onApply={filters.apply}
+                        from={filters.from}
+                        to={filters.to}
+                        total={filters.total}
+                    />
+
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full min-w-0">
                             <thead>
                                 <tr className="text-left text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
-                                    <th className="px-6 py-4">Supplier</th>
-                                    <th className="px-6 py-4">Bill #</th>
-                                    <th className="px-6 py-4">Due date</th>
-                                    <th className="px-6 py-4 text-right">Total</th>
-                                    <th className="px-6 py-4 text-right">Paid</th>
-                                    <th className="px-6 py-4 text-right">Balance due</th>
-                                    <th className="px-6 py-4">Aging</th>
-                                    <th className="px-6 py-4 text-right">Actions</th>
+                                    <th className="px-4 sm:px-6 py-3">Bill</th>
+                                    <th className="px-4 sm:px-6 py-3">Supplier</th>
+                                    <th className="px-4 sm:px-6 py-3">Aging</th>
+                                    <th className="px-4 sm:px-6 py-3 text-right">Amount</th>
+                                    <th className="px-4 sm:px-6 py-3 text-right w-28">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {bills.length > 0 ? bills.map((bill) => (
-                                    <tr key={bill.id} className="border-b border-border-warm last:border-0 hover:bg-cream/80">
-                                        <td className="px-6 py-4 font-medium text-ink">{bill.supplier_name || '—'}</td>
-                                        <td className="px-6 py-4">
-                                            <Link href={route('bills.edit', bill.id)} className="font-semibold text-ink hover:text-terracotta">
-                                                {bill.bill_number}
+                                {filters.items.length > 0 ? filters.items.map((bill) => (
+                                    <tr key={bill.id} className="border-b border-border-warm last:border-0 hover:bg-cream/80 transition-colors">
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4">
+                                            <Link href={route('bills.show', bill.id)} className="block group/link">
+                                                <span className="font-semibold text-ink group-hover/link:text-terracotta">{bill.bill_number}</span>
+                                                <p className="text-xs text-ink-muted mt-0.5">Due {formatDate(bill.due_date)}</p>
                                             </Link>
                                         </td>
-                                        <td className="px-6 py-4 text-ink">
-                                            {bill.due_date ? new Date(bill.due_date).toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4">
+                                            {bill.supplier_id ? (
+                                                <Link href={route('suppliers.show', bill.supplier_id)} className="font-medium text-ink hover:text-terracotta">
+                                                    {bill.supplier_name || '—'}
+                                                </Link>
+                                            ) : (
+                                                <div className="font-medium text-ink">{bill.supplier_name || '—'}</div>
+                                            )}
                                         </td>
-                                        <td className="px-6 py-4 text-right font-mono text-ink">RM {formatMoney(bill.total_amount)}</td>
-                                        <td className="px-6 py-4 text-right font-mono text-ink">RM {formatMoney(bill.amount_paid)}</td>
-                                        <td className="px-6 py-4 text-right font-mono font-semibold text-terracotta">RM {formatMoney(bill.balance_due)}</td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold ${getAgingBadge(bill.aging_bucket)}`}>
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4">
+                                            <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${getAgingBadge(bill.aging_bucket)}`}>
                                                 {bill.aging_label || 'Current'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <Link href={route('bills.edit', bill.id)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-ink hover:bg-surface-alt">
-                                                    View bill <Icons.ChevronRight />
-                                                </Link>
-                                                <button
-                                                    onClick={() => openPaymentModal(bill)}
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-forest bg-forest/10 hover:bg-forest/10"
-                                                >
-                                                    <Icons.Currency /> Record payment
-                                                </button>
-                                            </div>
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
+                                            <div className="font-mono text-sm font-semibold text-ink">RM {formatMoney(bill.total_amount)}</div>
+                                            {parseFloat(bill.amount_paid) > 0 && (
+                                                <p className="text-xs text-terracotta tabular-nums">Bal: RM {formatMoney(bill.balance_due)}</p>
+                                            )}
+                                        </td>
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
+                                            <RowActionsMenu items={rowActions(bill)} />
                                         </td>
                                     </tr>
                                 )) : (
                                     <tr>
-                                        <td colSpan={8} className="px-6 py-16 text-center text-ink-muted text-sm">
-                                            No outstanding payables. All bills are paid or no bills have been posted yet.
+                                        <td colSpan={5} className="px-6 py-16 text-center text-ink-muted text-sm">
+                                            {filters.searchInput || filters.status
+                                                ? 'No bills match your filters.'
+                                                : 'No outstanding payables. All bills are paid or no bills have been posted yet.'}
                                         </td>
                                     </tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
+
+                    <div className="md:hidden divide-y divide-border-warm">
+                        {filters.items.length > 0 ? filters.items.map((bill) => (
+                            <div key={bill.id} className="p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0 flex-1">
+                                        <Link href={route('bills.show', bill.id)} className="font-semibold text-ink hover:text-terracotta">{bill.bill_number}</Link>
+                                        <p className="text-xs text-ink-muted mt-0.5">{bill.supplier_name || '—'}</p>
+                                        <p className="text-sm font-mono font-semibold text-ink mt-1">RM {formatMoney(bill.total_amount)}</p>
+                                        {parseFloat(bill.amount_paid) > 0 && (
+                                            <p className="text-xs text-terracotta tabular-nums">Bal: RM {formatMoney(bill.balance_due)}</p>
+                                        )}
+                                        <span className={`inline-flex mt-2 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${getAgingBadge(bill.aging_bucket)}`}>
+                                            {bill.aging_label || 'Current'}
+                                        </span>
+                                    </div>
+                                    <RowActionsMenu items={rowActions(bill)} />
+                                </div>
+                            </div>
+                        )) : (
+                            <div className="px-4 py-16 text-center text-ink-muted text-sm">
+                                {filters.searchInput || filters.status
+                                    ? 'No bills match your filters.'
+                                    : 'No outstanding payables. All bills are paid or no bills have been posted yet.'}
+                            </div>
+                        )}
+                    </div>
+
+                    <IndexPagination currentPage={filters.currentPage} lastPage={filters.lastPage} onPage={(page) => filters.apply({ page })} />
                 </div>
 
                 {selectedBill && (
                     <div className="fixed inset-0 bg-ink/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-                        <div className="bg-surface rounded-2xl shadow-2xl max-w-md w-full p-8 border border-border-warm">
+                        <div className="bg-surface rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 border border-border-warm">
                             <div className="flex items-center gap-3 mb-6">
                                 <span className="p-2.5 rounded-xl bg-forest/10 text-forest"><Icons.Currency /></span>
                                 <div>

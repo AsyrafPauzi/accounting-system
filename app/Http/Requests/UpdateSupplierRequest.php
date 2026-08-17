@@ -24,6 +24,8 @@ class UpdateSupplierRequest extends FormRequest
             'email'           => 'nullable|email',
             'tin'             => 'nullable|string|max:50',
             'brn'             => 'nullable|string|max:50',
+            'identification_type' => 'nullable|string|in:BRN,NRIC,PASSPORT,ARMY',
+            'sst_number'      => 'nullable|string|max:50',
             'payment_terms'   => 'required|integer|min:0|max:365',
             'currency'        => 'nullable|string|size:3',
             'billing_street'  => 'nullable|string|max:255',

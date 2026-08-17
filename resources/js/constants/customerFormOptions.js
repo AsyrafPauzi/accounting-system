@@ -27,6 +27,62 @@ export const PAYMENT_TERM_PRESETS = [
 
 export const PAYMENT_TERM_CUSTOM = '__custom__';
 
+export const MALAYSIAN_STATES = [
+    'Johor', 'Kedah', 'Kelantan', 'Kuala Lumpur', 'Labuan', 'Melaka',
+    'Negeri Sembilan', 'Pahang', 'Penang', 'Perak', 'Perlis',
+    'Putrajaya', 'Sabah', 'Sarawak', 'Selangor', 'Terengganu',
+];
+
+export const ID_TYPE_OPTIONS = [
+    { value: 'BRN', label: 'BRN (SSM)' },
+    { value: 'NRIC', label: 'NRIC' },
+    { value: 'PASSPORT', label: 'Passport' },
+    { value: 'ARMY', label: 'Army' },
+];
+
+export function idNumberLabel(type) {
+    if (type === 'NRIC') return 'NRIC';
+    if (type === 'PASSPORT') return 'Passport no.';
+    if (type === 'ARMY') return 'Army ID';
+    return 'SSM BRN';
+}
+
+/** Fields LHDN requires on the party for an e-invoice. ID number is skipped for general-public TIN. */
+export const MYINVOIS_FIELD_LABELS = {
+    name: 'Legal name',
+    tin: 'TIN',
+    brn: 'ID number',
+    phone: 'Phone',
+    billing_street: 'Street',
+    billing_city: 'City',
+    billing_zip: 'Postcode',
+    billing_state: 'State',
+};
+
+export function myinvoisIdNumberRequired(data = {}) {
+    return String(data.tin || '').trim().toUpperCase() !== 'EI00000000010';
+}
+
+/** Client-side checklist matching MyInvoisService::customerGaps. */
+export function myinvoisPartyGapEntries(data = {}) {
+    const entries = [];
+    if (!String(data.name || '').trim()) entries.push({ key: 'name', label: MYINVOIS_FIELD_LABELS.name });
+    if (!String(data.tin || '').trim()) entries.push({ key: 'tin', label: MYINVOIS_FIELD_LABELS.tin });
+    if (myinvoisIdNumberRequired(data) && !String(data.brn || '').trim()) {
+        entries.push({ key: 'brn', label: MYINVOIS_FIELD_LABELS.brn });
+    }
+    if (!String(data.billing_street || '').trim()) entries.push({ key: 'billing_street', label: MYINVOIS_FIELD_LABELS.billing_street });
+    if (!String(data.billing_city || '').trim()) entries.push({ key: 'billing_city', label: MYINVOIS_FIELD_LABELS.billing_city });
+    if (!String(data.billing_zip || '').trim()) entries.push({ key: 'billing_zip', label: MYINVOIS_FIELD_LABELS.billing_zip });
+    if (!String(data.billing_state || '').trim()) entries.push({ key: 'billing_state', label: MYINVOIS_FIELD_LABELS.billing_state });
+    if (!String(data.phone || '').trim()) entries.push({ key: 'phone', label: MYINVOIS_FIELD_LABELS.phone });
+    return entries;
+}
+
+export function myinvoisPartyGaps(data = {}) {
+    return myinvoisPartyGapEntries(data).map((entry) => entry.label);
+}
+
 export function deriveIndustryState(stored) {
     if (!stored) return { industry_key: '', industry_other: '' };
     if (INDUSTRY_OPTIONS.includes(stored)) return { industry_key: stored, industry_other: '' };

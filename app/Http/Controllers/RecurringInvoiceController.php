@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\RecurringInvoice;
 use App\Models\Tenant;
 use App\Services\RecurringInvoiceService;
+use App\Support\IndexFilters;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,21 +23,21 @@ class RecurringInvoiceController extends Controller
     {
         $this->authorize('recurring-invoices.view');
 
-        $search = trim((string) $request->input('search', ''));
-        $status = $request->input('status', 'all');
+        $filters = IndexFilters::from($request, 10);
+        $status = $filters['status'];
 
         $templates = RecurringInvoice::query()
-            ->with(['customer:id,name', 'lastGeneratedInvoice:id,invoice_number,status'])
-            ->when($search !== '', fn ($q) => $q->where(function ($qq) use ($search) {
-                $qq->where('name', 'like', "%{$search}%")
-                    ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$search}%"));
+            ->with(['customer:id,name,email', 'lastGeneratedInvoice:id,invoice_number,status'])
+            ->when($filters['search'] !== '', fn ($q) => $q->where(function ($qq) use ($filters) {
+                $qq->where('name', 'like', '%'.$filters['search'].'%')
+                    ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', '%'.$filters['search'].'%'));
             }))
             ->when($status === 'active', fn ($q) => $q->where('is_active', true))
             ->when($status === 'paused', fn ($q) => $q->where('is_active', false))
             ->when($status === 'due', fn ($q) => $q->due())
             ->orderByDesc('is_active')
             ->orderBy('next_run_date')
-            ->paginate(20)
+            ->paginate($filters['per_page'])
             ->withQueryString();
 
         $counts = [
@@ -48,7 +49,7 @@ class RecurringInvoiceController extends Controller
 
         return Inertia::render('RecurringInvoices/Index', [
             'templates'     => $templates,
-            'filters'       => ['search' => $search, 'status' => $status],
+            'filters'       => $filters,
             'counts'        => $counts,
             'base_currency' => $this->tenantBaseCurrency(),
         ]);

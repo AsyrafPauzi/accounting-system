@@ -157,6 +157,7 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error'   => fn () => $request->session()->get('error'),
                 'info'    => fn () => $request->session()->get('info'),
+                'new_customer_id' => fn () => $request->session()->get('new_customer_id'),
                 // One-shot license payload from /admin/self-hosted issue.
                 // We never persist the signed key in the DB, so this is
                 // the only place the operator sees it. Strict per-request

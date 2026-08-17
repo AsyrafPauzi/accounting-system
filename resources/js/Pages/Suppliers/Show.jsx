@@ -1,154 +1,257 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
+import { formatCurrency } from '@/utils/currency';
+import { formatDate } from '@/utils/dates';
+import { PAYMENT_TERM_PRESETS, idNumberLabel } from '@/constants/customerFormOptions';
+import RowActionsMenu, { ActionIcons } from '@/Components/RowActionsMenu';
+import {
+    DocumentShowHeader,
+    SidebarCard,
+    docBtn,
+    headerBtn,
+    headerPrimary,
+    partyAddress,
+    sectionTitle,
+    statusTone,
+} from '@/Components/DocumentShowLayout';
 
-const Icons = {
-    BuildingOffice: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>,
-    Pencil: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>,
-    Document: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
-    Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
-    ChevronRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
-};
-
-function formatMoney(n) {
-    return (Number(n) || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function termsLabel(days) {
+    const preset = PAYMENT_TERM_PRESETS.find((p) => p.value === Number(days));
+    return preset ? preset.label : `Net ${days} days`;
 }
 
-function statusBadge(status) {
-    const map = {
-        draft: 'bg-surface-alt text-ink',
-        unpaid: 'bg-mustard/15 text-mustard',
-        'partially paid': 'bg-surface-alt text-terracotta',
-        paid: 'bg-forest/10 text-forest',
-        void: 'bg-terracotta/10 text-terracotta',
-    };
-    const c = map[status] || 'bg-surface-alt text-ink';
-    return <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-semibold ${c}`}>{status}</span>;
+function Fact({ label, children }) {
+    if (!children) return null;
+    return (
+        <div>
+            <p className={sectionTitle}>{label}</p>
+            <div className="mt-1 text-sm text-ink leading-relaxed">{children}</div>
+        </div>
+    );
 }
 
-export default function Show({ auth, supplier, bills = [], balance = 0 }) {
+export default function Show({
+    auth,
+    supplier,
+    bills = [],
+    balance = 0,
+    stats = {},
+    myinvois_gaps = [],
+}) {
+    const currency = supplier.currency || 'MYR';
+    const outstanding = Number(stats.balance ?? balance) || 0;
+    const billing = partyAddress(supplier).filter((line) => !String(line).startsWith('Tel ') && line !== supplier.email);
+    const canBill = auth.permissions.includes('bills.create');
+    const canEdit = auth.permissions.includes('suppliers.edit');
+    const canPay = auth.permissions.includes('bills.record-payment');
+
     return (
         <AuthenticatedLayout
             user={auth.user}
             header={
-                <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="w-11 h-11 rounded-xl bg-mustard flex items-center justify-center text-ink text-base font-semibold shrink-0">
-                            {(supplier.name || '?').charAt(0)}
-                        </div>
-                        <div className="min-w-0">
-                            <h1 className="font-display text-lg lg:text-xl font-medium text-ink tracking-tight leading-tight break-words">{supplier.name}</h1>
-                            <p className="text-ink-muted font-mono font-tabular text-xs mt-0.5">{supplier.code}</p>
+                <DocumentShowHeader
+                    backHref={route('suppliers.index')}
+                    title={supplier.name}
+                    status={supplier.is_active ? 'active' : null}
+                    subtitle={supplier.code}
+                    badges={
+                        <>
                             {!supplier.is_active && (
-                                <span className="inline-flex px-2 py-0.5 rounded-md text-eyebrow font-semibold uppercase bg-surface-alt text-ink-muted mt-1">Suspended</span>
+                                <span className="text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded-md bg-stone-100 text-stone-600">
+                                    Suspended
+                                </span>
                             )}
-                        </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2 shrink-0">
-                        <Link
-                            href={route('suppliers.edit', supplier.id)}
-                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-ink bg-surface border border-border-warm hover:bg-surface-alt transition-colors"
-                        >
-                            <Icons.Pencil /> Edit
+                            {myinvois_gaps.length > 0 && (
+                                <span className="text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded-md bg-mustard/15 text-ink">
+                                    MyInvois incomplete
+                                </span>
+                            )}
+                        </>
+                    }
+                >
+                    {canEdit && (
+                        <Link href={route('suppliers.edit', supplier.id)} className={headerBtn}>Edit</Link>
+                    )}
+                    {canBill && (
+                        <Link href={route('bills.create', { supplier_id: supplier.id })} className={headerPrimary}>
+                            New bill
                         </Link>
-                        <Link
-                            href={route('bills.create', { supplier_id: supplier.id })}
-                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-terracotta hover:bg-terracotta-dark dark:hover:bg-terracotta-light transition-colors"
-                        >
-                            <Icons.Plus /> Create bill
-                        </Link>
-                    </div>
-                </div>
+                    )}
+                    <RowActionsMenu
+                        items={[
+                            { label: 'Statement', href: route('supplier-statements.show', supplier.id), icon: <ActionIcons.Pdf /> },
+                            canPay ? { label: 'Make payment', href: route('ap-deposits.create', { supplier_id: supplier.id }), icon: <ActionIcons.Currency /> } : null,
+                            { label: 'All bills', href: route('bills.index', { supplier_id: supplier.id }), icon: <ActionIcons.Bill /> },
+                        ]}
+                    />
+                </DocumentShowHeader>
             }
         >
             <Head title={supplier.name} />
 
-            <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-surface rounded-2xl p-6 border border-border-warm/80 shadow-sm">
-                        <div className="flex items-center gap-2 mb-4">
-                            <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.BuildingOffice /></span>
-                            <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Details</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start pb-8">
+                <article className="bg-white rounded-2xl border border-border-warm/70 shadow-[0_8px_30px_rgba(28,25,23,0.06)] overflow-hidden">
+                    <div className="h-1.5 bg-terracotta" />
+
+                    <div className="px-6 sm:px-10 pt-8 pb-6 grid sm:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                            <p className={sectionTitle}>Contact</p>
+                            <Fact label="Person">{supplier.contact_person}</Fact>
+                            {supplier.email && (
+                                <Fact label="Email">
+                                    <a href={`mailto:${supplier.email}`} className="text-terracotta hover:underline break-all">{supplier.email}</a>
+                                </Fact>
+                            )}
+                            {supplier.phone && (
+                                <Fact label="Phone">
+                                    <a href={`tel:${supplier.phone}`} className="hover:text-terracotta">{supplier.phone}</a>
+                                </Fact>
+                            )}
                         </div>
+
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between gap-3">
+                                <p className={sectionTitle}>MyInvois</p>
+                                {myinvois_gaps.length === 0 ? (
+                                    <span className="text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded-md bg-forest/10 text-forest">Ready</span>
+                                ) : (
+                                    <span className="text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded-md bg-mustard/15 text-ink">
+                                        {myinvois_gaps.length} missing
+                                    </span>
+                                )}
+                            </div>
+                            <dl className="space-y-2 text-sm">
+                                <div className="flex justify-between gap-4">
+                                    <dt className="text-ink-muted">TIN</dt>
+                                    <dd className="font-mono tabular-nums text-ink">{supplier.tin || '—'}</dd>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                    <dt className="text-ink-muted">{idNumberLabel(supplier.identification_type)}</dt>
+                                    <dd className="font-mono tabular-nums text-ink">{supplier.brn || '—'}</dd>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                    <dt className="text-ink-muted">SST</dt>
+                                    <dd className="font-mono tabular-nums text-ink">{supplier.sst_number || '—'}</dd>
+                                </div>
+                            </dl>
+                            {myinvois_gaps.length > 0 && canEdit && (
+                                <p className="text-xs text-ink-muted">
+                                    Missing {myinvois_gaps.join(', ').toLowerCase()}.{' '}
+                                    <Link href={route('suppliers.edit', supplier.id)} className="text-terracotta font-medium hover:underline">Complete profile</Link>
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="px-6 sm:px-10 pb-8">
+                        <p className={`${sectionTitle} border-b border-border-warm pb-1.5 mb-2`}>Billing</p>
+                        {billing.length > 0
+                            ? billing.map((line) => <p key={line} className="text-sm text-ink-muted leading-relaxed">{line}</p>)
+                            : <p className="text-sm text-ink-muted">No billing address</p>}
+                    </div>
+
+                    {supplier.internal_notes && (
+                        <div className="px-6 sm:px-10 pb-8">
+                            <p className={sectionTitle}>Notes</p>
+                            <p className="mt-1.5 text-sm text-ink-muted whitespace-pre-line leading-relaxed">{supplier.internal_notes}</p>
+                        </div>
+                    )}
+
+                    <div className="border-t border-border-warm">
+                        <div className="px-6 sm:px-10 py-4 flex items-center justify-between">
+                            <p className="text-sm font-semibold text-ink">Bills</p>
+                            <span className="text-xs text-ink-muted">{bills.length} shown</span>
+                        </div>
+                        {bills.length === 0 ? (
+                            <div className="px-6 sm:px-10 pb-10 text-sm text-ink-muted">
+                                No bills yet.
+                                {canBill && (
+                                    <>
+                                        {' '}
+                                        <Link href={route('bills.create', { supplier_id: supplier.id })} className="text-terracotta font-medium hover:underline">
+                                            Create one
+                                        </Link>
+                                    </>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className={`${sectionTitle} border-y border-ink/10 bg-cream/40`}>
+                                            <th className="px-6 sm:px-10 py-3 text-left font-semibold">Bill</th>
+                                            <th className="px-3 py-3 text-left font-semibold">Date</th>
+                                            <th className="px-3 py-3 text-left font-semibold">Status</th>
+                                            <th className="px-6 sm:px-10 py-3 text-right font-semibold">Balance</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {bills.map((bill) => {
+                                            const total = Number(bill.total_amount) || 0;
+                                            const paid = Number(bill.amount_paid) || 0;
+                                            const due = Math.max(0, total - paid);
+                                            return (
+                                                <tr key={bill.id} className="border-b border-border-warm/60 last:border-0 hover:bg-cream/40">
+                                                    <td className="px-6 sm:px-10 py-3">
+                                                        <Link href={route('bills.show', bill.id)} className="font-medium text-ink hover:text-terracotta">
+                                                            {bill.bill_number}
+                                                        </Link>
+                                                    </td>
+                                                    <td className="px-3 py-3 text-ink-muted whitespace-nowrap">{formatDate(bill.bill_date)}</td>
+                                                    <td className="px-3 py-3">
+                                                        <span className={`text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded-md ${statusTone(bill.status)}`}>
+                                                            {String(bill.status).replace(/_/g, ' ')}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 sm:px-10 py-3 text-right font-mono tabular-nums text-ink">
+                                                        {formatCurrency(due, bill.currency || currency)}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </article>
+
+                <aside className="lg:sticky lg:top-4 space-y-4">
+                    <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm p-5">
+                        <p className={sectionTitle}>Outstanding</p>
+                        <p className={`mt-1 text-3xl font-display font-medium tabular-nums ${outstanding > 0 ? 'text-terracotta' : 'text-forest'}`}>
+                            {formatCurrency(outstanding, currency)}
+                        </p>
+                        <p className="mt-1 text-xs text-ink-muted">{termsLabel(supplier.payment_terms)}</p>
+                    </div>
+
+                    <SidebarCard title="Account">
                         <dl className="space-y-2 text-sm">
-                            <div><dt className="text-ink-muted font-medium">Contact</dt><dd className="text-ink">{supplier.contact_person || supplier.email || '—'}</dd></div>
-                            <div><dt className="text-ink-muted font-medium">Email</dt><dd className="text-ink">{supplier.email || '—'}</dd></div>
-                            <div><dt className="text-ink-muted font-medium">Phone</dt><dd className="text-ink">{supplier.phone || '—'}</dd></div>
-                            <div><dt className="text-ink-muted font-medium">Payment terms</dt><dd className="text-ink">Net {supplier.payment_terms} days</dd></div>
-                            <div><dt className="text-ink-muted font-medium">TIN / BRN</dt><dd className="text-ink">{supplier.tin || '—'} / {supplier.brn || '—'}</dd></div>
-                            {(supplier.billing_street || supplier.billing_city) && (
-                                <div>
-                                    <dt className="text-ink-muted font-medium">Address</dt>
-                                    <dd className="text-ink">
-                                        {[supplier.billing_street, supplier.billing_city, supplier.billing_state, supplier.billing_zip, supplier.billing_country].filter(Boolean).join(', ')}
-                                    </dd>
+                            <div className="flex justify-between gap-3">
+                                <dt className="text-ink-muted">Billed</dt>
+                                <dd className="font-mono tabular-nums">{formatCurrency(stats.total_billed, currency)}</dd>
+                            </div>
+                            <div className="flex justify-between gap-3">
+                                <dt className="text-ink-muted">Paid</dt>
+                                <dd className="font-mono tabular-nums text-forest">{formatCurrency(stats.total_paid, currency)}</dd>
+                            </div>
+                            {Number(supplier.credit_limit) > 0 && stats.remaining_limit != null && (
+                                <div className="flex justify-between gap-3 pt-2 border-t border-border-warm">
+                                    <dt className="text-ink-muted">Credit left</dt>
+                                    <dd className="font-mono tabular-nums">{formatCurrency(stats.remaining_limit, currency)}</dd>
                                 </div>
                             )}
                         </dl>
-                    </div>
-                    <div className="bg-surface rounded-2xl p-6 border border-border-warm/80 shadow-sm">
-                        <div className="flex items-center gap-2 mb-4">
-                            <span className="p-2 rounded-xl bg-terracotta/10 text-terracotta"><Icons.Document /></span>
-                            <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Outstanding</h3>
-                        </div>
-                        <p className="text-2xl font-bold text-terracotta font-mono tabular-nums">RM {formatMoney(balance)}</p>
-                        <p className="text-xs text-ink-muted mt-1">Balance due from bills</p>
-                    </div>
-                </div>
+                    </SidebarCard>
 
-                <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-border-warm flex items-center justify-between bg-cream/50">
-                        <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Bills</h3>
-                        <Link href={route('bills.create', { supplier_id: supplier.id })} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt">
-                            <Icons.Plus /> New bill
-                        </Link>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead>
-                                <tr className="text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
-                                    <th className="px-6 py-4">Bill #</th>
-                                    <th className="px-6 py-4">Date</th>
-                                    <th className="px-6 py-4">Due date</th>
-                                    <th className="px-6 py-4 text-right">Total</th>
-                                    <th className="px-6 py-4 text-right">Paid</th>
-                                    <th className="px-6 py-4 text-right">Balance</th>
-                                    <th className="px-6 py-4">Status</th>
-                                    <th className="px-6 py-4 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {bills.length > 0 ? bills.map(bill => {
-                                    const total = parseFloat(bill.total_amount) || 0;
-                                    const paid = parseFloat(bill.amount_paid) || 0;
-                                    const bal = Math.max(0, total - paid);
-                                    return (
-                                        <tr key={bill.id} className="border-b border-border-warm last:border-0 hover:bg-cream/80">
-                                            <td className="px-6 py-4 font-mono font-semibold text-ink">{bill.bill_number}</td>
-                                            <td className="px-6 py-4 text-ink">{bill.bill_date}</td>
-                                            <td className="px-6 py-4 text-ink">{bill.due_date || '—'}</td>
-                                            <td className="px-6 py-4 text-right font-mono tabular-nums">RM {formatMoney(total)}</td>
-                                            <td className="px-6 py-4 text-right font-mono tabular-nums">RM {formatMoney(paid)}</td>
-                                            <td className="px-6 py-4 text-right font-mono tabular-nums text-terracotta">RM {formatMoney(bal)}</td>
-                                            <td className="px-6 py-4">{statusBadge(bill.status)}</td>
-                                            <td className="px-6 py-4 text-right">
-                                                <Link href={route('bills.edit', bill.id)} className="inline-flex items-center gap-1 text-xs font-semibold text-terracotta hover:text-terracotta">
-                                                    View <Icons.ChevronRight />
-                                                </Link>
-                                            </td>
-                                        </tr>
-                                    );
-                                }) : (
-                                    <tr>
-                                        <td colSpan={8} className="px-6 py-12 text-center text-ink-muted text-sm">
-                                            No bills yet. Create a bill for this supplier.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                    <SidebarCard>
+                        <Link href={route('supplier-statements.show', supplier.id)} className={docBtn}>Statement</Link>
+                        {canPay && (
+                            <Link href={route('ap-deposits.create', { supplier_id: supplier.id })} className={docBtn}>Make payment</Link>
+                        )}
+                    </SidebarCard>
+                </aside>
             </div>
         </AuthenticatedLayout>
     );

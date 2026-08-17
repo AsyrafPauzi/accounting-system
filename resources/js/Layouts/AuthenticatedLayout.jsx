@@ -39,17 +39,17 @@ const Icons = {
 };
 
 const navConfig = [
-    { group: 'Main', links: [{ name: 'Dashboard', route: 'dashboard', Icon: Icons.ChartBar }] },
+    { group: 'Main', links: [{ name: 'Dashboard', route: 'dashboard', Icon: Icons.ChartBar, subtitle: 'Overview of sales, bills, and cash' }] },
     { group: 'Sales (Revenue)', subgroups: [
         { name: 'Quotes & orders', links: [
             { name: 'Estimates', route: 'estimates.index', Icon: Icons.ClipboardList, planPermission: 'estimates.view', userPermission: 'estimates.view', subtitle: 'Quotations sent to customers' },
-            { name: 'Sales Orders', route: 'sales-orders.index', Icon: Icons.ClipboardList, planPermission: 'estimates.view', userPermission: 'sales-orders.view', requiresGoodsFlow: true },
-            { name: 'Delivery Orders', route: 'delivery-orders.index', Icon: Icons.ClipboardList, planPermission: 'estimates.view', userPermission: 'delivery-orders.view', requiresGoodsFlow: true },
+            { name: 'Sales Orders', route: 'sales-orders.index', Icon: Icons.ClipboardList, planPermission: 'estimates.view', userPermission: 'sales-orders.view', requiresGoodsFlow: true, subtitle: 'Confirmed orders before delivery' },
+            { name: 'Delivery Orders', route: 'delivery-orders.index', Icon: Icons.ClipboardList, planPermission: 'estimates.view', userPermission: 'delivery-orders.view', requiresGoodsFlow: true, subtitle: 'Goods dispatched to customers' },
         ]},
         { name: 'Billing', links: [
-            { name: 'Invoices', route: 'invoices.index', Icon: Icons.Document, planPermission: 'invoices.view', userPermission: 'invoices.view' },
+            { name: 'Invoices', route: 'invoices.index', Icon: Icons.Document, planPermission: 'invoices.view', userPermission: 'invoices.view', subtitle: 'Bills sent to customers' },
             { name: 'Recurring Invoices', route: 'recurring-invoices.index', Icon: Icons.ArrowPath, planPermission: 'recurring-invoices.view', userPermission: 'recurring-invoices.view', subtitle: 'Auto-generate, post, and email on a schedule' },
-            { name: 'Credit Notes', route: 'credit-notes.index', Icon: Icons.ReceiptRefund, planPermission: 'credit-notes.view', userPermission: 'credit-notes.view' },
+            { name: 'Credit Notes', route: 'credit-notes.index', Icon: Icons.ReceiptRefund, planPermission: 'credit-notes.view', userPermission: 'credit-notes.view', subtitle: 'Refunds and reductions for customers' },
             { name: 'Debit Notes', route: 'debit-notes.index', Icon: Icons.Document, planPermission: 'credit-notes.view', userPermission: 'debit-notes.view', subtitle: 'Additional charges to customers' },
         ]},
         { name: 'Collections', links: [
@@ -57,19 +57,19 @@ const navConfig = [
             { name: 'Customer Statements', route: 'customer-statements.index', Icon: Icons.DocumentChart, planPermission: 'customer-statements.view', userPermission: 'customers.view', subtitle: 'Balance forward report per customer' },
         ]},
         { name: 'Masters', links: [
-            { name: 'Customers', route: 'customers.index', Icon: Icons.Users, planPermission: 'customers.view', userPermission: 'customers.view' },
+            { name: 'Customers', route: 'customers.index', Icon: Icons.Users, planPermission: 'customers.view', userPermission: 'customers.view', subtitle: 'People and companies you bill' },
             { name: 'Products & Services', route: 'products.index', Icon: Icons.Tag, planPermission: 'products.view', userPermission: 'products.view', subtitle: 'Reusable invoice line items' },
         ]},
     ]},
     { group: 'Purchases (Expenses)', subgroups: [
         { name: 'Ordering', links: [
-            { name: 'Purchase Orders', route: 'purchase-orders.index', Icon: Icons.ClipboardList, planPermission: 'bills.view', userPermission: 'bills.view' },
-            { name: 'Goods Receipts', route: 'goods-receipts.index', Icon: Icons.ClipboardList, planPermission: 'bills.view', userPermission: 'bills.view' },
+            { name: 'Purchase Orders', route: 'purchase-orders.index', Icon: Icons.ClipboardList, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Orders placed with suppliers' },
+            { name: 'Goods Receipts', route: 'goods-receipts.index', Icon: Icons.ClipboardList, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Stock received from suppliers' },
         ]},
         { name: 'Bills', links: [
-            { name: 'Bills / Purchases', route: 'bills.index', Icon: Icons.ShoppingCart, planPermission: 'bills.view', userPermission: 'bills.view' },
+            { name: 'Bills / Purchases', route: 'bills.index', Icon: Icons.ShoppingCart, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Supplier invoices to pay' },
             { name: 'Recurring Bills', route: 'recurring-bills.index', Icon: Icons.ArrowPath, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Auto-generate supplier bills on a schedule' },
-            { name: 'Supplier Credit Notes', route: 'supplier-credit-notes.index', Icon: Icons.ReceiptRefund, planPermission: 'bills.view', userPermission: 'bills.view' },
+            { name: 'Supplier Credit Notes', route: 'supplier-credit-notes.index', Icon: Icons.ReceiptRefund, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Credits from suppliers' },
             { name: 'Supplier Debit Notes', route: 'supplier-debit-notes.index', Icon: Icons.Document, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Additional charges from suppliers' },
         ]},
         { name: 'Payments', links: [
@@ -78,7 +78,7 @@ const navConfig = [
             { name: 'Accounts Payable', route: 'accounts-payable.index', Icon: Icons.Document, planPermission: 'reports.aged-reports', userPermission: 'reports.aged-reports', subtitle: 'Outstanding and aging' },
         ]},
         { name: 'Masters', links: [
-            { name: 'Suppliers', route: 'suppliers.index', Icon: Icons.BuildingOffice, planPermission: 'suppliers.view', userPermission: 'suppliers.view' },
+            { name: 'Suppliers', route: 'suppliers.index', Icon: Icons.BuildingOffice, planPermission: 'suppliers.view', userPermission: 'suppliers.view', subtitle: 'Companies you buy from' },
         ]},
     ]},
     { group: 'Accounting', links: [
@@ -180,13 +180,17 @@ export default function Authenticated({ user: propUser, header, children }) {
 
     const hideRailTip = () => setRailTip(null);
 
-    const railProps = (label, subtitle = '') => ({
-        'aria-label': label,
-        onMouseEnter: (e) => showRailTip(label, e, subtitle),
-        onMouseLeave: hideRailTip,
-        onFocus: (e) => showRailTip(label, e, subtitle),
-        onBlur: hideRailTip,
-    });
+    const railProps = (label, subtitle = '') => {
+        const hint = subtitle ? `${label} — ${subtitle}` : label;
+        return {
+            'aria-label': hint,
+            title: hint,
+            onMouseEnter: (e) => showRailTip(label, e, subtitle),
+            onMouseLeave: hideRailTip,
+            onFocus: (e) => showRailTip(label, e, subtitle),
+            onBlur: hideRailTip,
+        };
+    };
 
     // Post-signup welcome tour. Shows on the first authenticated page
     // load after a freshly-registered user verifies their email — i.e.
@@ -323,7 +327,10 @@ export default function Authenticated({ user: propUser, header, children }) {
                         onClick={() => persistSidebarCollapsed(!sidebarCollapsed)}
                         className="hidden lg:flex p-2 rounded-xl text-ink-muted hover:text-ink hover:bg-surface-alt transition-colors"
                         aria-label={sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation'}
-                        {...railProps(sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation')}
+                        {...railProps(
+                            sidebarCollapsed ? 'Expand navigation' : 'Collapse navigation',
+                            sidebarCollapsed ? 'Show names next to icons' : 'Icons only',
+                        )}
                     >
                         {sidebarCollapsed ? <Icons.ChevronRight /> : <Icons.ChevronLeft />}
                     </button>
@@ -534,14 +541,14 @@ export default function Authenticated({ user: propUser, header, children }) {
                             </button>
                             <div className={`mt-1 space-y-0.5 overflow-hidden transition-all duration-300 ${openGroups['Admin'] || sidebarCollapsed ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                 {[
-                                    { name: 'Tenants', route: 'admin.tenants.index', Icon: Icons.BuildingOffice },
-                                    { name: 'Plan Catalog', route: 'admin.plans.index', Icon: Icons.Sparkles },
-                                    { name: 'Self-hosted Installs', route: 'admin.self-hosted.index', Icon: Icons.BuildingOffice, saasOnly: true },
-                                    { name: 'Patch Broadcaster', route: 'admin.platform.show', Icon: Icons.ArrowPath, saasOnly: true },
-                                    { name: 'Platform Users', route: 'admin.users.index', Icon: Icons.Users },
-                                    { name: 'Audit Log', route: 'admin.audit-logs.index', Icon: Icons.Audit },
-                                    { name: 'Receipt OCR', route: 'admin.ocr.edit', Icon: Icons.Scan },
-                                    { name: 'Branding', route: 'admin.branding.edit', Icon: Icons.Sparkles },
+                                    { name: 'Tenants', route: 'admin.tenants.index', Icon: Icons.BuildingOffice, subtitle: 'All company accounts on the platform' },
+                                    { name: 'Plan Catalog', route: 'admin.plans.index', Icon: Icons.Sparkles, subtitle: 'Subscription plans and features' },
+                                    { name: 'Self-hosted Installs', route: 'admin.self-hosted.index', Icon: Icons.BuildingOffice, saasOnly: true, subtitle: 'Licensed on-prem installs' },
+                                    { name: 'Patch Broadcaster', route: 'admin.platform.show', Icon: Icons.ArrowPath, saasOnly: true, subtitle: 'Push updates to installs' },
+                                    { name: 'Platform Users', route: 'admin.users.index', Icon: Icons.Users, subtitle: 'Super-admin accounts' },
+                                    { name: 'Audit Log', route: 'admin.audit-logs.index', Icon: Icons.Audit, subtitle: 'Platform activity history' },
+                                    { name: 'Receipt OCR', route: 'admin.ocr.edit', Icon: Icons.Scan, subtitle: 'Scan settings for receipts' },
+                                    { name: 'Branding', route: 'admin.branding.edit', Icon: Icons.Sparkles, subtitle: 'Logo, colours, and product name' },
                                 ].filter((link) => !link.saasOnly || !isSelfHosted).map((link) => {
                                     const active = isRouteActive(link.route);
                                     return (
@@ -549,12 +556,19 @@ export default function Authenticated({ user: propUser, header, children }) {
                                             key={link.name}
                                             href={getSafeRoute(link.route)}
                                             className={linkClasses(active, false, sidebarCollapsed)}
-                                            {...railProps(link.name)}
+                                            {...railProps(link.name, link.subtitle)}
                                         >
                                             <span className={iconWrapClasses(active)}>
                                                 <link.Icon />
                                             </span>
-                                            <span className={navLabelClass(sidebarCollapsed)}>{link.name}</span>
+                                            <span className={navLabelClass(sidebarCollapsed)}>
+                                                <span className="block truncate">{link.name}</span>
+                                                {link.subtitle && (
+                                                    <span className={`block text-[10px] font-normal mt-0.5 truncate ${active ? 'text-white/80' : 'text-ink-muted'}`}>
+                                                        {link.subtitle}
+                                                    </span>
+                                                )}
+                                            </span>
                                             {active && <span className={`w-1.5 h-1.5 rounded-full bg-white/90 ${sidebarCollapsed ? 'lg:hidden' : ''}`} />}
                                         </Link>
                                     );
@@ -578,7 +592,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                                 <Link
                                     href={getSafeRoute('settings.company')}
                                     className={linkClasses(isRouteActive('settings.company'), false, sidebarCollapsed)}
-                                    {...railProps('Company settings')}
+                                    {...railProps('Company settings', 'Legal name, address, and tax IDs')}
                                 >
                                     <span className={iconWrapClasses(isRouteActive('settings.company'))}>
                                         <Icons.BuildingOffice />
@@ -592,7 +606,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                                     <Link
                                         href={getSafeRoute('settings.invite-firm.show')}
                                         className={linkClasses(isRouteActive('settings.invite-firm.show'), false, sidebarCollapsed)}
-                                        {...railProps('Invite my accountant')}
+                                        {...railProps('Invite my accountant', 'Give a firm access to the books')}
                                     >
                                         <span className={iconWrapClasses(isRouteActive('settings.invite-firm.show'))}>
                                             <Icons.Users />
@@ -604,7 +618,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                                     <Link
                                         href={getSafeRoute('audit.index')}
                                         className={linkClasses(isRouteActive('audit.index'), false, sidebarCollapsed)}
-                                        {...railProps('Audit Compliance')}
+                                        {...railProps('Audit Compliance', 'Year-end audit checklist')}
                                     >
                                         <span className={iconWrapClasses(isRouteActive('audit.index'))}>
                                             <Icons.Audit />
@@ -616,7 +630,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                                     <Link
                                         href={getSafeRoute('settings.team.index')}
                                         className={linkClasses(isRouteActive('settings.team.index'), false, sidebarCollapsed)}
-                                        {...railProps('Team & Roles')}
+                                        {...railProps('Team & Roles', 'Who can sign in and what they can do')}
                                     >
                                         <span className={iconWrapClasses(isRouteActive('settings.team.index'))}>
                                             <Icons.Users />
@@ -628,7 +642,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                                     <Link
                                         href={getSafeRoute('audit-logs.index')}
                                         className={linkClasses(isRouteActive('audit-logs.index'), false, sidebarCollapsed)}
-                                        {...railProps('Audit Logs')}
+                                        {...railProps('Audit Logs', 'Who changed what, and when')}
                                     >
                                         <span className={iconWrapClasses(isRouteActive('audit-logs.index'))}>
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -645,7 +659,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                                     <Link
                                         href={getSafeRoute('settings.integrations.index')}
                                         className={linkClasses(isRouteActive('settings.integrations.index'), false, sidebarCollapsed)}
-                                        {...railProps('API & Integrations')}
+                                        {...railProps('API & Integrations', 'Connect other apps')}
                                     >
                                         <span className={iconWrapClasses(isRouteActive('settings.integrations.index'))}>
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -665,7 +679,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                                     <Link
                                         href={getSafeRoute('settings.plan.index')}
                                         className={linkClasses(isRouteActive('settings.plan.index'), false, sidebarCollapsed)}
-                                        {...railProps(isSelfHosted ? 'License & Usage' : 'Plan & Usage')}
+                                        {...railProps(isSelfHosted ? 'License & Usage' : 'Plan & Usage', isSelfHosted ? 'License expiry and usage' : 'Subscription and usage limits')}
                                     >
                                         <span className={iconWrapClasses(isRouteActive('settings.plan.index'))}>
                                             <Icons.Sparkles />
@@ -688,7 +702,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                     <div className={`flex items-center gap-3 mb-3 ${sidebarCollapsed ? 'lg:justify-center lg:mb-2' : ''}`}>
                         <div
                             className="h-10 w-10 rounded-xl bg-terracotta flex items-center justify-center text-white text-sm font-semibold"
-                            {...railProps(user.name || 'User')}
+                            {...railProps(user.name || 'User', isImpersonating ? 'Impersonating' : (user.role_name?.replace('-', ' ') || 'Signed in'))}
                         >
                             {(user.name || 'U').charAt(0)}
                         </div>
@@ -703,7 +717,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                         <Link
                             href={route('profile.edit')}
                             className="py-2 rounded-lg text-center text-xs font-semibold text-ink bg-cream border border-border-warm hover:bg-surface-alt transition-colors"
-                            {...railProps('Settings')}
+                            {...railProps('Settings', 'Your profile and password')}
                         >
                             <span className={sidebarCollapsed ? 'lg:hidden' : ''}>Settings</span>
                             <span className={`hidden ${sidebarCollapsed ? 'lg:inline' : ''}`} aria-hidden="true">
@@ -715,7 +729,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                             method="post"
                             as="button"
                             className="py-2 rounded-lg text-center text-xs font-semibold text-terracotta bg-cream border border-border-warm hover:bg-terracotta/10 transition-colors"
-                            {...railProps('Logout')}
+                            {...railProps('Logout', 'Sign out of this account')}
                         >
                             <span className={sidebarCollapsed ? 'lg:hidden' : ''}>Logout</span>
                             <span className={`hidden ${sidebarCollapsed ? 'lg:inline' : ''}`} aria-hidden="true">
@@ -758,8 +772,8 @@ export default function Authenticated({ user: propUser, header, children }) {
                 </div>
 
                 {header && (
-                    <header className="flex-shrink-0 bg-surface/90 backdrop-blur-md border-b border-border-warm z-10">
-                        <div className="max-w-full mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-10">
+                    <header className="flex-shrink-0 sticky top-0 bg-surface/90 backdrop-blur-md border-b border-border-warm z-20">
+                        <div className="page-app-header max-w-full mx-auto py-3 sm:py-4 px-4 sm:px-6 lg:px-10">
                             {header}
                         </div>
                     </header>

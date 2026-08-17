@@ -137,6 +137,36 @@
      * variant utilities, or use the BrandButton/PrimaryButton/SecondaryButton
      * React primitives which apply this class automatically.
      */
+    /* Sticky app header — same title and action-button size on every page. */
+    .page-app-header > .flex {
+        gap: 0.5rem;
+    }
+    @media (min-width: 640px) {
+        .page-app-header > .flex {
+            align-items: center;
+        }
+    }
+    .page-app-header h1,
+    .page-app-header h2 {
+        @apply font-display font-medium text-ink tracking-tight;
+        font-size: 1.25rem !important;
+        line-height: 1.75rem !important;
+    }
+    @media (min-width: 640px) {
+        .page-app-header h1,
+        .page-app-header h2 {
+            font-size: 1.5rem !important;
+            line-height: 2rem !important;
+        }
+    }
+    .page-app-header a.font-semibold,
+    .page-app-header button.font-semibold {
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+        font-size: 1rem !important;
+        line-height: 1.5rem !important;
+    }
+
     .btn-app {
         @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-terracotta disabled:opacity-50 disabled:cursor-not-allowed;
     }

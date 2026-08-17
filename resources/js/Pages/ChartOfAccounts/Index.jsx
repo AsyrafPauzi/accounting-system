@@ -2,15 +2,14 @@ import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { confirm, alertUpgrade } from '@/utils/swal';
+import RowActionsMenu, { ActionIcons } from '@/Components/RowActionsMenu';
 
 const Icons = {
     Folder: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>,
     Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
     ArrowDownTray: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>,
     DocumentArrowDown: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h2.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
-    Pencil: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>,
     MagnifyingGlass: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
-    Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
 };
 
 const TYPE_OPTIONS = [
@@ -199,7 +198,7 @@ export default function Index({ auth, accounts = [], groupedByType = {} }) {
                                     <th className="px-6 py-4">Parent</th>
                                     <th className="px-6 py-4 max-w-[200px]">Description</th>
                                     <th className="px-6 py-4">Status</th>
-                                    <th className="px-6 py-4 text-right w-32">Actions</th>
+                                    <th className="px-6 py-4 text-right w-16">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -237,25 +236,10 @@ export default function Index({ auth, accounts = [], groupedByType = {} }) {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    {auth.planPermissions['accounts.edit'] && auth.permissions.includes('accounts.edit') && (
-                                                        <Link
-                                                            href={route('chart-of-accounts.edit', acc.id)}
-                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-ink-muted hover:text-ink hover:bg-surface-alt transition-colors"
-                                                        >
-                                                            <Icons.Pencil /> Edit
-                                                        </Link>
-                                                    )}
-                                                    {auth.planPermissions['accounts.delete'] && auth.permissions.includes('accounts.delete') && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleDelete(acc.id, acc.name)}
-                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-terracotta hover:bg-terracotta/10 transition-colors"
-                                                        >
-                                                            <Icons.Trash /> Delete
-                                                        </button>
-                                                    )}
-                                                </div>
+                                                <RowActionsMenu items={[
+                                                    { label: 'Edit', href: route('chart-of-accounts.edit', acc.id), icon: <ActionIcons.Pencil />, show: Boolean(auth.planPermissions['accounts.edit']) && auth.permissions.includes('accounts.edit') },
+                                                    { label: 'Delete', icon: <ActionIcons.Trash />, danger: true, show: Boolean(auth.planPermissions['accounts.delete']) && auth.permissions.includes('accounts.delete'), onClick: () => handleDelete(acc.id, acc.name) },
+                                                ]} />
                                             </td>
                                         </tr>
                                     ))

@@ -34,7 +34,10 @@ class BillService
         }
 
         return round(
-            (float) $bill->total_amount - (float) $bill->amount_paid - $credits - $deposits,
+            (float) ($bill->getAttributes()['total_amount'] ?? 0)
+            - (float) ($bill->getAttributes()['amount_paid'] ?? 0)
+            - $credits
+            - $deposits,
             2
         );
     }

@@ -116,7 +116,7 @@ export default function SalesTax({ auth, filters = {}, output_tax = 0, input_tax
                                         <tr key={i.id} className="hover:bg-cream/30">
                                             <td className="px-4 py-2 text-xs">{formatDate(i.issue_date)}</td>
                                             <td className="px-4 py-2">
-                                                <Link href={route('invoices.preview', i.id)} className="font-semibold text-terracotta hover:underline">{i.invoice_number}</Link>
+                                                <Link href={route('invoices.show', i.id)} className="font-semibold text-terracotta hover:underline">{i.invoice_number}</Link>
                                                 <p className="text-[11px] text-ink-muted">{i.customer}</p>
                                             </td>
                                             <td className="px-4 py-2 text-right font-mono tabular-nums">{formatCurrency(i.tax, base_currency)}</td>

@@ -28,7 +28,22 @@ class EstimateController extends Controller
         $this->authorize('estimates.view');
 
         $search = trim((string) $request->input('search', ''));
-        $status = $request->input('status', 'all');
+        $status = $request->input('status', '');
+        if ($status === 'all') {
+            $status = '';
+        }
+        $perPage = (int) $request->input('per_page', 25);
+        if (! in_array($perPage, [10, 25, 50, 100], true)) {
+            $perPage = 25;
+        }
+
+        $baseQuery = Estimate::query();
+
+        $totalCount = (clone $baseQuery)->count();
+        $openValue = (float) (clone $baseQuery)
+            ->whereIn('status', ['draft', 'sent', 'accepted'])
+            ->sum('total_amount');
+        $convertedCount = (int) (clone $baseQuery)->where('status', 'converted')->count();
 
         $estimates = Estimate::query()
             ->select(['id', 'estimate_number', 'customer_id', 'issue_date', 'expiry_date', 'status', 'currency', 'total_amount', 'converted_invoice_id', 'last_emailed_status', 'last_emailed_at'])
@@ -40,10 +55,10 @@ class EstimateController extends Controller
                 $qq->where('estimate_number', 'like', "%{$search}%")
                     ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$search}%"));
             }))
-            ->when(in_array($status, Estimate::STATUSES, true), fn ($q) => $q->where('status', $status))
+            ->when($status !== '' && in_array($status, Estimate::STATUSES, true), fn ($q) => $q->where('status', $status))
             ->orderByDesc('issue_date')
             ->orderByDesc('id')
-            ->paginate(20)
+            ->paginate($perPage)
             ->withQueryString();
 
         // Flatten customer.email → top-level customer_email for a
@@ -51,6 +66,7 @@ class EstimateController extends Controller
         // still available if the frontend wants it.
         $estimates->getCollection()->transform(function ($estimate) {
             $estimate->customer_email = $estimate->customer?->email;
+
             return $estimate;
         });
 
@@ -62,11 +78,15 @@ class EstimateController extends Controller
 
         return Inertia::render('Estimates/Index', [
             'estimates' => $estimates,
-            'filters'   => [
+            'filters' => [
                 'search' => $search,
                 'status' => $status,
+                'per_page' => $perPage,
             ],
-            'counts'    => $counts,
+            'counts' => $counts,
+            'totalCount' => $totalCount,
+            'openValue' => $openValue,
+            'convertedCount' => $convertedCount,
             'base_currency' => $this->tenantBaseCurrency(),
         ]);
     }
@@ -81,6 +101,7 @@ class EstimateController extends Controller
             'products'            => $this->productOptions(),
             'next_estimate_number'=> $this->estimates->nextNumber(),
             'base_currency'       => $this->tenantBaseCurrency(),
+            'default_customer_notes' => $this->defaultEstimateCustomerNotes(),
         ]);
     }
 
@@ -109,32 +130,37 @@ class EstimateController extends Controller
     {
         $this->authorize('estimates.create');
         $request->validate([
-            'rows'                       => 'required|array|min:1|max:200',
-            'rows.*.customer_id'         => 'required|exists:customers,id',
-            'rows.*.description'         => 'required|string',
-            'rows.*.quantity'            => 'required|numeric|min:0.01',
-            'rows.*.unit_price'          => 'required|numeric',
-            'rows.*.tax_rate'            => 'nullable|numeric',
-            'rows.*.issue_date'          => 'nullable|date',
+            'rows'                              => 'required|array|min:1|max:200',
+            'rows.*.customer_id'                => 'required|exists:customers,id',
+            'rows.*.issue_date'                 => 'nullable|date',
+            'rows.*.items'                      => 'required|array|min:1',
+            'rows.*.items.*.description'        => 'required|string|max:500',
+            'rows.*.items.*.quantity'           => 'required|numeric|min:0.01',
+            'rows.*.items.*.unit_price'         => 'required|numeric',
+            'rows.*.items.*.tax_rate'           => 'nullable|numeric',
+            'rows.*.items.*.item_classification'=> 'nullable|string|max:20',
         ]);
 
         $created = 0;
         foreach ($request->input('rows') as $row) {
+            $items = collect($row['items'] ?? [])->map(fn ($item) => [
+                'description'         => $item['description'],
+                'quantity'            => $item['quantity'],
+                'unit_price'          => $item['unit_price'],
+                'tax_rate'            => $item['tax_rate'] ?? 0,
+                'item_classification' => $item['item_classification'] ?? '022',
+                'discount_amount'     => 0,
+            ])->all();
+
             $this->estimates->create([
                 'estimate_number' => $this->estimates->nextNumber(),
                 'customer_id'     => $row['customer_id'],
                 'issue_date'      => $row['issue_date'] ?? now()->toDateString(),
                 'expiry_date'     => $row['expiry_date'] ?? now()->addDays(14)->toDateString(),
                 'currency'        => $row['currency'] ?? 'MYR',
+                'customer_notes'  => $row['customer_notes'] ?? ($this->defaultEstimateCustomerNotes() ?: null),
                 'created_by'      => $request->user()->id,
-            ], [[
-                'description'         => $row['description'],
-                'quantity'            => $row['quantity'],
-                'unit_price'          => $row['unit_price'],
-                'tax_rate'            => $row['tax_rate'] ?? 0,
-                'item_classification' => $row['item_classification'] ?? '022',
-                'discount_amount'     => 0,
-            ]]);
+            ], $items);
             $created++;
         }
 
@@ -428,5 +454,19 @@ class EstimateController extends Controller
         }
 
         return 'MYR';
+    }
+
+    private function defaultEstimateCustomerNotes(): string
+    {
+        if (function_exists('tenant') && tenant()) {
+            return (string) (tenant()->default_estimate_customer_notes ?? '');
+        }
+        if (auth()->user()?->tenant_id) {
+            $t = Tenant::find(auth()->user()->tenant_id);
+
+            return (string) ($t?->default_estimate_customer_notes ?? '');
+        }
+
+        return '';
     }
 }

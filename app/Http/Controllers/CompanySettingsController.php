@@ -47,6 +47,8 @@ class CompanySettingsController extends Controller
             'sst_number' => $tenant->sst_number ?? '',
             'invoice_brand_color' => $tenant->invoice_brand_color ?? '#0f172a',
             'invoice_logo_url' => $tenant->invoice_logo_url ?? '',
+            'default_invoice_customer_notes' => $tenant->default_invoice_customer_notes ?? '',
+            'default_estimate_customer_notes' => $tenant->default_estimate_customer_notes ?? '',
             'reminder_offsets' => is_array($tenant->reminder_offsets) && $tenant->reminder_offsets !== []
                 ? $tenant->reminder_offsets
                 : \App\Services\InvoiceReminderService::DEFAULT_OFFSETS,
@@ -125,6 +127,8 @@ class CompanySettingsController extends Controller
             'sst_number' => ['nullable', 'string', 'max:50'],
             'invoice_brand_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'invoice_logo_url' => ['nullable', 'string', 'max:500'],
+            'default_invoice_customer_notes' => ['nullable', 'string', 'max:5000'],
+            'default_estimate_customer_notes' => ['nullable', 'string', 'max:5000'],
             'reminder_offsets' => ['nullable', 'array'],
             'reminder_offsets.*' => ['integer'],
             'myinvois_client_id' => ['nullable', 'string', 'max:255'],

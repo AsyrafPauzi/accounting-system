@@ -36,6 +36,7 @@ class ArDepositController extends Controller
         return Inertia::render('ArDeposits/Show', [
             'deposit'      => array_merge($deposit->toArray(), ['open_amount' => $deposit->openAmount()]),
             'openInvoices' => $openInvoices,
+            'company'      => tenant()?->getCompanyDetails() ?? [],
         ]);
     }
 

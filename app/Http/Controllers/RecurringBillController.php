@@ -6,6 +6,7 @@ use App\Models\Account;
 use App\Models\RecurringBill;
 use App\Models\Supplier;
 use App\Services\RecurringBillService;
+use App\Support\IndexFilters;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -13,10 +14,38 @@ class RecurringBillController extends Controller
 {
     public function __construct(protected RecurringBillService $templates) {}
 
-    public function index()
+    public function index(Request $request)
     {
+        $filters = IndexFilters::from($request, 10);
+        $status = $filters['status'];
+
+        $templates = RecurringBill::query()
+            ->with('supplier:id,name,email')
+            ->when($filters['search'] !== '', function ($q) use ($filters) {
+                $q->where(function ($qq) use ($filters) {
+                    $qq->where('name', 'like', '%'.$filters['search'].'%')
+                        ->orWhereHas('supplier', fn ($s) => $s->where('name', 'like', '%'.$filters['search'].'%'));
+                });
+            })
+            ->when($status === 'active', fn ($q) => $q->where('is_active', true))
+            ->when($status === 'paused', fn ($q) => $q->where('is_active', false))
+            ->when($status === 'due', fn ($q) => $q->due())
+            ->orderByDesc('is_active')
+            ->orderBy('next_run_date')
+            ->paginate($filters['per_page'])
+            ->withQueryString();
+
+        $counts = [
+            'all'    => RecurringBill::count(),
+            'active' => RecurringBill::where('is_active', true)->count(),
+            'paused' => RecurringBill::where('is_active', false)->count(),
+            'due'    => RecurringBill::query()->due()->count(),
+        ];
+
         return Inertia::render('RecurringBills/Index', [
-            'templates' => RecurringBill::query()->with('supplier:id,name')->orderByDesc('id')->get(),
+            'templates' => $templates,
+            'filters'   => $filters,
+            'counts'    => $counts,
         ]);
     }
 
@@ -48,6 +77,7 @@ class RecurringBillController extends Controller
     {
         return Inertia::render('RecurringBills/Show', [
             'template' => RecurringBill::with(['items', 'supplier'])->findOrFail($id),
+            'company'  => tenant()?->getCompanyDetails() ?? [],
         ]);
     }
 

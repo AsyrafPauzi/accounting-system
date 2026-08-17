@@ -6,6 +6,7 @@ use App\Http\Requests\StoreSupplierRequest;
 use App\Http\Requests\UpdateSupplierRequest;
 use App\Models\Bill;
 use App\Models\Supplier;
+use App\Services\MyInvoisService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -50,16 +51,30 @@ class SupplierController extends Controller
     public function show(int $id): Response
     {
         $supplier = Supplier::findOrFail($id);
-        $bills = Bill::where('supplier_id', $id)->with('items')->orderByDesc('bill_date')->get();
+        $bills = Bill::where('supplier_id', $id)
+            ->with(['items', 'supplier:id,name'])
+            ->orderByDesc('bill_date')
+            ->limit(20)
+            ->get();
 
-        $balance = (float) Bill::where('supplier_id', $id)
-            ->whereNotIn('status', ['draft', 'void'])
-            ->sum(DB::raw('total_amount - amount_paid'));
+        $openBills = Bill::where('supplier_id', $id)->whereNotIn('status', ['draft', 'void']);
+        $totalBilled = (float) (clone $openBills)->sum('total_amount');
+        $totalPaid = (float) (clone $openBills)->sum('amount_paid');
+        $balance = round($totalBilled - $totalPaid, 2);
+        $creditLimit = (float) ($supplier->credit_limit ?? 0);
+        $remainingLimit = $creditLimit > 0 ? max(0, round($creditLimit - $balance, 2)) : null;
 
         return Inertia::render('Suppliers/Show', [
             'supplier' => $supplier,
             'bills' => $bills,
-            'balance' => round($balance, 2),
+            'balance' => $balance,
+            'stats' => [
+                'total_billed' => round($totalBilled, 2),
+                'total_paid' => round($totalPaid, 2),
+                'balance' => $balance,
+                'remaining_limit' => $remainingLimit,
+            ],
+            'myinvois_gaps' => MyInvoisService::supplierGaps($supplier),
         ]);
     }
 

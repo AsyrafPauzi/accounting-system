@@ -6,6 +6,7 @@ use App\Jobs\SendDeliveryOrderEmail;
 use App\Models\DeliveryOrder;
 use App\Services\DeliveryOrderService;
 use App\Services\SalesDocumentTrail;
+use App\Support\IndexFilters;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,18 +15,31 @@ class DeliveryOrderController extends Controller
 {
     public function __construct(protected DeliveryOrderService $deliveries) {}
 
-    public function index()
+    public function index(Request $request)
     {
+        $filters = IndexFilters::from($request);
+
         $orders = DeliveryOrder::query()
             ->with([
                 'customer:id,name',
                 'salesOrder:id,so_number',
                 'invoices:id,invoice_number,delivery_order_id,sales_order_id,estimate_id,status',
             ])
+            ->when($filters['search'] !== '', function ($q) use ($filters) {
+                $q->where(function ($qq) use ($filters) {
+                    $qq->where('do_number', 'like', '%'.$filters['search'].'%')
+                        ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', '%'.$filters['search'].'%'));
+                });
+            })
+            ->when($filters['status'] !== '' && in_array($filters['status'], DeliveryOrder::STATUSES, true), fn ($q) => $q->where('status', $filters['status']))
             ->orderByDesc('id')
-            ->paginate(20);
+            ->paginate($filters['per_page'])
+            ->withQueryString();
 
-        return Inertia::render('DeliveryOrders/Index', ['orders' => $orders]);
+        return Inertia::render('DeliveryOrders/Index', [
+            'orders'  => $orders,
+            'filters' => $filters,
+        ]);
     }
 
     public function show($id)
@@ -35,6 +49,7 @@ class DeliveryOrderController extends Controller
         return Inertia::render('DeliveryOrders/Show', [
             'order'          => $order,
             'document_trail' => app(SalesDocumentTrail::class)->forDeliveryOrder($order),
+            'company'        => tenant()?->getCompanyDetails() ?? [],
         ]);
     }
 

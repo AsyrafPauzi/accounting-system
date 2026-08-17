@@ -1,14 +1,24 @@
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { formatCurrency } from '@/utils/currency';
+import IndexFilterBar from '@/Components/IndexFilterBar';
+import IndexPagination from '@/Components/IndexPagination';
+import RowActionsMenu, { ActionIcons } from '@/Components/RowActionsMenu';
+import useClientIndexFilters from '@/hooks/useClientIndexFilters';
 
 const Icons = {
     Document: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
     Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
-    MagnifyingGlass: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
-    ChevronRight: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
 };
+
+const SEARCH_KEYS = ['dn_number', 'customer_name'];
+
+const STATUSES = [
+    { value: 'draft', label: 'Draft' },
+    { value: 'posted', label: 'Posted' },
+    { value: 'void', label: 'Void' },
+];
 
 function statusBadge(status) {
     const styles = {
@@ -20,11 +30,13 @@ function statusBadge(status) {
 }
 
 export default function Index({ auth, debitNotes = [] }) {
-    const [search, setSearch] = useState('');
-    const filtered = debitNotes.filter((dn) =>
-        (dn.dn_number || '').toLowerCase().includes(search.toLowerCase()) ||
-        (dn.customer_name || '').toLowerCase().includes(search.toLowerCase())
-    );
+    const permissions = auth.permissions || [];
+    const filters = useClientIndexFilters(debitNotes, { searchKeys: SEARCH_KEYS });
+    const statuses = useMemo(() => {
+        const seen = new Set(debitNotes.map((dn) => dn.status).filter(Boolean));
+        const extra = STATUSES.filter((opt) => seen.has(opt.value));
+        return extra.length > 0 ? extra : STATUSES;
+    }, [debitNotes]);
     const totalValue = debitNotes.filter((dn) => dn.status !== 'void').reduce((sum, dn) => sum + (parseFloat(dn.total_amount) || 0), 0);
 
     return (
@@ -34,7 +46,7 @@ export default function Index({ auth, debitNotes = [] }) {
                     <h2 className="text-xl sm:text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Debit Notes</h2>
                     <p className="text-ink-muted text-sm font-medium mt-1">Charge extra on a posted invoice — tax and ledger included</p>
                 </div>
-                {auth.permissions.includes('debit-notes.create') && (
+                {permissions.includes('debit-notes.create') && (
                     <Link href={route('debit-notes.create')} className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta shadow-lg">
                         <Icons.Plus /> Issue debit note
                     </Link>
@@ -58,13 +70,18 @@ export default function Index({ auth, debitNotes = [] }) {
                 </div>
 
                 <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
-                    <div className="px-4 sm:px-6 py-3 border-b border-border-warm flex items-center gap-3 bg-cream/50">
-                        <div className="relative flex-1 min-w-0 max-w-xs">
-                            <span className="absolute inset-y-0 left-3 flex items-center text-ink-muted"><Icons.MagnifyingGlass /></span>
-                            <input type="text" placeholder="Search DN # or customer..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 w-full border border-border-warm rounded-xl py-2 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta" />
-                        </div>
-                        <span className="text-ink-muted text-sm ml-auto">{filtered.length} of {debitNotes.length}</span>
-                    </div>
+                    <IndexFilterBar
+                        search={filters.searchInput}
+                        onSearchChange={filters.setSearchInput}
+                        searchPlaceholder="Search DN # or customer..."
+                        status={filters.status}
+                        statuses={statuses}
+                        perPage={filters.perPage}
+                        onApply={filters.apply}
+                        from={filters.from}
+                        to={filters.to}
+                        total={filters.total}
+                    />
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
@@ -74,11 +91,11 @@ export default function Index({ auth, debitNotes = [] }) {
                                     <th className="px-4 sm:px-6 py-3 hidden md:table-cell">Related invoice</th>
                                     <th className="px-4 sm:px-6 py-3">Status</th>
                                     <th className="px-4 sm:px-6 py-3 text-right">Amount</th>
-                                    <th className="px-4 sm:px-6 py-3 text-right w-28">Actions</th>
+                                    <th className="px-4 sm:px-6 py-3 text-right w-16">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filtered.length > 0 ? filtered.map((dn) => (
+                                {filters.items.length > 0 ? filters.items.map((dn) => (
                                     <tr key={dn.id} className={`border-b border-border-warm last:border-0 hover:bg-cream/80 ${dn.status === 'void' ? 'opacity-60' : ''}`}>
                                         <td className="px-4 sm:px-6 py-3">
                                             <Link href={route('debit-notes.show', dn.id)} className="font-semibold text-ink hover:text-terracotta">{dn.dn_number}</Link>
@@ -99,17 +116,22 @@ export default function Index({ auth, debitNotes = [] }) {
                                         </td>
                                         <td className="px-4 sm:px-6 py-3 text-right font-mono text-sm font-semibold">{formatCurrency(dn.total_amount, dn.currency)}</td>
                                         <td className="px-4 sm:px-6 py-3 text-right">
-                                            <Link href={route('debit-notes.show', dn.id)} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-terracotta bg-surface-alt hover:bg-cream">
-                                                Open <Icons.ChevronRight />
-                                            </Link>
+                                            <RowActionsMenu items={[
+                                                { label: 'Open', href: route('debit-notes.show', dn.id), icon: <ActionIcons.Open /> },
+                                                { label: 'Download PDF', href: route('debit-notes.pdf', dn.id), external: true, icon: <ActionIcons.Pdf /> },
+                                                { label: 'Email', icon: <ActionIcons.Mail />, show: permissions.includes('invoices.email'), onClick: () => router.post(route('debit-notes.email', dn.id)) },
+                                                { label: 'Edit', href: route('debit-notes.edit', dn.id), icon: <ActionIcons.Pencil />, show: permissions.includes('debit-notes.create') && dn.status !== 'void' },
+                                                { label: 'Void', icon: <ActionIcons.Trash />, danger: true, show: dn.status !== 'void', onClick: () => router.post(route('debit-notes.void', dn.id)) },
+                                            ]} />
                                         </td>
                                     </tr>
                                 )) : (
-                                    <tr><td colSpan={6} className="px-6 py-16 text-center text-ink-muted text-sm">{search ? 'No debit notes match your search.' : 'No debit notes yet. Issue one from here or from a posted invoice.'}</td></tr>
+                                    <tr><td colSpan={6} className="px-6 py-16 text-center text-ink-muted text-sm">{filters.searchInput || filters.status ? 'No debit notes match your filters.' : 'No debit notes yet. Issue one from here or from a posted invoice.'}</td></tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
+                    <IndexPagination currentPage={filters.currentPage} lastPage={filters.lastPage} onPage={(page) => filters.apply({ page })} />
                 </div>
             </div>
         </AuthenticatedLayout>

@@ -1,13 +1,25 @@
 import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { formatCurrency } from '@/utils/currency';
+import { confirm } from '@/utils/swal';
+import IndexFilterBar from '@/Components/IndexFilterBar';
+import IndexPagination from '@/Components/IndexPagination';
+import RowActionsMenu, { ActionIcons } from '@/Components/RowActionsMenu';
 
 const Icons = {
     Document: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
     Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
-    MagnifyingGlass: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
 };
+
+const STATUSES = [
+    { value: 'draft', label: 'Draft' },
+    { value: 'confirmed', label: 'Confirmed' },
+    { value: 'partially_received', label: 'Partially received' },
+    { value: 'received', label: 'Received' },
+    { value: 'billed', label: 'Billed' },
+    { value: 'cancelled', label: 'Cancelled' },
+];
 
 function statusBadge(status) {
     const styles = {
@@ -21,13 +33,36 @@ function statusBadge(status) {
     return styles[status] || 'bg-surface-alt text-ink';
 }
 
-export default function Index({ auth, orders, base_currency = 'MYR' }) {
-    const rows = orders?.data || orders || [];
-    const [search, setSearch] = useState('');
-    const filtered = rows.filter((po) =>
-        (po.po_number || '').toLowerCase().includes(search.toLowerCase()) ||
-        (po.supplier?.name || '').toLowerCase().includes(search.toLowerCase())
-    );
+export default function Index({ auth, orders, filters = {}, base_currency = 'MYR' }) {
+    const rows = orders?.data || [];
+    const { search = '', status: statusFilter = '', per_page: perPageFilter = 25 } = filters;
+    const [searchInput, setSearchInput] = useState(search);
+    const permissions = auth.permissions || [];
+
+    const applyFilters = (overrides = {}) => {
+        router.get(route('purchase-orders.index'), {
+            search: overrides.search ?? searchInput,
+            status: overrides.status ?? statusFilter,
+            per_page: overrides.per_page ?? perPageFilter,
+            page: overrides.page ?? 1,
+        }, { preserveState: false });
+    };
+
+    const convert = async (id) => {
+        const ok = await confirm({ title: 'Convert to bill?', text: 'Creates a draft bill from remaining unbilled quantities.', confirmText: 'Convert', icon: 'question' });
+        if (ok) router.post(route('purchase-orders.bill', id), {});
+    };
+
+    const cancelOrder = async (id) => {
+        const ok = await confirm({ title: 'Cancel this purchase order?', text: 'This cannot be undone.', confirmText: 'Cancel order', confirmColor: '#dc2626', icon: 'warning' });
+        if (ok) router.post(route('purchase-orders.cancel', id));
+    };
+
+    const currentPage = orders?.current_page || 1;
+    const lastPage = orders?.last_page || 1;
+    const from = orders?.from || 0;
+    const to = orders?.to || 0;
+    const total = orders?.total || 0;
 
     return (
         <AuthenticatedLayout user={auth.user} header={
@@ -36,7 +71,7 @@ export default function Index({ auth, orders, base_currency = 'MYR' }) {
                     <h2 className="text-xl sm:text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Purchase Orders</h2>
                     <p className="text-ink-muted text-sm font-medium mt-1">Confirm the order, then receive goods and convert to a bill from the same document</p>
                 </div>
-                {auth.permissions.includes('bills.create') && (
+                {permissions.includes('bills.create') && (
                     <Link href={route('purchase-orders.create')} className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-semibold text-white bg-terracotta shadow-lg">
                         <Icons.Plus /> New purchase order
                     </Link>
@@ -50,17 +85,22 @@ export default function Index({ auth, orders, base_currency = 'MYR' }) {
                         <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Orders</span>
                         <span className="p-2 rounded-xl bg-surface/10"><Icons.Document /></span>
                     </div>
-                    <p className="text-xl font-bold tabular-nums">{orders?.total ?? rows.length}</p>
+                    <p className="text-xl font-bold tabular-nums">{total}</p>
                 </div>
 
                 <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
-                    <div className="px-4 sm:px-6 py-3 border-b border-border-warm flex items-center gap-3 bg-cream/50">
-                        <div className="relative flex-1 min-w-0 max-w-xs">
-                            <span className="absolute inset-y-0 left-3 flex items-center text-ink-muted"><Icons.MagnifyingGlass /></span>
-                            <input type="text" placeholder="Search PO # or supplier..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 w-full border border-border-warm rounded-xl py-2 px-4 text-sm font-medium focus:ring-2 focus:ring-terracotta" />
-                        </div>
-                        <span className="text-ink-muted text-sm ml-auto">{filtered.length} shown</span>
-                    </div>
+                    <IndexFilterBar
+                        search={searchInput}
+                        onSearchChange={setSearchInput}
+                        searchPlaceholder="Search PO # or supplier..."
+                        status={statusFilter}
+                        statuses={STATUSES}
+                        perPage={perPageFilter}
+                        onApply={applyFilters}
+                        from={from}
+                        to={to}
+                        total={total}
+                    />
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
@@ -69,11 +109,11 @@ export default function Index({ auth, orders, base_currency = 'MYR' }) {
                                     <th className="px-4 sm:px-6 py-3">Supplier</th>
                                     <th className="px-4 sm:px-6 py-3">Status</th>
                                     <th className="px-4 sm:px-6 py-3 text-right">Total</th>
-                                    <th className="px-4 sm:px-6 py-3 text-right">Open</th>
+                                    <th className="px-4 sm:px-6 py-3 text-right w-16">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filtered.length > 0 ? filtered.map((po) => (
+                                {rows.length > 0 ? rows.map((po) => (
                                     <tr key={po.id} className="border-b border-border-warm last:border-0 hover:bg-cream/80">
                                         <td className="px-4 sm:px-6 py-3">
                                             <Link href={route('purchase-orders.show', po.id)} className="font-semibold text-ink hover:text-terracotta">{po.po_number}</Link>
@@ -87,15 +127,23 @@ export default function Index({ auth, orders, base_currency = 'MYR' }) {
                                         </td>
                                         <td className="px-4 sm:px-6 py-3 text-right font-mono text-sm font-semibold">{formatCurrency(po.total_amount, po.currency || base_currency)}</td>
                                         <td className="px-4 sm:px-6 py-3 text-right">
-                                            <Link href={route('purchase-orders.show', po.id)} className="inline-flex px-3 py-1.5 rounded-lg text-xs font-semibold text-terracotta bg-surface-alt">Open</Link>
+                                            <RowActionsMenu items={[
+                                                { label: 'Open', href: route('purchase-orders.show', po.id), icon: <ActionIcons.Open /> },
+                                                { label: 'Download PDF', href: route('purchase-orders.pdf', po.id), external: true, icon: <ActionIcons.Pdf /> },
+                                                { label: 'Email', icon: <ActionIcons.Mail />, onClick: () => router.post(route('purchase-orders.email', po.id)) },
+                                                { label: 'Edit', href: route('purchase-orders.edit', po.id), icon: <ActionIcons.Pencil />, show: !['received', 'billed', 'cancelled'].includes(po.status) },
+                                                { label: 'Convert to bill', icon: <ActionIcons.Bill />, show: po.status !== 'cancelled', onClick: () => convert(po.id) },
+                                                { label: 'Cancel order', icon: <ActionIcons.Trash />, danger: true, show: po.status !== 'cancelled' && po.status !== 'billed', onClick: () => cancelOrder(po.id) },
+                                            ]} />
                                         </td>
                                     </tr>
                                 )) : (
-                                    <tr><td colSpan={5} className="px-6 py-16 text-center text-ink-muted text-sm">{search ? 'No purchase orders match.' : 'No purchase orders yet.'}</td></tr>
+                                    <tr><td colSpan={5} className="px-6 py-16 text-center text-ink-muted text-sm">{search || statusFilter ? 'No purchase orders match.' : 'No purchase orders yet.'}</td></tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
+                    <IndexPagination currentPage={currentPage} lastPage={lastPage} onPage={(page) => applyFilters({ page })} />
                 </div>
             </div>
         </AuthenticatedLayout>

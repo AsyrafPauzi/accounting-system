@@ -3,15 +3,23 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { formatCurrency } from '@/utils/currency';
 import { formatDate } from '@/utils/dates';
+import DocumentShowLayout, {
+    DocumentShowHeader,
+    DocumentLines,
+    DocumentTotals,
+    docBtn,
+    docPrimary,
+    docGhost,
+    field,
+    partyAddress,
+    sectionTitle,
+    SidebarCard,
+} from '@/Components/DocumentShowLayout';
 
-const btn = 'inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-border-warm bg-surface hover:bg-cream';
-const primary = 'inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta-dark';
-const inputClass = 'w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta';
-const labelClass = 'block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5';
-
-export default function Show({ auth, creditNote, openBills = [], bankAccounts = [] }) {
+export default function Show({ auth, creditNote, openBills = [], bankAccounts = [], company = {} }) {
     const currency = creditNote.currency || 'MYR';
     const open = Number(creditNote.open_amount ?? 0);
+    const isVoid = creditNote.status === 'void';
     const refund = useForm({
         amount: open > 0 ? open.toFixed(2) : '',
         payment_date: new Date().toISOString().slice(0, 10),
@@ -21,108 +29,123 @@ export default function Show({ auth, creditNote, openBills = [], bankAccounts = 
     const apply = useForm({ bill_id: openBills[0]?.id || '', amount: open > 0 ? open.toFixed(2) : '' });
 
     return (
-        <AuthenticatedLayout user={auth.user}>
+        <AuthenticatedLayout
+            user={auth.user}
+            header={
+                <DocumentShowHeader
+                    backHref={route('supplier-credit-notes.index')}
+                    title={creditNote.scn_number}
+                    status={creditNote.status}
+                    subtitle={creditNote.supplier?.name || 'No supplier'}
+                />
+            }
+        >
             <Head title={creditNote.scn_number} />
-            <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
-                <Link href={route('supplier-credit-notes.index')} className="text-xs font-semibold text-ink-muted hover:text-ink">← Supplier credit notes</Link>
-                <div className="flex flex-col sm:flex-row sm:justify-between gap-4">
+            <DocumentShowLayout
+                company={company}
+                docLabel="Supplier credit note"
+                docNumber={creditNote.scn_number}
+                meta={[
+                    { label: 'Issued', value: formatDate(creditNote.issue_date) },
+                    creditNote.bill?.bill_number ? { label: 'Against', value: creditNote.bill.bill_number } : null,
+                ].filter(Boolean)}
+                partyTitle="Supplier"
+                partyName={creditNote.supplier?.name}
+                partyLines={partyAddress(creditNote.supplier)}
+                notes={creditNote.notes}
+                footer={creditNote.reason_description ? (
                     <div>
-                        <div className="flex items-center gap-3 flex-wrap">
-                            <h1 className="text-2xl font-display font-medium text-ink">{creditNote.scn_number}</h1>
-                            <span className="text-[10px] uppercase font-semibold px-2 py-1 rounded-md bg-cream">{creditNote.status}</span>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Reason</p>
+                        <p className="mt-1.5 text-sm text-ink-muted leading-relaxed">{creditNote.reason_description}</p>
+                    </div>
+                ) : null}
+                totals={
+                    <DocumentTotals
+                        rows={[
+                            { label: 'Subtotal', value: formatCurrency(creditNote.amount_before_tax ?? (Number(creditNote.total_amount) - Number(creditNote.tax_amount || 0)), currency) },
+                            { label: 'Tax', value: formatCurrency(creditNote.tax_amount, currency) },
+                            { label: 'Total', value: formatCurrency(creditNote.total_amount, currency), tone: 'total' },
+                            { label: 'Open credit', value: formatCurrency(open, currency), tone: 'due' },
+                        ]}
+                    />
+                }
+                sidebar={
+                    <>
+                        <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm p-5">
+                            <p className={sectionTitle}>Open credit</p>
+                            <p className={`mt-1 text-3xl font-display font-medium tabular-nums ${open > 0 ? 'text-terracotta' : 'text-forest'}`}>
+                                {formatCurrency(open, currency)}
+                            </p>
+                            <p className="mt-1 text-xs text-ink-muted">of {formatCurrency(creditNote.total_amount, currency)}</p>
                         </div>
-                        <p className="text-sm text-ink-muted mt-1">
-                            {creditNote.supplier?.name}
-                            {creditNote.bill?.bill_number ? ` · against ${creditNote.bill.bill_number}` : ''}
-                            {creditNote.issue_date ? ` · ${formatDate(creditNote.issue_date)}` : ''}
-                            {' · open '}{formatCurrency(open, currency)}
-                        </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        <a className={btn} href={route('supplier-credit-notes.pdf', creditNote.id)} target="_blank" rel="noreferrer">PDF</a>
-                        {creditNote.status !== 'void' && <button type="button" className={`${btn} text-terracotta`} onClick={() => router.post(route('supplier-credit-notes.void', creditNote.id))}>Void</button>}
-                    </div>
-                </div>
-
-                <div className="bg-surface rounded-2xl border border-border-warm overflow-hidden">
-                    <table className="w-full text-sm">
-                        <thead className="bg-cream/50 text-[10px] uppercase text-ink-muted">
-                            <tr>
-                                <th className="px-4 py-3 text-left">Description</th>
-                                <th className="px-3 py-3 text-right">Qty</th>
-                                <th className="px-3 py-3 text-right">Price</th>
-                                <th className="px-4 py-3 text-right">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {(creditNote.items || []).map((item) => (
-                                <tr key={item.id} className="border-t border-border-warm">
-                                    <td className="px-4 py-3">{item.description}</td>
-                                    <td className="px-3 py-3 text-right font-mono">{item.quantity}</td>
-                                    <td className="px-3 py-3 text-right font-mono">{formatCurrency(item.unit_price, currency)}</td>
-                                    <td className="px-4 py-3 text-right font-mono">{formatCurrency(item.amount, currency)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    <div className="p-4 text-right text-sm space-y-1">
-                        <div>Tax {formatCurrency(creditNote.tax_amount, currency)}</div>
-                        <div className="text-lg font-semibold text-terracotta">Total {formatCurrency(creditNote.total_amount, currency)}</div>
-                        <div className="text-ink-muted">Open {formatCurrency(open, currency)}</div>
-                    </div>
-                </div>
-
-                {creditNote.status !== 'void' && open > 0 && (
-                    <div className="grid md:grid-cols-2 gap-4">
-                        <form className="bg-surface rounded-2xl border border-border-warm p-5 space-y-3" onSubmit={(e) => { e.preventDefault(); apply.post(route('supplier-credit-notes.apply', creditNote.id)); }}>
-                            <h3 className="text-sm font-semibold">Apply to bill</h3>
-                            {openBills.length > 0 ? (
-                                <>
-                                    <div>
-                                        <label className={labelClass}>Bill</label>
-                                        <select className={inputClass} value={apply.data.bill_id} onChange={(e) => apply.setData('bill_id', e.target.value)}>
+                        <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm p-4 space-y-2">
+                            <a href={route('supplier-credit-notes.pdf', creditNote.id)} target="_blank" rel="noreferrer" className={docBtn}>View PDF</a>
+                            {creditNote.bill?.id && (
+                                <Link href={route('bills.show', creditNote.bill.id)} className={docBtn}>Open {creditNote.bill.bill_number}</Link>
+                            )}
+                            {!isVoid && (
+                                <button type="button" className={`${docGhost} text-terracotta hover:text-terracotta`} onClick={() => router.post(route('supplier-credit-notes.void', creditNote.id))}>Void credit note</button>
+                            )}
+                        </div>
+                        {(creditNote.applications || []).length > 0 && (
+                            <SidebarCard title="Applied to bills">
+                                {creditNote.applications.map((a) => (
+                                    <div key={a.id} className="flex justify-between text-sm gap-2">
+                                        {a.bill_id ? (
+                                            <Link href={route('bills.show', a.bill_id)} className="text-terracotta hover:underline truncate">
+                                                {a.bill?.bill_number || `Bill #${a.bill_id}`}
+                                            </Link>
+                                        ) : (
+                                            <span>{a.bill?.bill_number || `Bill #${a.bill_id}`}</span>
+                                        )}
+                                        <span className="font-mono tabular-nums shrink-0">{formatCurrency(a.amount, currency)}</span>
+                                    </div>
+                                ))}
+                            </SidebarCard>
+                        )}
+                        {!isVoid && open > 0 && (
+                            <SidebarCard title="Apply to bill">
+                                {openBills.length > 0 ? (
+                                    <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); apply.post(route('supplier-credit-notes.apply', creditNote.id), { preserveScroll: true }); }}>
+                                        <select className={field} value={apply.data.bill_id} onChange={(e) => apply.setData('bill_id', e.target.value)}>
                                             {openBills.map((b) => <option key={b.id} value={b.id}>{b.bill_number}</option>)}
                                         </select>
+                                        <input className={field} type="number" min="0.01" step="0.01" value={apply.data.amount} onChange={(e) => apply.setData('amount', e.target.value)} />
+                                        <button className={docPrimary} disabled={apply.processing}>Apply</button>
+                                    </form>
+                                ) : (
+                                    <p className="text-sm text-ink-muted">No open bills for this supplier.</p>
+                                )}
+                            </SidebarCard>
+                        )}
+                        {!isVoid && open > 0 && (
+                            <SidebarCard title="Refund leftover">
+                                <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); refund.post(route('supplier-credit-notes.refund', creditNote.id), { preserveScroll: true }); }}>
+                                    <input className={field} type="number" min="0.01" step="0.01" value={refund.data.amount} onChange={(e) => refund.setData('amount', e.target.value)} />
+                                    <input className={field} type="date" value={refund.data.payment_date} onChange={(e) => refund.setData('payment_date', e.target.value)} />
+                                    <select className={field} value={refund.data.bank_account_code} onChange={(e) => refund.setData('bank_account_code', e.target.value)}>
+                                        {bankAccounts.map((a) => <option key={a.code} value={a.code}>{a.code} {a.name}</option>)}
+                                    </select>
+                                    <input className={field} placeholder="Reference" value={refund.data.reference} onChange={(e) => refund.setData('reference', e.target.value)} />
+                                    <button className={docPrimary} disabled={refund.processing}>Refund to bank</button>
+                                </form>
+                            </SidebarCard>
+                        )}
+                        {(creditNote.refunds || []).length > 0 && (
+                            <SidebarCard title="Refunds">
+                                {creditNote.refunds.map((r) => (
+                                    <div key={r.id} className="flex justify-between text-sm text-ink-muted">
+                                        <span>{formatDate(r.payment_date)} · {r.bank_account_code}</span>
+                                        <span className="font-mono tabular-nums">{formatCurrency(r.amount, currency)}</span>
                                     </div>
-                                    <div>
-                                        <label className={labelClass}>Amount</label>
-                                        <input type="number" min="0.01" step="0.01" className={inputClass} value={apply.data.amount} onChange={(e) => apply.setData('amount', e.target.value)} />
-                                    </div>
-                                    <button className={primary} disabled={apply.processing}>Apply</button>
-                                </>
-                            ) : <p className="text-sm text-ink-muted">No open bills for this supplier.</p>}
-                        </form>
-                        <form className="bg-surface rounded-2xl border border-border-warm p-5 space-y-3" onSubmit={(e) => { e.preventDefault(); refund.post(route('supplier-credit-notes.refund', creditNote.id)); }}>
-                            <h3 className="text-sm font-semibold">Refund leftover to bank</h3>
-                            <div>
-                                <label className={labelClass}>Amount</label>
-                                <input type="number" min="0.01" step="0.01" className={inputClass} value={refund.data.amount} onChange={(e) => refund.setData('amount', e.target.value)} />
-                            </div>
-                            <div>
-                                <label className={labelClass}>Payment date</label>
-                                <input type="date" className={inputClass} value={refund.data.payment_date} onChange={(e) => refund.setData('payment_date', e.target.value)} />
-                            </div>
-                            <div>
-                                <label className={labelClass}>Bank account</label>
-                                <select className={inputClass} value={refund.data.bank_account_code} onChange={(e) => refund.setData('bank_account_code', e.target.value)}>
-                                    {bankAccounts.map((a) => <option key={a.code} value={a.code}>{a.code} {a.name}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className={labelClass}>Reference (optional)</label>
-                                <input className={inputClass} value={refund.data.reference} onChange={(e) => refund.setData('reference', e.target.value)} />
-                            </div>
-                            <button className={primary} disabled={refund.processing}>Refund</button>
-                        </form>
-                    </div>
-                )}
-                {(creditNote.refunds || []).map((r) => (
-                    <div key={r.id} className="flex justify-between text-sm text-ink-muted">
-                        <span>{formatDate(r.payment_date)} · {r.bank_account_code}</span>
-                        <span className="font-mono">{formatCurrency(r.amount, currency)}</span>
-                    </div>
-                ))}
-            </div>
+                                ))}
+                            </SidebarCard>
+                        )}
+                    </>
+                }
+            >
+                <DocumentLines items={creditNote.items || []} currency={currency} formatCurrency={formatCurrency} />
+            </DocumentShowLayout>
         </AuthenticatedLayout>
     );
 }

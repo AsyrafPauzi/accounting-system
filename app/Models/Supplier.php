@@ -15,6 +15,7 @@ class Supplier extends Model
 
     protected $fillable = [
         'name', 'code', 'contact_person', 'phone', 'email', 'tin', 'brn',
+        'identification_type', 'sst_number',
         'payment_terms', 'currency', 'billing_street', 'billing_city', 'billing_state',
         'billing_zip', 'billing_country', 'website', 'region', 'segment',
         'is_active', 'internal_notes',

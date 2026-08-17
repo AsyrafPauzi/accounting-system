@@ -6,6 +6,7 @@ use App\Jobs\SendGoodsReceiptEmail;
 use App\Models\GoodsReceipt;
 use App\Services\GoodsReceiptService;
 use App\Services\PurchasesDocumentTrail;
+use App\Support\IndexFilters;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,20 +15,39 @@ class GoodsReceiptController extends Controller
 {
     public function __construct(protected GoodsReceiptService $receipts) {}
 
-    public function index()
+    public function index(Request $request)
     {
+        $filters = IndexFilters::from($request);
+        $statuses = ['received', 'billed', 'cancelled'];
+
+        $orders = GoodsReceipt::query()
+            ->with('supplier:id,name')
+            ->when($filters['search'] !== '', function ($q) use ($filters) {
+                $q->where(function ($qq) use ($filters) {
+                    $qq->where('grn_number', 'like', '%'.$filters['search'].'%')
+                        ->orWhereHas('supplier', fn ($s) => $s->where('name', 'like', '%'.$filters['search'].'%'));
+                });
+            })
+            ->when($filters['status'] !== '' && in_array($filters['status'], $statuses, true), fn ($q) => $q->where('status', $filters['status']))
+            ->orderByDesc('id')
+            ->paginate($filters['per_page'])
+            ->withQueryString();
+
         return Inertia::render('GoodsReceipts/Index', [
-            'orders' => GoodsReceipt::query()->with('supplier:id,name')->orderByDesc('id')->paginate(20),
+            'orders'  => $orders,
+            'filters' => $filters,
         ]);
     }
 
     public function show($id)
     {
-        $order = GoodsReceipt::with(['items', 'supplier', 'purchaseOrder', 'bills:id,bill_number,goods_receipt_id,status'])->findOrFail($id);
+        // Load full bill rows — partial selects omit FKs and break document trail BelongsTo.
+        $order = GoodsReceipt::with(['items', 'supplier', 'purchaseOrder', 'bills'])->findOrFail($id);
 
         return Inertia::render('GoodsReceipts/Show', [
             'order' => $order,
             'trail' => app(PurchasesDocumentTrail::class)->forGoodsReceipt($order),
+            'company' => tenant()?->getCompanyDetails() ?? [],
         ]);
     }
 

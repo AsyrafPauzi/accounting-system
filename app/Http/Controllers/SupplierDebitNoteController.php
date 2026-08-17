@@ -27,6 +27,7 @@ class SupplierDebitNoteController extends Controller
     {
         return Inertia::render('SupplierDebitNotes/Show', [
             'debitNote' => SupplierDebitNote::with(['items', 'supplier', 'bill:id,bill_number'])->findOrFail($id),
+            'company'   => tenant()?->getCompanyDetails() ?? [],
         ]);
     }
 

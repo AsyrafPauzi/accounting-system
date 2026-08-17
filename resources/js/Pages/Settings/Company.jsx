@@ -30,6 +30,8 @@ export default function Company({ auth, company, canEdit = false }) {
         sst_number: company.sst_number || '',
         invoice_brand_color: company.invoice_brand_color || '#0f172a',
         invoice_logo_url: company.invoice_logo_url || '',
+        default_invoice_customer_notes: company.default_invoice_customer_notes || '',
+        default_estimate_customer_notes: company.default_estimate_customer_notes || '',
         reminder_offsets: company.reminder_offsets || [-14, -7, -3, 0, 3, 7, 14],
         myinvois_client_id: company.myinvois_client_id || '',
         myinvois_client_secret: '',
@@ -306,7 +308,7 @@ export default function Company({ auth, company, canEdit = false }) {
                 <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-border-warm/80 shadow-sm space-y-4">
                     <div>
                         <h3 className="text-sm font-semibold text-ink uppercase tracking-wider">Invoice PDF &amp; collections</h3>
-                        <p className="text-sm text-ink-muted mt-1">Logo and colour on PDFs. Late fees and reminder days for unpaid invoices.</p>
+                        <p className="text-sm text-ink-muted mt-1">Logo, colour, default notes on PDFs. Late fees and reminder days for unpaid invoices.</p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -322,6 +324,36 @@ export default function Company({ auth, company, canEdit = false }) {
                             <input type="number" step="0.01" min="0" max="100" className={inputClass} value={data.late_fee_percent} onChange={(e) => setData('late_fee_percent', e.target.value)} disabled={!isAdmin} />
                             <p className="mt-1 text-xs text-ink-muted">Used when you issue a late-interest invoice from an overdue invoice.</p>
                         </div>
+                    </div>
+                    <div>
+                        <label className={labelClass}>Default invoice notes (on PDF)</label>
+                        <textarea
+                            className={`${inputClass} resize-y min-h-[5.5rem]`}
+                            rows={3}
+                            value={data.default_invoice_customer_notes}
+                            onChange={(e) => setData('default_invoice_customer_notes', e.target.value)}
+                            disabled={!isAdmin}
+                            placeholder="Payment instructions, thank you message…"
+                        />
+                        <p className="mt-1 text-xs text-ink-muted">Pre-filled on every new invoice. You can still edit or clear it per invoice.</p>
+                        {errors.default_invoice_customer_notes && (
+                            <p className="text-terracotta text-xs mt-1">{errors.default_invoice_customer_notes}</p>
+                        )}
+                    </div>
+                    <div>
+                        <label className={labelClass}>Default estimate notes (on PDF)</label>
+                        <textarea
+                            className={`${inputClass} resize-y min-h-[5.5rem]`}
+                            rows={3}
+                            value={data.default_estimate_customer_notes}
+                            onChange={(e) => setData('default_estimate_customer_notes', e.target.value)}
+                            disabled={!isAdmin}
+                            placeholder="Payment terms, delivery details, thank you message…"
+                        />
+                        <p className="mt-1 text-xs text-ink-muted">Pre-filled on every new estimate. You can still edit or clear it per quote.</p>
+                        {errors.default_estimate_customer_notes && (
+                            <p className="text-terracotta text-xs mt-1">{errors.default_estimate_customer_notes}</p>
+                        )}
                     </div>
                     <div>
                         <p className={labelClass}>Payment reminders (days vs due date)</p>

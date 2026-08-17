@@ -41,6 +41,7 @@ class DebitNoteController extends Controller
         return Inertia::render('DebitNotes/Show', [
             'debitNote'    => $dn,
             'myinvois_gaps'=> $this->myinvois->readiness($dn),
+            'company'      => tenant()?->getCompanyDetails() ?? [],
         ]);
     }
 

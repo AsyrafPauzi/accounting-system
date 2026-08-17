@@ -14,14 +14,16 @@ const Icons = {
     ChevronLeft: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>,
     Document: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
     Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
+    Product: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>,
 };
 
-const inputClass = "w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta focus:border-terracotta transition-colors";
-const inputReadonlyClass = "w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink-muted bg-cream";
-const labelClass = "block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5";
+const inputClass = "w-full h-11 border border-border-warm rounded-xl px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta focus:border-terracotta transition-colors";
+const labelClass = "block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5 leading-none h-4";
 const lineControlClass = "w-full h-8 border border-border-warm rounded-lg py-1 px-1.5 text-xs font-medium text-ink bg-surface focus:ring-1 focus:ring-terracotta";
+const lineDescClass = "block w-full min-w-0 h-8 border border-border-warm rounded-lg py-1.5 px-1.5 text-xs leading-4 font-medium text-ink bg-surface placeholder-ink-muted/60 focus:ring-1 focus:ring-terracotta resize-y";
 const lineNumberClass = `${lineControlClass} font-mono tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`;
 const lineTaxClass = `${lineControlClass} px-0.5 pr-5 text-center tabular-nums`;
+const linePickIconClass = "relative shrink-0 h-8 w-8 rounded-lg border border-border-warm bg-cream/50 text-ink-muted hover:bg-cream hover:text-terracotta transition-colors";
 
 function currencyPrefix(currency) {
     return currencySymbol(currency);
@@ -29,7 +31,7 @@ function currencyPrefix(currency) {
 
 const initialQuickCustomer = { name: '', code: '', email: '', tin: '', brn: '', billing_street: '', billing_city: '', billing_state: '', billing_zip: '' };
 
-export default function Create({ auth, customers = [], lhdn_codes = [], customer_id: preselectedCustomerId = null, next_invoice_number: suggestedInvoiceNumber = null, base_currency = 'MYR', products = [], cash_sale = false, bankAccounts = [] }) {
+export default function Create({ auth, customers = [], lhdn_codes = [], customer_id: preselectedCustomerId = null, next_invoice_number: suggestedInvoiceNumber = null, base_currency = 'MYR', products = [], cash_sale = false, bankAccounts = [], default_customer_notes = '' }) {
     const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
     const [newCustomers, setNewCustomers] = useState([]);
     const [quickCustomer, setQuickCustomer] = useState(initialQuickCustomer);
@@ -45,7 +47,7 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
         issue_date: new Date().toISOString().split('T')[0],
         due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Default Net 30
         shipping_amount: 0,
-        customer_notes: '',
+        customer_notes: default_customer_notes || '',
         show_signature: false,
         currency: 'MYR',
         exchange_rate: '1',
@@ -190,24 +192,26 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
         <AuthenticatedLayout 
             user={auth.user} 
             header={
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-                    <div className="flex items-start sm:items-center gap-4">
-                        <Link href={route('invoices.index')} className="p-2.5 rounded-xl text-ink-muted hover:text-ink hover:bg-surface-alt transition-all duration-200">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                    <div className="flex items-center gap-2">
+                        <Link href={route('invoices.index')} className="p-2 rounded-xl text-ink-muted hover:text-ink hover:bg-surface-alt transition-all duration-200">
                             <Icons.ChevronLeft />
                         </Link>
-                        <div className="flex items-center gap-3">
-                            <span className="p-2.5 rounded-xl bg-surface-alt text-terracotta"><Icons.Document /></span>
+                        <div className="flex items-center gap-2.5">
+                            <span className="p-2 rounded-xl bg-surface-alt text-terracotta"><Icons.Document /></span>
                             <div>
-                                <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">{cash_sale ? 'Cash sale' : 'New Invoice'}</h2>
-                                <p className="text-ink-muted text-sm font-medium mt-1">{cash_sale ? 'Invoice + full receipt in one save' : `LHDN compliant · ${roundingLabel(invCur)} (${invCur})`}</p>
+                                <h2 className="text-xl sm:text-2xl font-display font-medium text-ink tracking-tight">{cash_sale ? 'Cash sale' : 'New Invoice'}</h2>
+                                <p className="text-ink-muted text-sm font-medium mt-1">
+                                    {cash_sale ? 'Invoice plus full receipt in one save' : 'Bill the customer — post and email when ready'}
+                                </p>
                             </div>
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <Link href={route('invoices.index')} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:border-border-warm hover:bg-cream transition-all duration-200">
+                        <Link href={route('invoices.index')} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:border-border-warm hover:bg-cream transition-all duration-200">
                             Cancel
                         </Link>
-                        <button type="submit" form="invoice-create-form" disabled={processing} className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50 shadow-lg  transition-all duration-200">
+                        <button type="submit" form="invoice-create-form" disabled={processing} className="inline-flex items-center gap-2 px-5 py-2 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50 shadow-lg transition-all duration-200">
                             {processing ? 'Saving...' : (cash_sale ? 'Save cash sale' : 'Create Invoice')}
                         </button>
                     </div>
@@ -223,39 +227,74 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                         <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Document /></span>
                         <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Invoice Details</h3>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-x-6 gap-y-5 items-start">
+                        <div className="min-w-0">
                             <label className={labelClass}>Invoice Number</label>
-                            <div className={`${inputReadonlyClass} font-mono text-terracotta`}>{data.invoice_number}</div>
+                            <input
+                                type="text"
+                                value={data.invoice_number}
+                                onChange={e => setData('invoice_number', e.target.value)}
+                                className={`${inputClass} font-mono text-terracotta`}
+                                required
+                            />
+                            {errors.invoice_number && <p className="text-terracotta text-xs font-medium mt-1">{errors.invoice_number}</p>}
                         </div>
-                        <div>
-                            <label className={labelClass}>MSIC Code</label>
-                            <input type="text" value={data.msic_code} onChange={e => setData('msic_code', e.target.value)} className={inputClass} />
+                        <div className="min-w-0">
+                            <label className={`${labelClass} flex items-center gap-1.5`}>
+                                MSIC Code
+                                <span className="relative inline-flex group/msic">
+                                    <button
+                                        type="button"
+                                        className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-border-warm text-[9px] font-bold text-ink-muted hover:text-ink hover:border-ink-muted focus:outline-none focus:ring-2 focus:ring-terracotta"
+                                        aria-describedby="msic-code-help"
+                                        aria-label="What is MSIC Code?"
+                                    >
+                                        ?
+                                    </button>
+                                    <span
+                                        id="msic-code-help"
+                                        role="tooltip"
+                                        className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-64 -translate-x-1/2 rounded-xl border border-border-warm bg-surface px-3 py-2 text-[11px] font-medium normal-case tracking-normal text-ink shadow-lg opacity-0 transition-opacity duration-150 group-hover/msic:opacity-100 group-focus-within/msic:opacity-100"
+                                    >
+                                        <span className="font-semibold text-ink">Malaysia Standard Industrial Classification</span>
+                                        <span className="mt-1 block text-ink-muted font-normal leading-snug">
+                                            5-digit business activity code required for LHDN MyInvois e-invoicing. Example: <span className="font-mono text-ink">62011</span> for computer programming.
+                                        </span>
+                                    </span>
+                                </span>
+                            </label>
+                            <input
+                                type="text"
+                                value={data.msic_code}
+                                onChange={e => setData('msic_code', e.target.value)}
+                                className={inputClass}
+                                placeholder="e.g. 62011"
+                            />
                         </div>
-                        <div className="md:col-span-2">
+                        <div className="md:col-span-2 min-w-0">
                             <label className={labelClass}>Customer</label>
-                            <div className="flex gap-2">
-                                <select value={data.customer_id} onChange={e => setData('customer_id', e.target.value)} className={inputClass} required>
+                            <div className="flex gap-2 items-stretch min-w-0">
+                                <select value={data.customer_id} onChange={e => setData('customer_id', e.target.value)} className={`${inputClass} min-w-0 flex-1`} required>
                                     <option value="">Select customer...</option>
                                     {customerOptions.map(c => <option key={c.id} value={c.id}>{c.name}{c.tin ? ` (${c.tin})` : ''}</option>)}
                                 </select>
-                                <button type="button" onClick={() => setShowNewCustomerModal(true)} className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-semibold text-sm text-terracotta bg-surface-alt border border-border-warm hover:bg-surface-alt transition-colors">
+                                <button type="button" onClick={() => setShowNewCustomerModal(true)} className="shrink-0 h-11 inline-flex items-center gap-1.5 px-4 rounded-xl font-semibold text-sm text-terracotta bg-surface-alt border border-border-warm hover:bg-surface-alt transition-colors">
                                     <Icons.Plus className="w-4 h-4" /> New customer
                                 </button>
                             </div>
                             {errors.customer_id && <p className="text-terracotta text-xs font-medium mt-1">{errors.customer_id}</p>}
                         </div>
-                        <div>
+                        <div className="min-w-0">
                             <label className={labelClass}>Issue Date</label>
                             <input type="date" value={data.issue_date} onChange={e => setData('issue_date', e.target.value)} className={inputClass} />
                         </div>
-                        <div>
+                        <div className="min-w-0">
                             <label className={labelClass}>Due Date</label>
                             <input type="date" value={data.due_date} onChange={e => setData('due_date', e.target.value)} className={inputClass} />
                         </div>
-                        {cash_sale && (
+                        {cash_sale ? (
                             <>
-                                <div>
+                                <div className="min-w-0">
                                     <label className={labelClass}>Bank / cash account</label>
                                     <select value={data.bank_account_code} onChange={e => setData('bank_account_code', e.target.value)} className={inputClass}>
                                         {bankAccounts.map((a) => (
@@ -263,23 +302,33 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                                         ))}
                                     </select>
                                 </div>
-                                <div>
+                                <div className="min-w-0">
                                     <label className={labelClass}>Payment date</label>
                                     <input type="date" value={data.payment_date} onChange={e => setData('payment_date', e.target.value)} className={inputClass} />
                                 </div>
+                                <div className="md:col-span-2 min-w-0">
+                                    <label className={labelClass}>Invoice currency</label>
+                                    <select value={data.currency} onChange={e => setData('currency', e.target.value)} className={inputClass}>
+                                        {SUPPORTED_CURRENCIES.map((c) => (
+                                            <option key={c.value} value={c.value}>{c.label}</option>
+                                        ))}
+                                    </select>
+                                    {errors.currency && <p className="text-terracotta text-xs font-medium mt-1">{errors.currency}</p>}
+                                </div>
                             </>
+                        ) : (
+                            <div className="md:col-span-2 min-w-0">
+                                <label className={labelClass}>Invoice currency</label>
+                                <select value={data.currency} onChange={e => setData('currency', e.target.value)} className={inputClass}>
+                                    {SUPPORTED_CURRENCIES.map((c) => (
+                                        <option key={c.value} value={c.value}>{c.label}</option>
+                                    ))}
+                                </select>
+                                {errors.currency && <p className="text-terracotta text-xs font-medium mt-1">{errors.currency}</p>}
+                            </div>
                         )}
-                        <div>
-                            <label className={labelClass}>Invoice currency</label>
-                            <select value={data.currency} onChange={e => setData('currency', e.target.value)} className={inputClass}>
-                                {SUPPORTED_CURRENCIES.map((c) => (
-                                    <option key={c.value} value={c.value}>{c.label}</option>
-                                ))}
-                            </select>
-                            {errors.currency && <p className="text-terracotta text-xs font-medium mt-1">{errors.currency}</p>}
-                        </div>
                         {(data.currency || 'MYR').toUpperCase() !== (base_currency || 'MYR').toUpperCase() && (
-                            <div className="md:col-span-2">
+                            <div className="md:col-span-2 min-w-0">
                                 <label className={labelClass}>Exchange rate ({(base_currency || 'MYR').toUpperCase()} per 1 {data.currency})</label>
                                 <input type="number" step="0.000001" min="0.000001" value={data.exchange_rate} onChange={e => setData('exchange_rate', e.target.value)} className={inputClass} placeholder="e.g. 4.72" />
                                 <p className="text-xs text-ink-muted mt-1.5">Ledger posting converts line totals into your company base currency using this rate.</p>
@@ -290,11 +339,11 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                 </div>
 
                 {/* Section 2: Line Items */}
-                <div className="bg-surface rounded-2xl shadow-sm border border-border-warm/80 overflow-hidden min-w-0">
-                        <div className="overflow-x-auto overscroll-x-contain">
-                        <table className="w-full table-fixed text-left border-collapse">
+                <div className="bg-surface rounded-2xl shadow-sm border border-border-warm/80 min-w-0">
+                        <div className="overflow-x-auto overscroll-x-contain rounded-2xl">
+                        <table className="w-full min-w-[44rem] text-left border-collapse">
                             <colgroup>
-                                <col className="w-[9.5rem]" />
+                                <col className="w-[5.5rem]" />
                                 <col />
                                 <col className="w-16" />
                                 <col className="w-[4.75rem]" />
@@ -318,57 +367,64 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                             <tbody className="divide-y divide-border-warm">
                                 {data.items.map((item, index) => (
                                     <tr key={index} className="group hover:bg-surface-alt/20 transition-all duration-200">
-                                        <td className="px-2 py-2 align-top">
+                                        <td className="px-2 py-2 align-middle">
                                             <select
                                                 value={item.item_classification}
                                                 onChange={e => updateItem(index, 'item_classification', e.target.value)}
-                                                className={lineControlClass}
+                                                className={`${lineControlClass} block truncate`}
                                                 title={(() => {
                                                     const selected = lhdn_codes.find((code) => String(code.id) === String(item.item_classification));
-                                                    return selected ? `${selected.id} — ${selected.name}` : '';
+                                                    return selected ? `${selected.id} — ${selected.name}` : 'LHDN classification';
                                                 })()}
                                             >
                                                 {lhdn_codes.map(code => (
-                                                    <option key={code.id} value={code.id}>{code.id} — {code.name}</option>
+                                                    <option key={code.id} value={code.id} title={`${code.id} — ${code.name}`}>
+                                                        {code.id}
+                                                    </option>
                                                 ))}
                                             </select>
                                         </td>
-                                        <td className="px-2 py-2 align-top">
+                                        <td className="px-2 py-2 align-middle">
                                             <div className="flex items-center gap-1.5 min-w-0">
                                                 <textarea
                                                     value={item.description}
                                                     onChange={e => updateItem(index, 'description', e.target.value)}
                                                     placeholder="What are you selling?"
                                                     rows={1}
-                                                    className="flex-1 min-w-0 h-8 border border-border-warm rounded-lg py-1 px-1.5 text-xs font-medium text-ink bg-surface placeholder-ink-muted/60 focus:ring-1 focus:ring-terracotta resize-y"
+                                                    className={`${lineDescClass} flex-1`}
                                                     required
                                                 />
                                                 {products.length > 0 && (
-                                                    <select
-                                                        value=""
-                                                        onChange={e => { applyProduct(index, e.target.value); e.target.value = ''; }}
-                                                        className="shrink-0 w-[4.25rem] h-8 border border-border-warm rounded-lg text-[10px] font-medium text-ink-muted bg-cream/50 hover:bg-cream px-1 focus:ring-1 focus:ring-terracotta cursor-pointer"
-                                                        title="Pick a saved product to auto-fill this line"
-                                                    >
-                                                        <option value="">+ Pick</option>
-                                                        {products.map(p => (
-                                                            <option key={p.id} value={p.id}>{p.name}{p.code ? ` (${p.code})` : ''}</option>
-                                                        ))}
-                                                    </select>
+                                                    <div className={linePickIconClass} title="Pick a saved product to fill description, price & tax">
+                                                        <span className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
+                                                            <Icons.Product />
+                                                        </span>
+                                                        <select
+                                                            value=""
+                                                            onChange={e => { applyProduct(index, e.target.value); e.target.value = ''; }}
+                                                            className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                                                            aria-label="Pick product for this line"
+                                                        >
+                                                            <option value="">Pick product…</option>
+                                                            {products.map(p => (
+                                                                <option key={p.id} value={p.id}>{p.name}{p.code ? ` (${p.code})` : ''}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-1 py-2 align-top">
-                                            <input type="number" value={item.quantity} onChange={e => updateItem(index, 'quantity', e.target.value)} className={`${lineNumberClass} text-center font-semibold`} />
+                                        <td className="px-1 py-2 align-middle">
+                                            <input type="number" value={item.quantity} onChange={e => updateItem(index, 'quantity', e.target.value)} className={`${lineNumberClass} block text-center font-semibold`} />
                                         </td>
-                                        <td className="px-1 py-2 align-top">
-                                            <input type="number" value={item.unit_price} onChange={e => updateItem(index, 'unit_price', e.target.value)} className={`${lineNumberClass} text-right font-semibold`} />
+                                        <td className="px-1 py-2 align-middle">
+                                            <input type="number" value={item.unit_price} onChange={e => updateItem(index, 'unit_price', e.target.value)} className={`${lineNumberClass} block text-right font-semibold`} />
                                         </td>
-                                        <td className="px-1 py-2 align-top">
-                                            <input type="number" value={item.discount_amount} onChange={e => updateItem(index, 'discount_amount', e.target.value)} className={`${lineNumberClass} text-right text-terracotta font-semibold`} />
+                                        <td className="px-1 py-2 align-middle">
+                                            <input type="number" value={item.discount_amount} onChange={e => updateItem(index, 'discount_amount', e.target.value)} className={`${lineNumberClass} block text-right text-terracotta font-semibold`} />
                                         </td>
-                                        <td className="px-1 py-2 align-top">
-                                            <select value={item.tax_rate} onChange={e => updateItem(index, 'tax_rate', e.target.value)} className={lineTaxClass}>
+                                        <td className="px-1 py-2 align-middle">
+                                            <select value={item.tax_rate} onChange={e => updateItem(index, 'tax_rate', e.target.value)} className={`${lineTaxClass} block`}>
                                                 <option value="0">0%</option>
                                                 <option value="6">6%</option>
                                                 <option value="8">8%</option>

@@ -2,14 +2,13 @@ import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { confirm } from '@/utils/swal';
+import RowActionsMenu, { ActionIcons } from '@/Components/RowActionsMenu';
 
 const Icons = {
     Plus: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
     Journal: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
     CheckCircle: () => <svg className="w-5 h-5 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
     Clock: () => <svg className="w-5 h-5 text-mustard" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-    Trash: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
-    Edit: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>,
 };
 
 export default function Index({ auth, journals, can_create }) {
@@ -121,43 +120,16 @@ export default function Index({ auth, journals, can_create }) {
                                             <td className="p-6 text-right font-mono font-display font-medium text-ink">
                                                 {totalCredit.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
                                             </td>
-                                            <td className="p-6">
-                                                <div className="flex justify-center items-center gap-2">
-                                                    {journal.status === 'draft' && (
-                                                        <>
-                                                            {auth.permissions.includes('journal.edit') && (
-                                                                <Link
-                                                                    href={route('journal.edit', journal.id)}
-                                                                    className="p-2 rounded-xl text-ink-muted hover:text-terracotta hover:bg-surface-alt transition-all duration-200"
-                                                                    title="Edit"
-                                                                >
-                                                                    <Icons.Edit />
-                                                                </Link>
-                                                            )}
-                                                            {auth.permissions.includes('journal.post') && (
-                                                                <button
-                                                                    onClick={() => handlePost(journal.id)}
-                                                                    className="p-2 rounded-xl text-ink-muted hover:text-forest hover:bg-forest/10 transition-all duration-200"
-                                                                    title="Post to Ledger"
-                                                                >
-                                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                                                </button>
-                                                            )}
-                                                            {auth.permissions.includes('journal.delete') && (
-                                                                <button
-                                                                    onClick={() => handleDelete(journal.id)}
-                                                                    className="p-2 rounded-xl text-ink-muted hover:text-terracotta hover:bg-terracotta/10 transition-all duration-200"
-                                                                    title="Delete"
-                                                                >
-                                                                    <Icons.Trash />
-                                                                </button>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                    {journal.status === 'posted' && (
-                                                        <span className="text-[10px] text-ink-muted font-bold uppercase tracking-widest">Locked</span>
-                                                    )}
-                                                </div>
+                                            <td className="p-6 text-right">
+                                                {journal.status === 'posted' ? (
+                                                    <span className="text-[10px] text-ink-muted font-bold uppercase tracking-widest">Locked</span>
+                                                ) : (
+                                                    <RowActionsMenu items={[
+                                                        { label: 'Edit', href: route('journal.edit', journal.id), icon: <ActionIcons.Pencil />, show: auth.permissions.includes('journal.edit') },
+                                                        { label: 'Post to ledger', icon: <ActionIcons.Check />, show: auth.permissions.includes('journal.post'), onClick: () => handlePost(journal.id) },
+                                                        { label: 'Delete draft', icon: <ActionIcons.Trash />, danger: true, show: auth.permissions.includes('journal.delete'), onClick: () => handleDelete(journal.id) },
+                                                    ]} />
+                                                )}
                                             </td>
                                         </tr>
                                     );

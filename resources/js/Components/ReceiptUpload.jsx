@@ -1,9 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { useForm } from '@inertiajs/react';
 import axios from 'axios';
 import { IconPhoto, IconUpload, IconLoader2, IconCheck, IconX } from '@tabler/icons-react';
 
-export default function ReceiptUpload({ onOcrComplete, billId = null }) {
+export default function ReceiptUpload({ onOcrComplete, billId = null, compact = false }) {
     const [uploading, setUploading] = useState(false);
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState(null);
@@ -35,7 +34,7 @@ export default function ReceiptUpload({ onOcrComplete, billId = null }) {
                 onUploadProgress: (progressEvent) => {
                     const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                     setProgress(percentCompleted);
-                }
+                },
             });
 
             if (response.data.success) {
@@ -83,116 +82,142 @@ export default function ReceiptUpload({ onOcrComplete, billId = null }) {
         }
     };
 
-    const handleFileChange = (e) => {
-        processFile(e.target.files[0]);
+    const tone = dragActive
+        ? 'border-terracotta bg-surface-alt/50'
+        : uploading
+            ? 'border-terracotta bg-surface-alt/30'
+            : success
+                ? 'border-forest bg-forest/10'
+                : error
+                    ? 'border-terracotta bg-terracotta/10'
+                    : 'border-border-warm hover:border-terracotta hover:bg-cream';
+
+    const browse = (e) => {
+        e?.stopPropagation();
+        fileInputRef.current?.click();
     };
 
-    const handleDrag = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.type === "dragenter" || e.type === "dragover") {
-            setDragActive(true);
-        } else if (e.type === "dragleave") {
-            setDragActive(false);
-        }
-    };
-
-    const handleDrop = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDragActive(false);
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            processFile(e.dataTransfer.files[0]);
-        }
-    };
+    let body;
+    if (uploading) {
+        body = compact ? (
+            <>
+                <IconLoader2 className="w-8 h-8 text-terracotta animate-spin shrink-0" />
+                <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-ink">Scanning receipt… {progress}%</p>
+                    <p className="text-xs text-ink-muted">Filling supplier, date, and lines from the file</p>
+                </div>
+            </>
+        ) : (
+            <>
+                <div className="relative mb-4">
+                    <IconLoader2 className="w-12 h-12 text-terracotta animate-spin" />
+                    <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-terracotta">{progress}%</div>
+                </div>
+                <h4 className="text-lg font-semibold text-ink">Scanning receipt…</h4>
+                <p className="text-sm text-ink-muted mt-1">Extracting supplier, date, and amounts</p>
+            </>
+        );
+    } else if (success) {
+        body = compact ? (
+            <>
+                <div className="w-10 h-10 bg-forest/10 rounded-full flex items-center justify-center shrink-0">
+                    <IconCheck className="w-5 h-5 text-forest" />
+                </div>
+                <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-ink">Receipt attached</p>
+                    <p className="text-xs text-ink-muted">Bill fields were filled where we could read them</p>
+                </div>
+                <button type="button" onClick={browse} className="text-xs font-semibold text-terracotta hover:underline shrink-0">
+                    Replace
+                </button>
+            </>
+        ) : (
+            <>
+                <div className="w-12 h-12 bg-forest/10 rounded-full flex items-center justify-center mb-4">
+                    <IconCheck className="w-6 h-6 text-forest" />
+                </div>
+                <h4 className="text-lg font-semibold text-ink">Scan complete</h4>
+                <p className="text-sm text-ink-muted mt-1">Fields have been auto-populated</p>
+                <button type="button" onClick={browse} className="mt-4 text-xs font-medium text-terracotta">Upload another</button>
+            </>
+        );
+    } else if (error) {
+        body = compact ? (
+            <>
+                <div className="w-10 h-10 bg-terracotta/10 rounded-full flex items-center justify-center shrink-0">
+                    <IconX className="w-5 h-5 text-terracotta" />
+                </div>
+                <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-terracotta">Upload failed</p>
+                    <p className="text-xs text-terracotta">{error}</p>
+                </div>
+                <button type="button" onClick={browse} className="text-xs font-semibold text-ink shrink-0">Try again</button>
+            </>
+        ) : (
+            <>
+                <div className="w-12 h-12 bg-terracotta/10 rounded-full flex items-center justify-center mb-4">
+                    <IconX className="w-6 h-6 text-terracotta" />
+                </div>
+                <h4 className="text-lg font-semibold text-terracotta">Upload failed</h4>
+                <p className="text-sm text-terracotta mt-1">{error}</p>
+                <button type="button" onClick={browse} className="mt-4 px-4 py-2 bg-ink text-white text-xs font-medium rounded-lg">Try again</button>
+            </>
+        );
+    } else {
+        body = compact ? (
+            <>
+                <div className="w-10 h-10 bg-surface-alt rounded-full flex items-center justify-center shrink-0">
+                    <IconUpload className="w-5 h-5 text-ink" />
+                </div>
+                <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-ink">Have a receipt?</p>
+                    <p className="text-xs text-ink-muted">Drop it here to fill the bill · JPG, PNG, WebP, or PDF · 10 MB</p>
+                </div>
+                <span className="inline-flex items-center px-3 py-1.5 rounded-lg border border-border-warm bg-surface text-xs font-semibold text-ink shrink-0">
+                    Browse
+                </span>
+            </>
+        ) : (
+            <>
+                <div className="w-12 h-12 bg-surface-alt rounded-full flex items-center justify-center mb-4">
+                    <IconUpload className="w-6 h-6 text-ink" />
+                </div>
+                <h4 className="text-lg font-semibold text-ink">Upload receipt</h4>
+                <p className="text-sm text-ink-muted mt-1">Drop your receipt here or click to browse</p>
+                <div className="mt-4 flex items-center gap-2 text-xs text-ink-muted">
+                    <IconPhoto size={14} />
+                    <span>JPG, PNG, WebP, or PDF · Max 10 MB</span>
+                </div>
+            </>
+        );
+    }
 
     return (
         <div className="w-full">
-            <div 
+            <div
                 onClick={() => fileInputRef.current?.click()}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-                className={`relative border-2 border-dashed rounded-xl p-8 transition-all duration-300 cursor-pointer overflow-hidden
-                    ${dragActive ? 'border-terracotta bg-surface-alt/50 scale-[1.02]' : 
-                      uploading ? 'border-terracotta bg-surface-alt/30' : 
-                      success ? 'border-forest bg-forest/10/30' : 
-                      error ? 'border-terracotta bg-terracotta/10/30' : 
-                      'border-border-warm hover:border-terracotta hover:bg-cream'}`}
+                onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(true); }}
+                onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(false); }}
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(true); }}
+                onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragActive(false);
+                    if (e.dataTransfer.files?.[0]) processFile(e.dataTransfer.files[0]);
+                }}
+                className={`relative border-2 border-dashed rounded-xl cursor-pointer overflow-hidden transition-colors ${tone} ${compact ? 'px-4 py-3' : 'p-8'}`}
             >
-                <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleFileChange} 
-                    className="hidden" 
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={(e) => processFile(e.target.files[0])}
+                    className="hidden"
                     accept="image/*,application/pdf"
                 />
-
-                <div className="flex flex-col items-center justify-center text-center">
-                    {uploading ? (
-                        <>
-                            <div className="relative mb-4">
-                                <IconLoader2 className="w-12 h-12 text-terracotta animate-spin" />
-                                <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-terracotta">
-                                    {progress}%
-                                </div>
-                            </div>
-                            <h4 className="text-lg font-semibold text-ink">Scanning Receipt...</h4>
-                            <p className="text-sm text-ink-muted mt-1">Our AI is extracting data from your receipt</p>
-                            
-                            {/* Scanning Animation Line */}
-                            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent animate-scan" />
-                        </>
-                    ) : success ? (
-                        <>
-                            <div className="w-12 h-12 bg-forest/10 rounded-full flex items-center justify-center mb-4">
-                                <IconCheck className="w-6 h-6 text-forest" />
-                            </div>
-                            <h4 className="text-lg font-semibold text-ink">Scan Complete!</h4>
-                            <p className="text-sm text-ink-muted mt-1">Fields have been auto-populated</p>
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                                className="mt-4 text-xs font-medium text-terracotta hover:text-terracotta"
-                            >
-                                Upload another
-                            </button>
-                        </>
-                    ) : error ? (
-                        <>
-                            <div className="w-12 h-12 bg-terracotta/10 rounded-full flex items-center justify-center mb-4">
-                                <IconX className="w-6 h-6 text-terracotta" />
-                            </div>
-                            <h4 className="text-lg font-semibold text-terracotta">Upload Failed</h4>
-                            <p className="text-sm text-terracotta mt-1">{error}</p>
-                            <button className="mt-4 px-4 py-2 bg-ink text-white text-xs font-medium rounded-lg">Try Again</button>
-                        </>
-                    ) : (
-                        <>
-                            <div className="w-12 h-12 bg-surface-alt rounded-full flex items-center justify-center mb-4 group-hover:bg-surface-alt transition-colors">
-                                <IconUpload className="w-6 h-6 text-ink group-hover:text-terracotta" />
-                            </div>
-                            <h4 className="text-lg font-semibold text-ink">Upload Receipt</h4>
-                            <p className="text-sm text-ink-muted mt-1">Drop your receipt here or click to browse</p>
-                            <div className="mt-4 flex items-center gap-2 text-xs text-ink-muted">
-                                <IconPhoto size={14} />
-                                <span>JPG, PNG, WebP, or PDF · Max 10 MB</span>
-                            </div>
-                        </>
-                    )}
+                <div className={compact ? 'flex items-center gap-3' : 'flex flex-col items-center justify-center text-center'}>
+                    {body}
                 </div>
             </div>
-
-            <style jsx>{`
-                @keyframes scan {
-                    0% { transform: translateY(0); opacity: 0; }
-                    50% { opacity: 1; }
-                    100% { transform: translateY(200px); opacity: 0; }
-                }
-                .animate-scan {
-                    animation: scan 2s linear infinite;
-                }
-            `}</style>
         </div>
     );
 }

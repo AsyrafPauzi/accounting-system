@@ -6,6 +6,7 @@ use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Account;
 use App\Models\Product;
+use App\Support\IndexFilters;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,8 +18,9 @@ class ProductController extends Controller
     {
         $this->authorize('products.view');
 
-        $search = trim((string) $request->input('search', ''));
-        $statusFilter = $request->input('status', 'all');
+        $filters = IndexFilters::from($request, 10);
+        $search = $filters['search'];
+        $statusFilter = $filters['status'];
 
         $query = Product::query();
 
@@ -39,15 +41,18 @@ class ProductController extends Controller
         $products = $query
             ->orderBy('display_order')
             ->orderBy('name')
-            ->paginate(20)
+            ->paginate($filters['per_page'])
             ->withQueryString();
+
+        $totalCount = Product::count();
+        $activeCount = Product::where('is_active', true)->count();
 
         return Inertia::render('Products/Index', [
             'products' => $products,
-            'filters'  => [
-                'search' => $search,
-                'status' => $statusFilter,
-            ],
+            'filters' => $filters,
+            'totalCount' => $totalCount,
+            'activeCount' => $activeCount,
+            'inactiveCount' => $totalCount - $activeCount,
         ]);
     }
 

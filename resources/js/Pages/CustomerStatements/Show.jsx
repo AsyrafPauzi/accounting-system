@@ -222,7 +222,7 @@ export default function Show({ auth, customer, statement, base_currency = 'MYR',
                                             <td className="px-6 py-3">
                                                 {event.invoice_id && event.type === 'invoice' ? (
                                                     <Link
-                                                        href={route('invoices.preview', event.invoice_id)}
+                                                        href={route('invoices.show', event.invoice_id)}
                                                         className="text-sm font-semibold text-terracotta hover:underline"
                                                     >
                                                         {event.reference}

@@ -70,77 +70,80 @@ export default function Show({ auth, estimate, base_currency = 'MYR', document_t
     };
 
     return (
-        <AuthenticatedLayout user={auth.user}>
-            <Head title={`${estimate.estimate_number} · ${estimate.customer?.name || 'Estimate'}`} />
-
-            <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
-                {/* Header */}
-                <div className="flex flex-col gap-4">
-                    <Link href={route('estimates.index')} className="inline-flex items-center gap-1 text-xs font-semibold text-ink-muted hover:text-ink">
-                        <Icons.ChevronLeft /> Back to estimates
-                    </Link>
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                        <div>
-                            <div className="flex items-center gap-3 flex-wrap">
-                                <h1 className="text-2xl sm:text-3xl font-display font-medium text-ink">{estimate.estimate_number}</h1>
-                                <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wider ${STATUS_STYLES[estimate.status]}`}>
+        <AuthenticatedLayout
+            user={auth.user}
+            header={
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <Link href={route('estimates.index')} className="p-2 rounded-xl text-ink-muted hover:text-ink hover:bg-surface-alt transition-all duration-200 shrink-0">
+                            <Icons.ChevronLeft />
+                        </Link>
+                        <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h2 className="text-xl sm:text-2xl font-display font-medium text-ink tracking-tight">{estimate.estimate_number}</h2>
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider ${STATUS_STYLES[estimate.status]}`}>
                                     {estimate.status}
                                 </span>
                             </div>
-                            <p className="text-sm text-ink-muted mt-1">For {estimate.customer?.name || '—'}</p>
-                        </div>
-
-                        {/* Action buttons */}
-                        <div className="flex flex-wrap items-center gap-2">
-                            {canEdit && (
-                                <Link href={route('estimates.edit', estimate.id)} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream transition-colors">
-                                    <Icons.Pencil /> Edit
-                                </Link>
-                            )}
-                            {auth.permissions.includes('estimates.create') && (
-                                <button type="button" onClick={() => router.post(route('estimates.duplicate', estimate.id))} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">
-                                    Duplicate
-                                </button>
-                            )}
-                            <a href={route('estimates.pdf', estimate.id)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">
-                                PDF
-                            </a>
-                            <ShareButtons publicUrl={public_pdf_url} whatsappUrl={whatsapp_url} />
-                            {auth.permissions.includes('estimates.email') && estimate.customer?.email && (
-                                <button type="button" onClick={() => router.post(route('estimates.email', estimate.id))} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">
-                                    Email
-                                </button>
-                            )}
-                            {transitions.map(t => (
-                                <button
-                                    key={t.to}
-                                    type="button"
-                                    onClick={() => handleTransition(t.to)}
-                                    className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${TONE_CLASSES[t.tone]}`}
-                                >
-                                    <t.Icon /> {t.label}
-                                </button>
-                            ))}
-                            {canConvert && (
-                                <button
-                                    type="button"
-                                    onClick={handleConvert}
-                                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 shadow-lg transition-colors"
-                                >
-                                    <Icons.ArrowsRight /> Convert to Invoice
-                                </button>
-                            )}
-                            {canConvert && showGoods && auth.permissions.includes('sales-orders.create') && (
-                                <button
-                                    type="button"
-                                    onClick={() => router.post(route('estimates.convert-so', estimate.id))}
-                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream"
-                                >
-                                    Convert to sales order
-                                </button>
-                            )}
+                            <p className="text-sm text-ink-muted mt-0.5 truncate">For {estimate.customer?.name || '—'}</p>
                         </div>
                     </div>
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        {canEdit && (
+                            <Link href={route('estimates.edit', estimate.id)} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">
+                                <Icons.Pencil /> Edit
+                            </Link>
+                        )}
+                        {canConvert && (
+                            <button
+                                type="button"
+                                onClick={handleConvert}
+                                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 shadow-lg"
+                            >
+                                <Icons.ArrowsRight /> Convert to Invoice
+                            </button>
+                        )}
+                    </div>
+                </div>
+            }
+        >
+            <Head title={`${estimate.estimate_number} · ${estimate.customer?.name || 'Estimate'}`} />
+
+            <div className="w-full space-y-5">
+                <div className="flex flex-wrap items-center gap-2">
+                    {auth.permissions.includes('estimates.create') && (
+                        <button type="button" onClick={() => router.post(route('estimates.duplicate', estimate.id))} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">
+                            Duplicate
+                        </button>
+                    )}
+                    <a href={route('estimates.pdf', estimate.id)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">
+                        PDF
+                    </a>
+                    <ShareButtons publicUrl={public_pdf_url} whatsappUrl={whatsapp_url} />
+                    {auth.permissions.includes('estimates.email') && estimate.customer?.email && (
+                        <button type="button" onClick={() => router.post(route('estimates.email', estimate.id))} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">
+                            Email
+                        </button>
+                    )}
+                    {transitions.map(t => (
+                        <button
+                            key={t.to}
+                            type="button"
+                            onClick={() => handleTransition(t.to)}
+                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${TONE_CLASSES[t.tone]}`}
+                        >
+                            <t.Icon /> {t.label}
+                        </button>
+                    ))}
+                    {canConvert && showGoods && auth.permissions.includes('sales-orders.create') && (
+                        <button
+                            type="button"
+                            onClick={() => router.post(route('estimates.convert-so', estimate.id))}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream"
+                        >
+                            Convert to sales order
+                        </button>
+                    )}
                 </div>
 
                 <DocumentTrail steps={document_trail} />
