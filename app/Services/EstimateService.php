@@ -200,7 +200,7 @@ class EstimateService
         return Estimate::query()
             ->whereIn('status', ['draft', 'sent'])
             ->whereNotNull('expiry_date')
-            ->whereDate('expiry_date', '<', now())
+            ->where('expiry_date', '<', now())
             ->update(['status' => 'expired']);
     }
 

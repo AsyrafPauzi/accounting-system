@@ -22,8 +22,8 @@ class ProfitAndLossController extends Controller
             ->join('journal_entries', 'journal_items.journal_entry_id', '=', 'journal_entries.id')
             ->join('accounts', 'journal_items.account_code', '=', 'accounts.code')
             ->whereIn('accounts.type', ['income', 'expense'])
-            ->whereDate('journal_entries.date', '>=', $dateFrom)
-            ->whereDate('journal_entries.date', '<=', $dateTo)
+            ->where('journal_entries.date', '>=', $dateFrom)
+            ->where('journal_entries.date', '<=', $dateTo)
             ->select(
                 'accounts.code',
                 'accounts.name',
@@ -83,8 +83,8 @@ class ProfitAndLossController extends Controller
             ->join('journal_entries', 'journal_items.journal_entry_id', '=', 'journal_entries.id')
             ->join('accounts', 'journal_items.account_code', '=', 'accounts.code')
             ->whereIn('accounts.type', ['income', 'expense'])
-            ->whereDate('journal_entries.date', '>=', $dateFrom)
-            ->whereDate('journal_entries.date', '<=', $dateTo)
+            ->where('journal_entries.date', '>=', $dateFrom)
+            ->where('journal_entries.date', '<=', $dateTo)
             ->select(
                 'accounts.code',
                 'accounts.name',

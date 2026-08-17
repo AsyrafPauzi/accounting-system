@@ -83,7 +83,7 @@ class CustomerStatementService
         $invoicesBefore = (float) DB::table('invoices')
             ->where('customer_id', $customer->id)
             ->whereNotIn('status', ['draft', 'void'])
-            ->whereDate('issue_date', '<', $from->toDateString())
+            ->where('issue_date', '<', $from->toDateString())
             ->whereNull('deleted_at')
             ->sum('total_amount');
 
@@ -93,14 +93,14 @@ class CustomerStatementService
             ->where('je.reference_type', 'Invoice Payment')
             ->where('i.customer_id', $customer->id)
             ->where('ji.account_code', '1100')
-            ->whereDate('je.date', '<', $from->toDateString())
+            ->where('je.date', '<', $from->toDateString())
             ->whereNull('je.deleted_at')
             ->sum('ji.credit');
 
         $creditsBefore = (float) DB::table('credit_notes')
             ->where('customer_id', $customer->id)
             ->where('status', '!=', 'void')
-            ->whereDate('issue_date', '<', $from->toDateString())
+            ->where('issue_date', '<', $from->toDateString())
             ->whereNull('deleted_at')
             ->sum('total_amount');
 

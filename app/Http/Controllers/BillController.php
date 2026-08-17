@@ -19,6 +19,8 @@ use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use App\Jobs\ProcessOcr;
+use Illuminate\Support\Facades\Cache;
 
 class BillController extends Controller
 {
@@ -328,23 +330,50 @@ class BillController extends Controller
             ], 500);
         }
 
-        // Process OCR
-        $ocrResult = $this->ocrService->process($path);
-
         if ($request->has('bill_id')) {
             $bill = Bill::findOrFail($request->bill_id);
             $bill->update([
                 'receipt_path' => $path,
-                'ocr_status' => $ocrResult['status'] === 'success' ? 'completed' : 'failed',
-                'ocr_data' => $ocrResult['data'] ?? null,
+                'ocr_status' => 'pending',
+            ]);
+        }
+
+        // Dispatch background OCR job
+        ProcessOcr::dispatch($path, $request->bill_id ? (int) $request->bill_id : null);
+
+        return response()->json([
+            'success' => true,
+            'status' => 'pending',
+            'path' => $path,
+            'url' => route('bills.receipt', $request->bill_id ?? 0) . '?path=' . urlencode($path),
+        ]);
+    }
+
+    /**
+     * Poll the status of background OCR processing.
+     */
+    public function ocrStatus(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'path' => 'required|string',
+        ]);
+
+        $path = $request->input('path');
+        $cacheKey = 'ocr-result:' . $path;
+
+        if (Cache::has($cacheKey)) {
+            $result = Cache::get($cacheKey);
+            $status = ($result['status'] ?? null) === 'success' ? 'completed' : 'failed';
+
+            return response()->json([
+                'status' => $status,
+                'ocr_data' => $result['data'] ?? null,
+                'error' => $result['error'] ?? null,
             ]);
         }
 
         return response()->json([
-            'success' => true,
-            'path' => $path,
-            'url' => route('bills.receipt', $request->bill_id ?? 0) . '?path=' . urlencode($path),
-            'ocr_data' => $ocrResult['data'] ?? null,
+            'status' => 'pending',
         ]);
     }
 

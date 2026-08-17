@@ -138,7 +138,7 @@ class PracticeMetricsService
             $headline = [
                 'revenue_mtd'      => (float) DB::table('invoices')
                     ->where('status', 'paid')
-                    ->whereDate('issue_date', '>=', $monthStart->toDateString())
+                    ->where('issue_date', '>=', $monthStart->toDateString())
                     ->sum('total_amount'),
                 'ar_outstanding'   => (float) DB::table('invoices')
                     ->whereNotIn('status', ['paid', 'void', 'draft'])
@@ -146,7 +146,7 @@ class PracticeMetricsService
                 'overdue_count'    => DB::table('invoices')
                     ->whereNotIn('status', ['paid', 'void', 'draft'])
                     ->whereNotNull('due_date')
-                    ->whereDate('due_date', '<', $today)
+                    ->where('due_date', '<', $today)
                     ->count(),
                 'last_activity_at' => DB::table('invoices')->max('created_at')
                     ?: (Schema::hasTable('bills') ? DB::table('bills')->max('created_at') : null),
@@ -157,7 +157,7 @@ class PracticeMetricsService
             $headline['expenses_mtd']  = Schema::hasTable('bills')
                 ? (float) DB::table('bills')
                     ->whereIn('status', ['unpaid', 'partially paid', 'paid'])
-                    ->whereDate('bill_date', '>=', $monthStart->toDateString())
+                    ->where('bill_date', '>=', $monthStart->toDateString())
                     ->sum('total_amount')
                 : 0.0;
             try {
@@ -244,8 +244,8 @@ class PracticeMetricsService
                 'iso'     => $start->format('Y-m'),
                 'revenue' => round((float) DB::table('invoices')
                     ->where('status', 'paid')
-                    ->whereDate('issue_date', '>=', $start->toDateString())
-                    ->whereDate('issue_date', '<=', $end->toDateString())
+                    ->where('issue_date', '>=', $start->toDateString())
+                    ->where('issue_date', '<=', $end->toDateString())
                     ->sum('total_amount'), 2),
             ];
         }

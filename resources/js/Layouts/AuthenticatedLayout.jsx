@@ -252,6 +252,8 @@ export default function Authenticated({ user: propUser, header, children }) {
         if (
             isRouteActive('admin.tenants.index') ||
             isRouteActive('admin.plans.index') ||
+            isRouteActive('admin.self-hosted.index') ||
+            isRouteActive('admin.platform.show') ||
             isRouteActive('admin.users.index') ||
             isRouteActive('admin.audit-logs.index') ||
             isRouteActive('admin.branding.edit') ||

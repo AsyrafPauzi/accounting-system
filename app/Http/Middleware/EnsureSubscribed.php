@@ -53,6 +53,13 @@ class EnsureSubscribed
             return $next($request);
         }
 
+        // If this user is being impersonated by a super-admin, allow the request to
+        // bypass subscription checks so the admin can debug inactive tenants and
+        // return to the admin panel.
+        if ($request->session()->has('impersonator_id')) {
+            return $next($request);
+        }
+
         $routeName = (string) $request->route()?->getName();
 
         // Firm users (Accountant track) — let the practice console
