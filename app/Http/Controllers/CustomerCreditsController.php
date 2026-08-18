@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\ReportPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -29,6 +30,16 @@ class CustomerCreditsController extends Controller
 {
     public function index(Request $request): Response
     {
+        $request->validate([
+            'as_of_date' => 'nullable|date',
+        ]);
+
+        $resolved = ReportPeriod::asOf(
+            $request->input('preset'),
+            $request->input('as_of_date')
+        );
+        $asOf = $resolved['as_of'];
+
         $rows = DB::table('credit_notes as cn')
             ->leftJoin('customers as c', 'c.id', '=', 'cn.customer_id')
             ->select([
@@ -42,6 +53,8 @@ class CustomerCreditsController extends Controller
                 DB::raw('MAX(cn.issue_date) as last_issued_at'),
             ])
             ->where('cn.status', '!=', 'void')
+            ->whereDate('cn.issue_date', '<=', $asOf)
+            ->whereRaw('(cn.total_amount - cn.applied_amount) > 0')
             ->whereNull('cn.deleted_at')
             ->groupBy('cn.customer_id', 'c.name', 'c.email')
             ->orderByDesc('open_amount')
@@ -69,6 +82,8 @@ class CustomerCreditsController extends Controller
                 'i.invoice_number',
             ])
             ->where('cn.status', '!=', 'void')
+            ->whereDate('cn.issue_date', '<=', $asOf)
+            ->whereRaw('(cn.total_amount - cn.applied_amount) > 0')
             ->whereNull('cn.deleted_at')
             ->orderByDesc('cn.issue_date')
             ->limit(500)
@@ -95,6 +110,7 @@ class CustomerCreditsController extends Controller
         ];
 
         return Inertia::render('Reports/CustomerCredits', [
+            'filters'       => ['preset' => $resolved['preset'], 'as_of_date' => $asOf],
             'rows'          => $rows,
             'totals'        => $totals,
             'details'       => $details,

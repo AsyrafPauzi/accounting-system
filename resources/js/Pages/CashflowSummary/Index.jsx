@@ -1,6 +1,7 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
+import ReportPeriodChips from '@/Components/ReportPeriodChips';
 import {
     BarChart,
     Bar,
@@ -23,20 +24,12 @@ function formatMoney(n) {
     return (Number(n) || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-const SALES_COLOR = '#2563eb';
-const EXPENSES_COLOR = '#dc2626';
+const MONEY_IN_COLOR = '#2563eb';
+const MONEY_OUT_COLOR = '#dc2626';
 
 export default function Index({ auth, summary = {}, chartData = [], filters = {} }) {
-    const { total_sales = 0, total_expenses = 0, net_cashflow = 0 } = summary;
-    const { date_from = '', date_to = '' } = filters;
-
-    const handleFilterSubmit = (e) => {
-        e.preventDefault();
-        const form = e.target;
-        const dateFrom = form.date_from?.value || '';
-        const dateTo = form.date_to?.value || '';
-        router.get(route('cashflow-summary.index'), { date_from: dateFrom, date_to: dateTo }, { preserveState: false });
-    };
+    const { money_in = 0, money_out = 0, net = 0 } = summary;
+    const { preset = 'custom', date_from = '', date_to = '' } = filters;
 
     return (
         <AuthenticatedLayout
@@ -44,78 +37,58 @@ export default function Index({ auth, summary = {}, chartData = [], filters = {}
             header={
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                     <div>
-                        <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Cashflow Summary</h2>
-                        <p className="text-ink-muted text-sm font-medium mt-1">Total Sales vs Total Expenses — see how money moves</p>
+                        <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Cash movement</h2>
+                        <p className="text-ink-muted text-sm font-medium mt-1">Money in and out of bank and cash. Transfers raise both sides; net is unchanged.</p>
                     </div>
                     <Link
-                        href={route('invoices.index')}
+                        href={route('transactions.index')}
                         className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:bg-cream shadow-sm"
                     >
-                        View invoices
+                        View transactions
                     </Link>
                 </div>
             }
         >
-            <Head title="Cashflow Summary" />
+            <Head title="Cash movement" />
 
             <div className="space-y-6">
                 {/* Date filter */}
                 <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm p-4">
-                    <form onSubmit={handleFilterSubmit} className="flex flex-wrap items-end gap-4">
-                        <div>
-                            <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5">From</label>
-                            <input
-                                type="date"
-                                name="date_from"
-                                defaultValue={date_from}
-                                className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5">To</label>
-                            <input
-                                type="date"
-                                name="date_to"
-                                defaultValue={date_to}
-                                className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
-                            />
-                        </div>
-                        <button
-                            type="submit"
-                            className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta transition-colors"
-                        >
-                            Update period
-                        </button>
-                    </form>
+                    <ReportPeriodChips
+                        action={route('cashflow-summary.index')}
+                        preset={preset}
+                        dateFrom={date_from}
+                        dateTo={date_to}
+                    />
                 </div>
 
                 {/* KPI cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="relative overflow-hidden bg-terracotta text-white rounded-2xl p-6 shadow-lg">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Total Sales</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Money in</span>
                             <span className="p-2 rounded-xl bg-surface/10"><Icons.ArrowTrendingUp /></span>
                         </div>
-                        <p className="text-2xl font-bold font-mono tabular-nums">RM {formatMoney(total_sales)}</p>
-                        <p className="text-xs text-terracotta mt-1">Posted invoices in period</p>
+                        <p className="text-2xl font-bold font-mono tabular-nums">RM {formatMoney(money_in)}</p>
+                        <p className="text-xs text-terracotta mt-1">Debits to bank and cash</p>
                     </div>
                     <div className="bg-surface rounded-2xl p-6 border border-border-warm shadow-sm">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Total Expenses</span>
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Money out</span>
                             <span className="p-2 rounded-xl bg-terracotta/10 text-terracotta"><Icons.ArrowTrendingDown /></span>
                         </div>
-                        <p className="text-2xl font-bold text-terracotta font-mono tabular-nums">RM {formatMoney(total_expenses)}</p>
-                        <p className="text-xs text-ink-muted mt-1">Posted bills in period</p>
+                        <p className="text-2xl font-bold text-terracotta font-mono tabular-nums">RM {formatMoney(money_out)}</p>
+                        <p className="text-xs text-ink-muted mt-1">Credits from bank and cash</p>
                     </div>
-                    <div className={`rounded-2xl p-6 border shadow-sm ${net_cashflow >= 0 ? 'bg-surface border-border-warm' : 'bg-terracotta/10/50 border-terracotta/30'}`}>
+                    <div className={`rounded-2xl p-6 border shadow-sm ${net >= 0 ? 'bg-surface border-border-warm' : 'bg-terracotta/10/50 border-terracotta/30'}`}>
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Net Cashflow</span>
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Net</span>
                             <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Banknotes /></span>
                         </div>
-                        <p className={`text-2xl font-bold font-mono tabular-nums ${net_cashflow >= 0 ? 'text-forest' : 'text-terracotta'}`}>
-                            RM {formatMoney(net_cashflow)}
+                        <p className={`text-2xl font-bold font-mono tabular-nums ${net >= 0 ? 'text-forest' : 'text-terracotta'}`}>
+                            RM {formatMoney(net)}
                         </p>
-                        <p className="text-xs text-ink-muted mt-1">Sales minus expenses</p>
+                        <p className="text-xs text-ink-muted mt-1">Money in minus money out</p>
                     </div>
                 </div>
 
@@ -123,7 +96,7 @@ export default function Index({ auth, summary = {}, chartData = [], filters = {}
                 <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden p-6">
                     <div className="flex items-center gap-2 mb-4">
                         <Icons.ChartBar />
-                        <h3 className="text-sm font-display font-medium text-ink">Sales vs Expenses by month</h3>
+                        <h3 className="text-sm font-display font-medium text-ink">Money in and out by month</h3>
                     </div>
                     {chartData.length > 0 ? (
                         <div className="h-[380px] w-full">
@@ -149,14 +122,14 @@ export default function Index({ auth, summary = {}, chartData = [], filters = {}
                                         contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}
                                     />
                                     <Legend />
-                                    <Bar dataKey="sales" name="Sales" fill={SALES_COLOR} radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="expenses" name="Expenses" fill={EXPENSES_COLOR} radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="money_in" name="Money in" fill={MONEY_IN_COLOR} radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="money_out" name="Money out" fill={MONEY_OUT_COLOR} radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
                     ) : (
                         <div className="h-[280px] flex items-center justify-center text-ink-muted text-sm font-medium">
-                            No data in this period. Post invoices and bills to see sales and expenses.
+                            No data in this period. Post bank or cash journals to see cash movement.
                         </div>
                     )}
                 </div>

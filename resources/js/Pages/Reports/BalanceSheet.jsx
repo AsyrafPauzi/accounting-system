@@ -1,7 +1,8 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { alertUpgrade } from '@/utils/swal';
+import ReportPeriodChips from '@/Components/ReportPeriodChips';
 
 
 const Icons = {
@@ -17,7 +18,7 @@ function formatMoney(n) {
     return (Number(n) || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function AccountTable({ title, accounts, total, emptyMessage, amountClass = 'text-ink' }) {
+function AccountTable({ title, accounts, total, emptyMessage, ledgerUrl, amountClass = 'text-ink' }) {
     return (
         <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-border-warm bg-cream/80">
@@ -36,8 +37,10 @@ function AccountTable({ title, accounts, total, emptyMessage, amountClass = 'tex
                             accounts.map((acc) => (
                                 <tr key={acc.code} className="border-b border-border-warm last:border-0 hover:bg-cream/80">
                                     <td className="px-6 py-4">
-                                        <span className="font-mono text-ink text-xs">{acc.code}</span>
-                                        <span className="block font-medium text-ink">{acc.name}</span>
+                                        <Link href={ledgerUrl(acc.code)} className="group inline-block">
+                                            <span className="font-mono text-ink text-xs group-hover:text-terracotta">{acc.code}</span>
+                                            <span className="block font-medium text-ink group-hover:text-terracotta">{acc.name}</span>
+                                        </Link>
                                     </td>
                                     <td className={`px-6 py-4 text-right font-mono tabular-nums font-semibold ${amountClass}`}>
                                         RM {formatMoney(acc.amount)}
@@ -66,7 +69,12 @@ function AccountTable({ title, accounts, total, emptyMessage, amountClass = 'tex
 
 export default function BalanceSheet({ auth, asset_accounts = [], liability_accounts = [], equity_accounts = [], total_assets = 0, total_liabilities = 0, total_equity = 0, total_liabilities_and_equity = 0, balanced = false, filters = {} }) {
     const { flash } = usePage().props;
-    const { as_at_date = '' } = filters;
+    const { preset = 'custom', as_at_date = '' } = filters;
+    const ledgerUrl = (code) => route('general-ledger.report', {
+        account_code: code,
+        date_to: filters.as_at_date,
+        from: 'bs',
+    });
 
     return (
         <AuthenticatedLayout
@@ -88,29 +96,23 @@ export default function BalanceSheet({ auth, asset_accounts = [], liability_acco
             <div className="space-y-6">
                 <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
                     <div className="px-6 py-5 border-b border-border-warm bg-cream/50">
-                        <form method="get" action={route('balance-sheet.index')} className="flex flex-col gap-1.5">
-                            <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider ml-1">As at date</label>
+                        <div className="flex flex-wrap items-end gap-3">
+                            <ReportPeriodChips
+                                action={route('balance-sheet.index')}
+                                preset={preset}
+                                mode="as_of"
+                                asOfKey="as_at_date"
+                                asOf={as_at_date}
+                            />
                             <div className="flex flex-wrap items-center gap-3">
-                                <input
-                                    type="date"
-                                    name="as_at_date"
-                                    defaultValue={as_at_date}
-                                    className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
-                                />
-                                <button
-                                    type="submit"
-                                    className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta shadow-lg  transition-all active:scale-95"
-                                >
-                                    Update report
-                                </button>
                                 <a
-                                    href={`${route('balance-sheet.export.csv')}?${new URLSearchParams({ as_at_date: as_at_date || '' })}`}
+                                    href={`${route('balance-sheet.export.csv')}?${new URLSearchParams({ preset, as_at_date: as_at_date || '' })}`}
                                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream transition-all active:scale-95"
                                 >
                                     <Icons.ArrowDownTray /> Download CSV
                                 </a>
                                 <a
-                                    href={auth.planPermissions['reports.export.full'] ? `${route('balance-sheet.export.pdf')}?${new URLSearchParams({ as_at_date: as_at_date || '' })}` : '#'}
+                                    href={auth.planPermissions['reports.export.full'] ? `${route('balance-sheet.export.pdf')}?${new URLSearchParams({ preset, as_at_date: as_at_date || '' })}` : '#'}
                                     onClick={(e) => {
                                         if (!auth.planPermissions['reports.export.full']) {
                                             e.preventDefault();
@@ -129,8 +131,8 @@ export default function BalanceSheet({ auth, asset_accounts = [], liability_acco
                                     )}
                                 </a>
                             </div>
-                            <p className="text-ink-muted text-[10px] font-medium ml-1">Shows balances at end of this day.</p>
-                        </form>
+                        </div>
+                        <p className="text-ink-muted text-[10px] font-medium mt-2 ml-1">Shows balances at end of this day.</p>
                     </div>
                 </div>
 
@@ -167,6 +169,7 @@ export default function BalanceSheet({ auth, asset_accounts = [], liability_acco
                         accounts={asset_accounts}
                         total={total_assets}
                         emptyMessage="No asset balances as at this date."
+                        ledgerUrl={ledgerUrl}
                         amountClass="text-terracotta"
                     />
                     <div className="space-y-6">
@@ -175,6 +178,7 @@ export default function BalanceSheet({ auth, asset_accounts = [], liability_acco
                             accounts={liability_accounts}
                             total={total_liabilities}
                             emptyMessage="No liability balances as at this date."
+                            ledgerUrl={ledgerUrl}
                             amountClass="text-mustard"
                         />
                         <AccountTable
@@ -182,6 +186,7 @@ export default function BalanceSheet({ auth, asset_accounts = [], liability_acco
                             accounts={equity_accounts}
                             total={total_equity}
                             emptyMessage="No equity balances as at this date."
+                            ledgerUrl={ledgerUrl}
                             amountClass="text-terracotta"
                         />
                     </div>

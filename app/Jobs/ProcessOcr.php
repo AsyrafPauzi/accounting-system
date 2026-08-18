@@ -4,12 +4,12 @@ namespace App\Jobs;
 
 use App\Models\Bill;
 use App\Services\OCRService;
+use App\Support\OcrResultCache;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class ProcessOcr implements ShouldQueue
@@ -52,7 +52,7 @@ class ProcessOcr implements ShouldQueue
         }
 
         // Cache the result for 15 minutes so the frontend can poll it if no bill existed yet
-        Cache::put('ocr-result:' . $this->path, $ocrResult, now()->addMinutes(15));
+        OcrResultCache::put($this->path, $ocrResult);
 
         Log::info('[OCR/Job] Background text extraction completed', [
             'path' => $this->path,
@@ -81,6 +81,6 @@ class ProcessOcr implements ShouldQueue
             'data' => null,
             'error' => 'OCR background processing failed: ' . $exception->getMessage(),
         ];
-        Cache::put('ocr-result:' . $this->path, $failedResult, now()->addMinutes(15));
+        OcrResultCache::put($this->path, $failedResult);
     }
 }

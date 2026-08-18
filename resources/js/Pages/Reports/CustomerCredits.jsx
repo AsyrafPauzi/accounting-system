@@ -2,6 +2,7 @@ import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
 import { formatCurrency } from '@/utils/currency';
+import ReportPeriodChips from '@/Components/ReportPeriodChips';
 
 function formatDate(value) {
     if (! value) return '';
@@ -17,7 +18,9 @@ const statusBadge = {
     draft:   'bg-surface-alt text-ink',
 };
 
-export default function CustomerCredits({ auth, rows = [], totals = {}, details = [], base_currency = 'MYR' }) {
+export default function CustomerCredits({ auth, filters = {}, rows = [], totals = {}, details = [], base_currency = 'MYR' }) {
+    const { preset = 'custom', as_of_date = '' } = filters;
+
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -25,20 +28,32 @@ export default function CustomerCredits({ auth, rows = [], totals = {}, details 
                 <div>
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-terracotta">Reports</p>
                     <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Customer Credits</h2>
-                    <p className="text-ink-muted text-sm font-medium mt-1">Outstanding credit notes and deposits held on customer accounts.</p>
+                    <p className="text-ink-muted text-sm font-medium mt-1">Outstanding credit notes and deposits held on customer accounts as of {formatDate(as_of_date) || 'today'}.</p>
                 </div>
             }
         >
             <Head title="Customer Credits" />
 
             <div className="space-y-6">
+                <div className="bg-surface rounded-2xl border border-border-warm shadow-sm">
+                    <div className="px-6 py-4 border-b border-border-warm bg-cream/50">
+                        <ReportPeriodChips
+                            action={route('reports.customer-credits.index')}
+                            preset={preset}
+                            mode="as_of"
+                            asOfKey="as_of_date"
+                            asOf={as_of_date}
+                        />
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="bg-surface rounded-2xl border border-border-warm shadow-sm p-4">
                         <div className="text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest">Customers with credit</div>
                         <div className="mt-2 text-xl font-bold tabular-nums text-ink">{totals.customer_count || 0}</div>
                     </div>
                     <div className="bg-surface rounded-2xl border border-border-warm shadow-sm p-4">
-                        <div className="text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest">Total credits issued</div>
+                        <div className="text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest">Open credits issued</div>
                         <div className="mt-2 text-xl font-bold tabular-nums text-ink">{formatCurrency(totals.total_issued || 0, base_currency)}</div>
                         <div className="text-xs text-ink-muted mt-1">{totals.note_count || 0} credit note{totals.note_count === 1 ? '' : 's'}</div>
                     </div>
@@ -93,8 +108,8 @@ export default function CustomerCredits({ auth, rows = [], totals = {}, details 
                 {details.length > 0 && (
                     <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
                         <div className="px-6 py-4 border-b border-border-warm">
-                            <h3 className="text-sm font-display font-semibold text-ink uppercase tracking-wider">Recent credit notes</h3>
-                            <p className="text-xs text-ink-muted mt-0.5">{details.length === 500 ? 'First 500' : `${details.length}`} note{details.length === 1 ? '' : 's'}, newest first</p>
+                            <h3 className="text-sm font-display font-semibold text-ink uppercase tracking-wider">Open credit notes</h3>
+                            <p className="text-xs text-ink-muted mt-0.5">{details.length === 500 ? 'First 500' : `${details.length}`} open note{details.length === 1 ? '' : 's'} as of {formatDate(as_of_date) || 'today'}, newest first</p>
                         </div>
                         <div className="overflow-x-auto max-h-[480px]">
                             <table className="w-full text-left">

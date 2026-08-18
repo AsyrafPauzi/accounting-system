@@ -1,7 +1,8 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { alertUpgrade } from '@/utils/swal';
+import ReportPeriodChips from '@/Components/ReportPeriodChips';
 
 
 const Icons = {
@@ -17,10 +18,44 @@ function formatMoney(n) {
     return (Number(n) || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function ProfitAndLoss({ auth, revenue_accounts = [], expense_accounts = [], total_revenue = 0, total_expenses = 0, net_profit = 0, filters = {} }) {
+function varianceClass(value) {
+    if (Number(value) > 0) return 'text-forest';
+    if (Number(value) < 0) return 'text-terracotta';
+    return 'text-ink-muted';
+}
+
+export default function ProfitAndLoss({
+    auth,
+    revenue_accounts = [],
+    expense_accounts = [],
+    total_revenue = 0,
+    total_expenses = 0,
+    net_profit = 0,
+    compare_revenue = null,
+    compare_expenses = null,
+    compare_net_profit = null,
+    revenue_variance = null,
+    expenses_variance = null,
+    net_profit_variance = null,
+    compare_label = null,
+    filters = {},
+}) {
     const { flash } = usePage().props;
-    const { date_from = '', date_to = '' } = filters;
+    const { preset = 'custom', date_from = '', date_to = '', compare = 'previous' } = filters;
+    const comparisonOn = compare !== 'none';
     const isProfit = net_profit >= 0;
+    const changeCompare = (value) => router.get(route('profit-and-loss.index'), {
+        preset,
+        date_from,
+        date_to,
+        compare: value,
+    }, { preserveScroll: true, preserveState: false });
+    const ledgerUrl = (code) => route('general-ledger.report', {
+        account_code: code,
+        date_from: filters.date_from,
+        date_to: filters.date_to,
+        from: 'pl',
+    });
 
     return (
         <AuthenticatedLayout
@@ -42,39 +77,42 @@ export default function ProfitAndLoss({ auth, revenue_accounts = [], expense_acc
             <div className="space-y-6">
                 <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-border-warm flex flex-wrap items-end gap-3 bg-cream/50">
-                        <form method="get" action={route('profit-and-loss.index')} className="flex flex-wrap items-end gap-3">
-                            <div>
-                                <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">From</label>
-                                <input
-                                    type="date"
-                                    name="date_from"
-                                    defaultValue={date_from}
-                                    className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">To</label>
-                                <input
-                                    type="date"
-                                    name="date_to"
-                                    defaultValue={date_to}
-                                    className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
-                                />
-                            </div>
-                            <button
-                                type="submit"
-                                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta transition-colors"
-                            >
-                                Update report
-                            </button>
+                        <ReportPeriodChips
+                            action={route('profit-and-loss.index')}
+                            preset={preset}
+                            dateFrom={date_from}
+                            dateTo={date_to}
+                            extraParams={{ compare }}
+                        />
+                        <div className="flex flex-wrap gap-1.5">
+                            {[
+                                ['previous', 'vs previous'],
+                                ['last_year', 'vs last year'],
+                                ['none', 'Off'],
+                            ].map(([value, label]) => (
+                                <button
+                                    key={value}
+                                    type="button"
+                                    onClick={() => changeCompare(value)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
+                                        compare === value
+                                            ? 'bg-forest text-white border-forest'
+                                            : 'bg-surface text-ink border-border-warm hover:bg-cream'
+                                    }`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
                             <a
-                                href={`${route('profit-and-loss.export.csv')}?${new URLSearchParams({ date_from: date_from || '', date_to: date_to || '' })}`}
+                                href={`${route('profit-and-loss.export.csv')}?${new URLSearchParams({ preset, date_from: date_from || '', date_to: date_to || '', compare })}`}
                                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream transition-colors"
                             >
                                 <Icons.ArrowDownTray /> Download CSV
                             </a>
                             <a
-                                href={auth.planPermissions?.['reports.export.full'] ? `${route('profit-and-loss.export.pdf')}?${new URLSearchParams({ date_from: date_from || '', date_to: date_to || '' })}` : '#'}
+                                href={auth.planPermissions?.['reports.export.full'] ? `${route('profit-and-loss.export.pdf')}?${new URLSearchParams({ preset, date_from: date_from || '', date_to: date_to || '', compare })}` : '#'}
                                 onClick={(e) => {
                                     if (!auth.planPermissions?.['reports.export.full']) {
                                         e.preventDefault();
@@ -92,7 +130,10 @@ export default function ProfitAndLoss({ auth, revenue_accounts = [], expense_acc
                                     <svg className="w-3 h-3 text-mustard" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                                 )}
                             </a>
-                        </form>
+                        </div>
+                        {comparisonOn && compare_label && (
+                            <p className="w-full text-xs text-ink-muted">Comparing with {compare_label.toLowerCase()}.</p>
+                        )}
                     </div>
                 </div>
 
@@ -135,7 +176,9 @@ export default function ProfitAndLoss({ auth, revenue_accounts = [], expense_acc
                                 <thead>
                                     <tr className="text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
                                         <th className="px-6 py-4">Account</th>
-                                        <th className="px-6 py-4 text-right">Amount</th>
+                                        <th className="px-6 py-4 text-right">This period</th>
+                                        {comparisonOn && <th className="px-6 py-4 text-right">Compare</th>}
+                                        {comparisonOn && <th className="px-6 py-4 text-right">Variance</th>}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -143,17 +186,29 @@ export default function ProfitAndLoss({ auth, revenue_accounts = [], expense_acc
                                         revenue_accounts.map((acc) => (
                                             <tr key={acc.code} className="border-b border-border-warm last:border-0 hover:bg-cream/80">
                                                 <td className="px-6 py-4">
-                                                    <span className="font-mono text-ink text-xs">{acc.code}</span>
-                                                    <span className="block font-medium text-ink">{acc.name}</span>
+                                                    <Link href={ledgerUrl(acc.code)} className="group inline-block">
+                                                        <span className="font-mono text-ink text-xs group-hover:text-terracotta">{acc.code}</span>
+                                                        <span className="block font-medium text-ink group-hover:text-terracotta">{acc.name}</span>
+                                                    </Link>
                                                 </td>
                                                 <td className="px-6 py-4 text-right font-mono tabular-nums text-forest font-semibold">
                                                     RM {formatMoney(acc.amount)}
                                                 </td>
+                                                {comparisonOn && (
+                                                    <td className="px-6 py-4 text-right font-mono tabular-nums text-ink">
+                                                        RM {formatMoney(acc.compare_amount)}
+                                                    </td>
+                                                )}
+                                                {comparisonOn && (
+                                                    <td className={`px-6 py-4 text-right font-mono tabular-nums font-semibold ${varianceClass(acc.variance)}`}>
+                                                        RM {formatMoney(acc.variance)}
+                                                    </td>
+                                                )}
                                             </tr>
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={2} className="px-6 py-8 text-center text-ink-muted text-sm">
+                                            <td colSpan={comparisonOn ? 4 : 2} className="px-6 py-8 text-center text-ink-muted text-sm">
                                                 No revenue in this period.
                                             </td>
                                         </tr>
@@ -163,6 +218,8 @@ export default function ProfitAndLoss({ auth, revenue_accounts = [], expense_acc
                                     <tr className="border-t-2 border-border-warm bg-cream/80 font-semibold">
                                         <td className="px-6 py-4">Total revenue</td>
                                         <td className="px-6 py-4 text-right font-mono tabular-nums text-forest">RM {formatMoney(total_revenue)}</td>
+                                        {comparisonOn && <td className="px-6 py-4 text-right font-mono tabular-nums">RM {formatMoney(compare_revenue)}</td>}
+                                        {comparisonOn && <td className={`px-6 py-4 text-right font-mono tabular-nums ${varianceClass(revenue_variance)}`}>RM {formatMoney(revenue_variance)}</td>}
                                     </tr>
                                 </tfoot>
                             </table>
@@ -178,7 +235,9 @@ export default function ProfitAndLoss({ auth, revenue_accounts = [], expense_acc
                                 <thead>
                                     <tr className="text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
                                         <th className="px-6 py-4">Account</th>
-                                        <th className="px-6 py-4 text-right">Amount</th>
+                                        <th className="px-6 py-4 text-right">This period</th>
+                                        {comparisonOn && <th className="px-6 py-4 text-right">Compare</th>}
+                                        {comparisonOn && <th className="px-6 py-4 text-right">Variance</th>}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -186,17 +245,29 @@ export default function ProfitAndLoss({ auth, revenue_accounts = [], expense_acc
                                         expense_accounts.map((acc) => (
                                             <tr key={acc.code} className="border-b border-border-warm last:border-0 hover:bg-cream/80">
                                                 <td className="px-6 py-4">
-                                                    <span className="font-mono text-ink text-xs">{acc.code}</span>
-                                                    <span className="block font-medium text-ink">{acc.name}</span>
+                                                    <Link href={ledgerUrl(acc.code)} className="group inline-block">
+                                                        <span className="font-mono text-ink text-xs group-hover:text-terracotta">{acc.code}</span>
+                                                        <span className="block font-medium text-ink group-hover:text-terracotta">{acc.name}</span>
+                                                    </Link>
                                                 </td>
                                                 <td className="px-6 py-4 text-right font-mono tabular-nums text-terracotta font-semibold">
                                                     RM {formatMoney(acc.amount)}
                                                 </td>
+                                                {comparisonOn && (
+                                                    <td className="px-6 py-4 text-right font-mono tabular-nums text-ink">
+                                                        RM {formatMoney(acc.compare_amount)}
+                                                    </td>
+                                                )}
+                                                {comparisonOn && (
+                                                    <td className={`px-6 py-4 text-right font-mono tabular-nums font-semibold ${varianceClass(acc.variance)}`}>
+                                                        RM {formatMoney(acc.variance)}
+                                                    </td>
+                                                )}
                                             </tr>
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={2} className="px-6 py-8 text-center text-ink-muted text-sm">
+                                            <td colSpan={comparisonOn ? 4 : 2} className="px-6 py-8 text-center text-ink-muted text-sm">
                                                 No expenses in this period.
                                             </td>
                                         </tr>
@@ -206,6 +277,8 @@ export default function ProfitAndLoss({ auth, revenue_accounts = [], expense_acc
                                     <tr className="border-t-2 border-border-warm bg-cream/80 font-semibold">
                                         <td className="px-6 py-4">Total expenses</td>
                                         <td className="px-6 py-4 text-right font-mono tabular-nums text-terracotta">RM {formatMoney(total_expenses)}</td>
+                                        {comparisonOn && <td className="px-6 py-4 text-right font-mono tabular-nums">RM {formatMoney(compare_expenses)}</td>}
+                                        {comparisonOn && <td className={`px-6 py-4 text-right font-mono tabular-nums ${varianceClass(expenses_variance)}`}>RM {formatMoney(expenses_variance)}</td>}
                                     </tr>
                                 </tfoot>
                             </table>
@@ -214,11 +287,19 @@ export default function ProfitAndLoss({ auth, revenue_accounts = [], expense_acc
                 </div>
 
                 <div className="bg-surface rounded-2xl border-2 border-border-warm/80 shadow-sm overflow-hidden">
-                    <div className="px-6 py-5 flex items-center justify-between">
+                    <div className={`px-6 py-5 grid items-center gap-4 ${comparisonOn ? 'grid-cols-1 sm:grid-cols-4' : 'grid-cols-2'}`}>
                         <span className="text-lg font-display font-medium text-ink">Net {isProfit ? 'profit' : 'loss'}</span>
-                        <span className={`text-2xl font-bold tabular-nums font-mono ${isProfit ? 'text-forest' : 'text-terracotta'}`}>
+                        <span className={`text-2xl font-bold tabular-nums font-mono text-right ${isProfit ? 'text-forest' : 'text-terracotta'}`}>
                             {isProfit ? '' : '−'}RM {formatMoney(Math.abs(net_profit))}
                         </span>
+                        {comparisonOn && (
+                            <span className="text-right font-mono tabular-nums text-ink">RM {formatMoney(compare_net_profit)}</span>
+                        )}
+                        {comparisonOn && (
+                            <span className={`text-right font-mono tabular-nums font-semibold ${varianceClass(net_profit_variance)}`}>
+                                RM {formatMoney(net_profit_variance)}
+                            </span>
+                        )}
                     </div>
                 </div>
             </div>

@@ -56,20 +56,51 @@ class PayrollService
         $i = 0;
 
         foreach (self::PAYROLL_ACCOUNTS as $key => $defaults) {
-            $resolved[$key] = Account::firstOrCreate(
-                ['code' => $defaults['code']],
-                [
-                    'name'          => $defaults['name'],
-                    'type'          => $defaults['type'],
-                    'sub_type'      => $defaults['sub_type'] ?? null,
-                    'description'   => $defaults['description'],
-                    'is_active'     => true,
-                    'display_order' => $orderBase + (++$i),
-                ]
-            );
+            $accountAtCode = Account::where('code', $defaults['code'])->first();
+            if ($accountAtCode
+                && $accountAtCode->name === $defaults['name']
+                && $accountAtCode->type === $defaults['type']) {
+                $resolved[$key] = $accountAtCode;
+                continue;
+            }
+
+            $accountByName = Account::where('name', $defaults['name'])
+                ->where('type', $defaults['type'])
+                ->first();
+            if ($accountByName) {
+                $resolved[$key] = $accountByName;
+                continue;
+            }
+
+            $code = $accountAtCode
+                ? $this->nextAvailableCode($defaults['code'])
+                : $defaults['code'];
+
+            $resolved[$key] = Account::create([
+                'code'          => $code,
+                'name'          => $defaults['name'],
+                'type'          => $defaults['type'],
+                'sub_type'      => $defaults['sub_type'] ?? null,
+                'description'   => $defaults['description'],
+                'is_active'     => true,
+                'display_order' => $orderBase + (++$i),
+            ]);
         }
 
         return $resolved;
+    }
+
+    private function nextAvailableCode(string $preferredCode): string
+    {
+        $width = strlen($preferredCode);
+        $candidate = (int) $preferredCode;
+
+        do {
+            $candidate++;
+            $code = str_pad((string) $candidate, $width, '0', STR_PAD_LEFT);
+        } while (Account::where('code', $code)->exists());
+
+        return $code;
     }
 
     /**
@@ -194,6 +225,24 @@ class PayrollService
             }
 
             return $journal;
+        });
+    }
+
+    /**
+     * Post several payroll runs in one transaction.
+     *
+     * @param  list<array<string, mixed>>  $rows
+     * @return list<JournalEntry>
+     */
+    public function recordMany(array $rows): array
+    {
+        return DB::transaction(function () use ($rows) {
+            $journals = [];
+            foreach ($rows as $row) {
+                $journals[] = $this->record($row);
+            }
+
+            return $journals;
         });
     }
 }

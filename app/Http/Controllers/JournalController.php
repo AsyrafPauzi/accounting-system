@@ -19,14 +19,70 @@ class JournalController extends Controller
     {
         $this->authorize('journal.view');
 
-        $journals = JournalEntry::with(['items.account'])
+        $perPage = (int) $request->input('per_page', 10);
+        if (! in_array($perPage, [10, 25, 50, 100], true)) {
+            $perPage = 10;
+        }
+        $search = trim((string) $request->input('search', ''));
+        $statusFilter = (string) $request->input('status', '');
+
+        $query = JournalEntry::query()
+            ->withCount('items')
+            ->withSum('items as total_debit', 'debit')
+            ->withSum('items as total_credit', 'credit')
             ->orderBy('date', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->orderBy('id', 'desc');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', '%'.$search.'%')
+                    ->orWhere('reference_number', 'like', '%'.$search.'%')
+                    ->orWhere('reference_type', 'like', '%'.$search.'%');
+            });
+        }
+
+        if (in_array($statusFilter, ['draft', 'posted'], true)) {
+            $query->where('status', $statusFilter);
+        }
+
+        $totalCount = (clone $query)->count();
+        $draftCount = (clone $query)->where('status', 'draft')->count();
+        $postedCount = (clone $query)->where('status', 'posted')->count();
+
+        $paginator = $query->paginate($perPage)->withQueryString();
+
+        $journals = collect($paginator->items())->map(fn (JournalEntry $journal) => [
+            'id' => $journal->id,
+            'date' => $journal->date?->format('Y-m-d'),
+            'reference_number' => $journal->reference_number,
+            'reference_type' => $journal->reference_type,
+            'description' => $journal->description,
+            'status' => $journal->status,
+            'type' => $journal->type,
+            'items_count' => (int) $journal->items_count,
+            'total_debit' => round((float) ($journal->total_debit ?? 0), 2),
+            'total_credit' => round((float) ($journal->total_credit ?? 0), 2),
+        ]);
 
         return Inertia::render('Journal/Index', [
             'journals' => $journals,
             'can_create' => $request->user()->can('journal.create'),
+            'totalCount' => $totalCount,
+            'draftCount' => $draftCount,
+            'postedCount' => $postedCount,
+            'paginator' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'from' => $paginator->firstItem() ?? 0,
+                'to' => $paginator->lastItem() ?? 0,
+            ],
+            'filters' => [
+                'search' => $search,
+                'status' => $statusFilter,
+                'per_page' => $perPage,
+            ],
         ]);
     }
 

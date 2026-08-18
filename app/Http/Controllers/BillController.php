@@ -21,7 +21,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use App\Jobs\ProcessOcr;
-use Illuminate\Support\Facades\Cache;
+use App\Support\OcrResultCache;
 
 class BillController extends Controller
 {
@@ -375,10 +375,9 @@ class BillController extends Controller
         ]);
 
         $path = $request->input('path');
-        $cacheKey = 'ocr-result:' . $path;
+        $result = OcrResultCache::get($path);
 
-        if (Cache::has($cacheKey)) {
-            $result = Cache::get($cacheKey);
+        if ($result !== null) {
             $status = ($result['status'] ?? null) === 'success' ? 'completed' : 'failed';
 
             return response()->json([

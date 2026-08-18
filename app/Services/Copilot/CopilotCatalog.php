@@ -388,7 +388,7 @@ class CopilotCatalog
             'receive_ar_deposit' => [
                 'risk' => self::RISK_HIGH,
                 'permission' => 'invoices.record-payment',
-                'description' => 'Receive a customer deposit (bank → 2200). Requires Confirm.',
+                'description' => 'Receive a customer deposit (bank → 2250). Requires Confirm.',
                 'parameters' => [
                     'type' => 'object',
                     'properties' => [
@@ -404,7 +404,7 @@ class CopilotCatalog
             'apply_ar_deposit' => [
                 'risk' => self::RISK_HIGH,
                 'permission' => 'invoices.record-payment',
-                'description' => 'Apply deposit to invoice (2200 → 1100). Requires Confirm.',
+                'description' => 'Apply deposit to invoice (2250 → 1100). Requires Confirm.',
                 'parameters' => [
                     'type' => 'object',
                     'properties' => [

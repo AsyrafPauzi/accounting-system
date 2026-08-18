@@ -30,7 +30,7 @@ class ArDepositService
             ]);
 
             $accountMap = DB::table('accounts')
-                ->whereIn('code', [$data['bank_account_code'], '2200'])
+                ->whereIn('code', [$data['bank_account_code'], '2250'])
                 ->pluck('id', 'code');
 
             $journalId = DB::table('journal_entries')->insertGetId([
@@ -45,7 +45,7 @@ class ArDepositService
             $amount = (float) $data['amount'];
             DB::table('journal_items')->insert([
                 ['journal_entry_id' => $journalId, 'account_id' => $accountMap[$data['bank_account_code']] ?? null, 'account_code' => $data['bank_account_code'], 'debit' => $amount, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2200'] ?? null, 'account_code' => '2200', 'debit' => 0, 'credit' => $amount, 'created_at' => $now, 'updated_at' => $now],
+                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2250'] ?? null, 'account_code' => '2250', 'debit' => 0, 'credit' => $amount, 'created_at' => $now, 'updated_at' => $now],
             ]);
 
             return $deposit;
@@ -53,7 +53,7 @@ class ArDepositService
     }
 
     /**
-     * One bank receipt allocated across invoices. Leftover stays on 2200.
+     * One bank receipt allocated across invoices. Leftover stays on 2250.
      *
      * @param  array<string, mixed>  $data
      * @param  list<array{invoice_id?: int, amount?: float|int|string}>  $allocations
@@ -104,7 +104,7 @@ class ArDepositService
             $deposit->status = $deposit->openAmount() <= 0 ? 'applied' : 'open';
             $deposit->save();
 
-            $accountMap = DB::table('accounts')->whereIn('code', ['2200', '1100'])->pluck('id', 'code');
+            $accountMap = DB::table('accounts')->whereIn('code', ['2250', '1100'])->pluck('id', 'code');
             $journalId = DB::table('journal_entries')->insertGetId([
                 'date'           => now(),
                 'description'    => 'Apply deposit to '.$invoice->invoice_number,
@@ -115,7 +115,7 @@ class ArDepositService
             ]);
             $now = now();
             DB::table('journal_items')->insert([
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2200'] ?? null, 'account_code' => '2200', 'debit' => $apply, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
+                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2250'] ?? null, 'account_code' => '2250', 'debit' => $apply, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
                 ['journal_entry_id' => $journalId, 'account_id' => $accountMap['1100'] ?? null, 'account_code' => '1100', 'debit' => 0, 'credit' => $apply, 'created_at' => $now, 'updated_at' => $now],
             ]);
 
@@ -132,7 +132,7 @@ class ArDepositService
 
         DB::transaction(function () use ($deposit, $amount, $paymentDate, $reference) {
             $accountMap = DB::table('accounts')
-                ->whereIn('code', [$deposit->bank_account_code, '2200'])
+                ->whereIn('code', [$deposit->bank_account_code, '2250'])
                 ->pluck('id', 'code');
             $journalId = DB::table('journal_entries')->insertGetId([
                 'date'           => $paymentDate,
@@ -144,7 +144,7 @@ class ArDepositService
             ]);
             $now = now();
             DB::table('journal_items')->insert([
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2200'] ?? null, 'account_code' => '2200', 'debit' => $amount, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
+                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2250'] ?? null, 'account_code' => '2250', 'debit' => $amount, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
                 ['journal_entry_id' => $journalId, 'account_id' => $accountMap[$deposit->bank_account_code] ?? null, 'account_code' => $deposit->bank_account_code, 'debit' => 0, 'credit' => $amount, 'created_at' => $now, 'updated_at' => $now],
             ]);
             $deposit->refunded_amount = round((float) ($deposit->refunded_amount ?? 0) + $amount, 2);
@@ -162,7 +162,7 @@ class ArDepositService
         }
 
         DB::transaction(function () use ($deposit, $amount, $date) {
-            $accountMap = DB::table('accounts')->whereIn('code', ['2200', '4000'])->pluck('id', 'code');
+            $accountMap = DB::table('accounts')->whereIn('code', ['2250', '4000'])->pluck('id', 'code');
             $journalId = DB::table('journal_entries')->insertGetId([
                 'date'           => $date,
                 'description'    => 'Forfeit leftover deposit '.$deposit->id,
@@ -173,7 +173,7 @@ class ArDepositService
             ]);
             $now = now();
             DB::table('journal_items')->insert([
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2200'] ?? null, 'account_code' => '2200', 'debit' => $amount, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
+                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2250'] ?? null, 'account_code' => '2250', 'debit' => $amount, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
                 ['journal_entry_id' => $journalId, 'account_id' => $accountMap['4000'] ?? null, 'account_code' => '4000', 'debit' => 0, 'credit' => $amount, 'created_at' => $now, 'updated_at' => $now],
             ]);
             $deposit->forfeited_amount = round((float) ($deposit->forfeited_amount ?? 0) + $amount, 2);
@@ -284,7 +284,7 @@ class ArDepositService
     private function repostReceiveJournal(ArDeposit $deposit): void
     {
         $accountMap = DB::table('accounts')
-            ->whereIn('code', [$deposit->bank_account_code, '2200'])
+            ->whereIn('code', [$deposit->bank_account_code, '2250'])
             ->pluck('id', 'code');
         $journalId = DB::table('journal_entries')->insertGetId([
             'date'           => $deposit->payment_date,
@@ -298,7 +298,7 @@ class ArDepositService
         $amount = (float) $deposit->amount;
         DB::table('journal_items')->insert([
             ['journal_entry_id' => $journalId, 'account_id' => $accountMap[$deposit->bank_account_code] ?? null, 'account_code' => $deposit->bank_account_code, 'debit' => $amount, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
-            ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2200'] ?? null, 'account_code' => '2200', 'debit' => 0, 'credit' => $amount, 'created_at' => $now, 'updated_at' => $now],
+            ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2250'] ?? null, 'account_code' => '2250', 'debit' => 0, 'credit' => $amount, 'created_at' => $now, 'updated_at' => $now],
         ]);
     }
 }

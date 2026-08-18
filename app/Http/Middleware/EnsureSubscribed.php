@@ -36,6 +36,10 @@ class EnsureSubscribed
         // page, which presents to the user as "the link goes back to
         // homepage and I can't accept the invite."
         'firm.invite.',
+        // Welcome-tour / verify-email reminder dismiss — stamps a
+        // timestamp on the user row. Must stay reachable on the free
+        // tier so Skip does not close-then-reopen the modal.
+        'onboarding.',
     ];
 
     public function handle(Request $request, Closure $next): Response
@@ -92,7 +96,10 @@ class EnsureSubscribed
         if ($user->hasRole('super-admin')) {
             // Super admins are restricted to central platform management.
             // They must impersonate a tenant to access business modules (invoices, customers, etc).
-            $allowedRoutes = ['admin.', 'profile.', 'logout', 'login'];
+            // `onboarding.` is a self-action on the user row (welcome-tour /
+            // verify-email reminder dismiss). Blocking it made Skip close the
+            // modal then immediately re-open, because welcomed_at never saved.
+            $allowedRoutes = ['admin.', 'profile.', 'logout', 'login', 'onboarding.'];
             $isAllowed = false;
             foreach ($allowedRoutes as $prefix) {
                 if (str_starts_with($routeName, $prefix)) {

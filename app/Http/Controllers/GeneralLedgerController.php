@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Account;
 use App\Models\JournalEntry;
 use App\Models\JournalItem;
+use App\Models\Tenant;
+use App\Support\AccountLedger;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,34 +22,77 @@ class GeneralLedgerController extends Controller
      */
     public function report(Request $request): Response
     {
-        $query = JournalItem::with('journalEntry')
-            ->join('journal_entries', 'journal_items.journal_entry_id', '=', 'journal_entries.id')
-            ->select('journal_items.*')
-            ->orderBy('journal_entries.date', 'desc')
-            ->orderBy('journal_entries.id', 'desc')
-            ->orderBy('journal_items.id', 'asc');
-
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
         $referenceType = $request->input('reference_type');
         $accountCode = $request->input('account_code');
+        $from = $request->input('from');
+        $isAccountLedger = filled($accountCode);
+
+        $baseQuery = JournalItem::with('journalEntry')
+            ->join('journal_entries', 'journal_items.journal_entry_id', '=', 'journal_entries.id')
+            ->select('journal_items.*');
 
         if ($dateFrom) {
-            $query->where('journal_entries.date', '>=', $dateFrom);
+            $baseQuery->where('journal_entries.date', '>=', $dateFrom);
         }
         if ($dateTo) {
-            $query->where('journal_entries.date', '<=', $dateTo);
+            $baseQuery->where('journal_entries.date', '<=', $dateTo);
         }
         if ($referenceType && in_array($referenceType, self::REFERENCE_TYPES, true)) {
-            $query->where('journal_entries.reference_type', $referenceType);
+            $baseQuery->where('journal_entries.reference_type', $referenceType);
         }
         if ($accountCode) {
-            $query->where('journal_items.account_code', $accountCode);
+            $baseQuery->where('journal_items.account_code', $accountCode);
         }
 
-        $paginator = $query->paginate(50)->withQueryString();
+        $account = $isAccountLedger
+            ? Account::query()->where('code', $accountCode)->firstOrFail()
+            : null;
 
-        $transactions = collect($paginator->items())->map(function (JournalItem $item) {
+        $openingBalance = 0.0;
+        $runningBalanceMap = [];
+        $perPage = in_array((int) $request->input('per_page'), [10, 25, 50, 100], true)
+            ? (int) $request->input('per_page')
+            : 25;
+
+        if ($isAccountLedger) {
+            $openingBalance = $dateFrom
+                ? AccountLedger::openingBalance($accountCode, $dateFrom, $account->type)
+                : 0.0;
+
+            $linesForBalance = (clone $baseQuery)
+                ->orderBy('journal_entries.date')
+                ->orderBy('journal_entries.id')
+                ->orderBy('journal_items.id')
+                ->get(['journal_items.id', 'journal_items.debit', 'journal_items.credit']);
+
+            $runningBalanceMap = AccountLedger::runningBalances(
+                $account->type,
+                $openingBalance,
+                $linesForBalance->map(fn ($line) => [
+                    'id' => $line->id,
+                    'debit' => (float) $line->debit,
+                    'credit' => (float) $line->credit,
+                ])
+            );
+
+            $paginator = (clone $baseQuery)
+                ->orderBy('journal_entries.date')
+                ->orderBy('journal_entries.id')
+                ->orderBy('journal_items.id')
+                ->paginate($perPage)
+                ->withQueryString();
+        } else {
+            $paginator = (clone $baseQuery)
+                ->orderBy('journal_entries.date', 'desc')
+                ->orderBy('journal_entries.id', 'desc')
+                ->orderBy('journal_items.id', 'asc')
+                ->paginate($perPage)
+                ->withQueryString();
+        }
+
+        $transactions = collect($paginator->items())->map(function (JournalItem $item) use ($runningBalanceMap) {
             $entry = $item->journalEntry;
 
             return [
@@ -59,6 +105,8 @@ class GeneralLedgerController extends Controller
                 'credit' => (float) $item->credit,
                 'reference_type' => $entry->reference_type,
                 'source_route' => $entry->getSourceRoute(),
+                'source_label' => $entry->getSourceLabel(),
+                'running_balance' => $runningBalanceMap[$item->id] ?? null,
             ];
         });
 
@@ -75,6 +123,18 @@ class GeneralLedgerController extends Controller
         $totalCredits = (float) (clone $statsQuery)->sum('journal_items.credit');
         $transactionsCount = (clone $statsQuery)->count();
 
+        $periodMovement = null;
+        $closingBalance = null;
+
+        if ($isAccountLedger) {
+            $periodLines = (clone $statsQuery)
+                ->select(['journal_items.debit', 'journal_items.credit'])
+                ->get();
+
+            $periodMovement = AccountLedger::sumSignedMovements($account->type, $periodLines);
+            $closingBalance = round($openingBalance + $periodMovement, 2);
+        }
+
         $accountOptions = Account::orderBy('code')->get(['code', 'name'])->map(fn ($a) => ['value' => $a->code, 'label' => "{$a->code} — {$a->name}"])->values()->all();
 
         return Inertia::render('GeneralLedger/Report', [
@@ -85,7 +145,18 @@ class GeneralLedgerController extends Controller
                 'date_to' => $dateTo,
                 'reference_type' => $referenceType,
                 'account_code' => $accountCode,
+                'from' => $from,
+                'per_page' => $perPage,
             ],
+            'ledgerMode' => $isAccountLedger,
+            'accountLedger' => $isAccountLedger ? [
+                'code' => $account->code,
+                'name' => $account->name,
+                'type' => $account->type,
+            ] : null,
+            'openingBalance' => $isAccountLedger ? $openingBalance : null,
+            'closingBalance' => $closingBalance,
+            'periodMovement' => $periodMovement,
             'stats' => [
                 'transactions_count' => $transactionsCount,
                 'total_debits' => round($totalDebits, 2),
@@ -97,6 +168,8 @@ class GeneralLedgerController extends Controller
                 'last_page' => $paginator->lastPage(),
                 'per_page' => $paginator->perPage(),
                 'total' => $paginator->total(),
+                'from' => $paginator->firstItem() ?? 0,
+                'to' => $paginator->lastItem() ?? 0,
                 'prev_url' => $paginator->previousPageUrl(),
                 'next_url' => $paginator->nextPageUrl(),
             ],
@@ -121,7 +194,11 @@ class GeneralLedgerController extends Controller
             $query->where('reference_type', $referenceType);
         }
 
-        $paginator = $query->paginate(25)->withQueryString();
+        $perPage = in_array((int) $request->input('per_page'), [10, 25, 50, 100], true)
+            ? (int) $request->input('per_page')
+            : 25;
+
+        $paginator = $query->paginate($perPage)->withQueryString();
 
         $entries = collect($paginator->items())->map(function (JournalEntry $entry) {
             $totalDebit = $entry->items->sum(fn ($i) => (float) $i->debit);
@@ -139,6 +216,7 @@ class GeneralLedgerController extends Controller
                 'items_count' => $entry->items->count(),
                 'balanced' => $balanced,
                 'source_route' => $entry->getSourceRoute(),
+                'source_label' => $entry->getSourceLabel(),
             ];
         });
 
@@ -167,6 +245,7 @@ class GeneralLedgerController extends Controller
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
                 'reference_type' => $referenceType,
+                'per_page' => $perPage,
             ],
             'stats' => [
                 'entries_count' => $entriesForStats->count(),
@@ -179,6 +258,8 @@ class GeneralLedgerController extends Controller
                 'last_page' => $paginator->lastPage(),
                 'per_page' => $paginator->perPage(),
                 'total' => $paginator->total(),
+                'from' => $paginator->firstItem() ?? 0,
+                'to' => $paginator->lastItem() ?? 0,
                 'prev_url' => $paginator->previousPageUrl(),
                 'next_url' => $paginator->nextPageUrl(),
             ],
@@ -212,6 +293,7 @@ class GeneralLedgerController extends Controller
             'total_credit' => round($totalCredit, 2),
             'balanced' => abs($totalDebit - $totalCredit) < 0.01,
             'source_route' => $entry->getSourceRoute(),
+            'source_label' => $entry->getSourceLabel(),
         ];
 
         return Inertia::render('GeneralLedger/Show', [
@@ -243,11 +325,11 @@ class GeneralLedgerController extends Controller
         }
         $entries = $query->limit(self::EXPORT_LIMIT)->get();
 
-        $filename = 'general-ledger-entries-' . ($dateFrom ?: 'all') . '-to-' . ($dateTo ?: 'all') . '.csv';
+        $filename = 'general-ledger-entries-'.($dateFrom ?: 'all').'-to-'.($dateTo ?: 'all').'.csv';
         $filename = preg_replace('/[^a-z0-9\-\.]/i', '-', $filename);
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ];
 
         return new StreamedResponse(function () use ($entries) {
@@ -293,6 +375,7 @@ class GeneralLedgerController extends Controller
         $entries = $query->limit(self::EXPORT_LIMIT)->get()->map(function (JournalEntry $entry) {
             $totalDebit = $entry->items->sum(fn ($i) => (float) $i->debit);
             $totalCredit = $entry->items->sum(fn ($i) => (float) $i->credit);
+
             return [
                 'date' => $entry->date->format('Y-m-d'),
                 'id' => $entry->id,
@@ -306,14 +389,15 @@ class GeneralLedgerController extends Controller
         });
 
         $company = $this->reportCompany();
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.general-ledger-entries', [
+        $pdf = Pdf::loadView('pdf.general-ledger-entries', [
             'entries' => $entries,
             'company' => $company,
             'date_from' => $dateFrom,
             'date_to' => $dateTo,
         ])->setPaper('a4', 'landscape');
-        $filename = 'general-ledger-entries-' . ($dateFrom ?: 'all') . '-to-' . ($dateTo ?: 'all') . '.pdf';
+        $filename = 'general-ledger-entries-'.($dateFrom ?: 'all').'-to-'.($dateTo ?: 'all').'.pdf';
         $filename = preg_replace('/[^a-z0-9\-\.]/i', '-', $filename);
+
         return $pdf->download($filename);
     }
 
@@ -348,11 +432,11 @@ class GeneralLedgerController extends Controller
         $accountCodes = $items->pluck('account_code')->unique()->filter()->values()->all();
         $accountsMap = $accountCodes ? Account::whereIn('code', $accountCodes)->pluck('name', 'code')->toArray() : [];
 
-        $filename = 'general-ledger-report-' . ($dateFrom ?: 'all') . '-to-' . ($dateTo ?: 'all') . '.csv';
+        $filename = 'general-ledger-report-'.($dateFrom ?: 'all').'-to-'.($dateTo ?: 'all').'.csv';
         $filename = preg_replace('/[^a-z0-9\-\.]/i', '-', $filename);
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ];
 
         return new StreamedResponse(function () use ($items, $accountsMap) {
@@ -408,6 +492,7 @@ class GeneralLedgerController extends Controller
         $accountsMap = $accountCodes ? Account::whereIn('code', $accountCodes)->pluck('name', 'code')->toArray() : [];
         $transactions = $items->map(function (JournalItem $item) use ($accountsMap) {
             $entry = $item->journalEntry;
+
             return [
                 'date' => $entry->date->format('Y-m-d'),
                 'entry_id' => $entry->id,
@@ -421,14 +506,15 @@ class GeneralLedgerController extends Controller
         });
 
         $company = $this->reportCompany();
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.general-ledger-report', [
+        $pdf = Pdf::loadView('pdf.general-ledger-report', [
             'transactions' => $transactions,
             'company' => $company,
             'date_from' => $dateFrom,
             'date_to' => $dateTo,
         ])->setPaper('a4', 'landscape');
-        $filename = 'general-ledger-report-' . ($dateFrom ?: 'all') . '-to-' . ($dateTo ?: 'all') . '.pdf';
+        $filename = 'general-ledger-report-'.($dateFrom ?: 'all').'-to-'.($dateTo ?: 'all').'.pdf';
         $filename = preg_replace('/[^a-z0-9\-\.]/i', '-', $filename);
+
         return $pdf->download($filename);
     }
 
@@ -436,14 +522,16 @@ class GeneralLedgerController extends Controller
     {
         $user = request()->user();
         if ($user && $user->tenant_id) {
-            $tenant = \App\Models\Tenant::find($user->tenant_id);
+            $tenant = Tenant::find($user->tenant_id);
             $data = $tenant?->data ?? [];
             $c = $data['company'] ?? [];
             $name = $c['display_name'] ?? $c['legal_name'] ?? config('invoice.company.name');
             $addressParts = array_filter([$c['street'] ?? '', $c['city'] ?? '', $c['state'] ?? '', $c['postcode'] ?? '', $c['country'] ?? '']);
             $address = implode(', ', $addressParts);
+
             return ['name' => $name ?: config('invoice.company.name'), 'address' => $address ?: config('invoice.company.address')];
         }
+
         return config('invoice.company');
     }
 }

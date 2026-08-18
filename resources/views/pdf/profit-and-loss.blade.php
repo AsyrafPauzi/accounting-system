@@ -35,6 +35,9 @@
             <div class="header-right">
                 <div class="report-title">Profit &amp; Loss</div>
                 <div class="report-period">From {{ \Carbon\Carbon::parse($date_from)->format('d M Y') }} to {{ \Carbon\Carbon::parse($date_to)->format('d M Y') }}</div>
+                @if($compare !== 'none')
+                <div class="report-period">{{ $compare_label }}: {{ \Carbon\Carbon::parse($compare_from)->format('d M Y') }} to {{ \Carbon\Carbon::parse($compare_to)->format('d M Y') }}</div>
+                @endif
             </div>
         </div>
 
@@ -43,7 +46,11 @@
             <thead>
                 <tr>
                     <th>Account</th>
-                    <th class="text-right">Amount (MYR)</th>
+                    <th class="text-right">This period</th>
+                    @if($compare !== 'none')
+                    <th class="text-right">Compare</th>
+                    <th class="text-right">Variance</th>
+                    @endif
                 </tr>
             </thead>
             <tbody>
@@ -51,13 +58,21 @@
                 <tr>
                     <td><span style="font-family: DejaVu Sans Mono;">{{ $row['code'] }}</span> {{ $row['name'] }}</td>
                     <td class="text-right currency">{{ number_format($row['amount'], 2) }}</td>
+                    @if($compare !== 'none')
+                    <td class="text-right currency">{{ number_format($row['compare_amount'], 2) }}</td>
+                    <td class="text-right currency">{{ number_format($row['variance'], 2) }}</td>
+                    @endif
                 </tr>
                 @empty
-                <tr><td colspan="2">No revenue in this period.</td></tr>
+                <tr><td colspan="{{ $compare !== 'none' ? 4 : 2 }}">No revenue in this period.</td></tr>
                 @endforelse
                 <tr class="totals-row">
                     <td>Total revenue</td>
                     <td class="text-right currency">{{ number_format($total_revenue, 2) }}</td>
+                    @if($compare !== 'none')
+                    <td class="text-right currency">{{ number_format($compare_revenue, 2) }}</td>
+                    <td class="text-right currency">{{ number_format($revenue_variance, 2) }}</td>
+                    @endif
                 </tr>
             </tbody>
         </table>
@@ -67,7 +82,11 @@
             <thead>
                 <tr>
                     <th>Account</th>
-                    <th class="text-right">Amount (MYR)</th>
+                    <th class="text-right">This period</th>
+                    @if($compare !== 'none')
+                    <th class="text-right">Compare</th>
+                    <th class="text-right">Variance</th>
+                    @endif
                 </tr>
             </thead>
             <tbody>
@@ -75,13 +94,21 @@
                 <tr>
                     <td><span style="font-family: DejaVu Sans Mono;">{{ $row['code'] }}</span> {{ $row['name'] }}</td>
                     <td class="text-right currency">{{ number_format($row['amount'], 2) }}</td>
+                    @if($compare !== 'none')
+                    <td class="text-right currency">{{ number_format($row['compare_amount'], 2) }}</td>
+                    <td class="text-right currency">{{ number_format($row['variance'], 2) }}</td>
+                    @endif
                 </tr>
                 @empty
-                <tr><td colspan="2">No expenses in this period.</td></tr>
+                <tr><td colspan="{{ $compare !== 'none' ? 4 : 2 }}">No expenses in this period.</td></tr>
                 @endforelse
                 <tr class="totals-row">
                     <td>Total expenses</td>
                     <td class="text-right currency">{{ number_format($total_expenses, 2) }}</td>
+                    @if($compare !== 'none')
+                    <td class="text-right currency">{{ number_format($compare_expenses, 2) }}</td>
+                    <td class="text-right currency">{{ number_format($expenses_variance, 2) }}</td>
+                    @endif
                 </tr>
             </tbody>
         </table>
@@ -90,6 +117,10 @@
             <tr class="net-row">
                 <td>Net {{ $net_profit >= 0 ? 'profit' : 'loss' }}</td>
                 <td class="text-right currency">{{ number_format($net_profit, 2) }} MYR</td>
+                @if($compare !== 'none')
+                <td class="text-right currency">{{ number_format($compare_net_profit, 2) }} MYR</td>
+                <td class="text-right currency">{{ number_format($net_profit_variance, 2) }} MYR</td>
+                @endif
             </tr>
         </table>
     </div>

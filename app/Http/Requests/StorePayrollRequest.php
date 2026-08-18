@@ -59,9 +59,9 @@ class StorePayrollRequest extends FormRequest
         return $rules;
     }
 
-    public static function addBalanceCheck(Validator $validator, array $input): void
+    public static function addBalanceCheck(Validator $validator, array $input, string $errorKey = 'net_pay'): void
     {
-        $validator->after(function (Validator $validator) use ($input) {
+        $validator->after(function (Validator $validator) use ($input, $errorKey) {
             $debits = array_sum([
                 (float) ($input['gross_salaries'] ?? 0),
                 (float) ($input['employer_epf'] ?? 0),
@@ -81,7 +81,7 @@ class StorePayrollRequest extends FormRequest
 
             if (abs($debits - $credits) > 0.01) {
                 $validator->errors()->add(
-                    'net_pay',
+                    $errorKey,
                     'Debits (RM ' . number_format($debits, 2) . ') must equal Credits (RM ' . number_format($credits, 2) .
                     '). Adjust Net Pay or check the statutory amounts.'
                 );
@@ -92,5 +92,39 @@ class StorePayrollRequest extends FormRequest
     public function withValidator($validator): void
     {
         self::addBalanceCheck($validator, $this->all());
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function batchRules(bool $withAccountExists = false): array
+    {
+        $rules = [
+            'rows' => 'required|array|min:1|max:50',
+        ];
+
+        foreach (self::payloadRules() as $key => $rule) {
+            $rules["rows.*.{$key}"] = $rule;
+        }
+
+        if ($withAccountExists) {
+            $rules['rows.*.bank_account_code'] = 'required|string|exists:accounts,code';
+        }
+
+        return $rules;
+    }
+
+    /**
+     * @param  list<mixed>  $rows
+     */
+    public static function addBatchBalanceChecks(Validator $validator, array $rows): void
+    {
+        foreach ($rows as $index => $row) {
+            self::addBalanceCheck(
+                $validator,
+                is_array($row) ? $row : [],
+                "rows.{$index}.net_pay"
+            );
+        }
     }
 }
