@@ -5,12 +5,16 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreAccountRequest;
 use App\Http\Requests\UpdateAccountRequest;
 use App\Models\Account;
-use App\Support\DefaultChartOfAccounts;
+use App\Models\Tenant;
+use App\Support\AccountLedger;
+use App\Support\DefaultChartOfAccountsSeeder;
+use App\Support\PlanCap;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\RedirectResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ChartOfAccountsController extends Controller
@@ -24,21 +28,26 @@ class ChartOfAccountsController extends Controller
             ->orderBy('code')
             ->get()
             ->sortBy(fn (Account $a) => [array_search($a->type, self::TYPE_ORDER, true), $a->display_order ?? 9999, $a->code])
-            ->values()
-            ->map(fn (Account $a) => [
-                'id' => $a->id,
-                'code' => $a->code,
-                'name' => $a->name,
-                'type' => $a->type,
-                'type_label' => Account::getTypeLabel($a->type),
-                'sub_type' => $a->sub_type,
-                'sub_type_label' => Account::getSubTypeLabel($a->sub_type),
-                'parent_id' => $a->parent_id,
-                'parent_code' => $a->parent?->code,
-                'description' => $a->description,
-                'is_active' => $a->is_active,
-                'display_order' => $a->display_order,
-            ]);
+            ->values();
+
+        $asOf = now()->toDateString();
+        $balances = AccountLedger::balancesAsOf($accounts->pluck('code')->all(), $asOf);
+
+        $accounts = $accounts->map(fn (Account $a) => [
+            'id' => $a->id,
+            'code' => $a->code,
+            'name' => $a->name,
+            'type' => $a->type,
+            'type_label' => Account::getTypeLabel($a->type),
+            'sub_type' => $a->sub_type,
+            'sub_type_label' => Account::getSubTypeLabel($a->sub_type),
+            'parent_id' => $a->parent_id,
+            'parent_code' => $a->parent?->code,
+            'description' => $a->description,
+            'is_active' => $a->is_active,
+            'display_order' => $a->display_order,
+            'balance' => $balances[$a->code] ?? 0.0,
+        ]);
 
         $groupedByType = $accounts->groupBy('type');
 
@@ -70,11 +79,11 @@ class ChartOfAccountsController extends Controller
         // once at company-creation time and ships exactly one bank row.
         if (
             ($validated['sub_type'] ?? null) === 'bank'
-            && \App\Support\PlanCap::bankAccountCapHit()
+            && PlanCap::bankAccountCapHit()
         ) {
             return redirect()->route('chart-of-accounts.index')->with(
                 'error',
-                'Your plan only allows '.\App\Support\PlanCap::STARTUP_BANK_ACCOUNT_CAP.' bank account. Upgrade to Solo or higher for additional bank accounts.'
+                'Your plan only allows '.PlanCap::STARTUP_BANK_ACCOUNT_CAP.' bank account. Upgrade to Solo or higher for additional bank accounts.'
             );
         }
 
@@ -91,14 +100,14 @@ class ChartOfAccountsController extends Controller
 
         return Inertia::render('ChartOfAccounts/Edit', [
             'account' => [
-                'id'            => $account->id,
-                'code'          => $account->code,
-                'name'          => $account->name,
-                'type'          => $account->type,
-                'sub_type'      => $account->sub_type,
-                'parent_id'     => $account->parent_id,
-                'description'   => $account->description,
-                'is_active'     => $account->is_active,
+                'id' => $account->id,
+                'code' => $account->code,
+                'name' => $account->name,
+                'type' => $account->type,
+                'sub_type' => $account->sub_type,
+                'parent_id' => $account->parent_id,
+                'description' => $account->description,
+                'is_active' => $account->is_active,
                 'display_order' => $account->display_order,
             ],
             'accounts' => $accounts,
@@ -151,16 +160,7 @@ class ChartOfAccountsController extends Controller
      */
     public function seedDefault(Request $request): RedirectResponse
     {
-        $existingCodes = Account::pluck('code')->toArray();
-        $created = 0;
-        foreach (DefaultChartOfAccounts::rows() as $row) {
-            if (in_array($row['code'], $existingCodes, true)) {
-                continue;
-            }
-            Account::create(array_merge($row, ['is_active' => true]));
-            $existingCodes[] = $row['code'];
-            $created++;
-        }
+        $created = DefaultChartOfAccountsSeeder::seedMissing();
 
         $message = $created > 0
             ? "Default chart seeded: {$created} account(s) added."
@@ -181,10 +181,10 @@ class ChartOfAccountsController extends Controller
             ->sortBy(fn (Account $a) => [array_search($a->type, self::TYPE_ORDER, true), $a->display_order ?? 9999, $a->code])
             ->values();
 
-        $filename = 'chart-of-accounts-' . now()->format('Y-m-d') . '.csv';
+        $filename = 'chart-of-accounts-'.now()->format('Y-m-d').'.csv';
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ];
 
         return new StreamedResponse(function () use ($accounts) {
@@ -222,12 +222,12 @@ class ChartOfAccountsController extends Controller
 
         $company = $this->reportCompany();
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.chart-of-accounts', [
+        $pdf = Pdf::loadView('pdf.chart-of-accounts', [
             'groupedByType' => $accounts,
             'company' => $company,
         ])->setPaper('a4', 'portrait');
 
-        return $pdf->download('chart-of-accounts-' . now()->format('Y-m-d') . '.pdf');
+        return $pdf->download('chart-of-accounts-'.now()->format('Y-m-d').'.pdf');
     }
 
     /**
@@ -237,7 +237,7 @@ class ChartOfAccountsController extends Controller
     {
         $user = request()->user();
         if ($user && $user->tenant_id) {
-            $tenant = \App\Models\Tenant::find($user->tenant_id);
+            $tenant = Tenant::find($user->tenant_id);
             $data = $tenant?->data ?? [];
             $c = $data['company'] ?? [];
             $name = $c['display_name'] ?? $c['legal_name'] ?? config('invoice.company.name');

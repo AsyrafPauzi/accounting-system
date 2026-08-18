@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use Carbon\Carbon;
+use App\Models\Tenant;
+use App\Support\MyInvoisGap;
+use App\Support\ReportPeriod;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Sales Tax Report
@@ -30,51 +34,102 @@ class SalesTaxReportController extends Controller
 {
     public function index(Request $request): Response
     {
+        $resolved = $this->resolvePeriod($request);
+        $start = $resolved['date_from'];
+        $end = $resolved['date_to'];
+        $data = $this->buildReportData($start, $end);
+
+        return Inertia::render('Reports/SalesTax', [
+            'filters' => ['preset' => $resolved['preset'], 'start_date' => $start, 'end_date' => $end],
+            ...$data,
+            'base_currency' => $this->tenantBaseCurrency(),
+        ]);
+    }
+
+    public function exportCsv(Request $request): StreamedResponse
+    {
+        $resolved = $this->resolvePeriod($request);
+        $start = $resolved['date_from'];
+        $end = $resolved['date_to'];
+        $data = $this->buildReportData($start, $end);
+
+        return response()->streamDownload(function () use ($data): void {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['section', 'rate', 'taxable', 'tax', 'document', 'status']);
+            fputcsv($out, ['Pack — output tax', '', $data['pack']['taxable_sales'], $data['pack']['output_tax'], '', '']);
+            fputcsv($out, ['Pack — input tax', '', '', $data['pack']['input_tax'], '', '']);
+            fputcsv($out, ['Pack — net tax', '', '', $data['pack']['net_tax'], '', '']);
+            fputcsv($out, ['Pack — exempt sales', 'Exempt', $data['pack']['exempt_sales'], 0, '', '']);
+
+            foreach ($data['by_rate'] as $row) {
+                fputcsv($out, ['Sales by rate', $row['label'], $row['taxable'], $row['tax_collected'], '', '']);
+            }
+
+            foreach ($data['myinvois_gaps'] as $row) {
+                fputcsv($out, ['MyInvois gap', '', $row['total'], '', $row['invoice_number'], $row['reason']]);
+            }
+            fclose($out);
+        }, "sales-tax-{$start}-to-{$end}.csv", [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $resolved = $this->resolvePeriod($request);
+        $start = $resolved['date_from'];
+        $end = $resolved['date_to'];
+        $data = $this->buildReportData($start, $end);
+
+        $pdf = Pdf::loadView('pdf.sales-tax', [
+            ...$data,
+            'company' => $this->reportCompany(),
+            'base_currency' => $this->tenantBaseCurrency(),
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download("sales-tax-{$start}-to-{$end}.pdf");
+    }
+
+    private function resolvePeriod(Request $request): array
+    {
         $request->validate([
             'start_date' => 'nullable|date',
-            'end_date'   => 'nullable|date|after_or_equal:start_date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
         ]);
 
-        $start = Carbon::parse($request->input('start_date', now()->startOfQuarter()->toDateString()))->toDateString();
-        $end = Carbon::parse($request->input('end_date', now()->toDateString()))->toDateString();
+        $preset = $request->input('preset');
+        if ($preset === null && ! $request->filled('start_date') && ! $request->filled('end_date')) {
+            $preset = 'this_sst_period';
+        }
+
+        return ReportPeriod::range(
+            $preset,
+            $request->input('start_date'),
+            $request->input('end_date')
+        );
+    }
+
+    private function buildReportData(string $start, string $end): array
+    {
+        $invoiceBase = DB::table('invoices')
+            ->whereNotIn('status', ['draft', 'void'])
+            ->whereBetween('issue_date', [$start, $end])
+            ->whereNull('deleted_at');
 
         // ── Output tax (collected on sales) ────────────────────────────────
-        $outputTax = (float) DB::table('invoices')
-            ->whereNotIn('status', ['draft', 'void'])
-            ->whereBetween('issue_date', [$start, $end])
-            ->whereNull('deleted_at')
-            ->sum('tax_amount');
-
-        $invoiceCount = (int) DB::table('invoices')
-            ->whereNotIn('status', ['draft', 'void'])
-            ->whereBetween('issue_date', [$start, $end])
-            ->whereNull('deleted_at')
-            ->count();
-
-        $taxableSales = (float) DB::table('invoices')
-            ->whereNotIn('status', ['draft', 'void'])
-            ->whereBetween('issue_date', [$start, $end])
-            ->whereNull('deleted_at')
-            ->sum('amount_before_tax');
+        $outputTax = (float) (clone $invoiceBase)->sum('tax_amount');
+        $invoiceCount = (int) (clone $invoiceBase)->count();
+        $taxableSales = (float) (clone $invoiceBase)->sum('amount_before_tax');
 
         // ── Input tax (paid on purchases) ──────────────────────────────────
-        $inputTax = (float) DB::table('bills')
-            ->where('status', '!=', 'void')
+        $billBase = DB::table('bills')
+            ->whereNotIn('status', ['draft', 'void'])
             ->whereBetween('bill_date', [$start, $end])
-            ->whereNull('deleted_at')
-            ->sum('tax_amount');
+            ->whereNull('deleted_at');
 
-        $billCount = (int) DB::table('bills')
-            ->where('status', '!=', 'void')
-            ->whereBetween('bill_date', [$start, $end])
-            ->whereNull('deleted_at')
-            ->count();
-
-        $taxablePurchases = (float) DB::table('bills')
-            ->where('status', '!=', 'void')
-            ->whereBetween('bill_date', [$start, $end])
-            ->whereNull('deleted_at')
-            ->sum(DB::raw('total_amount - tax_amount'));
+        $inputTax = (float) (clone $billBase)->sum('tax_amount');
+        $billCount = (int) (clone $billBase)->count();
+        $taxablePurchases = (float) (clone $billBase)->sum(DB::raw('total_amount - tax_amount'));
 
         // ── Breakdown by tax rate (for sales, derived from line items) ─────
         $byRate = DB::table('invoice_items as ii')
@@ -93,13 +148,16 @@ class SalesTaxReportController extends Controller
             ->orderBy('ii.tax_rate')
             ->get()
             ->map(fn ($r) => [
-                'tax_rate'      => (float) $r->tax_rate,
-                'taxable'       => round((float) $r->taxable, 2),
+                'tax_rate' => (float) $r->tax_rate,
+                'label' => (float) $r->tax_rate === 0.0 ? 'Exempt' : number_format((float) $r->tax_rate, 2).'%',
+                'taxable' => round((float) $r->taxable, 2),
                 'tax_collected' => round((float) $r->tax_collected, 2),
                 'invoice_count' => (int) $r->invoice_count,
             ])
             ->values()
             ->all();
+
+        $exemptSales = collect($byRate)->firstWhere('tax_rate', 0.0)['taxable'] ?? 0.0;
 
         // ── Per-invoice list (so the user can audit any number) ────────────
         $invoiceList = DB::table('invoices as i')
@@ -116,14 +174,14 @@ class SalesTaxReportController extends Controller
             ->limit(500)
             ->get()
             ->map(fn ($r) => [
-                'id'             => $r->id,
+                'id' => $r->id,
                 'invoice_number' => $r->invoice_number,
-                'issue_date'     => $r->issue_date,
-                'customer'       => $r->customer_name ?? '—',
-                'taxable'        => round((float) $r->amount_before_tax, 2),
-                'tax'            => round((float) $r->tax_amount, 2),
-                'total'          => round((float) $r->total_amount, 2),
-                'currency'       => $r->currency ?? 'MYR',
+                'issue_date' => $r->issue_date,
+                'customer' => $r->customer_name ?? '—',
+                'taxable' => round((float) $r->amount_before_tax, 2),
+                'tax' => round((float) $r->tax_amount, 2),
+                'total' => round((float) $r->total_amount, 2),
+                'currency' => $r->currency ?? 'MYR',
             ])
             ->all();
 
@@ -133,7 +191,7 @@ class SalesTaxReportController extends Controller
                 'b.id', 'b.bill_number', 'b.bill_date', 'b.total_amount',
                 'b.tax_amount', 'b.currency', 's.name as supplier_name',
             ])
-            ->where('b.status', '!=', 'void')
+            ->whereNotIn('b.status', ['draft', 'void'])
             ->whereBetween('b.bill_date', [$start, $end])
             ->whereNull('b.deleted_at')
             ->where('b.tax_amount', '>', 0)
@@ -141,31 +199,117 @@ class SalesTaxReportController extends Controller
             ->limit(500)
             ->get()
             ->map(fn ($r) => [
-                'id'          => $r->id,
+                'id' => $r->id,
                 'bill_number' => $r->bill_number,
-                'bill_date'   => $r->bill_date,
-                'supplier'    => $r->supplier_name ?? '—',
-                'taxable'     => round((float) $r->total_amount - (float) $r->tax_amount, 2),
-                'tax'         => round((float) $r->tax_amount, 2),
-                'total'       => round((float) $r->total_amount, 2),
-                'currency'    => $r->currency ?? 'MYR',
+                'bill_date' => $r->bill_date,
+                'supplier' => $r->supplier_name ?? '—',
+                'taxable' => round((float) $r->total_amount - (float) $r->tax_amount, 2),
+                'tax' => round((float) $r->tax_amount, 2),
+                'total' => round((float) $r->total_amount, 2),
+                'currency' => $r->currency ?? 'MYR',
             ])
             ->all();
 
-        return Inertia::render('Reports/SalesTax', [
-            'filters'           => ['start_date' => $start, 'end_date' => $end],
-            'output_tax'        => round($outputTax, 2),
-            'input_tax'         => round($inputTax, 2),
-            'net_tax'           => round($outputTax - $inputTax, 2),
-            'invoice_count'     => $invoiceCount,
-            'bill_count'        => $billCount,
-            'taxable_sales'     => round($taxableSales, 2),
+        [$gaps, $gapCounts] = $this->myinvoisGaps($start, $end);
+        $pack = [
+            'period_from' => $start,
+            'period_to' => $end,
+            'output_tax' => round($outputTax, 2),
+            'input_tax' => round($inputTax, 2),
+            'net_tax' => round($outputTax - $inputTax, 2),
+            'exempt_sales' => round((float) $exemptSales, 2),
+            'taxable_sales' => round($taxableSales, 2),
+        ];
+
+        return [
+            'pack' => $pack,
+            'output_tax' => $pack['output_tax'],
+            'input_tax' => $pack['input_tax'],
+            'net_tax' => $pack['net_tax'],
+            'invoice_count' => $invoiceCount,
+            'bill_count' => $billCount,
+            'taxable_sales' => $pack['taxable_sales'],
             'taxable_purchases' => round($taxablePurchases, 2),
-            'by_rate'           => $byRate,
-            'invoices'          => $invoiceList,
-            'bills'             => $billList,
-            'base_currency'     => $this->tenantBaseCurrency(),
-        ]);
+            'by_rate' => $byRate,
+            'invoices' => $invoiceList,
+            'bills' => $billList,
+            'myinvois_gaps' => $gaps,
+            'gap_counts' => $gapCounts,
+        ];
+    }
+
+    private function myinvoisGaps(string $start, string $end): array
+    {
+        $query = DB::table('invoices as i')
+            ->leftJoin('customers as c', 'c.id', '=', 'i.customer_id')
+            ->whereNotIn('i.status', ['draft', 'void'])
+            ->whereBetween('i.issue_date', [$start, $end])
+            ->whereNull('i.deleted_at')
+            ->where(function ($query): void {
+                $query->whereNull('i.lhdn_uuid')
+                    ->orWhereRaw("TRIM(i.lhdn_uuid) = ''")
+                    ->orWhereIn('i.lhdn_status', ['pending', 'rejected', 'invalid']);
+            });
+
+        $counts = (clone $query)->selectRaw(
+            "SUM(CASE WHEN i.lhdn_uuid IS NULL OR TRIM(i.lhdn_uuid) = '' THEN 1 ELSE 0 END) AS missing,
+             SUM(CASE WHEN i.lhdn_uuid IS NOT NULL AND TRIM(i.lhdn_uuid) <> '' AND i.lhdn_status = 'pending' THEN 1 ELSE 0 END) AS pending,
+             SUM(CASE WHEN i.lhdn_uuid IS NOT NULL AND TRIM(i.lhdn_uuid) <> '' AND i.lhdn_status IN ('rejected', 'invalid') THEN 1 ELSE 0 END) AS rejected"
+        )->first();
+
+        $gaps = $query->select([
+            'i.id',
+            'i.invoice_number',
+            'i.issue_date',
+            'i.total_amount',
+            'i.lhdn_uuid',
+            'i.lhdn_status',
+            'c.name as customer_name',
+        ])
+            ->orderBy('i.issue_date')
+            ->orderBy('i.invoice_number')
+            ->limit(200)
+            ->get()
+            ->map(fn ($row) => [
+                'id' => $row->id,
+                'invoice_number' => $row->invoice_number,
+                'issue_date' => $row->issue_date,
+                'customer' => $row->customer_name ?? '—',
+                'total' => round((float) $row->total_amount, 2),
+                'lhdn_status' => $row->lhdn_status,
+                'reason' => MyInvoisGap::myinvoisGapReason($row->lhdn_uuid, $row->lhdn_status),
+            ])
+            ->all();
+
+        return [$gaps, [
+            'missing' => (int) ($counts->missing ?? 0),
+            'pending' => (int) ($counts->pending ?? 0),
+            'rejected' => (int) ($counts->rejected ?? 0),
+        ]];
+    }
+
+    private function reportCompany(): array
+    {
+        $user = request()->user();
+        if ($user && $user->tenant_id) {
+            $tenant = Tenant::find($user->tenant_id);
+            $company = ($tenant?->data ?? [])['company'] ?? [];
+            $name = $company['display_name'] ?? $company['legal_name'] ?? config('invoice.company.name');
+            $addressParts = array_filter([
+                $company['street'] ?? '',
+                $company['city'] ?? '',
+                $company['state'] ?? '',
+                $company['postcode'] ?? '',
+                $company['country'] ?? '',
+            ]);
+
+            return [
+                'name' => $name ?: config('invoice.company.name'),
+                'address' => implode(', ', $addressParts) ?: config('invoice.company.address'),
+            ];
+        }
+
+        return config('invoice.company');
     }
 
     private function tenantBaseCurrency(): string
@@ -174,11 +318,12 @@ class SalesTaxReportController extends Controller
             return strtoupper((string) (tenant()->base_currency ?? 'MYR'));
         }
         if (auth()->user()?->tenant_id) {
-            $t = \App\Models\Tenant::find(auth()->user()->tenant_id);
+            $t = Tenant::find(auth()->user()->tenant_id);
             if ($t?->base_currency) {
                 return strtoupper((string) $t->base_currency);
             }
         }
+
         return 'MYR';
     }
 }

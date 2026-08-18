@@ -2,9 +2,10 @@ import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
 import { formatCurrency } from '@/utils/currency';
+import ReportPeriodChips from '@/Components/ReportPeriodChips';
 
-export default function IncomeByCustomer({ auth, filters = {}, rows = [], totals = {}, base_currency = 'MYR' }) {
-    const { start_date = '', end_date = '' } = filters;
+export default function IncomeByCustomer({ auth, filters = {}, rows = [], products = [], totals = {}, base_currency = 'MYR' }) {
+    const { preset = 'custom', start_date = '', end_date = '' } = filters;
 
     return (
         <AuthenticatedLayout
@@ -22,17 +23,14 @@ export default function IncomeByCustomer({ auth, filters = {}, rows = [], totals
             <div className="space-y-6">
                 <div className="bg-surface rounded-2xl border border-border-warm shadow-sm">
                     <div className="px-6 py-4 border-b border-border-warm bg-cream/50">
-                        <form method="get" action={route('reports.income-by-customer.index')} className="flex flex-wrap items-end gap-3">
-                            <div>
-                                <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">From</label>
-                                <input type="date" name="start_date" defaultValue={start_date} className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta" />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">To</label>
-                                <input type="date" name="end_date" defaultValue={end_date} className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta" />
-                            </div>
-                            <button type="submit" className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta-dark transition-colors">Update report</button>
-                        </form>
+                        <ReportPeriodChips
+                            action={route('reports.income-by-customer.index')}
+                            preset={preset}
+                            fromKey="start_date"
+                            toKey="end_date"
+                            dateFrom={start_date}
+                            dateTo={end_date}
+                        />
                     </div>
                 </div>
 
@@ -107,6 +105,42 @@ export default function IncomeByCustomer({ auth, filters = {}, rows = [], totals
                                     </tr>
                                 </tfoot>
                             )}
+                        </table>
+                    </div>
+                </div>
+
+                <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-border-warm bg-cream/80">
+                        <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Sales by product</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead>
+                                <tr className="text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
+                                    <th className="px-6 py-3">Product / service</th>
+                                    <th className="px-6 py-3 text-center">Qty</th>
+                                    <th className="px-6 py-3 text-center">Invoices</th>
+                                    <th className="px-6 py-3 text-right">Total sales</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border-warm">
+                                {products.length > 0 ? products.map((product, index) => (
+                                    <tr key={`${product.product_name}-${index}`} className="hover:bg-cream/30">
+                                        <td className="px-6 py-3 font-semibold text-ink">{product.product_name}</td>
+                                        <td className="px-6 py-3 text-center tabular-nums text-ink">{product.quantity}</td>
+                                        <td className="px-6 py-3 text-center tabular-nums text-ink">{product.invoice_count}</td>
+                                        <td className="px-6 py-3 text-right font-mono tabular-nums text-terracotta font-semibold">
+                                            {formatCurrency(product.total_sales, base_currency)}
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan={4} className="px-6 py-10 text-center text-ink-muted text-sm">
+                                            No product sales for this period.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
                         </table>
                     </div>
                 </div>

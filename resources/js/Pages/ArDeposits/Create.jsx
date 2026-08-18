@@ -153,8 +153,8 @@ export default function Create({ auth, customers = [], bankAccounts = [], custom
                             <h4 className="font-semibold text-ink text-xs uppercase tracking-wider mb-2">Unapplied leftover</h4>
                             <p className="text-terracotta text-sm leading-relaxed">
                                 {data.customer_id && openInvoices.length === 0
-                                    ? 'No open invoices for this customer. The full amount will sit as a deposit (2200) until you apply it later.'
-                                    : 'Anything not allocated stays as a customer deposit (2200) and can be knocked off later.'}
+                                    ? 'No open invoices for this customer. The full amount will sit as a deposit (2250) until you apply it later.'
+                                    : 'Anything not allocated stays as a customer deposit (2250) and can be knocked off later.'}
                             </p>
                         </div>
                         <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use Carbon\Carbon;
+use App\Support\ReportPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -31,8 +31,13 @@ class IncomeByCustomerController extends Controller
             'end_date'   => 'nullable|date|after_or_equal:start_date',
         ]);
 
-        $start = Carbon::parse($request->input('start_date', now()->startOfYear()->toDateString()))->toDateString();
-        $end = Carbon::parse($request->input('end_date', now()->toDateString()))->toDateString();
+        $resolved = ReportPeriod::range(
+            $request->input('preset'),
+            $request->input('start_date'),
+            $request->input('end_date')
+        );
+        $start = $resolved['date_from'];
+        $end = $resolved['date_to'];
 
         $rows = DB::table('invoices as i')
             ->leftJoin('customers as c', 'c.id', '=', 'i.customer_id')
@@ -70,9 +75,34 @@ class IncomeByCustomerController extends Controller
             'customer_count' => count($rows),
         ];
 
+        $products = DB::table('invoice_items as ii')
+            ->join('invoices as i', 'i.id', '=', 'ii.invoice_id')
+            ->leftJoin('products as p', 'p.id', '=', 'ii.product_id')
+            ->whereBetween('i.issue_date', [$start, $end])
+            ->where('i.status', '!=', 'void')
+            ->whereNull('i.deleted_at')
+            ->whereNull('ii.deleted_at')
+            ->groupBy('ii.product_id', 'p.name', 'ii.description')
+            ->select([
+                DB::raw("COALESCE(p.name, ii.description, 'Uncategorised') as product_name"),
+                DB::raw('SUM(ii.amount) as total_sales'),
+                DB::raw('SUM(ii.quantity) as quantity'),
+                DB::raw('COUNT(DISTINCT i.id) as invoice_count'),
+            ])
+            ->orderByDesc('total_sales')
+            ->get()
+            ->map(fn ($row) => [
+                'product_name'  => $row->product_name,
+                'total_sales'   => round((float) $row->total_sales, 2),
+                'quantity'      => round((float) $row->quantity, 2),
+                'invoice_count' => (int) $row->invoice_count,
+            ])
+            ->all();
+
         return Inertia::render('Reports/IncomeByCustomer', [
-            'filters'       => ['start_date' => $start, 'end_date' => $end],
+            'filters'       => ['preset' => $resolved['preset'], 'start_date' => $start, 'end_date' => $end],
             'rows'          => $rows,
+            'products'      => $products,
             'totals'        => $totals,
             'base_currency' => $this->tenantBaseCurrency(),
         ]);

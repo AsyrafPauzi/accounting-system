@@ -1,134 +1,329 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
+import { formatCurrency } from '@/utils/currency';
+import ReportPeriodChips from '@/Components/ReportPeriodChips';
 
 const Icons = {
-    Scale: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>,
-    Calendar: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
-    CheckCircle: () => <svg className="w-5 h-5 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-    AlertTriangle: () => <svg className="w-5 h-5 text-terracotta" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.268 17c-.77 1.333.192 3 1.732 3z" /></svg>,
+    Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
+    Warning: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4a2 2 0 00-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z" /></svg>,
+    MagnifyingGlass: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
 };
 
-export default function TrialBalance({ auth, trialBalance, totals, filters }) {
-    const handleDateChange = (date) => {
-        router.get(route('trial-balance.index'), { as_of_date: date }, { preserveState: true });
-    };
+const TYPE_ORDER = ['asset', 'liability', 'equity', 'income', 'expense'];
 
-    const isBalanced = totals.difference < 0.01;
+const TYPE_LABELS = {
+    asset: 'Assets',
+    liability: 'Liabilities',
+    equity: 'Equity',
+    income: 'Income',
+    expense: 'Expenses',
+};
+
+const TYPE_OPTIONS = [
+    { value: '', label: 'All types' },
+    { value: 'asset', label: 'Assets' },
+    { value: 'liability', label: 'Liabilities' },
+    { value: 'equity', label: 'Equity' },
+    { value: 'income', label: 'Income' },
+    { value: 'expense', label: 'Expenses' },
+];
+
+function money(n) {
+    return formatCurrency(n, 'MYR');
+}
+
+function moneyOrDash(n) {
+    return Number(n) > 0 ? money(n) : '—';
+}
+
+function formatAsOf(iso) {
+    if (! iso) return '';
+    return new Date(`${iso}T00:00:00`).toLocaleDateString('en-MY', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+    });
+}
+
+function groupByType(rows) {
+    const buckets = Object.fromEntries(TYPE_ORDER.map((type) => [type, []]));
+    rows.forEach((row) => {
+        const type = TYPE_ORDER.includes(row.type) ? row.type : 'asset';
+        buckets[type].push(row);
+    });
+    return TYPE_ORDER
+        .map((type) => {
+            const accounts = buckets[type];
+            const debit = accounts.reduce((sum, row) => sum + Number(row.debit || 0), 0);
+            const credit = accounts.reduce((sum, row) => sum + Number(row.credit || 0), 0);
+            return { type, label: TYPE_LABELS[type], accounts, debit, credit };
+        })
+        .filter((group) => group.accounts.length > 0);
+}
+
+export default function TrialBalance({ auth, trialBalance = [], totals = {}, filters = {} }) {
+    const asOfDate = filters.as_of_date || '';
+    const preset = filters.preset || 'custom';
+    const [search, setSearch] = useState('');
+    const [typeFilter, setTypeFilter] = useState('');
+
+    const isBalanced = Number(totals.difference || 0) < 0.01;
+    const accountCount = trialBalance.length;
+
+    const filteredRows = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return trialBalance.filter((row) => {
+            const matchesType = typeFilter === '' || row.type === typeFilter;
+            const matchesSearch = ! q
+                || (row.code || '').toLowerCase().includes(q)
+                || (row.name || '').toLowerCase().includes(q);
+            return matchesType && matchesSearch;
+        });
+    }, [trialBalance, search, typeFilter]);
+
+    const groups = useMemo(() => groupByType(filteredRows), [filteredRows]);
+    const hasFilters = Boolean(search || typeFilter);
+
+    const ledgerUrl = (code) => route('general-ledger.report', {
+        account_code: code,
+        date_to: asOfDate,
+        from: 'tb',
+    });
 
     return (
         <AuthenticatedLayout
             user={auth.user}
             header={
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                    <div className="flex items-center gap-3">
-                        <span className="p-2.5 rounded-xl bg-surface-alt text-terracotta">
-                            <Icons.Scale />
-                        </span>
-                        <div>
-                            <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Trial Balance</h2>
-                            <p className="text-ink-muted text-sm font-medium mt-1">Verification of double-entry mathematical accuracy</p>
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                    <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-terracotta">Reports</p>
+                            <h1 className="font-display text-xl lg:text-2xl font-medium text-ink tracking-tight">Trial balance</h1>
                         </div>
-                    </div>
-                    <div className="flex items-center gap-3 bg-surface p-2 rounded-xl border border-border-warm shadow-sm">
-                        <Icons.Calendar />
-                        <input 
-                            type="date" 
-                            value={filters.as_of_date} 
-                            onChange={(e) => handleDateChange(e.target.value)}
-                            className="border-none focus:ring-0 text-sm font-display font-medium text-ink bg-transparent"
-                        />
+                        <p className="text-ink-muted text-sm mt-1 truncate">
+                            Account balances as of {formatAsOf(asOfDate) || 'today'}. Click a line to open the ledger.
+                        </p>
                     </div>
                 </div>
             }
         >
             <Head title="Trial Balance" />
 
-            <div className="space-y-6">
-                {/* Status Card */}
-                <div className={`p-6 rounded-2xl border flex items-center justify-between ${isBalanced ? 'bg-forest/10 border-forest/30' : 'bg-terracotta/10 border-terracotta/30'}`}>
-                    <div className="flex items-center gap-4">
-                        <span className={`p-3 rounded-xl ${isBalanced ? 'bg-forest/10' : 'bg-terracotta/10'}`}>
-                            {isBalanced ? <Icons.CheckCircle /> : <Icons.AlertTriangle />}
-                        </span>
-                        <div>
-                            <h3 className={`text-lg font-bold ${isBalanced ? 'text-forest-dark' : 'text-terracotta'}`}>
-                                {isBalanced ? 'System is Balanced' : 'Out of Balance!'}
-                            </h3>
-                            <p className={`text-sm ${isBalanced ? 'text-forest' : 'text-terracotta'}`}>
-                                {isBalanced 
-                                    ? 'Total debits equal total credits. Mathematical accuracy is verified.' 
-                                    : `There is a discrepancy of RM ${totals.difference.toLocaleString('en-MY', { minimumFractionDigits: 2 })}. Please check your manual journal entries.`}
+            <div className="space-y-4 sm:space-y-5 min-w-0">
+                <div className="bg-surface rounded-2xl border border-border-warm shadow-sm p-4">
+                    <ReportPeriodChips
+                        action={route('trial-balance.index')}
+                        preset={preset}
+                        mode="as_of"
+                        asOf={asOfDate}
+                    />
+                </div>
+
+                <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-border-warm">
+                        <div className="px-4 py-4 sm:px-6">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Accounts</p>
+                            <p className="mt-1 font-mono tabular-nums font-bold text-ink text-lg">{accountCount}</p>
+                            <p className="text-xs text-ink-muted mt-1">With a balance</p>
+                        </div>
+                        <div className="px-4 py-4 sm:px-6">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Debits</p>
+                            <p className="mt-1 font-mono tabular-nums font-bold text-ink text-sm sm:text-base">{money(totals.debit)}</p>
+                        </div>
+                        <div className="px-4 py-4 sm:px-6">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Credits</p>
+                            <p className="mt-1 font-mono tabular-nums font-bold text-ink text-sm sm:text-base">{money(totals.credit)}</p>
+                        </div>
+                        <div className="px-4 py-4 sm:px-6">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Status</p>
+                            <p className={`mt-1 inline-flex items-center gap-1.5 text-sm font-semibold ${isBalanced ? 'text-forest' : 'text-terracotta'}`}>
+                                {isBalanced ? <Icons.Check /> : <Icons.Warning />}
+                                {isBalanced ? 'In balance' : `Out by ${money(totals.difference)}`}
                             </p>
                         </div>
-                    </div>
-                    <div className="text-right hidden sm:block">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted mb-1">Total of each side</p>
-                        <p className="text-xl font-mono font-display font-medium text-ink">RM {totals.debit.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
                     </div>
                 </div>
 
                 <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-cream/80 border-b border-border-warm text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest">
-                                <th className="p-6">Account Code</th>
-                                <th className="p-6">Account Name</th>
-                                <th className="p-6 text-right">Debit (RM)</th>
-                                <th className="p-6 text-right">Credit (RM)</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border-warm">
-                            {trialBalance.length > 0 ? (
-                                trialBalance.map((item) => (
-                                    <tr key={item.id} className="group hover:bg-cream/50 transition-colors duration-200">
-                                        <td className="p-6">
-                                            <span className="font-mono text-sm font-display font-medium text-ink bg-surface-alt px-2 py-1 rounded">
-                                                {item.code}
-                                            </span>
-                                        </td>
-                                        <td className="p-6">
-                                            <div className="text-sm font-medium text-ink">{item.name}</div>
-                                            <div className="text-[10px] text-ink-muted mt-0.5 uppercase font-bold tracking-tighter">
-                                                {item.type}
-                                            </div>
-                                        </td>
-                                        <td className="p-6 text-right font-mono font-display font-medium text-ink">
-                                            {item.debit > 0 ? item.debit.toLocaleString('en-MY', { minimumFractionDigits: 2 }) : '—'}
-                                        </td>
-                                        <td className="p-6 text-right font-mono font-display font-medium text-ink">
-                                            {item.credit > 0 ? item.credit.toLocaleString('en-MY', { minimumFractionDigits: 2 }) : '—'}
+                    <div className="px-4 sm:px-6 py-4 border-b border-border-warm flex flex-wrap items-center gap-3 bg-cream/50">
+                        <div className="relative flex-1 min-w-[220px] max-w-full sm:max-w-xs">
+                            <span className="absolute inset-y-0 left-3 flex items-center text-ink-muted">
+                                <Icons.MagnifyingGlass />
+                            </span>
+                            <input
+                                type="text"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Search by code or name..."
+                                className="w-full pl-9 pr-4 py-2.5 border border-border-warm rounded-xl text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
+                            />
+                        </div>
+
+                        <select
+                            value={typeFilter}
+                            onChange={(e) => setTypeFilter(e.target.value)}
+                            className="border border-border-warm rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta min-w-[160px]"
+                        >
+                            {TYPE_OPTIONS.map((opt) => (
+                                <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+
+                        {hasFilters && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSearch('');
+                                    setTypeFilter('');
+                                }}
+                                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream"
+                            >
+                                Clear
+                            </button>
+                        )}
+
+                        <span className="text-ink-muted text-sm font-medium ml-auto whitespace-nowrap">
+                            {filteredRows.length} of {accountCount}
+                        </span>
+                    </div>
+
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead>
+                                <tr className="text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
+                                    <th className="px-4 sm:px-6 py-3 w-28">Code</th>
+                                    <th className="px-4 sm:px-6 py-3">Account</th>
+                                    <th className="px-4 sm:px-6 py-3 text-right">Debit</th>
+                                    <th className="px-4 sm:px-6 py-3 text-right">Credit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {groups.length > 0 ? groups.map((group) => (
+                                    <React.Fragment key={group.type}>
+                                        <tr className="bg-cream/70">
+                                            <td colSpan={4} className="px-4 sm:px-6 py-2.5 text-[10px] font-semibold uppercase tracking-widest text-ink-muted">
+                                                {group.label}
+                                            </td>
+                                        </tr>
+                                        {group.accounts.map((item) => (
+                                            <tr key={item.id} className="border-b border-border-warm last:border-0 hover:bg-cream/80 transition-colors">
+                                                <td className="px-4 sm:px-6 py-3 font-mono text-ink font-semibold whitespace-nowrap">
+                                                    <Link href={ledgerUrl(item.code)} className="hover:text-terracotta">
+                                                        {item.code}
+                                                    </Link>
+                                                </td>
+                                                <td className="px-4 sm:px-6 py-3">
+                                                    <Link href={ledgerUrl(item.code)} className="font-medium text-ink hover:text-terracotta">
+                                                        {item.name}
+                                                    </Link>
+                                                </td>
+                                                <td className="px-4 sm:px-6 py-3 text-right font-mono tabular-nums text-ink whitespace-nowrap">
+                                                    {moneyOrDash(item.debit)}
+                                                </td>
+                                                <td className="px-4 sm:px-6 py-3 text-right font-mono tabular-nums text-ink whitespace-nowrap">
+                                                    {moneyOrDash(item.credit)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        <tr className="border-b border-border-warm bg-cream/30">
+                                            <td colSpan={2} className="px-4 sm:px-6 py-2.5 text-right text-xs font-semibold text-ink-muted">
+                                                Total {group.label.toLowerCase()}
+                                            </td>
+                                            <td className="px-4 sm:px-6 py-2.5 text-right font-mono tabular-nums text-sm font-semibold text-ink whitespace-nowrap">
+                                                {money(group.debit)}
+                                            </td>
+                                            <td className="px-4 sm:px-6 py-2.5 text-right font-mono tabular-nums text-sm font-semibold text-ink whitespace-nowrap">
+                                                {money(group.credit)}
+                                            </td>
+                                        </tr>
+                                    </React.Fragment>
+                                )) : (
+                                    <tr>
+                                        <td colSpan={4} className="px-4 py-16 text-center">
+                                            <p className="text-ink font-semibold mb-1">
+                                                {hasFilters ? 'No accounts match your filters.' : 'No balances as of this date.'}
+                                            </p>
+                                            <p className="text-ink-muted text-sm">
+                                                {hasFilters
+                                                    ? 'Try a different search or clear filters.'
+                                                    : 'Post invoices, bills, or a journal to populate this report.'}
+                                            </p>
                                         </td>
                                     </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan="4" className="p-12 text-center text-ink-muted font-medium">
-                                        No transactions found for the selected date.
-                                    </td>
-                                </tr>
+                                )}
+                            </tbody>
+                            {accountCount > 0 && (
+                                <tfoot>
+                                    <tr className="border-t-2 border-border-warm bg-cream/80">
+                                        <td colSpan={2} className="px-4 sm:px-6 py-4 text-right text-xs font-semibold uppercase tracking-widest text-ink">
+                                            Grand totals
+                                        </td>
+                                        <td className="px-4 sm:px-6 py-4 text-right font-mono tabular-nums font-bold text-ink whitespace-nowrap">
+                                            {money(totals.debit)}
+                                        </td>
+                                        <td className="px-4 sm:px-6 py-4 text-right font-mono tabular-nums font-bold text-ink whitespace-nowrap">
+                                            {money(totals.credit)}
+                                        </td>
+                                    </tr>
+                                </tfoot>
                             )}
-                        </tbody>
-                        <tfoot className="bg-cream border-t-2 border-border-warm">
-                            <tr className="font-display font-medium text-ink">
-                                <td colSpan="2" className="p-6 text-right text-xs uppercase tracking-widest">Grand Totals</td>
-                                <td className="p-6 text-right font-mono text-lg underline decoration-double">
-                                    {totals.debit.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
-                                </td>
-                                <td className="p-6 text-right font-mono text-lg underline decoration-double">
-                                    {totals.credit.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                        </table>
+                    </div>
+
+                    <div className="md:hidden divide-y divide-border-warm">
+                        {groups.length > 0 ? groups.map((group) => (
+                            <div key={group.type}>
+                                <div className="px-4 py-2.5 bg-cream/70 text-[10px] font-semibold uppercase tracking-widest text-ink-muted">
+                                    {group.label}
+                                </div>
+                                {group.accounts.map((item) => (
+                                    <Link key={item.id} href={ledgerUrl(item.code)} className="block p-4 hover:bg-cream/50">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <p className="font-mono text-xs font-semibold text-ink">{item.code}</p>
+                                                <p className="mt-0.5 font-medium text-ink">{item.name}</p>
+                                            </div>
+                                            <div className="text-right shrink-0 font-mono tabular-nums text-sm">
+                                                {item.debit > 0 && <p className="font-semibold text-ink">{money(item.debit)} Dr</p>}
+                                                {item.credit > 0 && <p className="font-semibold text-ink">{money(item.credit)} Cr</p>}
+                                            </div>
+                                        </div>
+                                    </Link>
+                                ))}
+                                <div className="px-4 py-2.5 bg-cream/30 flex justify-between text-xs font-semibold text-ink-muted">
+                                    <span>Total {group.label.toLowerCase()}</span>
+                                    <span className="font-mono tabular-nums text-ink">
+                                        {money(group.debit)} · {money(group.credit)}
+                                    </span>
+                                </div>
+                            </div>
+                        )) : (
+                            <div className="px-4 py-16 text-center">
+                                <p className="text-ink font-semibold mb-1">
+                                    {hasFilters ? 'No accounts match your filters.' : 'No balances as of this date.'}
+                                </p>
+                                <p className="text-ink-muted text-sm">
+                                    {hasFilters
+                                        ? 'Try a different search or clear filters.'
+                                        : 'Post invoices, bills, or a journal to populate this report.'}
+                                </p>
+                            </div>
+                        )}
+                        {accountCount > 0 && (
+                            <div className="px-4 py-4 bg-cream/80 flex justify-between gap-3">
+                                <span className="text-xs font-semibold uppercase tracking-widest text-ink">Grand totals</span>
+                                <span className="font-mono tabular-nums font-bold text-sm text-ink">
+                                    {money(totals.debit)} · {money(totals.credit)}
+                                </span>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-                <div className="bg-surface-alt border border-border-warm p-6 rounded-2xl">
-                    <h4 className="text-sm font-display font-medium text-ink mb-2 uppercase tracking-wide">About this report</h4>
-                    <p className="text-sm text-ink leading-relaxed">
-                        Each account shows its <strong>net balance</strong> on the side it normally lives on — assets and expenses on the left (Debit), liabilities, equity, and income on the right (Credit). Accounts that have been fully cleared (e.g. invoices paid off, statutory remittances settled) are hidden because their balance is zero. In a balanced ledger, the grand total of debits always equals the grand total of credits.
-                    </p>
-                </div>
+                <p className="text-xs text-ink-muted">
+                    Each line is the net balance on its normal side. Cleared accounts (zero balance) are hidden. Grand totals always use the full report, even if you filter the list.
+                </p>
             </div>
         </AuthenticatedLayout>
     );

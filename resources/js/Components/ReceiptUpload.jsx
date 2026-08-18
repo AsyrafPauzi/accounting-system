@@ -62,7 +62,7 @@ export default function ReceiptUpload({ onOcrComplete, billId = null, compact = 
                             }
                         } catch (pollErr) {
                             clearInterval(pollInterval);
-                            setError('Failed to retrieve OCR scan status');
+                            setError(pollErr.response?.data?.message || 'Failed to retrieve OCR scan status');
                             setUploading(false);
                         }
                     }, 2000);

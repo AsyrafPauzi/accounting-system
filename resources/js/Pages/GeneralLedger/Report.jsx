@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { alertUpgrade } from '@/utils/swal';
+import { formatCurrency } from '@/utils/currency';
+import IndexPagination from '@/Components/IndexPagination';
 
 
 const Icons = {
@@ -23,24 +25,110 @@ const REFERENCE_OPTIONS = [
     { value: 'Credit Note', label: 'Credit Note' },
     { value: 'Bill', label: 'Bill' },
     { value: 'Bill Payment', label: 'Bill Payment' },
+    { value: 'Manual', label: 'Manual journal' },
 ];
+
+function queryParams(filters) {
+    const params = {};
+    if (filters.dateFrom) params.date_from = filters.dateFrom;
+    if (filters.dateTo) params.date_to = filters.dateTo;
+    if (filters.referenceType) params.reference_type = filters.referenceType;
+    if (filters.accountCode) params.account_code = filters.accountCode;
+    if (filters.from) params.from = filters.from;
+    if (filters.perPage) params.per_page = filters.perPage;
+    if (filters.page) params.page = filters.page;
+    return params;
+}
 
 function formatMoney(n) {
     return (Number(n) || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function Report({ auth, transactions = [], accountsMap = {}, filters = {}, stats = {}, accountOptions = [], paginator = {} }) {
-    const { flash } = usePage().props;
-    const { date_from = '', date_to = '', reference_type = '', account_code = '' } = filters;
-    const { transactions_count = 0, total_debits = 0, total_credits = 0 } = stats;
-    const { current_page = 1, last_page = 1, prev_url, next_url, total } = paginator;
+export default function Report({
+    auth,
+    transactions = [],
+    accountsMap = {},
+    filters = {},
+    stats = {},
+    accountOptions = [],
+    paginator = {},
+    ledgerMode = false,
+    accountLedger = null,
+    openingBalance = null,
+    closingBalance = null,
+    periodMovement = null,
+}) {
+    const dateFromFilter = filters.date_from || '';
+    const dateToFilter = filters.date_to || '';
+    const typeFilter = filters.reference_type || '';
+    const accountFilter = filters.account_code || '';
+    const from = filters.from || '';
+    const perPageFilter = Number(filters.per_page || paginator.per_page || 25);
 
-    const getSourceLabel = (refType) => {
-        if (refType === 'Invoice' || refType === 'Invoice Payment') return 'Invoice';
-        if (refType === 'Credit Note') return 'Credit Note';
-        if (refType === 'Bill' || refType === 'Bill Payment') return 'Bill';
-        return refType;
+    const [dateFrom, setDateFrom] = useState(dateFromFilter);
+    const [dateTo, setDateTo] = useState(dateToFilter);
+    const [referenceType, setReferenceType] = useState(typeFilter);
+    const [accountCode, setAccountCode] = useState(accountFilter);
+    const [perPage, setPerPage] = useState(perPageFilter);
+
+    const { transactions_count: transactionsCount = 0, total_debits: totalDebits = 0, total_credits: totalCredits = 0 } = stats;
+
+    const visit = ({
+        dateFrom: nextDateFrom,
+        dateTo: nextDateTo,
+        referenceType: nextType,
+        accountCode: nextAccount,
+        perPage: nextPerPage,
+        page = 1,
+    }) => {
+        router.get(
+            route('general-ledger.report'),
+            queryParams({
+                dateFrom: nextDateFrom,
+                dateTo: nextDateTo,
+                referenceType: nextType,
+                accountCode: nextAccount,
+                from,
+                perPage: nextPerPage,
+                page,
+            }),
+            { preserveState: false, preserveScroll: true }
+        );
     };
+
+    const appliedFilters = {
+        dateFrom: dateFromFilter,
+        dateTo: dateToFilter,
+        referenceType: typeFilter,
+        accountCode: accountFilter,
+        perPage: perPageFilter,
+    };
+
+    const hasFilters = Boolean(dateFromFilter || dateToFilter || typeFilter || accountFilter);
+    const exportParams = new URLSearchParams(queryParams({ ...appliedFilters, page: undefined })).toString();
+
+    const backHref = from === 'coa'
+        ? route('chart-of-accounts.index')
+        : from === 'tb'
+            ? route('trial-balance.index', { as_of_date: dateToFilter || undefined })
+            : from === 'pl'
+                ? route('profit-and-loss.index', {
+                    date_from: dateFromFilter || undefined,
+                    date_to: dateToFilter || undefined,
+                })
+                : from === 'bs'
+                    ? route('balance-sheet.index', { as_at_date: dateToFilter || undefined })
+                    : route('general-ledger.index');
+
+    const backLabel = from === 'coa'
+        ? 'Back to Chart of Accounts'
+        : from === 'tb'
+            ? 'Back to Trial Balance'
+            : from === 'pl'
+                ? 'Back to Profit & Loss'
+                : from === 'bs'
+                    ? 'Back to Balance Sheet'
+                    : 'Back to General Ledger';
 
     return (
         <AuthenticatedLayout
@@ -48,23 +136,34 @@ export default function Report({ auth, transactions = [], accountsMap = {}, filt
             header={
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                     <div>
-                        <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">General Ledger Report</h2>
-                        <p className="text-ink-muted text-sm font-medium mt-1">
-                            One row per debit or credit line — use filters to narrow by date, type, or account.
-                        </p>
-                        <p className="text-ink-muted text-xs mt-0.5">
-                            Every line from posted invoices, payments, and credit notes.
-                        </p>
+                        {ledgerMode && accountLedger ? (
+                            <>
+                                <Link href={backHref} className="text-xs font-semibold text-terracotta hover:text-terracotta mb-2 inline-block">
+                                    ← {backLabel}
+                                </Link>
+                                <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">
+                                    {accountLedger.code} — {accountLedger.name}
+                                </h2>
+                                <p className="text-ink-muted text-sm font-medium mt-1">Every posting to this account</p>
+                            </>
+                        ) : (
+                            <>
+                                <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">General Ledger Report</h2>
+                                <p className="text-ink-muted text-sm font-medium mt-1">
+                                    One row per debit or credit line — use filters to narrow by date, type, or account.
+                                </p>
+                            </>
+                        )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                         <a
-                            href={`${route('general-ledger.report.export.csv')}?${new URLSearchParams(Object.fromEntries(Object.entries({ date_from, date_to, reference_type, account_code }).filter(([, v]) => v != null && v !== '')))}`}
+                            href={`${route('general-ledger.report.export.csv')}?${exportParams}`}
                             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream transition-colors"
                         >
                             <Icons.ArrowDownTray /> CSV
                         </a>
                         <a
-                            href={auth.planPermissions['reports.export.full'] ? `${route('general-ledger.report.export.pdf')}?${new URLSearchParams(Object.fromEntries(Object.entries({ date_from, date_to, reference_type, account_code }).filter(([, v]) => v != null && v !== '')))}` : '#'}
+                            href={auth.planPermissions['reports.export.full'] ? `${route('general-ledger.report.export.pdf')}?${exportParams}` : '#'}
                             onClick={(e) => {
                                 if (!auth.planPermissions['reports.export.full']) {
                                     e.preventDefault();
@@ -92,7 +191,7 @@ export default function Report({ auth, transactions = [], accountsMap = {}, filt
                 </div>
             }
         >
-            <Head title="General Ledger Report" />
+            <Head title={ledgerMode && accountLedger ? `${accountLedger.code} — ${accountLedger.name}` : 'General Ledger Report'} />
 
 
             <div className="space-y-6">
@@ -102,7 +201,7 @@ export default function Report({ auth, transactions = [], accountsMap = {}, filt
                             <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Transactions</span>
                             <span className="p-2 rounded-xl bg-surface/10"><Icons.ListBullet /></span>
                         </div>
-                        <p className="text-2xl font-bold tabular-nums">{transactions_count}</p>
+                        <p className="text-2xl font-bold tabular-nums">{transactionsCount}</p>
                         <p className="text-xs text-terracotta mt-1">Debit & credit lines</p>
                     </div>
                     <div className="bg-surface rounded-2xl p-6 border border-border-warm shadow-sm transition-all hover:shadow-md">
@@ -110,7 +209,7 @@ export default function Report({ auth, transactions = [], accountsMap = {}, filt
                             <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Total debits</span>
                             <span className="p-2 rounded-xl bg-surface-alt text-terracotta"><Icons.TrendingUp /></span>
                         </div>
-                        <p className="text-xl font-display font-medium text-ink font-mono tabular-nums">RM {formatMoney(total_debits)}</p>
+                        <p className="text-xl font-display font-medium text-ink font-mono tabular-nums">{formatCurrency(totalDebits, 'MYR')}</p>
                         <p className="text-xs text-ink-muted mt-1">Filtered period</p>
                     </div>
                     <div className="bg-surface rounded-2xl p-6 border border-border-warm shadow-sm transition-all hover:shadow-md">
@@ -118,7 +217,7 @@ export default function Report({ auth, transactions = [], accountsMap = {}, filt
                             <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Total credits</span>
                             <span className="p-2 rounded-xl bg-surface-alt text-terracotta"><Icons.TrendingDown /></span>
                         </div>
-                        <p className="text-xl font-display font-medium text-ink font-mono tabular-nums">RM {formatMoney(total_credits)}</p>
+                        <p className="text-xl font-display font-medium text-ink font-mono tabular-nums">{formatCurrency(totalCredits, 'MYR')}</p>
                         <p className="text-xs text-ink-muted mt-1">Filtered period</p>
                     </div>
                     <div className="bg-surface rounded-2xl p-6 border border-border-warm shadow-sm transition-all hover:shadow-md flex items-center">
@@ -132,135 +231,183 @@ export default function Report({ auth, transactions = [], accountsMap = {}, filt
                 </div>
 
                 <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-border-warm flex flex-wrap items-end gap-3 bg-cream/50">
-                        <form method="get" action={route('general-ledger.report')} className="flex flex-wrap items-end gap-3">
-                            <div>
-                                <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">Date from</label>
-                                <input
-                                    type="date"
-                                    name="date_from"
-                                    defaultValue={date_from}
-                                    className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">Date to</label>
-                                <input
-                                    type="date"
-                                    name="date_to"
-                                    defaultValue={date_to}
-                                    className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">Reference type</label>
-                                <select
-                                    name="reference_type"
-                                    defaultValue={reference_type}
-                                    className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
-                                >
-                                    {REFERENCE_OPTIONS.map((opt) => (
-                                        <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">Account</label>
-                                <select
-                                    name="account_code"
-                                    defaultValue={account_code}
-                                    className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta min-w-[180px]"
-                                >
-                                    <option value="">All accounts</option>
-                                    {accountOptions.map((opt) => (
-                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <button
-                                type="submit"
-                                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta transition-colors"
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            visit({ dateFrom, dateTo, referenceType, accountCode, perPage, page: 1 });
+                        }}
+                        className="px-4 sm:px-6 py-4 border-b border-border-warm flex flex-wrap items-center gap-3 bg-cream/50"
+                    >
+                        <input
+                            type="date"
+                            value={dateFrom}
+                            onChange={(e) => setDateFrom(e.target.value)}
+                            className="border border-border-warm rounded-xl py-2.5 px-3 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
+                            aria-label="Date from"
+                        />
+                        <span className="text-ink-muted text-xs">to</span>
+                        <input
+                            type="date"
+                            value={dateTo}
+                            onChange={(e) => setDateTo(e.target.value)}
+                            className="border border-border-warm rounded-xl py-2.5 px-3 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta"
+                            aria-label="Date to"
+                        />
+                        <select
+                            value={referenceType}
+                            onChange={(e) => {
+                                const nextType = e.target.value;
+                                setReferenceType(nextType);
+                                visit({ dateFrom, dateTo, referenceType: nextType, accountCode, perPage, page: 1 });
+                            }}
+                            className="border border-border-warm rounded-xl py-2.5 pl-3 pr-8 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta min-w-[160px]"
+                        >
+                            {REFERENCE_OPTIONS.map((opt) => (
+                                <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                        <select
+                            value={accountCode}
+                            onChange={(e) => {
+                                const nextAccount = e.target.value;
+                                setAccountCode(nextAccount);
+                                visit({ dateFrom, dateTo, referenceType, accountCode: nextAccount, perPage, page: 1 });
+                            }}
+                            className="border border-border-warm rounded-xl py-2.5 pl-3 pr-8 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta min-w-[180px]"
+                        >
+                            <option value="">All accounts</option>
+                            {accountOptions.map((opt) => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                        <select
+                            value={perPage}
+                            onChange={(e) => {
+                                const next = Number(e.target.value);
+                                setPerPage(next);
+                                visit({ ...appliedFilters, perPage: next, page: 1 });
+                            }}
+                            className="border border-border-warm rounded-xl py-2.5 pl-3 pr-8 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta min-w-[140px]"
+                        >
+                            <option value={10}>10 per page</option>
+                            <option value={25}>25 per page</option>
+                            <option value={50}>50 per page</option>
+                            <option value={100}>100 per page</option>
+                        </select>
+                        <button type="submit" className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta-dark">
+                            Apply
+                        </button>
+                        {hasFilters && (
+                            <Link
+                                href={route('general-ledger.report', from ? { from, per_page: perPage } : { per_page: perPage })}
+                                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream"
                             >
-                                Apply filters
-                            </button>
-                        </form>
-                        {(date_from || date_to || reference_type || account_code) && (
-                            <Link href={route('general-ledger.report')} className="text-xs font-semibold text-terracotta hover:text-terracotta">
-                                Clear filters
+                                Clear
                             </Link>
                         )}
-                        <span className="text-ink-muted text-sm font-medium ml-auto">
-                            Page {current_page} of {last_page} ({total} lines)
+                        <span className="text-ink-muted text-sm font-medium ml-auto whitespace-nowrap">
+                            {paginator.total > 0
+                                ? `${paginator.from}–${paginator.to} of ${paginator.total}`
+                                : '0 of 0'}
                         </span>
-                    </div>
+                    </form>
 
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead>
                                 <tr className="text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
-                                    <th className="px-6 py-4">Date</th>
-                                    <th className="px-6 py-4">Entry #</th>
-                                    <th className="px-6 py-4">Description</th>
-                                    <th className="px-6 py-4">Account</th>
-                                    <th className="px-6 py-4">Reference</th>
-                                    <th className="px-6 py-4 text-right">Debit</th>
-                                    <th className="px-6 py-4 text-right">Credit</th>
-                                    <th className="px-6 py-4 text-right w-28">Actions</th>
+                                    <th className="px-4 py-3">Date</th>
+                                    <th className="px-4 py-3">Description</th>
+                                    {!ledgerMode && <th className="px-4 py-3">Account</th>}
+                                    <th className="px-4 py-3">Source</th>
+                                    <th className="px-4 py-3 text-right">Debit</th>
+                                    <th className="px-4 py-3 text-right">Credit</th>
+                                    {ledgerMode && <th className="px-4 py-3 text-right">Balance</th>}
                                 </tr>
                             </thead>
                             <tbody>
+                                {ledgerMode && (
+                                    <tr className="border-b border-border-warm bg-cream/40 text-sm">
+                                        <td className="px-4 py-3 text-xs text-ink-muted" colSpan={5}>Opening balance</td>
+                                        <td className="px-4 py-3 text-right font-mono tabular-nums font-semibold text-ink">
+                                            RM {formatMoney(openingBalance ?? 0)}
+                                        </td>
+                                    </tr>
+                                )}
                                 {transactions.length > 0 ? (
                                     transactions.map((tx) => (
                                         <tr key={tx.id} className="border-b border-border-warm last:border-0 hover:bg-cream/80 transition-colors">
-                                            <td className="px-6 py-4 font-mono text-ink text-xs">{tx.date}</td>
-                                            <td className="px-6 py-4 font-mono text-ink text-xs">#{tx.entry_id}</td>
-                                            <td className="px-6 py-4 text-ink max-w-[200px] truncate" title={tx.description}>{tx.description}</td>
-                                            <td className="px-6 py-4">
-                                                <span className="font-mono font-semibold text-ink">{tx.account_code}</span>
-                                                <span className="block text-xs text-ink-muted">{accountsMap[tx.account_code] || '—'}</span>
+                                            <td className="px-4 py-3 font-mono text-ink text-xs">{tx.date}</td>
+                                            <td className="px-4 py-3 text-ink max-w-[220px]">
+                                                <p className="truncate" title={tx.description}>{tx.description}</p>
+                                                <Link href={route('general-ledger.show', tx.entry_id)} className="text-[10px] text-ink-muted hover:text-terracotta">
+                                                    Entry #{tx.entry_id}
+                                                </Link>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold bg-surface-alt text-ink">
-                                                    {tx.reference_type}
-                                                </span>
+                                            {!ledgerMode && (
+                                                <td className="px-4 py-3">
+                                                    <Link
+                                                        href={route('general-ledger.report', queryParams({
+                                                            ...appliedFilters,
+                                                            accountCode: tx.account_code,
+                                                            page: 1,
+                                                        }))}
+                                                        className="font-mono font-semibold text-terracotta hover:text-terracotta"
+                                                    >
+                                                        {tx.account_code}
+                                                    </Link>
+                                                    <span className="block text-xs text-ink-muted">{accountsMap[tx.account_code] || '—'}</span>
+                                                </td>
+                                            )}
+                                            <td className="px-4 py-3">
+                                                {tx.source_route ? (
+                                                    <a href={tx.source_route} className="text-xs font-semibold text-terracotta hover:text-terracotta">
+                                                        {tx.source_label || tx.reference_type}
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-xs text-ink-muted">{tx.reference_type || '—'}</span>
+                                                )}
                                             </td>
-                                            <td className="px-6 py-4 text-right font-mono tabular-nums text-ink">
+                                            <td className="px-4 py-3 text-right font-mono tabular-nums text-ink">
                                                 {tx.debit > 0 ? `RM ${formatMoney(tx.debit)}` : '—'}
                                             </td>
-                                            <td className="px-6 py-4 text-right font-mono tabular-nums text-ink">
+                                            <td className="px-4 py-3 text-right font-mono tabular-nums text-ink">
                                                 {tx.credit > 0 ? `RM ${formatMoney(tx.credit)}` : '—'}
                                             </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex flex-col items-end gap-1.5">
-                                                    <Link
-                                                        href={route('general-ledger.show', tx.entry_id)}
-                                                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-bold text-terracotta bg-surface-alt hover:bg-surface-alt transition-colors whitespace-nowrap uppercase tracking-wider shadow-sm"
-                                                    >
-                                                        <Icons.Eye /> View entry
-                                                    </Link>
-                                                    {tx.source_route && (
-                                                        <a 
-                                                            href={tx.source_route} 
-                                                            className="inline-flex items-center gap-1 text-[9px] font-display font-medium text-ink-muted hover:text-ink transition-colors uppercase tracking-tight"
-                                                        >
-                                                            {getSourceLabel(tx.reference_type)} <Icons.ArrowTopRightOnSquare />
-                                                        </a>
-                                                    )}
-                                                </div>
-                                            </td>
+                                            {ledgerMode && (
+                                                <td className="px-4 py-3 text-right font-mono tabular-nums font-semibold text-ink">
+                                                    RM {formatMoney(tx.running_balance ?? 0)}
+                                                </td>
+                                            )}
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={8} className="px-6 py-16 text-center">
+                                        <td colSpan={6} className="px-4 py-16 text-center">
                                             <p className="text-ink font-semibold mb-1">
-                                                No transactions in this period.
+                                                {ledgerMode ? 'Nothing posted to this account yet' : 'No transactions in this period.'}
                                             </p>
                                             <p className="text-ink-muted text-sm">
-                                                {(date_from || date_to || reference_type || account_code)
+                                                {hasFilters
                                                     ? 'Try a different date range or clear filters.'
                                                     : 'Post an invoice or record a payment to see ledger lines.'}
                                             </p>
+                                        </td>
+                                    </tr>
+                                )}
+                                {ledgerMode && transactions.length > 0 && (
+                                    <tr className="border-t-2 border-border-warm bg-cream/60 text-sm font-semibold">
+                                        <td className="px-4 py-3" colSpan={5}>Period movement</td>
+                                        <td className="px-4 py-3 text-right font-mono tabular-nums" colSpan={1}>
+                                            RM {formatMoney(periodMovement ?? 0)}
+                                        </td>
+                                    </tr>
+                                )}
+                                {ledgerMode && (
+                                    <tr className="border-t border-border-warm bg-cream/80 text-sm font-semibold">
+                                        <td className="px-4 py-3" colSpan={5}>Closing balance</td>
+                                        <td className="px-4 py-3 text-right font-mono tabular-nums" colSpan={1}>
+                                            RM {formatMoney(closingBalance ?? openingBalance ?? 0)}
                                         </td>
                                     </tr>
                                 )}
@@ -268,23 +415,11 @@ export default function Report({ auth, transactions = [], accountsMap = {}, filt
                         </table>
                     </div>
 
-                    {last_page > 1 && (
-                        <div className="px-6 py-4 border-t border-border-warm flex items-center justify-between bg-cream/50">
-                            <span className="text-ink-muted text-sm">Page {current_page} of {last_page}</span>
-                            <div className="flex gap-2">
-                                {prev_url && (
-                                    <Link href={prev_url} className="px-4 py-2 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">
-                                        Previous
-                                    </Link>
-                                )}
-                                {next_url && (
-                                    <Link href={next_url} className="px-4 py-2 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">
-                                        Next
-                                    </Link>
-                                )}
-                            </div>
-                        </div>
-                    )}
+                    <IndexPagination
+                        currentPage={paginator.current_page || 1}
+                        lastPage={paginator.last_page || 1}
+                        onPage={(page) => visit({ ...appliedFilters, page })}
+                    />
                 </div>
             </div>
         </AuthenticatedLayout>

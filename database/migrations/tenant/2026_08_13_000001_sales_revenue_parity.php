@@ -455,11 +455,11 @@ return new class extends Migration
         if (! Schema::hasTable('accounts')) {
             return;
         }
-        if (DB::table('accounts')->where('code', '2200')->exists()) {
+        if (DB::table('accounts')->where('code', '2250')->exists()) {
             return;
         }
         DB::table('accounts')->insert([
-            'code'          => '2200',
+            'code'          => '2250',
             'name'          => 'Customer Deposits',
             'type'          => 'liability',
             'sub_type'      => null,

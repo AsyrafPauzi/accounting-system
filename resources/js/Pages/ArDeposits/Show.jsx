@@ -79,7 +79,7 @@ export default function Show({ auth, deposit, openInvoices = [], company = {} })
                             <p className={`mt-1 text-3xl font-display font-medium tabular-nums ${open > 0 ? 'text-terracotta' : 'text-forest'}`}>
                                 {formatCurrency(open, currency)}
                             </p>
-                            <p className="mt-1 text-xs text-ink-muted">of {formatCurrency(deposit.amount, currency)} received · account 2200</p>
+                            <p className="mt-1 text-xs text-ink-muted">of {formatCurrency(deposit.amount, currency)} received · account 2250</p>
                         </div>
                         <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm p-4 space-y-2">
                             {canEmail && (

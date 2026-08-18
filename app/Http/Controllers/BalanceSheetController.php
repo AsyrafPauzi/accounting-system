@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\ReportPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -15,7 +16,11 @@ class BalanceSheetController extends Controller
      */
     public function index(Request $request): Response
     {
-        $asAtDate = $request->input('as_at_date', now()->format('Y-m-d'));
+        $resolved = ReportPeriod::asOf(
+            $request->input('preset'),
+            $request->input('as_at_date')
+        );
+        $asAtDate = $resolved['as_of'];
 
         $rows = DB::table('journal_items')
             ->join('journal_entries', 'journal_items.journal_entry_id', '=', 'journal_entries.id')
@@ -77,6 +82,7 @@ class BalanceSheetController extends Controller
             'total_liabilities_and_equity' => round($totalLiabilitiesAndEquity, 2),
             'balanced' => $balanced,
             'filters' => [
+                'preset' => $resolved['preset'],
                 'as_at_date' => $asAtDate,
             ],
         ]);
@@ -144,7 +150,11 @@ class BalanceSheetController extends Controller
 
     public function exportCsv(Request $request): StreamedResponse
     {
-        $asAtDate = $request->input('as_at_date', now()->format('Y-m-d'));
+        $resolved = ReportPeriod::asOf(
+            $request->input('preset'),
+            $request->input('as_at_date')
+        );
+        $asAtDate = $resolved['as_of'];
         $data = $this->buildBalanceSheetData($asAtDate);
 
         $filename = 'balance-sheet-as-at-' . $asAtDate . '.csv';
@@ -175,7 +185,11 @@ class BalanceSheetController extends Controller
 
     public function exportPdf(Request $request)
     {
-        $asAtDate = $request->input('as_at_date', now()->format('Y-m-d'));
+        $resolved = ReportPeriod::asOf(
+            $request->input('preset'),
+            $request->input('as_at_date')
+        );
+        $asAtDate = $resolved['as_of'];
         $data = $this->buildBalanceSheetData($asAtDate);
         $company = $this->reportCompany();
 

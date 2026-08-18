@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use Carbon\Carbon;
+use App\Support\ReportPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -28,8 +28,13 @@ class PurchasesByVendorController extends Controller
             'end_date'   => 'nullable|date|after_or_equal:start_date',
         ]);
 
-        $start = Carbon::parse($request->input('start_date', now()->startOfYear()->toDateString()))->toDateString();
-        $end = Carbon::parse($request->input('end_date', now()->toDateString()))->toDateString();
+        $resolved = ReportPeriod::range(
+            $request->input('preset'),
+            $request->input('start_date'),
+            $request->input('end_date')
+        );
+        $start = $resolved['date_from'];
+        $end = $resolved['date_to'];
 
         $rows = DB::table('bills as b')
             ->leftJoin('suppliers as s', 's.id', '=', 'b.supplier_id')
@@ -68,7 +73,7 @@ class PurchasesByVendorController extends Controller
         ];
 
         return Inertia::render('Reports/PurchasesByVendor', [
-            'filters'       => ['start_date' => $start, 'end_date' => $end],
+            'filters'       => ['preset' => $resolved['preset'], 'start_date' => $start, 'end_date' => $end],
             'rows'          => $rows,
             'totals'        => $totals,
             'base_currency' => $this->tenantBaseCurrency(),

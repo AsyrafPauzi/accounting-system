@@ -13,13 +13,6 @@ function formatMoney(n) {
 }
 
 export default function Show({ auth, entry = {}, items = [], accountsMap = {} }) {
-    const getSourceLabel = () => {
-        if (entry.reference_type === 'Invoice' || entry.reference_type === 'Invoice Payment') return 'View Invoice';
-        if (entry.reference_type === 'Credit Note') return 'View Credit Note';
-        if (entry.reference_type === 'Bill' || entry.reference_type === 'Bill Payment') return 'View Bill';
-        return null;
-    };
-
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -68,7 +61,7 @@ export default function Show({ auth, entry = {}, items = [], accountsMap = {} })
                             <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Source document</p>
                             {entry.source_route ? (
                                 <a href={entry.source_route} className="text-terracotta hover:text-terracotta font-semibold text-sm">
-                                    {getSourceLabel()}
+                                    {entry.source_label || entry.reference_type}
                                 </a>
                             ) : (
                                 <span className="text-ink-muted">—</span>
@@ -94,7 +87,14 @@ export default function Show({ auth, entry = {}, items = [], accountsMap = {} })
                             <tbody>
                                 {items.map((line) => (
                                     <tr key={line.id} className="border-b border-border-warm last:border-0 hover:bg-cream/80">
-                                        <td className="px-6 py-4 font-mono font-semibold text-ink">{line.account_code}</td>
+                                        <td className="px-6 py-4 font-mono font-semibold text-ink">
+                                            <Link
+                                                href={route('general-ledger.report', { account_code: line.account_code, from: 'gl' })}
+                                                className="text-terracotta hover:text-terracotta"
+                                            >
+                                                {line.account_code}
+                                            </Link>
+                                        </td>
                                         <td className="px-6 py-4 text-ink">{accountsMap[line.account_code] || '—'}</td>
                                         <td className="px-6 py-4 text-right font-mono tabular-nums text-ink">
                                             {line.debit > 0 ? `RM ${formatMoney(line.debit)}` : '—'}

@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\FirmClient;
 use App\Models\Tenant;
+use App\Support\DefaultChartOfAccountsSeeder;
 use App\Support\Deployment;
 use Closure;
 use Illuminate\Http\Request;
@@ -44,7 +45,7 @@ class InitializeTenancyByLoggedInUser
             if ($tenant) {
                 tenancy()->initialize($tenant);
             }
-            return $next($request);
+            return $this->finish($request, $next);
         }
 
         // 1. Public customer-facing links (PDF, tracking pixel, Pay Now return)
@@ -54,12 +55,12 @@ class InitializeTenancyByLoggedInUser
             $tenant = Tenant::find($request->input('tenant_id'));
             if ($tenant) {
                 tenancy()->initialize($tenant);
-                return $next($request);
+                return $this->finish($request, $next);
             }
         }
 
         if (! auth()->check()) {
-            return $next($request);
+            return $this->finish($request, $next);
         }
 
         $user = auth()->user();
@@ -87,7 +88,7 @@ class InitializeTenancyByLoggedInUser
                     $request->session()->forget('acting_tenant_id');
                 }
             }
-            return $next($request);
+            return $this->finish($request, $next);
         }
 
         // 3. Regular SME tenant user
@@ -98,6 +99,40 @@ class InitializeTenancyByLoggedInUser
             }
         }
 
+        return $this->finish($request, $next);
+    }
+
+    private function finish(Request $request, Closure $next): Response
+    {
+        if (tenancy()->initialized && auth()->check()) {
+            $this->ensureDefaultChartOfAccounts($request);
+        }
+
         return $next($request);
+    }
+
+    /**
+     * Backfill the default chart once per session per tenant so every
+     * login gets a usable COA without manual "seed" clicks.
+     */
+    private function ensureDefaultChartOfAccounts(Request $request): void
+    {
+        $tenantId = tenant('id');
+        if (! $tenantId) {
+            return;
+        }
+
+        $sessionKey = "default_coa_ensured_{$tenantId}";
+        if ($request->session()->get($sessionKey)) {
+            return;
+        }
+
+        try {
+            DefaultChartOfAccountsSeeder::seedMissing();
+        } catch (\Throwable) {
+            return;
+        }
+
+        $request->session()->put($sessionKey, true);
     }
 }

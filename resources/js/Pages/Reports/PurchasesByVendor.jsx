@@ -2,9 +2,10 @@ import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 import { formatCurrency } from '@/utils/currency';
+import ReportPeriodChips from '@/Components/ReportPeriodChips';
 
 export default function PurchasesByVendor({ auth, filters = {}, rows = [], totals = {}, base_currency = 'MYR' }) {
-    const { start_date = '', end_date = '' } = filters;
+    const { preset = 'custom', start_date = '', end_date = '' } = filters;
 
     return (
         <AuthenticatedLayout
@@ -22,17 +23,14 @@ export default function PurchasesByVendor({ auth, filters = {}, rows = [], total
             <div className="space-y-6">
                 <div className="bg-surface rounded-2xl border border-border-warm shadow-sm">
                     <div className="px-6 py-4 border-b border-border-warm bg-cream/50">
-                        <form method="get" action={route('reports.purchases-by-vendor.index')} className="flex flex-wrap items-end gap-3">
-                            <div>
-                                <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">From</label>
-                                <input type="date" name="start_date" defaultValue={start_date} className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta" />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1">To</label>
-                                <input type="date" name="end_date" defaultValue={end_date} className="border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta" />
-                            </div>
-                            <button type="submit" className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta-dark transition-colors">Update report</button>
-                        </form>
+                        <ReportPeriodChips
+                            action={route('reports.purchases-by-vendor.index')}
+                            preset={preset}
+                            fromKey="start_date"
+                            toKey="end_date"
+                            dateFrom={start_date}
+                            dateTo={end_date}
+                        />
                     </div>
                 </div>
 

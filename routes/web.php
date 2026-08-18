@@ -22,6 +22,7 @@ use App\Http\Controllers\BalanceSheetController;
 use App\Http\Controllers\CashflowSummaryController;
 use App\Http\Controllers\AgedReceivablesController;
 use App\Http\Controllers\JournalController;
+use App\Http\Controllers\PayrollRemittanceController;
 use App\Http\Controllers\ReportsHubController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -724,10 +725,19 @@ Route::middleware(['auth'])->group(function () {
     // permission as well as the role-based `journal.create` (a payroll run
     // posts a manual journal under the hood, so the role still applies).
     Route::middleware(['permission:journal.create', 'plan.permission:payroll.run'])->group(function () {
+        Route::get('/payroll/batch', [\App\Http\Controllers\PayrollController::class, 'batchCreate'])->name('payroll.batch');
+        Route::post('/payroll/batch', [\App\Http\Controllers\PayrollController::class, 'batchStore'])
+            ->middleware('throttle:creation')
+            ->name('payroll.batch.store');
         Route::get('/payroll', [\App\Http\Controllers\PayrollController::class, 'create'])->name('payroll.create');
         Route::post('/payroll', [\App\Http\Controllers\PayrollController::class, 'store'])
             ->middleware('throttle:creation')
             ->name('payroll.store');
+    });
+
+    Route::middleware(['permission:journal.create', 'plan.permission:payroll.run'])->group(function () {
+        Route::get('/reports/payroll-remittance', [PayrollRemittanceController::class, 'index'])
+            ->name('reports.payroll-remittance');
     });
 
     // --- Reports Hub ---
@@ -741,7 +751,8 @@ Route::middleware(['auth'])->group(function () {
     });
 
     Route::middleware(['permission:reports.sales', 'plan.permission:reports.sales'])->group(function () {
-        Route::get('/reports/sales', [\App\Http\Controllers\SalesReportController::class, 'index'])->name('reports.sales.index');
+        Route::get('/reports/sales', fn () => redirect()->route('reports.income-by-customer.index'))
+            ->name('reports.sales.index');
     });
 
     Route::middleware(['permission:reports.balance-sheet', 'plan.permission:reports.balance-sheet'])->group(function () {
@@ -760,6 +771,12 @@ Route::middleware(['auth'])->group(function () {
     // --- Sales Tax Report (output vs input tax) ---
     Route::middleware(['permission:reports.sales-tax', 'plan.permission:reports.sales-tax'])->group(function () {
         Route::get('/reports/sales-tax', [\App\Http\Controllers\SalesTaxReportController::class, 'index'])->name('reports.sales-tax.index');
+        Route::middleware('permission:reports.export.limited|reports.export.full')->group(function () {
+            Route::get('/reports/sales-tax/export/csv', [\App\Http\Controllers\SalesTaxReportController::class, 'exportCsv'])->name('reports.sales-tax.export.csv');
+        });
+        Route::middleware('permission:reports.export.full')->group(function () {
+            Route::get('/reports/sales-tax/export/pdf', [\App\Http\Controllers\SalesTaxReportController::class, 'exportPdf'])->name('reports.sales-tax.export.pdf');
+        });
     });
 
     // --- Income by Customer (paid vs unpaid breakdown) ---

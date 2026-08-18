@@ -90,7 +90,7 @@ const navConfig = [
         { name: 'Trial Balance', route: 'trial-balance.index', Icon: Icons.Scale, planPermission: 'general-ledger.view', userPermission: 'general-ledger.view', subtitle: 'Verify account balances' },
     ]},
     { group: 'Reports', links: [
-        { name: 'Reports', route: 'reports.index', Icon: Icons.ChartPie, planPermission: 'reports.view', userPermission: 'reports.view', subtitle: 'Financial statements & analysis', activeRoutes: ['reports.index', 'general-ledger.report', 'profit-and-loss.index', 'reports.sales.index', 'balance-sheet.index', 'cashflow-summary.index', 'aged-receivables.index', 'reports.sales-tax.index', 'reports.income-by-customer.index', 'reports.customer-credits.index', 'reports.purchases-by-vendor.index'] },
+        { name: 'Reports', route: 'reports.index', Icon: Icons.ChartPie, planPermission: 'reports.view', userPermission: 'reports.view', subtitle: 'Financial statements & analysis', activeRoutes: ['reports.index', 'general-ledger.index', 'general-ledger.report', 'trial-balance.index', 'profit-and-loss.index', 'reports.sales.index', 'balance-sheet.index', 'cashflow-summary.index', 'aged-receivables.index', 'accounts-payable.index', 'reports.sales-tax.index', 'reports.payroll-remittance', 'reports.income-by-customer.index', 'reports.customer-credits.index', 'reports.purchases-by-vendor.index'] },
     ]},
 ];
 
@@ -197,8 +197,10 @@ export default function Authenticated({ user: propUser, header, children }) {
     // when `email_verified_at` is set but `welcomed_at` is still null.
     // Suppress while impersonating: the welcome message would say "Hi
     // <impersonated user>" which is the wrong UX for an admin debugging.
+    // Super-admins also skip it — the copy is SME onboarding, not the
+    // platform console.
     const [welcomeOpen, setWelcomeOpen] = useState(
-        Boolean(user?.email_verified_at) && !user?.welcomed_at && !isImpersonating
+        Boolean(user?.email_verified_at) && !user?.welcomed_at && !isImpersonating && !isAdmin
     );
 
     // Verify-email reminder. Mutually exclusive with the welcome modal:

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Account;
 use App\Models\JournalItem;
+use App\Support\ReportPeriod;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -18,7 +19,11 @@ class TrialBalanceController extends Controller
     {
         $this->authorize('general-ledger.view');
 
-        $asOfDate = $request->input('as_of_date', now()->format('Y-m-d'));
+        $resolved = ReportPeriod::asOf(
+            $request->input('preset'),
+            $request->input('as_of_date')
+        );
+        $asOfDate = $resolved['as_of'];
 
         // Calculate balances per account up to the specified date
         $balances = JournalItem::query()
@@ -80,6 +85,7 @@ class TrialBalanceController extends Controller
                 'difference' => round(abs($totalDebit - $totalCredit), 2),
             ],
             'filters' => [
+                'preset' => $resolved['preset'],
                 'as_of_date' => $asOfDate,
             ],
         ]);
