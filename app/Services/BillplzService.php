@@ -31,10 +31,37 @@ class BillplzService
         return new self($secret, $tenant->billplz_collection_id, $base, $xsig);
     }
 
+    public static function forPlatform(): ?self
+    {
+        $secret = (string) (config('services.billplz.secret_key') ?? '');
+        $collection = (string) (config('services.billplz.collection_id') ?? '');
+        if ($secret === '' || $collection === '') {
+            return null;
+        }
+        $sandbox = (bool) config('services.billplz.sandbox', true);
+        $base = $sandbox
+            ? 'https://www.billplz-sandbox.com/api'
+            : 'https://www.billplz.com/api';
+        $xsig = config('services.billplz.xsignature_key');
+
+        return new self($secret, $collection, $base, filled($xsig) ? (string) $xsig : null);
+    }
+
     /**
      * @param  array{description: string, email: string, name: string, amount: float, callback_url: string, redirect_url: string, reference: string}  $data
      */
     public function createBill(array $data): ?string
+    {
+        $detailed = $this->createBillDetailed($data);
+
+        return $detailed['url'] ?? null;
+    }
+
+    /**
+     * @param  array{description:string,email:string,name:string,amount:float,callback_url:string,redirect_url:string,reference:string}  $data
+     * @return array{id:string,url:string}|null
+     */
+    public function createBillDetailed(array $data): ?array
     {
         $response = Http::withBasicAuth($this->secretKey, '')
             ->asForm()
@@ -56,9 +83,15 @@ class BillplzService
             return null;
         }
 
-        $url = $response->json('url');
+        $json = $response->json();
+        $id = is_array($json) ? ($json['id'] ?? null) : null;
+        $url = is_array($json) ? ($json['url'] ?? null) : null;
 
-        return is_string($url) && $url !== '' ? $url : null;
+        if (! is_string($id) || $id === '' || ! is_string($url) || $url === '') {
+            return null;
+        }
+
+        return ['id' => $id, 'url' => $url];
     }
 
     public function callbackIsPaid(array $payload): bool

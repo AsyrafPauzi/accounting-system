@@ -4,8 +4,10 @@ namespace App\Models;
 
 use App\Models\Concerns\Auditable;
 use App\Models\Concerns\BelongsToTenant;
+use App\Support\SubscriptionPeriod;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Stancl\Tenancy\Database\Concerns\CentralConnection;
 
 class Subscription extends Model
@@ -69,19 +71,36 @@ class Subscription extends Model
         return ! empty($this->pending_plan_id);
     }
 
+    public function renewals(): HasMany
+    {
+        return $this->hasMany(SubscriptionRenewal::class);
+    }
+
     public function scopeActive(Builder $query): Builder
     {
-        return $query->whereIn('status', ['active', 'trialing'])
+        // past_due rows stay in the active set until subscription:expire
+        // flips them to expired; isActive() still enforces the grace window.
+        return $query->whereIn('status', ['active', 'trialing', 'past_due'])
             ->where(function ($q) {
                 $q->whereNull('current_period_ends_at')
-                  ->orWhereDate('current_period_ends_at', '>=', now()->toDateString());
+                    ->orWhereDate('current_period_ends_at', '>=', now()->toDateString())
+                    ->orWhere('status', 'past_due');
             });
     }
 
     public function isActive(): bool
     {
-        if (! in_array($this->status, ['active', 'trialing'], true)) {
+        if (! in_array($this->status, ['active', 'trialing', 'past_due'], true)) {
             return false;
+        }
+
+        if ($this->status === 'past_due') {
+            $ends = $this->current_period_ends_at?->toDateString();
+            if (! $ends) {
+                return true;
+            }
+
+            return SubscriptionPeriod::graceDeadline($ends) >= now()->toDateString();
         }
 
         if ($this->current_period_ends_at === null) {

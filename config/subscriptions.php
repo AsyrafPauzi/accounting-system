@@ -38,4 +38,7 @@ return [
      * `plans` with price_monthly = 0.
      */
     'trial_fallback_slug' => env('SUBSCRIPTION_TRIAL_FALLBACK_SLUG', 'startup'),
+
+    'renewal_lead_days' => (int) env('SUBSCRIPTION_RENEWAL_LEAD_DAYS', 7),
+    'grace_days' => (int) env('SUBSCRIPTION_GRACE_DAYS', 7),
 ];

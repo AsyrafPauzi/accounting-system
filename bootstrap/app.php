@@ -38,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // on the gateway-issued bill code as the authentication signal.
         $middleware->validateCsrfTokens(except: [
             '/subscription/webhook',
+            '/subscription/webhook/billplz',
             '/subscription/webhook/extra-user',
             '/subscription/webhook/copilot-credits',
             '/pay/toyyibpay/callback',

@@ -57,6 +57,20 @@ return [
             'env'           => env('TOYYIBPAY_ENV', 'sandbox'),
         ],
 
+    'billplz' => env('APP_DEPLOYMENT_MODE', 'saas') === 'self_hosted'
+        ? [
+            'secret_key' => null,
+            'collection_id' => null,
+            'xsignature_key' => null,
+            'sandbox' => true,
+        ]
+        : [
+            'secret_key' => env('BILLPLZ_SECRET_KEY'),
+            'collection_id' => env('BILLPLZ_COLLECTION_ID'),
+            'xsignature_key' => env('BILLPLZ_XSIGNATURE_KEY'),
+            'sandbox' => filter_var(env('BILLPLZ_SANDBOX', true), FILTER_VALIDATE_BOOLEAN),
+        ],
+
     'commercepay' => [
         'staging_url'    => env('COMMERCEPAY_STAGING_URL', 'https://staging-payments.commerce.asia'),
         'production_url' => env('COMMERCEPAY_PRODUCTION_URL', 'https://payments.commerce.asia'),

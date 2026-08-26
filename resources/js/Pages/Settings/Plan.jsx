@@ -2,10 +2,11 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import BillingHistory from '@/Components/BillingHistory';
 
-export default function PlanSettings({ auth, subscription, userCount, history = [], copilotCredits = null }) {
+export default function PlanSettings({ auth, subscription, userCount, history = [], copilotCredits = null, renewal = null }) {
     const plan = subscription?.plan;
     const isCorporate = plan?.slug === 'corporate';
     const isTrialing = subscription?.status === 'trialing';
+    const isPastDue = subscription?.status === 'past_due';
     const pendingPlan = subscription?.pending_plan;
     const trialEndsAt = subscription?.current_period_ends_at;
     // Inclusive day count: a trial that ends today reads "0 days left",
@@ -54,6 +55,34 @@ export default function PlanSettings({ auth, subscription, userCount, history = 
             <Head title="Plan & Usage" />
 
             <div className="max-w-5xl space-y-8">
+                {(isPastDue || renewal?.payment_url) && (
+                    <div className="bg-terracotta/10 border border-terracotta/40 rounded-2xl px-6 py-4 text-sm text-ink flex items-center justify-between flex-wrap gap-3">
+                        <div>
+                            <p className="font-semibold text-terracotta">
+                                {isPastDue
+                                    ? 'Payment overdue — renew to keep your plan.'
+                                    : 'Your renewal payment is due.'}
+                            </p>
+                            <p className="mt-0.5 text-ink-muted">
+                                {renewal?.grace_ends_at
+                                    ? `Pay by ${new Date(renewal.grace_ends_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })} to keep ${plan?.name || 'your subscription'}.`
+                                    : `Complete payment to keep ${plan?.name || 'your subscription'} active.`}
+                                {renewal?.amount != null ? ` Amount: RM ${Number(renewal.amount).toFixed(2)}.` : ''}
+                            </p>
+                        </div>
+                        {renewal?.payment_url && (
+                            <a
+                                href={renewal.payment_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-4 py-1.5 rounded-lg bg-terracotta text-white text-eyebrow font-semibold uppercase hover:bg-terracotta-dark transition-colors"
+                            >
+                                Pay now
+                            </a>
+                        )}
+                    </div>
+                )}
+
                 {/* Trial banner — visible whenever the subscription is in
                     `trialing` status. It's the same shape as the existing
                     "scheduled change" banner on Subscription/Index, but
