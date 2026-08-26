@@ -4,8 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Models\SubscriptionRenewal;
 use App\Services\BillingHistoryService;
+use App\Services\BillplzService;
+use App\Services\SubscriptionRenewalService;
 use App\Services\ToyyibpayService;
+use App\Support\SubscriptionPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -328,6 +332,30 @@ class SubscriptionController extends Controller
         return response('OK');
     }
 
+    public function webhookBillplz(Request $request)
+    {
+        Log::info('Billplz subscription renewal webhook', $request->except(['x_signature']));
+
+        $billplz = BillplzService::forPlatform();
+        if (! $billplz || ! $billplz->callbackIsPaid($request->all())) {
+            return response('ignored', 200);
+        }
+
+        $billId = (string) $request->input('id');
+        if ($billId === '') {
+            return response('missing id', 200);
+        }
+
+        $renewal = SubscriptionRenewal::where('gateway_bill_id', $billId)->first();
+        if (! $renewal) {
+            return response('not found', 200);
+        }
+
+        app(SubscriptionRenewalService::class)->markPaid($renewal);
+
+        return response('OK');
+    }
+
     public function webhookExtraUser(Request $request)
     {
         // Toyyibpay payload is form-encoded; we redact the bill code on log
@@ -478,6 +506,28 @@ class SubscriptionController extends Controller
             ->first();
         $userCount = \App\Models\User::where('tenant_id', $tenantId)->count();
 
+        $pendingRenewal = null;
+        if ($subscription) {
+            $row = SubscriptionRenewal::query()
+                ->where('subscription_id', $subscription->id)
+                ->where('status', 'pending')
+                ->latest('id')
+                ->first();
+            if ($row) {
+                $periodEnd = $subscription->current_period_ends_at?->toDateString();
+                $pendingRenewal = [
+                    'status' => $row->status,
+                    'payment_url' => $row->payment_url,
+                    'amount' => (float) $row->amount,
+                    'due_at' => $row->due_at?->toDateString(),
+                    'period_end' => $row->period_end?->toDateString(),
+                    'grace_ends_at' => $periodEnd
+                        ? SubscriptionPeriod::graceDeadline($periodEnd)
+                        : null,
+                ];
+            }
+        }
+
         return Inertia::render('Settings/Plan', [
             'subscription' => $subscription,
             'userCount' => $userCount,
@@ -485,6 +535,7 @@ class SubscriptionController extends Controller
             'copilotCredits' => app(\App\Services\Copilot\CopilotCreditService::class)->snapshot(
                 \App\Models\Tenant::find($tenantId)
             ),
+            'renewal' => $pendingRenewal,
         ]);
     }
 

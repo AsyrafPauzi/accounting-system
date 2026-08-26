@@ -58,6 +58,7 @@ Route::get('/public/estimates/{uuid}/download', [\App\Http\Controllers\EstimateC
 
 // --- Toyyibpay Webhook (Server-to-Server) ---
 Route::post('/subscription/webhook', [SubscriptionController::class, 'webhook'])->name('subscription.webhook');
+Route::post('/subscription/webhook/billplz', [SubscriptionController::class, 'webhookBillplz'])->name('subscription.webhook.billplz');
 Route::post('/subscription/webhook/extra-user', [SubscriptionController::class, 'webhookExtraUser'])->name('subscription.webhook.extra_user');
 Route::post('/subscription/webhook/copilot-credits', [SubscriptionController::class, 'webhookCopilotCredits'])->name('subscription.webhook.copilot_credits');
 Route::post('/pay/toyyibpay/callback', [InvoiceController::class, 'toyyibpayCallback'])->name('pay.toyyibpay.callback');

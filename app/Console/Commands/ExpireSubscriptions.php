@@ -3,39 +3,41 @@
 namespace App\Console\Commands;
 
 use App\Models\Subscription;
+use App\Support\SubscriptionPeriod;
 use Illuminate\Console\Command;
 
 class ExpireSubscriptions extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'subscription:expire';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Mark active subscriptions as expired when their current period has ended';
+    protected $description = 'Mark subscriptions past_due after period end, then expired after grace';
 
-    /**
-     * Execute the console command.
-     */
     public function handle(): int
     {
         $today = now()->toDateString();
+        $pastDue = 0;
+        $expired = 0;
 
-        $count = Subscription::where('status', 'active')
+        Subscription::query()
+            ->whereIn('status', ['active', 'past_due'])
             ->whereNotNull('current_period_ends_at')
-            ->where('current_period_ends_at', '<', $today)
-            ->update(['status' => 'expired']);
+            ->orderBy('id')
+            ->chunkById(100, function ($subs) use ($today, &$pastDue, &$expired) {
+                foreach ($subs as $sub) {
+                    $ends = $sub->current_period_ends_at?->toDateString();
+                    $action = SubscriptionPeriod::expireAction($sub->status, $ends, $today);
+                    if ($action === 'past_due') {
+                        $sub->update(['status' => 'past_due']);
+                        $pastDue++;
+                    } elseif ($action === 'expired') {
+                        $sub->update(['status' => 'expired']);
+                        $expired++;
+                    }
+                }
+            });
 
-        $this->info("Expired {$count} subscription(s).");
+        $this->info("Marked {$pastDue} past_due; expired {$expired} subscription(s).");
 
         return self::SUCCESS;
     }
 }
-

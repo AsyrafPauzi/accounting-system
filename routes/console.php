@@ -47,6 +47,15 @@ Schedule::command('statements:send-monthly')
     ->appendOutputTo(storage_path('logs/monthly-statements.log'));
 
 /*
+ * Daily 01:45 — create Billplz payment-link renewals for monthly/yearly
+ * subscriptions entering the lead window (or already past period end).
+ */
+Schedule::command('subscription:issue-renewals')
+    ->dailyAt('01:45')
+    ->onOneServer()
+    ->appendOutputTo(storage_path('logs/subscription-renewals.log'));
+
+/*
  * Daily 02:00 — flip any subscription whose current period has ended and has
  * a queued downgrade (`pending_plan_id`) onto the new plan. Runs *before*
  * subscription:expire so the pending plan isn't lost when the row would
