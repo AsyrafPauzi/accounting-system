@@ -203,7 +203,7 @@ export default function SubscriptionIndex({ auth, plans = [], currentSubscriptio
                         />
                         <FAQRow
                             question="Do you support SST and LHDN e-Invoice?"
-                            answer="SST is built into invoicing and reports across every paid plan. LHDN MyInvois e-Invoicing is included on Corporate and Enterprise."
+                            answer="SST is built into invoicing and reports across every paid plan. LHDN MyInvois e-Invoicing is included on Growth and above."
                         />
                     </div>
                 </section>

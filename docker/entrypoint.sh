@@ -27,7 +27,10 @@ echo "[entrypoint] database reachable."
 # Run migrations + link storage + warm caches. These are all
 # idempotent so re-running on every boot is a feature, not a bug.
 php artisan migrate --force --no-interaction --isolated
-php artisan tenants:migrate --force --isolated
+if [ "${RUN_TENANT_MIGRATE:-0}" = "1" ]; then
+    echo "[entrypoint] RUN_TENANT_MIGRATE=1 — running tenants:migrate…"
+    php artisan tenants:migrate --force --isolated
+fi
 php artisan app:sync-roles-permissions
 php artisan app:sync-plans
 php artisan storage:link || true

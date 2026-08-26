@@ -24,6 +24,9 @@ export default function Consolidated({ auth, invoices = [], batches = [], gaps =
         >
             <Head title="Consolidated e-invoice" />
             {gaps.length > 0 && <p className="text-sm text-terracotta mb-4">Complete MyInvois profile first: {gaps.join(', ')}</p>}
+            <div className="flex gap-2 text-sm mb-4">
+                <Link href={route('myinvois.submissions.index')} className="text-terracotta font-semibold hover:underline">Submission vault</Link>
+            </div>
             <form className="space-y-4 max-w-3xl" onSubmit={(e) => { e.preventDefault(); post(route('myinvois.consolidated.store')); }}>
                 <p className="text-sm text-ink-muted">Bundle posted invoices that have not been submitted individually.</p>
                 <div className="grid grid-cols-2 gap-3">

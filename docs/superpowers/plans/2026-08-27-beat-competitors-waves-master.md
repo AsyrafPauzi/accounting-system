@@ -69,11 +69,12 @@ Do **not** ship inventory, POS, fixed assets, or more Copilot tools until:
 
 ---
 
-## Wave 3 — Bukku deal-breakers + firm moat (days 46–90)
+## Wave 3 — Bukku deal-breakers + firm moat (days 46–90) ✅ Signed off 2026-08-27
 
 **Goal:** Honest claim: “better than Bukku for firms, better than Wave for Malaysian SMEs.”
 
-**Detailed plan:** [`2026-08-27-wave-3-bukku-parity-practice-moat.md`](./2026-08-27-wave-3-bukku-parity-practice-moat.md)
+**Detailed plan:** [`2026-08-27-wave-3-bukku-parity-practice-moat.md`](./2026-08-27-wave-3-bukku-parity-practice-moat.md)  
+**Tests:** **409 passed** — bank rec, SST-02, receipt inbox, close pack, MyInvois vault, async provision
 
 | # | Deliverable | Beats |
 |---|---|---|
@@ -161,8 +162,9 @@ Wave 2 #11 (HTML invoice) blocks Wave 4 #26 (portal).
 
 1. ~~Wave 1~~ ✅ — [`2026-08-27-wave-1-trust-foundation.md`](./2026-08-27-wave-1-trust-foundation.md)
 2. ~~Wave 2~~ ✅ — [`2026-08-27-wave-2-accountant-wave-simplicity.md`](./2026-08-27-wave-2-accountant-wave-simplicity.md)
-3. **Now:** Wave 3 — [`2026-08-27-wave-3-bukku-parity-practice-moat.md`](./2026-08-27-wave-3-bukku-parity-practice-moat.md) — start with Task 0 (tax-code finish) then Task 1 (ops scale)
-4. Do not start Wave 4 until Wave 3 exit checklist signed off
+3. ~~Wave 3~~ ✅ — [`2026-08-27-wave-3-bukku-parity-practice-moat.md`](./2026-08-27-wave-3-bukku-parity-practice-moat.md)
+4. **Now:** Wave 4 — inventory lite, fixed assets, FX, portal (plan TBD)
+5. Do not start Wave 4 until Wave 3 exit checklist signed off ✅
 
 ---
 

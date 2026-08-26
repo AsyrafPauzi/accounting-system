@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Bill;
+use App\Models\OcrJob;
 use App\Services\OCRService;
 use App\Support\OcrResultCache;
 use Illuminate\Bus\Queueable;
@@ -21,7 +22,8 @@ class ProcessOcr implements ShouldQueue
      */
     public function __construct(
         public string $path,
-        public ?int $billId = null
+        public ?int $billId = null,
+        public ?int $ocrJobId = null,
     ) {}
 
     /**
@@ -32,14 +34,28 @@ class ProcessOcr implements ShouldQueue
         Log::info('[OCR/Job] Starting background text extraction', [
             'path' => $this->path,
             'bill_id' => $this->billId,
+            'ocr_job_id' => $this->ocrJobId,
+        ]);
+
+        $ocrJob = $this->resolveOcrJob();
+        $ocrJob->update([
+            'status' => 'processing',
+            'error_message' => null,
         ]);
 
         $ocrResult = $ocrService->process($this->path);
+        $success = ($ocrResult['status'] ?? null) === 'success';
+
+        $ocrJob->update([
+            'status' => $success ? 'ready' : 'failed',
+            'parsed_data' => $ocrResult['data'] ?? null,
+            'error_message' => $success ? null : ($ocrResult['error'] ?? 'OCR extraction failed.'),
+        ]);
 
         if ($this->billId) {
             $bill = Bill::find($this->billId);
             if ($bill) {
-                $status = ($ocrResult['status'] ?? null) === 'success' ? 'completed' : 'failed';
+                $status = $success ? 'completed' : 'failed';
                 $bill->update([
                     'ocr_status' => $status,
                     'ocr_data' => $ocrResult['data'] ?? null,
@@ -56,6 +72,8 @@ class ProcessOcr implements ShouldQueue
 
         Log::info('[OCR/Job] Background text extraction completed', [
             'path' => $this->path,
+            'ocr_job_id' => $ocrJob->id,
+            'status' => $ocrJob->status,
         ]);
     }
 
@@ -67,8 +85,16 @@ class ProcessOcr implements ShouldQueue
         Log::error('[OCR/Job] Background OCR job failed', [
             'path' => $this->path,
             'bill_id' => $this->billId,
+            'ocr_job_id' => $this->ocrJobId,
             'error' => $exception->getMessage(),
         ]);
+
+        if ($ocrJob = $this->findOcrJob()) {
+            $ocrJob->update([
+                'status' => 'failed',
+                'error_message' => 'OCR background processing failed: '.$exception->getMessage(),
+            ]);
+        }
 
         if ($this->billId) {
             if ($bill = Bill::find($this->billId)) {
@@ -79,8 +105,33 @@ class ProcessOcr implements ShouldQueue
         $failedResult = [
             'status' => 'failed',
             'data' => null,
-            'error' => 'OCR background processing failed: ' . $exception->getMessage(),
+            'error' => 'OCR background processing failed: '.$exception->getMessage(),
         ];
         OcrResultCache::put($this->path, $failedResult);
+    }
+
+    private function resolveOcrJob(): OcrJob
+    {
+        if ($job = $this->findOcrJob()) {
+            return $job;
+        }
+
+        return OcrJob::create([
+            'file_path' => $this->path,
+            'status' => 'pending',
+        ]);
+    }
+
+    private function findOcrJob(): ?OcrJob
+    {
+        if ($this->ocrJobId) {
+            return OcrJob::find($this->ocrJobId);
+        }
+
+        return OcrJob::query()
+            ->where('file_path', $this->path)
+            ->whereNotIn('status', ['confirmed', 'discarded'])
+            ->latest('id')
+            ->first();
     }
 }

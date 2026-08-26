@@ -12,13 +12,30 @@ use Stancl\Tenancy\Database\Concerns\HasDomains;
 class Tenant extends BaseTenant implements TenantWithDatabase
 {
     use HasDatabase, CentralConnection, Auditable, HasDomains;
-    
 
+    protected $fillable = [
+        'id',
+        'provision_status',
+        'provision_error',
+        'provisioned_at',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'provisioned_at' => 'datetime',
+        ];
+    }
 
     // This makes sure the database name is based on the company ID
     public static function getCustomColumns(): array
     {
-        return ['id'];
+        return [
+            'id',
+            'provision_status',
+            'provision_error',
+            'provisioned_at',
+        ];
     }
 
     public function subscription()

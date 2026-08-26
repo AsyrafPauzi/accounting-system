@@ -20,7 +20,8 @@ final class OnboardingChecklist
 
         $progress = [];
         if (\Illuminate\Support\Facades\Schema::connection($user->getConnectionName())->hasColumn('users', 'onboarding_steps')) {
-            $progress = is_array($user->onboarding_steps) ? $user->onboarding_steps : [];
+            $raw = $user->getAttributes()['onboarding_steps'] ?? null;
+            $progress = is_array($raw) ? $raw : (is_string($raw) ? (json_decode($raw, true) ?: []) : []);
         }
         if (! empty($progress['dismissed_at'])) {
             return self::empty();

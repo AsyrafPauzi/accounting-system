@@ -17,6 +17,7 @@ class InvoicePayment extends Model
         'payment_date',
         'bank_account_code',
         'reference',
+        'receipt_number',
         'created_by',
         'reversed_at',
         'reversed_by',

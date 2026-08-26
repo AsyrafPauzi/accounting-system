@@ -175,10 +175,11 @@ class PlanPermissionAlignmentTest extends TestCase
         // "Sales tax & ageing reports"
         $this->assertContains('reports.sales-tax', $perms);
         $this->assertContains('reports.aged-reports', $perms);
+        // "LHDN MyInvois e-Invoicing" — Growth packaging win over Bukku
+        $this->assertContains('myinvois.submit', $perms);
 
         // Growth does NOT grant Corporate-tier bullets
         $this->assertNotContains('payroll.run', $perms, 'Payroll is a Corporate bullet');
-        $this->assertNotContains('myinvois.submit', $perms, 'MyInvois is a Corporate bullet');
         $this->assertNotContains('audit-logs.view', $perms, 'Audit log is a Corporate bullet');
     }
 
@@ -205,7 +206,7 @@ class PlanPermissionAlignmentTest extends TestCase
         $this->assertContains('audit-logs.view', $perms);
         // "Payroll module"
         $this->assertContains('payroll.run', $perms);
-        // "LHDN MyInvois e-Invoicing — coming soon" (gate exists, controller doesn't)
+        // MyInvois inherited from Growth
         $this->assertContains('myinvois.submit', $perms);
 
         // Corporate does NOT grant Enterprise-only SSO
@@ -273,12 +274,22 @@ class PlanPermissionAlignmentTest extends TestCase
         $this->assertStringContainsStringIgnoringCase('coming soon', $matched);
     }
 
-    public function test_corporate_plan_mentions_myinvois(): void
+    public function test_growth_plan_mentions_myinvois(): void
+    {
+        $plan = Plan::where('slug', 'growth')->firstOrFail();
+        $matched = collect($plan->features)->first(fn ($b) => stripos($b, 'myinvois') !== false);
+        $this->assertNotNull($matched, 'Growth plan must mention MyInvois.');
+        $this->assertStringNotContainsStringIgnoringCase('coming soon', $matched);
+    }
+
+    public function test_corporate_plan_inherits_myinvois_via_growth(): void
     {
         $plan = Plan::where('slug', 'corporate')->firstOrFail();
-        $matched = collect($plan->features)->first(fn ($b) => stripos($b, 'myinvois') !== false);
-        $this->assertNotNull($matched, 'Corporate plan must mention MyInvois.');
-        $this->assertStringNotContainsStringIgnoringCase('coming soon', $matched);
+        $this->assertTrue(
+            collect($plan->features)->contains(fn ($b) => stripos($b, 'everything in growth') !== false),
+            'Corporate plan must inherit Growth bullets including MyInvois.'
+        );
+        $this->assertContains('myinvois.submit', $this->permsFor('corporate'));
     }
 
     public function test_enterprise_plan_marks_branding_self_hosted_only(): void

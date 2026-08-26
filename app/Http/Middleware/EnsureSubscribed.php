@@ -41,6 +41,11 @@ class EnsureSubscribed
         // timestamp on the user row. Must stay reachable on the free
         // tier so Skip does not close-then-reopen the modal.
         'onboarding.',
+        // Tenant DB is still being created — user must reach the
+        // polling page (and status/retry endpoints) before we have
+        // a subscription row or tenant context to bill against.
+        'provisioning',
+        'provisioning.',
     ];
 
     public function handle(Request $request, Closure $next): Response

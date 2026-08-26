@@ -18,6 +18,7 @@ class InvoiceItem extends Model
         'quantity',
         'unit_price',
         'tax_rate',
+        'tax_code_id',
         'discount_amount',
         'item_classification',
         'amount',

@@ -154,4 +154,26 @@ class Firm extends Model
             ->count();
         return ($this->currentClientCount() + $pending) < $cap;
     }
+
+    /** Firm-staff seats included on the Practice plan (+ paid extras). */
+    public function staffSeatCap(): int
+    {
+        $sub = $this->subscription;
+        if (! $sub) {
+            return 1;
+        }
+
+        return $sub->totalSeats();
+    }
+
+    /** Active firm staff (owner + invited staff). */
+    public function currentStaffCount(): int
+    {
+        return $this->staff()->whereNotNull('firm_role')->count();
+    }
+
+    public function canAddStaff(): bool
+    {
+        return $this->currentStaffCount() < $this->staffSeatCap();
+    }
 }

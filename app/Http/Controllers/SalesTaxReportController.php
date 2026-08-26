@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Tenant;
+use App\Services\Sst02ExportService;
 use App\Support\MyInvoisGap;
 use App\Support\ReportPeriod;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -90,6 +91,57 @@ class SalesTaxReportController extends Controller
         return $pdf->download("sales-tax-{$start}-to-{$end}.pdf");
     }
 
+    public function exportSst02(Request $request, Sst02ExportService $sst02): StreamedResponse|\Symfony\Component\HttpFoundation\Response
+    {
+        $resolved = $this->resolvePeriod($request);
+        $start = $resolved['date_from'];
+        $end = $resolved['date_to'];
+        $rows = $sst02->build($start, $end);
+
+        if ($request->query('format') === 'pdf') {
+            $pdf = Pdf::loadView('pdf.sst-02-summary', [
+                'rows' => $rows,
+                'period_from' => $start,
+                'period_to' => $end,
+                'company' => $this->reportCompany(),
+                'base_currency' => $this->tenantBaseCurrency(),
+            ])->setPaper('a4', 'portrait');
+
+            return $pdf->download("sst-02-helper-{$start}-to-{$end}.pdf");
+        }
+
+        return response()->streamDownload(function () use ($rows): void {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, [
+                'tax_code',
+                'taxable_sales',
+                'output_tax',
+                'taxable_purchases',
+                'input_tax',
+                'net_tax',
+                'cn_adjustment',
+                'dn_adjustment',
+            ]);
+
+            foreach ($rows as $row) {
+                fputcsv($out, [
+                    $row['tax_code'],
+                    $row['taxable_sales'],
+                    $row['output_tax'],
+                    $row['taxable_purchases'],
+                    $row['input_tax'],
+                    $row['net_tax'],
+                    $row['cn_adjustment'],
+                    $row['dn_adjustment'],
+                ]);
+            }
+
+            fclose($out);
+        }, "sst-02-helper-{$start}-to-{$end}.csv", [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
     private function resolvePeriod(Request $request): array
     {
         $request->validate([
@@ -138,25 +190,28 @@ class SalesTaxReportController extends Controller
         $billCount = (int) (clone $billBase)->count();
         $taxablePurchases = (float) (clone $billBase)->sum(DB::raw('total_amount - tax_amount'));
 
-        // ── Breakdown by tax rate (for sales, derived from line items) ─────
-        $byRate = DB::table('invoice_items as ii')
+        // ── Breakdown by tax code (for sales, derived from line items) ─────
+        $byCode = DB::table('invoice_items as ii')
             ->join('invoices as i', 'i.id', '=', 'ii.invoice_id')
+            ->leftJoin('tax_codes as tc', 'tc.id', '=', 'ii.tax_code_id')
             ->select(
-                'ii.tax_rate',
+                DB::raw("COALESCE(tc.code, CASE WHEN ii.tax_rate = 0 THEN 'ES' WHEN ii.tax_rate >= 9.5 THEN 'ST-10' WHEN ii.tax_rate >= 7.5 THEN 'SR-8' ELSE CONCAT(ii.tax_rate, '%') END) as tax_code"),
+                DB::raw('COALESCE(tc.rate, ii.tax_rate) as tax_rate'),
                 DB::raw('SUM(ii.amount) as taxable'),
-                DB::raw('SUM(ii.amount * (ii.tax_rate / 100)) as tax_collected'),
+                DB::raw('SUM(ii.amount * (COALESCE(tc.rate, ii.tax_rate) / 100)) as tax_collected'),
                 DB::raw('COUNT(DISTINCT i.id) as invoice_count')
             )
             ->whereNotIn('i.status', ['draft', 'void'])
             ->whereBetween('i.issue_date', [$start, $end])
             ->whereNull('i.deleted_at')
             ->whereNull('ii.deleted_at')
-            ->groupBy('ii.tax_rate')
-            ->orderBy('ii.tax_rate')
+            ->groupBy('tax_code', DB::raw('COALESCE(tc.rate, ii.tax_rate)'))
+            ->orderBy('tax_code')
             ->get()
             ->map(fn ($r) => [
+                'tax_code' => (string) $r->tax_code,
                 'tax_rate' => (float) $r->tax_rate,
-                'label' => (float) $r->tax_rate === 0.0 ? 'Exempt' : number_format((float) $r->tax_rate, 2).'%',
+                'label' => (float) $r->tax_rate === 0.0 ? ((string) $r->tax_code === 'ZRL' ? 'ZRL' : 'Exempt') : ((string) $r->tax_code),
                 'taxable' => round((float) $r->taxable, 2),
                 'tax_collected' => round((float) $r->tax_collected, 2),
                 'invoice_count' => (int) $r->invoice_count,
@@ -164,7 +219,9 @@ class SalesTaxReportController extends Controller
             ->values()
             ->all();
 
-        $exemptSales = collect($byRate)->firstWhere('tax_rate', 0.0)['taxable'] ?? 0.0;
+        $byRate = $byCode;
+
+        $exemptSales = collect($byCode)->first(fn ($row) => in_array($row['tax_code'], ['ES', 'ZRL'], true) || $row['tax_rate'] === 0.0)['taxable'] ?? 0.0;
 
         // ── Per-invoice list (so the user can audit any number) ────────────
         $invoiceList = DB::table('invoices as i')
@@ -238,6 +295,7 @@ class SalesTaxReportController extends Controller
             'taxable_sales' => $pack['taxable_sales'],
             'taxable_purchases' => round($taxablePurchases, 2),
             'by_rate' => $byRate,
+            'by_code' => $byCode,
             'invoices' => $invoiceList,
             'bills' => $billList,
             'myinvois_gaps' => $gaps,

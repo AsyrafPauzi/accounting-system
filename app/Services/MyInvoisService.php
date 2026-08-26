@@ -8,6 +8,7 @@ use App\Models\CreditNote;
 use App\Models\Customer;
 use App\Models\DebitNote;
 use App\Models\Invoice;
+use App\Models\MyInvoisSubmission;
 use App\Models\Supplier;
 use App\Support\DocumentNumber;
 use Illuminate\Support\Facades\Http;
@@ -129,7 +130,7 @@ class MyInvoisService
             [$json, $hash] = $this->encodeForSubmit($payload);
             $codeNumber = $this->codeNumber($doc);
 
-            $result = $this->submitRaw($codeNumber, $json, $hash);
+            $result = $this->submitRaw($codeNumber, $json, $hash, $this->documentTypeFor($doc), (int) $doc->id);
             $this->applyResult($doc, $result);
         } finally {
             $this->supplierIdOverride = null;
@@ -229,7 +230,7 @@ class MyInvoisService
             }
             $payload = $this->buildConsolidatedDocument($batch, $invoices);
             [$json, $hash] = $this->encodeForSubmit($payload);
-            $result = $this->submitRaw($batch->document_number, $json, $hash);
+            $result = $this->submitRaw($batch->document_number, $json, $hash, 'consolidated', (int) $batch->id);
             $this->applyResult($batch, $result);
         } finally {
             $this->supplierIdOverride = null;
@@ -312,7 +313,7 @@ class MyInvoisService
 
         $payload = $this->buildSelfBilledDocument($bill);
         [$json, $hash] = $this->encodeForSubmit($payload);
-        $result = $this->submitRaw($bill->bill_number, $json, $hash);
+        $result = $this->submitRaw($bill->bill_number, $json, $hash, 'bill', (int) $bill->id);
         $this->applyResult($bill, $result);
     }
 
@@ -686,17 +687,37 @@ class MyInvoisService
     }
 
     /**
-     * @return array{uuid: string, longId: string, status: string, error?: string}
+     * @return array{uuid: string, longId: string, status: string, error?: string, submission_id?: int}
      */
-    private function submitRaw(string $codeNumber, string $json, string $hash): array
+    private function submitRaw(string $codeNumber, string $json, string $hash, string $documentType, int $documentId): array
     {
+        $requestJson = json_decode($json, true);
+        if (! is_array($requestJson)) {
+            $requestJson = ['raw' => $json];
+        }
+
         if (! $this->isLive()) {
             $uuid = (string) Str::uuid();
-
-            return [
+            $responseJson = [
                 'uuid'   => $uuid,
                 'longId' => Str::lower(Str::random(32)),
                 'status' => 'submitted',
+            ];
+            $submission = $this->persistSubmission(
+                $documentType,
+                $documentId,
+                $requestJson,
+                $responseJson,
+                202,
+                $uuid,
+                'submitted',
+            );
+
+            return [
+                'uuid'           => $uuid,
+                'longId'         => $responseJson['longId'],
+                'status'         => 'submitted',
+                'submission_id'  => $submission->id,
             ];
         }
 
@@ -714,24 +735,70 @@ class MyInvoisService
             ]);
 
         if (! $response->successful()) {
+            $responseJson = $response->json();
+            if (! is_array($responseJson)) {
+                $responseJson = ['body' => $response->body()];
+            }
             Log::warning('MyInvois submit failed', ['body' => $response->body()]);
+            $this->persistSubmission(
+                $documentType,
+                $documentId,
+                $requestJson,
+                $responseJson,
+                $response->status(),
+                null,
+                'error',
+            );
             throw new \LogicException('LHDN rejected the submission: '.$response->body());
         }
 
         $body = $response->json();
+        if (! is_array($body)) {
+            $body = ['body' => (string) $response->body()];
+        }
         $accepted = $body['acceptedDocuments'][0] ?? null;
         $rejected = $body['rejectedDocuments'][0] ?? null;
         if ($rejected) {
+            $this->persistSubmission(
+                $documentType,
+                $documentId,
+                $requestJson,
+                $body,
+                $response->status(),
+                is_array($rejected) ? ($rejected['uuid'] ?? null) : null,
+                'rejected',
+            );
             throw new \LogicException($this->formatLhdnError($rejected));
         }
         if (! $accepted) {
+            $this->persistSubmission(
+                $documentType,
+                $documentId,
+                $requestJson,
+                $body,
+                $response->status(),
+                null,
+                'error',
+            );
             throw new \LogicException('LHDN returned no accepted document.');
         }
 
+        $uuid = $accepted['uuid'] ?? (string) Str::uuid();
+        $submission = $this->persistSubmission(
+            $documentType,
+            $documentId,
+            $requestJson,
+            $body,
+            $response->status(),
+            $uuid,
+            'submitted',
+        );
+
         return [
-            'uuid'   => $accepted['uuid'] ?? (string) Str::uuid(),
-            'longId' => $accepted['longId'] ?? '',
-            'status' => 'submitted',
+            'uuid'          => $uuid,
+            'longId'        => $accepted['longId'] ?? '',
+            'status'        => 'submitted',
+            'submission_id' => $submission->id,
         ];
     }
 
@@ -749,6 +816,49 @@ class MyInvoisService
             'lhdn_reject_reason'=> $result['error'] ?? null,
             'lhdn_qr_url'       => $qr,
         ])->save();
+
+        if (! empty($result['submission_id'])) {
+            MyInvoisSubmission::query()
+                ->whereKey($result['submission_id'])
+                ->update(['lhdn_uuid' => $uuid]);
+        }
+    }
+
+    private function documentTypeFor(object $doc): string
+    {
+        return match (true) {
+            $doc instanceof Invoice => 'invoice',
+            $doc instanceof CreditNote => 'credit_note',
+            $doc instanceof DebitNote => 'debit_note',
+            $doc instanceof Bill => 'bill',
+            $doc instanceof ConsolidatedEInvoice => 'consolidated',
+            default => class_basename($doc),
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $requestJson
+     * @param  array<string, mixed>|null  $responseJson
+     */
+    private function persistSubmission(
+        string $documentType,
+        int $documentId,
+        array $requestJson,
+        ?array $responseJson,
+        ?int $httpStatus,
+        ?string $lhdnUuid,
+        string $status,
+    ): MyInvoisSubmission {
+        return MyInvoisSubmission::create([
+            'document_type' => $documentType,
+            'document_id'   => $documentId,
+            'request_json'  => $requestJson,
+            'response_json' => $responseJson,
+            'http_status'   => $httpStatus,
+            'lhdn_uuid'     => $lhdnUuid,
+            'status'        => $status,
+            'submitted_at'  => now(),
+        ]);
     }
 
     private function codeNumber(Invoice|CreditNote|DebitNote $doc): string

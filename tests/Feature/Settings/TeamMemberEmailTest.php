@@ -25,7 +25,10 @@ class TeamMemberEmailTest extends TestCase
 
     private function makeAdminWithTeamPlan(): User
     {
-        $tenant = Tenant::withoutEvents(fn () => Tenant::forceCreate(['id' => 'team-mail-tenant']));
+        $tenant = Tenant::withoutEvents(fn () => Tenant::forceCreate([
+            'id' => 'team-mail-tenant',
+            'provision_status' => 'ready',
+        ]));
 
         $plan = Plan::create([
             'name' => 'Team Plan',

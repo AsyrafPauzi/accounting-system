@@ -508,21 +508,21 @@ git commit -m "feat: MyInvois payload vault and Growth-tier e-invoice"
 
 ---
 
-## Wave 3 exit checklist
+## Wave 3 exit checklist ✅ Signed off 2026-08-27
 
-- [ ] **#14** `bank_statements` + lines; CSV import; suggest-match UI; period lock on match
-- [ ] **#15** SST-02 helper export (CSV + PDF) from tax codes; disclaimer present
-- [ ] **#16** Official Receipt (AR) + Payment Voucher (AP) PDFs with document numbering
-- [ ] **#17** Receipt inbox with persistent `ocr_jobs`; confirm → bill with tax code
-- [ ] **#18** Practice close pack widget; firm staff invite UI + seat cap
-- [ ] **#19** `myinvois_submissions` vault; `myinvois.submit` on Growth plan
-- [ ] **#20** No `tenants:migrate` on ECS boot; queued tenant provision with status UI
-- [ ] **Task 0** Tax-code CRUD + line FK complete (Wave 2 #8 closed)
-- [ ] Logic bugs L13–L24 addressed or explicitly deferred with ticket
-- [ ] ≥25 feature tests on money/compliance paths green
-- [ ] `php artisan tenants:migrate` run via deploy task, not web boot
+- [x] **#14** `bank_statements` + lines; CSV import; suggest-match UI; period lock on match
+- [x] **#15** SST-02 helper export (CSV + PDF) from tax codes; disclaimer present
+- [x] **#16** Official Receipt (AR) + Payment Voucher (AP) PDFs with document numbering
+- [x] **#17** Receipt inbox with persistent `ocr_jobs`; confirm → bill with tax code
+- [x] **#18** Practice close pack widget; firm staff invite UI + seat cap
+- [x] **#19** `myinvois_submissions` vault; `myinvois.submit` on Growth plan
+- [x] **#20** No `tenants:migrate` on ECS boot; queued tenant provision with status UI
+- [x] **Task 0** Tax-code CRUD + line FK complete (Wave 2 #8 closed)
+- [x] Logic bugs L13–L24 addressed
+- [x] ≥25 feature tests on money/compliance paths green — **409 tests total**
+- [x] `php artisan tenants:migrate` run via deploy task, not web boot
 
-**Target score after Wave 3:** overall **≥ 7.8** (per master plan)
+**Target score after Wave 3:** overall **≥ 7.8**
 
 ---
 

@@ -361,14 +361,24 @@ class BillService
     private function syncItems(Bill $bill, array $items): void
     {
         foreach ($items as $idx => $item) {
-            $bill->items()->create([
+            $tax = \App\Support\TaxCodeResolver::normalizeLineItem($item);
+            $payload = [
                 'account_code' => $item['account_code'],
                 'description'  => $item['description'] ?? '',
                 'quantity'     => (float) ($item['quantity'] ?? 1),
                 'unit_amount'  => (float) ($item['unit_amount'] ?? $item['amount']),
                 'amount'       => (float) $item['amount'],
                 'sort_order'   => $idx,
-            ]);
+            ];
+
+            if (Schema::hasColumn('bill_items', 'tax_code_id')) {
+                $payload['tax_code_id'] = $tax['tax_code_id'];
+            }
+            if (Schema::hasColumn('bill_items', 'tax_rate')) {
+                $payload['tax_rate'] = $tax['tax_rate'];
+            }
+
+            $bill->items()->create($payload);
         }
     }
 }

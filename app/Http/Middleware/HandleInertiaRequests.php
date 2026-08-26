@@ -174,6 +174,16 @@ class HandleInertiaRequests extends Middleware
                 ['code' => 'en', 'label' => 'English'],
                 ['code' => 'ms', 'label' => 'Bahasa Malaysia'],
             ],
+            'tax_codes' => function () use ($tenant) {
+                if (! $tenant || ! tenancy()->initialized) {
+                    return [];
+                }
+                try {
+                    return \App\Support\TaxCodeResolver::activeOptions()->values()->all();
+                } catch (\Throwable) {
+                    return [];
+                }
+            },
             'theme' => fn () => $user?->theme_preference ?? 'light',
             'deployment_mode' => config('deployment.mode', 'saas'),
             'copilot_credits' => function () use ($user, $tenant) {

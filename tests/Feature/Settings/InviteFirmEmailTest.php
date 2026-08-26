@@ -22,7 +22,10 @@ class InviteFirmEmailTest extends TestCase
 
     private function makeSmeAdmin(string $tenantId = 'invite-firm-email-tenant'): User
     {
-        $tenant = Tenant::withoutEvents(fn () => Tenant::forceCreate(['id' => $tenantId]));
+        $tenant = Tenant::withoutEvents(fn () => Tenant::forceCreate([
+            'id' => $tenantId,
+            'provision_status' => 'ready',
+        ]));
 
         $user = User::factory()->create([
             'tenant_id' => $tenant->id,

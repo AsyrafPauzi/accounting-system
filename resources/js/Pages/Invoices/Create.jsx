@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, Link, router } from '@inertiajs/react';
+import { Head, useForm, Link, router, usePage } from '@inertiajs/react';
 import {
     SUPPORTED_CURRENCIES,
     currencySymbol,
@@ -32,6 +32,7 @@ function currencyPrefix(currency) {
 const initialQuickCustomer = { name: '', code: '', email: '', tin: '', brn: '', billing_street: '', billing_city: '', billing_state: '', billing_zip: '' };
 
 export default function Create({ auth, customers = [], lhdn_codes = [], customer_id: preselectedCustomerId = null, next_invoice_number: suggestedInvoiceNumber = null, base_currency = 'MYR', products = [], cash_sale = false, bankAccounts = [], default_customer_notes = '' }) {
+    const { tax_codes = [] } = usePage().props;
     const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
     const [newCustomers, setNewCustomers] = useState([]);
     const [quickCustomer, setQuickCustomer] = useState(initialQuickCustomer);
@@ -58,7 +59,8 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                 description: '', 
                 quantity: 1, 
                 unit_price: 0, 
-                tax_rate: 8, 
+                tax_rate: 8,
+                tax_code_id: null,
                 discount_amount: 0,
                 item_classification: '011'
             }
@@ -424,11 +426,31 @@ export default function Create({ auth, customers = [], lhdn_codes = [], customer
                                             <input type="number" value={item.discount_amount} onChange={e => updateItem(index, 'discount_amount', e.target.value)} className={`${lineNumberClass} block text-right text-terracotta font-semibold`} />
                                         </td>
                                         <td className="px-1 py-2 align-middle">
-                                            <select value={item.tax_rate} onChange={e => updateItem(index, 'tax_rate', e.target.value)} className={`${lineTaxClass} block`}>
-                                                <option value="0">0%</option>
-                                                <option value="6">6%</option>
-                                                <option value="8">8%</option>
-                                                <option value="16">16%</option>
+                                            <select
+                                                value={item.tax_code_id ?? item.tax_rate}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    const code = tax_codes.find((c) => String(c.id) === val);
+                                                    if (code) {
+                                                        updateItem(index, 'tax_code_id', code.id);
+                                                        updateItem(index, 'tax_rate', code.rate);
+                                                    } else {
+                                                        updateItem(index, 'tax_code_id', null);
+                                                        updateItem(index, 'tax_rate', val);
+                                                    }
+                                                }}
+                                                className={`${lineTaxClass} block`}
+                                            >
+                                                {tax_codes.length > 0 ? tax_codes.map((code) => (
+                                                    <option key={code.id} value={code.id}>{code.code} ({code.rate}%)</option>
+                                                )) : (
+                                                    <>
+                                                        <option value="0">0%</option>
+                                                        <option value="6">6%</option>
+                                                        <option value="8">8%</option>
+                                                        <option value="16">16%</option>
+                                                    </>
+                                                )}
                                             </select>
                                         </td>
                                         <td className="px-2 py-2 align-middle">

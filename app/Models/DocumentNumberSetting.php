@@ -44,6 +44,8 @@ class DocumentNumberSetting extends Model
             'supplier_debit_note'  => ['prefix' => 'SDN', 'table' => 'supplier_debit_notes', 'column' => 'sdn_number'],
             'ar_deposit'           => ['prefix' => 'DEP', 'table' => 'ar_deposits', 'column' => 'id'],
             'ap_deposit'           => ['prefix' => 'APD', 'table' => 'ap_deposits', 'column' => 'id'],
+            'official_receipt'     => ['prefix' => 'OR', 'table' => 'invoice_payments', 'column' => 'receipt_number'],
+            'payment_voucher'      => ['prefix' => 'PV', 'table' => 'bill_payments', 'column' => 'voucher_number'],
         ];
     }
 }

@@ -19,6 +19,7 @@
 /storage/*.key
 /storage/pail
 /storage/tenant*/
+/database/tenant*
 /vendor
 /docs
 Homestead.json

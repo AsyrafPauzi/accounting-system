@@ -103,6 +103,12 @@ export default function Company({ auth, company, canEdit = false }) {
                             >
                                 Accounting periods →
                             </Link>
+                            <Link
+                                href={route('settings.tax-codes.index')}
+                                className="text-sm font-semibold text-terracotta hover:text-terracotta whitespace-nowrap"
+                            >
+                                Tax codes →
+                            </Link>
                         </>
                     )}
                 </div>

@@ -14,6 +14,7 @@ class BillItem extends Model
 
     protected $fillable = [
         'bill_id', 'account_code', 'description', 'quantity', 'unit_amount', 'amount', 'sort_order',
+        'tax_code_id', 'tax_rate',
     ];
 
     protected function casts(): array

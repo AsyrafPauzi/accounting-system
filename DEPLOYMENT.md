@@ -50,13 +50,28 @@ Set **`RUN_MIGRATIONS=true`** on the ECS task definition for the app service.
 On each container start, `docker/entrypoint.sh` runs (in order):
 
 1. `php artisan migrate --force --isolated` — central schema
-2. `php artisan tenants:migrate --force --isolated` — all tenant databases
 
-`--isolated` uses a cache lock so that during a rolling deploy only one task applies pending migrations; other tasks skip quickly if migrations are already running or complete.
+`tenants:migrate` is **not** run on every boot by default. With many tenant databases, iterating all tenants on each ECS task start adds minutes to boot time. Run tenant migrations via a one-off task instead (see below).
+
+To opt back into boot-time tenant migrations (e.g. small installs), set:
+
+```
+RUN_TENANT_MIGRATE=1
+```
 
 **`db:seed` is not run on startup.** Seeders include demo/test accounts and must not run on every production deploy.
 
-When there are no pending migrations, both commands finish in seconds and the container continues to nginx/supervisor as usual.
+When there are no pending central migrations, the migrate step finishes in seconds and the container continues to nginx/supervisor as usual.
+
+### Tenant migrations on deploy (recommended)
+
+After deploying schema changes under `database/migrations/tenant/`, run a **one-off ECS task** (or ECS Exec) before or immediately after the rolling deploy:
+
+```bash
+php artisan tenants:migrate --force
+```
+
+Do **not** rely on every web container boot to migrate all tenants in production. Use `RUN_TENANT_MIGRATE=1` only for small/staging environments.
 
 ### ECS task definition
 
@@ -66,7 +81,7 @@ Add to the app container environment:
 RUN_MIGRATIONS=true
 ```
 
-You do **not** need a separate one-off migration task after each deploy if this is set. Keep a one-off task or ECS Exec only for emergencies or debugging.
+You do **not** need `RUN_TENANT_MIGRATE=1` on the web service in production. Keep a one-off migrate task or ECS Exec for `tenants:migrate` and emergencies.
 
 ### First-time production database / seeding
 

@@ -394,7 +394,7 @@ export default function Show({
                                     <span className="font-mono inline-flex items-center gap-2 tabular-nums">
                                         {formatCurrency(p.amount, invoice.currency)}
                                         {!p.reversed_at && (
-                                            <a className="text-terracotta no-underline text-xs" href={route('invoices.payment-receipt', [invoice.id, p.id])} target="_blank" rel="noreferrer">Receipt</a>
+                                            <a className="text-terracotta no-underline text-xs" href={route('invoices.payment-receipt', [invoice.id, p.id])} target="_blank" rel="noreferrer">Official receipt</a>
                                         )}
                                         {!p.reversed_at && auth.permissions.includes('invoices.record-payment') && (
                                             <button

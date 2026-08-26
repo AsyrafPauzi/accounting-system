@@ -160,7 +160,10 @@ export default function Show({ auth, bill, bankAccounts = [], myinvois_gaps = []
                                 {(bill.payments || []).map((p) => (
                                     <div key={p.id} className="flex justify-between text-sm gap-2">
                                         <span>{formatDate(p.payment_date)} · {p.bank_account_code}</span>
-                                        <span className="font-mono tabular-nums">{formatCurrency(p.amount, currency)}</span>
+                                        <span className="font-mono inline-flex items-center gap-2 tabular-nums">
+                                            {formatCurrency(p.amount, currency)}
+                                            <a className="text-terracotta no-underline text-xs" href={route('bills.payment-voucher', [bill.id, p.id])} target="_blank" rel="noreferrer">Voucher</a>
+                                        </span>
                                     </div>
                                 ))}
                                 {(bill.credit_note_applications || []).map((a) => (

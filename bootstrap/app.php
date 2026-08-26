@@ -57,6 +57,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\InitializeTenancyByLoggedInUser::class,
+            \App\Http\Middleware\EnsureTenantProvisioned::class,
             \App\Http\Middleware\SetTenantLocale::class,
             // License gate is a no-op on SaaS; on self-hosted it
             // redirects to /install or /license-invalid based on

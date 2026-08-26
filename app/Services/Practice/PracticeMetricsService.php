@@ -7,6 +7,9 @@ use App\Models\FirmClient;
 use App\Models\Invoice;
 use App\Models\Tenant;
 use App\Services\InvoiceService;
+use App\Services\PayrollService;
+use App\Support\AccountingPeriodResolver;
+use App\Support\PayrollRemittance;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -104,8 +107,45 @@ class PracticeMetricsService
                 'cash_balance'     => $stats['cash_balance'],
                 'financial_year_start_month' => (int) ($tenant->financial_year_start_month ?? 1),
                 'health'           => $this->healthTag($stats),
+                'close_pack'       => $stats['close_pack'],
             ];
         })->filter()->values();
+    }
+
+    /**
+     * Month-end close checklist for one client tenant. Switches
+     * tenancy in/out when called standalone (e.g. from tests).
+     *
+     * @return array<string, mixed>
+     */
+    public function closePackForClient(Tenant $tenant): array
+    {
+        $defaults = $this->emptyClosePack();
+        $needsEnd = false;
+
+        try {
+            $needsEnd = ! (function_exists('tenancy') && tenancy()->initialized && tenant('id') === $tenant->id);
+            if ($needsEnd) {
+                tenancy()->initialize($tenant);
+            }
+
+            if (! Schema::hasTable('invoices')) {
+                return $defaults;
+            }
+
+            return $this->computeClosePack();
+        } catch (\Throwable $e) {
+            Log::warning('PracticeMetricsService: close pack failed', [
+                'tenant_id' => $tenant->id,
+                'err'       => $e->getMessage(),
+            ]);
+
+            return $defaults;
+        } finally {
+            if ($needsEnd) {
+                tenancy()->end();
+            }
+        }
     }
 
     /**
@@ -124,6 +164,7 @@ class PracticeMetricsService
             'revenue_trend'    => $this->emptyRevenueTrend(),
             'expenses_mtd'     => 0.0,
             'cash_balance'     => 0.0,
+            'close_pack'       => $this->emptyClosePack(),
         ];
 
         try {
@@ -159,6 +200,7 @@ class PracticeMetricsService
             ];
 
             $headline['ar_aging']      = $this->computeAgingBuckets($today);
+            $headline['close_pack']    = $this->computeClosePack($today);
             $headline['revenue_trend'] = $this->computeRevenueTrend();
             $headline['expenses_mtd']  = Schema::hasTable('bills')
                 ? (float) DB::table('bills')
@@ -301,6 +343,262 @@ class PracticeMetricsService
         $balance = (float) $query->selectRaw('COALESCE(SUM(ji.debit - ji.credit), 0) as bal')->value('bal');
 
         return round($balance, 2);
+    }
+
+    /**
+     * Per-client month-end signals: unbilled work, overdue AR, SST /
+     * MyInvois gaps, accounting period status, payroll remittance.
+     *
+     * @return array<string, mixed>
+     */
+    private function computeClosePack(?string $today = null): array
+    {
+        $today = $today ?? Carbon::now()->toDateString();
+        $todayCarbon = Carbon::parse($today);
+        $monthStart = $todayCarbon->copy()->startOfMonth()->toDateString();
+        $monthEnd = $todayCarbon->copy()->endOfMonth()->toDateString();
+
+        $draftCount = (int) DB::table('invoices')
+            ->where('status', 'draft')
+            ->whereNull('deleted_at')
+            ->count();
+
+        $unsentCount = (int) DB::table('invoices')
+            ->whereNotIn('status', ['draft', 'void', 'paid'])
+            ->whereNull('deleted_at')
+            ->whereNull('last_emailed_at')
+            ->count();
+
+        $unbilledCount = $draftCount + $unsentCount;
+
+        $invoiceService = app(InvoiceService::class);
+        $overdueAmount = 0.0;
+        $overdueCount = 0;
+
+        Invoice::query()
+            ->select('id', 'total_amount', 'amount_paid', 'due_date', 'status')
+            ->whereNotIn('status', ['paid', 'void', 'draft'])
+            ->whereNotNull('due_date')
+            ->where('due_date', '<', $today)
+            ->get()
+            ->each(function (Invoice $invoice) use ($invoiceService, &$overdueAmount, &$overdueCount): void {
+                $balance = $invoiceService->remainingBalance($invoice);
+                if ($balance <= 0) {
+                    return;
+                }
+                $overdueCount++;
+                $overdueAmount += $balance;
+            });
+
+        $sstGapsCount = $this->countMyInvoisGaps($monthStart, $monthEnd);
+
+        $period = AccountingPeriodResolver::forDate($today);
+        $periodStatus = $period?->status ?? 'unknown';
+        $periodLabel = $period?->label ?? $todayCarbon->format('M Y');
+
+        $payroll = $this->computePayrollRemittanceSignal($today);
+
+        $pack = [
+            'unbilled' => [
+                'count'        => $unbilledCount,
+                'draft_count'  => $draftCount,
+                'unsent_count' => $unsentCount,
+                'status'       => $this->signalStatus($unbilledCount, 1, 3),
+            ],
+            'overdue_ar' => [
+                'count'  => $overdueCount,
+                'amount' => round($overdueAmount, 2),
+                'status' => $overdueCount === 0
+                    ? 'ok'
+                    : ($overdueCount >= 5 ? 'risk' : 'watch'),
+            ],
+            'sst_gaps' => [
+                'count'  => $sstGapsCount,
+                'status' => $this->signalStatus($sstGapsCount, 1, 3),
+            ],
+            'period' => [
+                'label'  => $periodLabel,
+                'status' => $periodStatus,
+                'status_signal' => $periodStatus === 'closed' ? 'ok' : 'watch',
+            ],
+            'payroll_remittance' => $payroll,
+        ];
+
+        $pack['overall'] = $this->closePackOverall($pack);
+
+        return $pack;
+    }
+
+    private function countMyInvoisGaps(string $start, string $end): int
+    {
+        return (int) DB::table('invoices as i')
+            ->whereNotIn('i.status', ['draft', 'void'])
+            ->whereBetween('i.issue_date', [$start, $end])
+            ->whereNull('i.deleted_at')
+            ->where(function ($query): void {
+                $query->whereNull('i.lhdn_uuid')
+                    ->orWhereRaw("TRIM(i.lhdn_uuid) = ''")
+                    ->orWhereIn('i.lhdn_status', ['pending', 'rejected', 'invalid']);
+            })
+            ->count();
+    }
+
+    /**
+     * @return array{applicable: bool, total_due: float, next_due_date: ?string, status: string}
+     */
+    private function computePayrollRemittanceSignal(string $asOf): array
+    {
+        if (! Schema::hasTable('journal_items') || ! Schema::hasTable('journal_entries')) {
+            return [
+                'applicable'    => false,
+                'total_due'   => 0.0,
+                'next_due_date' => null,
+                'status'      => 'n/a',
+            ];
+        }
+
+        try {
+            $accounts = (new PayrollService())->ensureAccounts();
+        } catch (\Throwable) {
+            return [
+                'applicable'    => false,
+                'total_due'   => 0.0,
+                'next_due_date' => null,
+                'status'      => 'n/a',
+            ];
+        }
+
+        $payableCodes = collect([
+            'epf_payable', 'socso_payable', 'eis_payable', 'pcb_payable', 'hrd_payable',
+        ])->map(fn (string $key) => $accounts[$key]->code ?? null)->filter()->values();
+
+        if ($payableCodes->isEmpty()) {
+            return [
+                'applicable'    => false,
+                'total_due'   => 0.0,
+                'next_due_date' => null,
+                'status'      => 'n/a',
+            ];
+        }
+
+        $movements = DB::table('journal_items as ji')
+            ->join('journal_entries as je', 'ji.journal_entry_id', '=', 'je.id')
+            ->whereIn('ji.account_code', $payableCodes)
+            ->where('je.status', 'posted')
+            ->whereDate('je.date', '<=', $asOf)
+            ->whereNull('ji.deleted_at')
+            ->whereNull('je.deleted_at')
+            ->select([
+                'ji.account_code',
+                DB::raw('SUM(ji.debit) as total_debit'),
+                DB::raw('SUM(ji.credit) as total_credit'),
+            ])
+            ->groupBy('ji.account_code')
+            ->get();
+
+        $totalDue = round($movements->sum(function ($row) {
+            return PayrollRemittance::creditBalance(
+                (float) ($row->total_debit ?? 0),
+                (float) ($row->total_credit ?? 0)
+            );
+        }), 2);
+
+        if ($totalDue <= 0) {
+            return [
+                'applicable'    => true,
+                'total_due'   => 0.0,
+                'next_due_date' => null,
+                'status'      => 'ok',
+            ];
+        }
+
+        $nextDue = $this->payrollRemittanceDueDate(Carbon::parse($asOf));
+
+        return [
+            'applicable'      => true,
+            'total_due'       => $totalDue,
+            'next_due_date'   => $nextDue->toDateString(),
+            'status'          => $nextDue->isPast() ? 'risk' : 'watch',
+        ];
+    }
+
+    /** Malaysian statutory remittance is due by the 15th of each month. */
+    private function payrollRemittanceDueDate(Carbon $reference): Carbon
+    {
+        $due = $reference->copy()->day(15)->startOfDay();
+        if ($reference->day > 15) {
+            $due = $reference->copy()->addMonth()->day(15)->startOfDay();
+        }
+
+        return $due;
+    }
+
+    private function signalStatus(int $count, int $watchAt, int $riskAt): string
+    {
+        if ($count >= $riskAt) {
+            return 'risk';
+        }
+        if ($count >= $watchAt) {
+            return 'watch';
+        }
+
+        return 'ok';
+    }
+
+    /**
+     * @param  array<string, mixed>  $pack
+     */
+    private function closePackOverall(array $pack): string
+    {
+        $signals = [
+            $pack['unbilled']['status'] ?? 'ok',
+            $pack['overdue_ar']['status'] ?? 'ok',
+            $pack['sst_gaps']['status'] ?? 'ok',
+            $pack['period']['status_signal'] ?? 'ok',
+            $pack['payroll_remittance']['status'] ?? 'n/a',
+        ];
+
+        if (in_array('risk', $signals, true)) {
+            return 'risk';
+        }
+        if (in_array('watch', $signals, true)) {
+            return 'watch';
+        }
+
+        return 'ok';
+    }
+
+    private function emptyClosePack(): array
+    {
+        return [
+            'unbilled' => [
+                'count'        => 0,
+                'draft_count'  => 0,
+                'unsent_count' => 0,
+                'status'       => 'ok',
+            ],
+            'overdue_ar' => [
+                'count'  => 0,
+                'amount' => 0.0,
+                'status' => 'ok',
+            ],
+            'sst_gaps' => [
+                'count'  => 0,
+                'status' => 'ok',
+            ],
+            'period' => [
+                'label'  => Carbon::now()->format('M Y'),
+                'status' => 'unknown',
+                'status_signal' => 'watch',
+            ],
+            'payroll_remittance' => [
+                'applicable'    => false,
+                'total_due'   => 0.0,
+                'next_due_date' => null,
+                'status'      => 'n/a',
+            ],
+            'overall' => 'ok',
+        ];
     }
 
     private function emptyAgingBuckets(): array

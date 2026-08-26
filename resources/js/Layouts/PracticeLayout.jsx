@@ -56,6 +56,14 @@ export default function PracticeLayout({ children, header }) {
                         >
                             AR aging
                         </Link>
+                        {Array.isArray(auth?.permissions) && auth.permissions.includes('practice.staff.manage') && (
+                            <Link
+                                href={route('practice.team.index')}
+                                className="text-sm text-ink-muted hover:text-ink transition-colors"
+                            >
+                                Team
+                            </Link>
+                        )}
                         {/*
                           * Lands on the rich firm Plan & usage page
                           * (Settings/PlanFirm.jsx) so the firm-owner

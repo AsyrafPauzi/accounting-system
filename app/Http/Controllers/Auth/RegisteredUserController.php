@@ -71,7 +71,10 @@ class RegisteredUserController extends Controller
 
 
         $companyId = Str::slug($request->name) . '_' . rand(100, 999);
-        $tenant = \App\Models\Tenant::create(['id' => $companyId]);
+        $tenant = \App\Models\Tenant::create([
+            'id' => $companyId,
+            'provision_status' => 'pending',
+        ]);
 
 
         $adminRole = Role::where('name', 'admin')->where('guard_name', 'web')->first();
@@ -147,6 +150,6 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        return redirect(route('provisioning', absolute: false));
     }
 }

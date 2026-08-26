@@ -33,5 +33,6 @@
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
         <env name="SPAMBOT_GUARD_ENABLED" value="false"/>
+        <ini name="memory_limit" value="512M"/>
     </php>
 </phpunit>

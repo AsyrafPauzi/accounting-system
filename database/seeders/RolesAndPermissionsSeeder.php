@@ -52,6 +52,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'journal.view', 'journal.create', 'journal.edit', 'journal.post', 'journal.delete',
             'general-ledger.view',
 
+            // Bank reconciliation
+            'bank-rec.view', 'bank-rec.match',
+
             // Reports
             'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet',
             'reports.cashflow', 'reports.aged-reports', 'reports.export.limited', 'reports.export.full',
@@ -113,6 +116,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'accounts.view', 'accounts.create', 'accounts.edit', 'accounts.delete',
             'journal.view', 'journal.create', 'journal.edit', 'journal.post', 'journal.delete',
             'general-ledger.view',
+            'bank-rec.view', 'bank-rec.match',
             'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet', 'reports.cashflow', 'reports.aged-reports', 'reports.export.full',
             'reports.sales-tax', 'reports.customer-credits', 'reports.purchases-by-vendor',
             'settings.view', 'audit-logs.view', 'integrations.view', 'myinvois.submit',

@@ -7,6 +7,7 @@ use App\Http\Controllers\CreditNoteController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\BillController;
+use App\Http\Controllers\ReceiptInboxController;
 use App\Http\Controllers\AccountsPayableController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\CompanySettingsController;
@@ -158,6 +159,12 @@ Route::middleware(['auth'])->group(function () {
             ->where('tenantId', '[A-Za-z0-9_-]+')
             ->middleware('permission:practice.clients.unlink')
             ->name('clients.unlink');
+
+        Route::middleware('permission:practice.staff.manage')->group(function () {
+            Route::get('/team', [\App\Http\Controllers\Practice\PracticeStaffController::class, 'index'])->name('team.index');
+            Route::post('/team', [\App\Http\Controllers\Practice\PracticeStaffController::class, 'store'])->name('team.store');
+            Route::delete('/team/{user}', [\App\Http\Controllers\Practice\PracticeStaffController::class, 'destroy'])->name('team.destroy');
+        });
     });
 
     // Tenant → firm invite acceptance. Lives outside `practice.` prefix
@@ -236,6 +243,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settings/accounting-periods', [\App\Http\Controllers\AccountingPeriodController::class, 'index'])->name('settings.accounting-periods.index');
     Route::post('/settings/accounting-periods/{period}/close', [\App\Http\Controllers\AccountingPeriodController::class, 'close'])->name('settings.accounting-periods.close');
     Route::post('/settings/accounting-periods/{period}/reopen', [\App\Http\Controllers\AccountingPeriodController::class, 'reopen'])->name('settings.accounting-periods.reopen');
+    Route::get('/settings/tax-codes', [\App\Http\Controllers\TaxCodeController::class, 'index'])->name('settings.tax-codes.index');
+    Route::post('/settings/tax-codes', [\App\Http\Controllers\TaxCodeController::class, 'store'])->name('settings.tax-codes.store');
+    Route::patch('/settings/tax-codes/{taxCode}', [\App\Http\Controllers\TaxCodeController::class, 'update'])->name('settings.tax-codes.update');
+    Route::delete('/settings/tax-codes/{taxCode}', [\App\Http\Controllers\TaxCodeController::class, 'destroy'])->name('settings.tax-codes.destroy');
     Route::post('/settings/company/myinvois-test', [CompanySettingsController::class, 'testMyInvois'])->name('settings.company.myinvois-test');
     Route::get('/settings/plan', [SubscriptionController::class, 'planSettings'])->name('settings.plan.index');
     Route::post('/settings/plan/copilot-credits', [SubscriptionController::class, 'buyCopilotCredits'])
@@ -434,6 +445,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/myinvois/consolidated', [\App\Http\Controllers\ConsolidatedEInvoiceController::class, 'index'])->name('myinvois.consolidated.index');
         Route::post('/myinvois/consolidated', [\App\Http\Controllers\ConsolidatedEInvoiceController::class, 'store'])->name('myinvois.consolidated.store');
         Route::post('/myinvois/consolidated/{id}/cancel', [\App\Http\Controllers\ConsolidatedEInvoiceController::class, 'cancel'])->name('myinvois.consolidated.cancel');
+        Route::get('/myinvois/submissions', [\App\Http\Controllers\MyInvoisSubmissionController::class, 'index'])->name('myinvois.submissions.index');
+        Route::get('/myinvois/submissions/{id}', [\App\Http\Controllers\MyInvoisSubmissionController::class, 'show'])->whereNumber('id')->name('myinvois.submissions.show');
     });
 
     // --- Credit Notes ---
@@ -557,6 +570,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/bills/{id}/edit', [BillController::class, 'edit'])->name('bills.edit');
         Route::get('/bills/{id?}/receipt', [BillController::class, 'showReceipt'])->name('bills.receipt');
         Route::get('/bills/{id}', [BillController::class, 'show'])->whereNumber('id')->name('bills.show');
+        Route::get('/bills/{id}/payments/{paymentId}/voucher', [BillController::class, 'paymentVoucher'])->whereNumber(['id', 'paymentId'])->name('bills.payment-voucher');
     });
     Route::middleware(['permission:bills.create', 'plan.permission:bills.view'])->group(function () {
         Route::get('/bills/create', [BillController::class, 'create'])->name('bills.create');
@@ -575,6 +589,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/bills/ocr-status', [BillController::class, 'ocrStatus'])
             ->middleware('plan.permission:ocr.use')
             ->name('bills.ocr-status');
+    });
+    Route::middleware(['permission:ocr.use', 'plan.permission:ocr.use'])->group(function () {
+        Route::get('/receipts/inbox', [ReceiptInboxController::class, 'index'])->name('receipts.index');
+        Route::post('/receipts/inbox', [ReceiptInboxController::class, 'store'])->name('receipts.store');
+        Route::get('/receipts/inbox/{id}', [ReceiptInboxController::class, 'show'])->whereNumber('id')->name('receipts.show');
+        Route::post('/receipts/inbox/{id}/confirm', [ReceiptInboxController::class, 'confirm'])->whereNumber('id')->name('receipts.confirm');
+        Route::post('/receipts/inbox/{id}/discard', [ReceiptInboxController::class, 'discard'])->whereNumber('id')->name('receipts.discard');
+        Route::post('/receipts/inbox/{id}/retry', [ReceiptInboxController::class, 'retry'])->whereNumber('id')->name('receipts.retry');
     });
     Route::middleware(['permission:bills.edit', 'plan.permission:bills.view'])->group(function () {
         Route::put('/bills/{id}', [BillController::class, 'update'])->name('bills.update');
@@ -694,6 +716,24 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 
+    // --- Bank reconciliation (CSV import + suggest-match) ---
+    Route::middleware(['permission:bank-rec.match', 'plan.permission:bank-rec.match'])->group(function () {
+        Route::get('/bank-rec/import', [\App\Http\Controllers\BankReconciliationController::class, 'createImport'])->name('bank-rec.import');
+        Route::post('/bank-rec/import', [\App\Http\Controllers\BankReconciliationController::class, 'storeImport'])
+            ->middleware('throttle:creation')
+            ->name('bank-rec.import.store');
+        Route::post('/bank-rec/{statement}/suggest', [\App\Http\Controllers\BankReconciliationController::class, 'suggestMatches'])->name('bank-rec.suggest');
+        Route::post('/bank-rec/lines/{line}/confirm', [\App\Http\Controllers\BankReconciliationController::class, 'confirmMatch'])->name('bank-rec.lines.confirm');
+        Route::post('/bank-rec/lines/{line}/reject', [\App\Http\Controllers\BankReconciliationController::class, 'rejectSuggestion'])->name('bank-rec.lines.reject');
+        Route::post('/bank-rec/lines/{line}/exclude', [\App\Http\Controllers\BankReconciliationController::class, 'excludeLine'])->name('bank-rec.lines.exclude');
+        Route::post('/bank-rec/{statement}/reconcile', [\App\Http\Controllers\BankReconciliationController::class, 'reconcile'])->name('bank-rec.reconcile');
+    });
+
+    Route::middleware(['permission:bank-rec.view', 'plan.permission:bank-rec.view'])->group(function () {
+        Route::get('/bank-rec', [\App\Http\Controllers\BankReconciliationController::class, 'index'])->name('bank-rec.index');
+        Route::get('/bank-rec/{statement}', [\App\Http\Controllers\BankReconciliationController::class, 'match'])->name('bank-rec.match');
+    });
+
     // --- Transactions feed (bank/cash movements) + quick deposit / withdrawal ---
     Route::middleware(['permission:journal.view', 'plan.permission:journal.view'])->group(function () {
         Route::get('/transactions', [\App\Http\Controllers\TransactionsController::class, 'index'])->name('transactions.index');
@@ -789,6 +829,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reports/sales-tax', [\App\Http\Controllers\SalesTaxReportController::class, 'index'])->name('reports.sales-tax.index');
         Route::middleware('permission:reports.export.limited|reports.export.full')->group(function () {
             Route::get('/reports/sales-tax/export/csv', [\App\Http\Controllers\SalesTaxReportController::class, 'exportCsv'])->name('reports.sales-tax.export.csv');
+            Route::get('/reports/sales-tax/export/sst02', [\App\Http\Controllers\SalesTaxReportController::class, 'exportSst02'])->name('reports.sales-tax.export-sst02');
         });
         Route::middleware('permission:reports.export.full')->group(function () {
             Route::get('/reports/sales-tax/export/pdf', [\App\Http\Controllers\SalesTaxReportController::class, 'exportPdf'])->name('reports.sales-tax.export.pdf');

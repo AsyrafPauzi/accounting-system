@@ -57,6 +57,13 @@ export default function SalesTax({ auth, filters = {}, output_tax = 0, input_tax
                             Download CSV
                         </a>
                         <a
+                            href={`${route('reports.sales-tax.export-sst02')}?${exportQuery}`}
+                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream transition-colors"
+                            title="Figures for your SST-02 return — verify before submitting to MyTax"
+                        >
+                            Download SST-02 helper
+                        </a>
+                        <a
                             href={canExportPdf ? `${route('reports.sales-tax.export.pdf')}?${exportQuery}` : '#'}
                             onClick={(event) => {
                                 if (! canExportPdf) {
@@ -76,6 +83,9 @@ export default function SalesTax({ auth, filters = {}, output_tax = 0, input_tax
                             )}
                         </a>
                     </div>
+                    <p className="px-6 pb-4 text-xs text-ink-muted italic border-t border-border-warm pt-3">
+                        SST-02 helper exports are filing aids only — not a filed form. Verify all figures against source documents before submitting to MyTax.
+                    </p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">

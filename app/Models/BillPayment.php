@@ -17,6 +17,7 @@ class BillPayment extends Model
         'payment_date',
         'bank_account_code',
         'reference',
+        'voucher_number',
         'created_by',
     ];
 

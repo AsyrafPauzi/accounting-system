@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateInvoiceRequest;
 use App\Services\InvoiceService;
 use App\Services\SalesDocumentTrail;
 use App\Services\ToyyibpayService;
+use App\Support\DocumentNumber;
 use App\Support\ShareLink;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Account;
@@ -703,15 +704,21 @@ class InvoiceController extends Controller
     {
         $invoice = Invoice::with('customer')->findOrFail($id);
         $payment = $invoice->payments()->findOrFail($paymentId);
+
+        if (! $payment->receipt_number) {
+            $payment->receipt_number = DocumentNumber::next('invoice_payments', 'receipt_number', 'OR');
+            $payment->save();
+        }
+
         $company = tenant()?->getCompanyDetails() ?? config('invoice.company');
         $pdf = Pdf::loadView('pdf.payment-receipt', [
             'invoice'  => $invoice,
-            'payment'  => $payment,
+            'payment'  => $payment->fresh(),
             'customer' => $invoice->customer,
             'company'  => $company,
         ])->setPaper('a4', 'portrait');
 
-        return $pdf->stream("Receipt-{$invoice->invoice_number}-{$payment->id}.pdf", ['Attachment' => false]);
+        return $pdf->stream("Official-Receipt-{$payment->receipt_number}.pdf", ['Attachment' => false]);
     }
 
     public function publicPixel($uuid)

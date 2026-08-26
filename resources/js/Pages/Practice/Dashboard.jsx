@@ -1,6 +1,6 @@
 import PracticeLayout from '@/Layouts/PracticeLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Fragment } from 'react';
 import {
     BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -45,6 +45,7 @@ const formatDueIn = (days) => {
 // ─── Colour palette (matches the SME dashboard) ────────────────────────
 
 const HEALTH_COLORS = { good: '#0f766e', watch: '#a16207', risk: '#c2410c' };
+const SIGNAL_COLORS = { ok: '#0f766e', watch: '#a16207', risk: '#c2410c', 'n/a': '#9ca3af' };
 const AGING_COLORS  = ['#0f766e', '#65a30d', '#a16207', '#dc2626', '#7f1d1d']; // current → 90+
 const TERRACOTTA    = '#c1502c';
 
@@ -79,6 +80,7 @@ export default function Dashboard({ firm, aggregates, clients, attention = [], d
 
     const [unlinkTarget, setUnlinkTarget] = useState(null);
     const [unlinking, setUnlinking] = useState(false);
+    const [expandedClosePack, setExpandedClosePack] = useState(null);
 
     const enterClient = (tenantId) => {
         router.post(route('practice.switch', tenantId));
@@ -427,54 +429,75 @@ export default function Dashboard({ firm, aggregates, clients, attention = [], d
                                     <th className="px-6 py-3 text-right">Overdue</th>
                                     <th className="px-6 py-3 text-right">Cash</th>
                                     <th className="px-6 py-3">Last activity</th>
+                                    <th className="px-6 py-3">Close pack</th>
                                     <th className="px-6 py-3"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border-warm">
                                 {clients.map((c) => (
-                                    <tr key={c.tenant_id} className="hover:bg-cream/30 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2.5">
-                                                <HealthDot tag={c.health} />
-                                                <div className="min-w-0">
-                                                    <div className="font-semibold text-ink truncate">{c.name}</div>
-                                                    <div className="text-xs text-ink-muted">{c.permission_level}</div>
+                                    <Fragment key={c.tenant_id}>
+                                        <tr className="hover:bg-cream/30 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-2.5">
+                                                    <HealthDot tag={c.health} />
+                                                    <div className="min-w-0">
+                                                        <div className="font-semibold text-ink truncate">{c.name}</div>
+                                                        <div className="text-xs text-ink-muted">{c.permission_level}</div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-ink-muted">
-                                            {c.plan ?? <span className="italic">—</span>}
-                                            {c.plan_status && c.plan_status !== 'active' && (
-                                                <span className="ml-1.5 text-terracotta text-xs uppercase">({c.plan_status})</span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 text-right font-tabular">{formatRMExact(c.revenue_mtd)}</td>
-                                        <td className="px-6 py-4 text-right font-tabular">{formatRMExact(c.ar_outstanding)}</td>
-                                        <td className={`px-6 py-4 text-right font-tabular ${c.overdue_count > 0 ? 'text-terracotta font-semibold' : 'text-ink-muted'}`}>
-                                            {c.overdue_count}
-                                        </td>
-                                        <td className="px-6 py-4 text-right font-tabular text-ink-muted">{formatRMCompact(c.cash_balance)}</td>
-                                        <td className="px-6 py-4 text-ink-muted">{formatRelative(c.last_activity_at)}</td>
-                                        <td className="px-6 py-4 text-right whitespace-nowrap">
-                                            <button
-                                                type="button"
-                                                onClick={() => enterClient(c.tenant_id)}
-                                                className="text-sm font-semibold text-terracotta hover:text-terracotta-dark dark:hover:text-terracotta-light"
-                                            >
-                                                Enter →
-                                            </button>
-                                            {canUnlink && (
+                                            </td>
+                                            <td className="px-6 py-4 text-ink-muted">
+                                                {c.plan ?? <span className="italic">—</span>}
+                                                {c.plan_status && c.plan_status !== 'active' && (
+                                                    <span className="ml-1.5 text-terracotta text-xs uppercase">({c.plan_status})</span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-tabular">{formatRMExact(c.revenue_mtd)}</td>
+                                            <td className="px-6 py-4 text-right font-tabular">{formatRMExact(c.ar_outstanding)}</td>
+                                            <td className={`px-6 py-4 text-right font-tabular ${c.overdue_count > 0 ? 'text-terracotta font-semibold' : 'text-ink-muted'}`}>
+                                                {c.overdue_count}
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-tabular text-ink-muted">{formatRMCompact(c.cash_balance)}</td>
+                                            <td className="px-6 py-4 text-ink-muted">{formatRelative(c.last_activity_at)}</td>
+                                            <td className="px-6 py-4">
                                                 <button
                                                     type="button"
-                                                    onClick={() => setUnlinkTarget({ tenant_id: c.tenant_id, name: c.name })}
-                                                    className="ml-4 text-xs font-semibold text-ink-muted hover:text-terracotta dark:hover:text-terracotta-light underline-offset-2 hover:underline"
-                                                    title="Remove this client from your firm. Their books are kept intact."
+                                                    onClick={() => setExpandedClosePack(expandedClosePack === c.tenant_id ? null : c.tenant_id)}
+                                                    className="inline-flex items-center gap-2 text-xs font-semibold text-ink hover:text-terracotta"
+                                                    aria-expanded={expandedClosePack === c.tenant_id}
                                                 >
-                                                    Unlink
+                                                    <ClosePackBadge overall={c.close_pack?.overall ?? 'ok'} />
+                                                    <span>{expandedClosePack === c.tenant_id ? 'Hide' : 'View'}</span>
                                                 </button>
-                                            )}
-                                        </td>
-                                    </tr>
+                                            </td>
+                                            <td className="px-6 py-4 text-right whitespace-nowrap">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => enterClient(c.tenant_id)}
+                                                    className="text-sm font-semibold text-terracotta hover:text-terracotta-dark dark:hover:text-terracotta-light"
+                                                >
+                                                    Enter →
+                                                </button>
+                                                {canUnlink && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setUnlinkTarget({ tenant_id: c.tenant_id, name: c.name })}
+                                                        className="ml-4 text-xs font-semibold text-ink-muted hover:text-terracotta dark:hover:text-terracotta-light underline-offset-2 hover:underline"
+                                                        title="Remove this client from your firm. Their books are kept intact."
+                                                    >
+                                                        Unlink
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                        {expandedClosePack === c.tenant_id && (
+                                            <tr className="bg-cream/20">
+                                                <td colSpan={9} className="px-6 py-4">
+                                                    <ClosePackPanel pack={c.close_pack} onOpen={() => enterClient(c.tenant_id)} />
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </Fragment>
                                 ))}
                             </tbody>
                         </table>
@@ -604,5 +627,97 @@ function DeadlineBadge({ daysAway }) {
             <span className="text-base leading-none font-display">{daysAway}</span>
             <span className="leading-none mt-0.5">{daysAway === 1 ? 'day' : 'days'}</span>
         </span>
+    );
+}
+
+function ClosePackBadge({ overall = 'ok' }) {
+    const colour = SIGNAL_COLORS[overall] ?? SIGNAL_COLORS.ok;
+    const label = { ok: 'Ready', watch: 'Review', risk: 'Action' }[overall] ?? 'Ready';
+
+    return (
+        <span
+            className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide border"
+            style={{ color: colour, borderColor: `${colour}55`, background: `${colour}15` }}
+        >
+            <span className="w-2 h-2 rounded-full" style={{ background: colour }} />
+            {label}
+        </span>
+    );
+}
+
+function ClosePackPanel({ pack, onOpen }) {
+    if (! pack) {
+        return <p className="text-sm text-ink-muted">Close pack data unavailable.</p>;
+    }
+
+    const rows = [
+        {
+            key: 'unbilled',
+            label: 'Unbilled work',
+            detail: `${pack.unbilled?.count ?? 0} invoice(s) — ${pack.unbilled?.draft_count ?? 0} draft, ${pack.unbilled?.unsent_count ?? 0} unsent`,
+            status: pack.unbilled?.status ?? 'ok',
+        },
+        {
+            key: 'overdue_ar',
+            label: 'Overdue AR',
+            detail: `${pack.overdue_ar?.count ?? 0} invoice(s) • ${formatRMExact(pack.overdue_ar?.amount ?? 0)}`,
+            status: pack.overdue_ar?.status ?? 'ok',
+        },
+        {
+            key: 'sst_gaps',
+            label: 'SST / MyInvois gaps',
+            detail: `${pack.sst_gaps?.count ?? 0} posted invoice(s) need LHDN action this month`,
+            status: pack.sst_gaps?.status ?? 'ok',
+        },
+        {
+            key: 'period',
+            label: 'Accounting period',
+            detail: `${pack.period?.label ?? 'Current month'} — ${pack.period?.status ?? 'unknown'}`,
+            status: pack.period?.status_signal ?? 'watch',
+        },
+        {
+            key: 'payroll',
+            label: 'Payroll remittance',
+            detail: pack.payroll_remittance?.applicable
+                ? (pack.payroll_remittance.total_due > 0
+                    ? `${formatRMExact(pack.payroll_remittance.total_due)} due${pack.payroll_remittance.next_due_date ? ` by ${pack.payroll_remittance.next_due_date}` : ''}`
+                    : 'No statutory balance outstanding')
+                : 'Payroll not set up',
+            status: pack.payroll_remittance?.status ?? 'n/a',
+        },
+    ];
+
+    return (
+        <div>
+            <div className="flex items-center justify-between gap-4 mb-3">
+                <p className="text-sm font-semibold text-ink">Month-end close pack</p>
+                <button
+                    type="button"
+                    onClick={onOpen}
+                    className="text-xs font-semibold text-terracotta hover:text-terracotta-dark"
+                >
+                    Open books →
+                </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                {rows.map((row) => (
+                    <ClosePackSignal key={row.key} label={row.label} detail={row.detail} status={row.status} />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function ClosePackSignal({ label, detail, status = 'ok' }) {
+    const colour = SIGNAL_COLORS[status] ?? SIGNAL_COLORS.ok;
+
+    return (
+        <div className="rounded-xl border border-border-warm bg-surface px-3 py-2.5">
+            <div className="flex items-center gap-2 mb-1">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: colour }} />
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">{label}</p>
+            </div>
+            <p className="text-xs text-ink leading-snug">{detail}</p>
+        </div>
     );
 }

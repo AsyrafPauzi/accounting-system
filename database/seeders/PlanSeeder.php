@@ -98,6 +98,7 @@ class PlanSeeder extends Seeder
             // Tier-specific feature gates added June 2026 to align routes
             // with the bullets on the pricing page. See PlanPermissionAlignmentTest.
             'customer-statements.view',  // Growth+ ("Customer statements")
+            'bank-rec.view', 'bank-rec.match', // Growth+ (bank reconciliation)
             // currencies.multi was dropped June 2026 — the multi-currency
             // feature ships to all tiers today (currency dropdown +
             // exchange-rate field on invoices/estimates) and was never
@@ -109,7 +110,7 @@ class PlanSeeder extends Seeder
             // Coming-soon Corporate / Enterprise features. The permission
             // exists so we can wire the future controller behind it without
             // a migration; today no route consumes it.
-            'myinvois.submit',           // Corporate+ LHDN MyInvois e-Invoicing
+            'myinvois.submit',           // Growth+ LHDN MyInvois e-Invoicing
             'sso.configure',             // Enterprise ("Single sign-on — coming soon")
             // Practice (Accountant track)
             'practice.access', 'practice.clients.view', 'practice.clients.invite',
@@ -205,6 +206,8 @@ class PlanSeeder extends Seeder
                     'Products & services catalogue',
                     'Balance sheet & cash flow reports',
                     'Sales tax & ageing reports',
+                    'Bank reconciliation (CSV import)',
+                    'LHDN MyInvois e-Invoicing',
                     'Priority email support',
                 ],
                 'is_active' => true,
@@ -229,7 +232,6 @@ class PlanSeeder extends Seeder
                     'Up to 5 team members included',
                     'Audit log & compliance pack',
                     'Payroll module',
-                    'LHDN MyInvois e-Invoicing',
                     'Dedicated account manager',
                 ],
                 'is_active' => true,
@@ -519,9 +521,11 @@ class PlanSeeder extends Seeder
             [
                 'products.view', 'products.create', 'products.edit', 'products.delete',
                 'customer-statements.view',
+                'bank-rec.view', 'bank-rec.match',
                 'reports.sales-tax', 'reports.customer-credits', 'reports.purchases-by-vendor',
                 'reports.balance-sheet', 'reports.cashflow', 'reports.aged-reports',
                 'accounts.create', 'accounts.edit',
+                'myinvois.submit',
             ]
         )));
 

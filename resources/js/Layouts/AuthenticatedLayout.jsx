@@ -68,6 +68,7 @@ const navConfig = [
             { name: 'Goods Receipts', route: 'goods-receipts.index', Icon: Icons.ClipboardList, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Stock received from suppliers' },
         ]},
         { name: 'Bills', links: [
+            { name: 'Receipt inbox', route: 'receipts.index', Icon: Icons.Document, planPermission: 'ocr.use', userPermission: 'ocr.use', subtitle: 'Upload receipts and create bills from OCR' },
             { name: 'Bills / Purchases', nameKey: 'navigation.links.bills', route: 'bills.index', Icon: Icons.ShoppingCart, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Supplier invoices to pay' },
             { name: 'Recurring Bills', route: 'recurring-bills.index', Icon: Icons.ArrowPath, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Auto-generate supplier bills on a schedule' },
             { name: 'Supplier Credit Notes', route: 'supplier-credit-notes.index', Icon: Icons.ReceiptRefund, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Credits from suppliers' },
@@ -84,6 +85,7 @@ const navConfig = [
     ]},
     { group: 'Accounting', groupKey: 'navigation.groups.accounting', links: [
         { name: 'Transactions', route: 'transactions.index', Icon: Icons.CreditCard, planPermission: 'journal.view', userPermission: 'journal.view', subtitle: 'Bank & cash movements feed', activeRoutes: ['transactions.index', 'transactions.deposit.create', 'transactions.withdrawal.create'] },
+        { name: 'Bank reconciliation', route: 'bank-rec.index', Icon: Icons.DocumentCheck, planPermission: 'bank-rec.view', userPermission: 'bank-rec.view', subtitle: 'Import statements & match transactions', activeRoutes: ['bank-rec.index', 'bank-rec.import', 'bank-rec.match'] },
         { name: 'Chart of Accounts', route: 'chart-of-accounts.index', Icon: Icons.Folder, planPermission: 'accounts.view', userPermission: 'accounts.view', subtitle: 'Accounts used in postings and reports' },
         { name: 'General Ledger', route: 'general-ledger.index', Icon: Icons.BookOpen, planPermission: 'general-ledger.view', userPermission: 'general-ledger.view', subtitle: 'By journal entry' },
         { name: 'Manual Journal Entry', route: 'journal.index', Icon: Icons.Scale, planPermission: 'journal.create', userPermission: 'journal.view', subtitle: 'Post custom journal entries' },

@@ -81,13 +81,13 @@ class AddClientController extends Controller
         $adminRole = Role::where('name', 'admin')->where('guard_name', 'web')->first();
         $linkedByUserId = $request->user()?->id;
 
-        // Deliberately not wrapped in a DB transaction. Stancl's
-        // TenantCreated event listeners run tenant migrations during
-        // Tenant::create(), and those run on a separate connection that
-        // commits independently — wrapping the outer flow in a
-        // transaction breaks them ("There is no active transaction").
-        // The SME register flow has the same shape; we mirror it.
-        $tenant = Tenant::create(['id' => $tenantId]);
+        // Deliberately not wrapped in a DB transaction — user/tenant
+        // rows commit on the central connection while ProvisionTenantJob
+        // creates the tenant database asynchronously on the queue.
+        $tenant = Tenant::create([
+            'id' => $tenantId,
+            'provision_status' => 'pending',
+        ]);
 
         $user = User::create([
             'name'                     => $validated['owner_name'],

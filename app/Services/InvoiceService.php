@@ -549,13 +549,15 @@ class InvoiceService
     private function syncItems(Invoice $invoice, array $items): void
     {
         foreach ($items as $item) {
+            $tax = \App\Support\TaxCodeResolver::normalizeLineItem($item);
             $invoice->items()->create([
                 'product_id'          => $item['product_id'] ?? null,
                 'account_code'        => $item['account_code'] ?? null,
                 'description'         => $item['description'],
                 'quantity'            => $item['quantity'],
                 'unit_price'          => $item['unit_price'],
-                'tax_rate'            => $item['tax_rate'],
+                'tax_code_id'         => $tax['tax_code_id'],
+                'tax_rate'            => $tax['tax_rate'],
                 'item_classification' => $item['item_classification'],
                 'discount_amount'     => $item['discount_amount'] ?? 0,
                 'amount'              => ($item['quantity'] * $item['unit_price']) - (float) ($item['discount_amount'] ?? 0),

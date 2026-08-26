@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use App\Jobs\ProcessOcr;
 use App\Support\OcrResultCache;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class BillController extends Controller
 {
@@ -188,6 +189,27 @@ class BillController extends Controller
             'success',
             $bill->purchase_kind === 'claim' ? 'Reimbursement recorded.' : 'Payment recorded.'
         );
+    }
+
+    public function paymentVoucher(int $id, int $paymentId)
+    {
+        $bill = Bill::with('supplier')->findOrFail($id);
+        $payment = $bill->payments()->findOrFail($paymentId);
+
+        if (! $payment->voucher_number) {
+            $payment->voucher_number = DocumentNumber::next('bill_payments', 'voucher_number', 'PV');
+            $payment->save();
+        }
+
+        $company = tenant()?->getCompanyDetails() ?? config('invoice.company');
+        $pdf = Pdf::loadView('pdf.payment-voucher', [
+            'bill'     => $bill,
+            'payment'  => $payment->fresh(),
+            'supplier' => $bill->supplier,
+            'company'  => $company,
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->stream("Payment-Voucher-{$payment->voucher_number}.pdf", ['Attachment' => false]);
     }
 
     public function show(int $id): Response
