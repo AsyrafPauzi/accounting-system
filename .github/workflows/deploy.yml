@@ -38,9 +38,6 @@ jobs:
           cp .env.example .env
           php artisan key:generate
 
-      - name: Run PHPUnit
-        run: php artisan test
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -51,6 +48,9 @@ jobs:
         run: |
           npm ci
           npm run build
+
+      - name: Run PHPUnit
+        run: php artisan test
 
   deploy:
     name: Deploy

@@ -9,6 +9,12 @@ abstract class TestCase extends BaseTestCase
 {
     use CreatesTestTenants;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withoutVite();
+    }
+
     protected function tearDown(): void
     {
         if (function_exists('tenancy') && tenancy()->initialized) {
