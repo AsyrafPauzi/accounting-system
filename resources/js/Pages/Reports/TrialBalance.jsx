@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { formatCurrency } from '@/utils/currency';
 import ReportPeriodChips from '@/Components/ReportPeriodChips';
 
@@ -62,9 +62,24 @@ function groupByType(rows) {
         .filter((group) => group.accounts.length > 0);
 }
 
-export default function TrialBalance({ auth, trialBalance = [], totals = {}, filters = {} }) {
+export default function TrialBalance({
+    auth,
+    trialBalance = [],
+    totals = {},
+    compare_label = null,
+    compare_as_of_date = null,
+    compare_totals = null,
+    filters = {},
+}) {
     const asOfDate = filters.as_of_date || '';
     const preset = filters.preset || 'custom';
+    const compare = filters.compare || 'previous';
+    const comparisonOn = compare !== 'none';
+    const changeCompare = (value) => router.get(route('trial-balance.index'), {
+        preset,
+        as_of_date: asOfDate,
+        compare: value,
+    }, { preserveScroll: true, preserveState: false });
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState('');
 
@@ -111,13 +126,37 @@ export default function TrialBalance({ auth, trialBalance = [], totals = {}, fil
             <Head title="Trial Balance" />
 
             <div className="space-y-4 sm:space-y-5 min-w-0">
-                <div className="bg-surface rounded-2xl border border-border-warm shadow-sm p-4">
+                <div className="bg-surface rounded-2xl border border-border-warm shadow-sm p-4 space-y-3">
                     <ReportPeriodChips
                         action={route('trial-balance.index')}
                         preset={preset}
                         mode="as_of"
                         asOf={asOfDate}
+                        extraParams={{ compare }}
                     />
+                    <div className="flex flex-wrap gap-1.5">
+                        {[
+                            ['previous', 'vs prior month'],
+                            ['last_year', 'vs last year'],
+                            ['none', 'Off'],
+                        ].map(([value, label]) => (
+                            <button
+                                key={value}
+                                type="button"
+                                onClick={() => changeCompare(value)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
+                                    compare === value
+                                        ? 'bg-forest text-white border-forest'
+                                        : 'bg-surface text-ink border-border-warm hover:bg-cream'
+                                }`}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                    {comparisonOn && compare_as_of_date && (
+                        <p className="text-xs text-ink-muted">{compare_label}: {formatAsOf(compare_as_of_date)}</p>
+                    )}
                 </div>
 
                 <div className="bg-surface rounded-2xl border border-border-warm shadow-sm overflow-hidden">
@@ -196,6 +235,12 @@ export default function TrialBalance({ auth, trialBalance = [], totals = {}, fil
                                     <th className="px-4 sm:px-6 py-3">Account</th>
                                     <th className="px-4 sm:px-6 py-3 text-right">Debit</th>
                                     <th className="px-4 sm:px-6 py-3 text-right">Credit</th>
+                                    {comparisonOn && (
+                                        <>
+                                            <th className="px-4 sm:px-6 py-3 text-right">Cmp Dr</th>
+                                            <th className="px-4 sm:px-6 py-3 text-right">Cmp Cr</th>
+                                        </>
+                                    )}
                                 </tr>
                             </thead>
                             <tbody>
@@ -224,6 +269,16 @@ export default function TrialBalance({ auth, trialBalance = [], totals = {}, fil
                                                 <td className="px-4 sm:px-6 py-3 text-right font-mono tabular-nums text-ink whitespace-nowrap">
                                                     {moneyOrDash(item.credit)}
                                                 </td>
+                                                {comparisonOn && (
+                                                    <>
+                                                        <td className="px-4 sm:px-6 py-3 text-right font-mono tabular-nums text-ink-muted whitespace-nowrap">
+                                                            {moneyOrDash(item.compare_debit)}
+                                                        </td>
+                                                        <td className="px-4 sm:px-6 py-3 text-right font-mono tabular-nums text-ink-muted whitespace-nowrap">
+                                                            {moneyOrDash(item.compare_credit)}
+                                                        </td>
+                                                    </>
+                                                )}
                                             </tr>
                                         ))}
                                         <tr className="border-b border-border-warm bg-cream/30">
@@ -236,11 +291,12 @@ export default function TrialBalance({ auth, trialBalance = [], totals = {}, fil
                                             <td className="px-4 sm:px-6 py-2.5 text-right font-mono tabular-nums text-sm font-semibold text-ink whitespace-nowrap">
                                                 {money(group.credit)}
                                             </td>
+                                            {comparisonOn && <td colSpan={2} />}
                                         </tr>
                                     </React.Fragment>
                                 )) : (
                                     <tr>
-                                        <td colSpan={4} className="px-4 py-16 text-center">
+                                        <td colSpan={comparisonOn ? 6 : 4} className="px-4 py-16 text-center">
                                             <p className="text-ink font-semibold mb-1">
                                                 {hasFilters ? 'No accounts match your filters.' : 'No balances as of this date.'}
                                             </p>
@@ -265,6 +321,16 @@ export default function TrialBalance({ auth, trialBalance = [], totals = {}, fil
                                         <td className="px-4 sm:px-6 py-4 text-right font-mono tabular-nums font-bold text-ink whitespace-nowrap">
                                             {money(totals.credit)}
                                         </td>
+                                        {comparisonOn && compare_totals && (
+                                            <>
+                                                <td className="px-4 sm:px-6 py-4 text-right font-mono tabular-nums font-bold text-ink-muted whitespace-nowrap">
+                                                    {money(compare_totals.debit)}
+                                                </td>
+                                                <td className="px-4 sm:px-6 py-4 text-right font-mono tabular-nums font-bold text-ink-muted whitespace-nowrap">
+                                                    {money(compare_totals.credit)}
+                                                </td>
+                                            </>
+                                        )}
                                     </tr>
                                 </tfoot>
                             )}

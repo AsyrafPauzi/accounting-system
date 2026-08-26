@@ -239,6 +239,187 @@
         }
     },
 
+    "invoices": {
+        "title": "Invoices",
+        "page_title": "Sales Invoices",
+        "subtitle": "Create, manage and track revenue documents",
+        "new": "New invoice",
+        "create": "Create Invoice",
+        "cash_sale": "Cash sale",
+        "batch": "Batch",
+        "balance_due": "Balance due",
+        "total_invoices": "Total Invoices",
+        "total_invoices_hint": "Draft · Unpaid · Paid",
+        "outstanding_ar": "Outstanding (AR)",
+        "outstanding_hint": "Awaiting collection",
+        "collected": "Collected",
+        "collected_hint": "Cash received",
+        "search_placeholder": "Search by invoice # or customer...",
+        "all_statuses": "All statuses",
+        "table_invoice": "Invoice",
+        "table_customer": "Customer",
+        "table_status": "Status",
+        "table_amount": "Amount",
+        "table_actions": "Actions",
+        "empty_none": "No invoices yet. Create your first invoice to get started.",
+        "empty_filtered": "No invoices match your filters.",
+        "status": {
+            "draft": "Draft",
+            "unpaid": "Unpaid",
+            "partially_paid": "Partially paid",
+            "paid": "Paid",
+            "void": "Void"
+        },
+        "actions": {
+            "open": "Open",
+            "duplicate": "Duplicate",
+            "preview_pdf": "Preview PDF",
+            "download_pdf": "Download PDF",
+            "post_to_ledger": "Post to ledger",
+            "edit": "Edit",
+            "delete_draft": "Delete draft",
+            "record_payment": "Record payment",
+            "credit_note": "Credit note",
+            "email": "Email",
+            "emailing": "Emailing…",
+            "void_invoice": "Void invoice",
+            "viewed": "Viewed",
+            "walk_in": "Walk-in",
+            "no_email": "No email",
+            "balance_short": "Bal:"
+        },
+        "confirm": {
+            "bulk_email_title": "Email :count invoice PDF(s)?",
+            "bulk_email_text": "Queued to each customer email on file. Rows without email are skipped.",
+            "bulk_email_confirm": "Send",
+            "post_title": "Post to Ledger?",
+            "post_text": "This will lock the invoice details and create General Ledger entries.",
+            "post_confirm": "Post",
+            "void_title": "Void Invoice?",
+            "void_text": "This creates a reversal entry and cancels the balance. This action cannot be undone.",
+            "void_confirm": "Void",
+            "delete_title": "Delete Draft?",
+            "delete_text": "This cannot be undone.",
+            "delete_confirm": "Delete",
+            "email_title": "Email Invoice PDF?",
+            "email_text": "This will send the PDF to the customer email on file.",
+            "email_confirm": "Send"
+        },
+        "bulk": {
+            "selected": ":count selected",
+            "download_pdfs": "Download PDFs",
+            "email_selected": "Email selected",
+            "clear": "Clear"
+        },
+        "filters": {
+            "apply": "Apply",
+            "per_page": ":count per page"
+        },
+        "pagination": {
+            "page_of": "Page :current of :last",
+            "previous": "Previous",
+            "next": "Next",
+            "range": ":from–:to of :total",
+            "empty": "0 of 0"
+        },
+        "payment_modal": {
+            "title": "Record Receipt",
+            "subtitle": "Payment for :number",
+            "amount": "Amount",
+            "date": "Date",
+            "account": "Account",
+            "no_bank_accounts": "No bank/cash accounts — add one in Chart of Accounts",
+            "cancel": "Cancel",
+            "confirm": "Confirm Receipt",
+            "processing": "Processing..."
+        }
+    },
+
+    "bills": {
+        "title": "Bills / Purchases",
+        "page_title": "Bills & Purchases",
+        "subtitle": "Record expenses and track payables",
+        "new": "New bill",
+        "create": "Create bill",
+        "batch": "Batch",
+        "balance_due": "Balance due",
+        "total_bills": "Total bills",
+        "total_bills_hint": "Draft · Unpaid · Paid",
+        "outstanding_ap": "Outstanding (AP)",
+        "outstanding_hint": "Amount due to suppliers",
+        "paid_period": "Paid (period)",
+        "paid_hint": "Payments recorded",
+        "search_placeholder": "Search by bill # or supplier...",
+        "all_suppliers": "All suppliers",
+        "table_bill": "Bill",
+        "table_supplier": "Supplier",
+        "table_due_date": "Due date",
+        "table_status": "Status",
+        "table_receipt": "Receipt",
+        "table_total": "Total",
+        "table_balance": "Balance",
+        "table_actions": "Actions",
+        "empty_none": "No bills yet. Create your first bill to get started.",
+        "empty_filtered": "No bills match your filters.",
+        "status": {
+            "draft": "Draft",
+            "unpaid": "Unpaid",
+            "partially_paid": "Partially paid",
+            "paid": "Paid",
+            "void": "Void"
+        },
+        "actions": {
+            "open": "Open",
+            "duplicate": "Duplicate",
+            "preview_pdf": "Preview PDF",
+            "download_pdf": "Download PDF",
+            "post_to_ledger": "Post to ledger",
+            "edit": "Edit",
+            "delete_draft": "Delete draft",
+            "record_payment": "Record payment",
+            "view_receipt": "View receipt",
+            "void_bill": "Void bill",
+            "balance_short": "Bal:"
+        },
+        "confirm": {
+            "post_title": "Post to Ledger?",
+            "post_text": "This will lock the bill details and create General Ledger entries.",
+            "post_confirm": "Post",
+            "void_title": "Void Bill?",
+            "void_text": "This creates a reversal entry and cancels the balance. This action cannot be undone.",
+            "void_confirm": "Void",
+            "delete_title": "Delete Draft?",
+            "delete_text": "This cannot be undone.",
+            "delete_confirm": "Delete"
+        },
+        "bulk": {
+            "selected": ":count selected",
+            "clear": "Clear"
+        },
+        "filters": {
+            "apply": "Apply",
+            "per_page": ":count per page"
+        },
+        "pagination": {
+            "page_of": "Page :current of :last",
+            "previous": "Previous",
+            "next": "Next",
+            "range": ":from–:to of :total",
+            "empty": "0 of 0"
+        },
+        "payment_modal": {
+            "title": "Record Payment",
+            "subtitle": "Bill :number",
+            "amount": "Amount",
+            "date": "Date",
+            "account": "Account",
+            "no_bank_accounts": "No bank/cash accounts — add one in Chart of Accounts",
+            "cancel": "Cancel",
+            "confirm": "Confirm Payment",
+            "processing": "Processing..."
+        }
+    },
+
     "subscription": {
         "free_tier": "You\u2019re on the Free tier.",
         "upgrade": "Upgrade"

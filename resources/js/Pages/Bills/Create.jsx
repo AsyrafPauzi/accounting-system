@@ -1,6 +1,6 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import DocumentFormHeader from '@/Components/DocumentFormHeader';
 import { blankPurchaseLine } from '@/Components/PurchasesDocLines';
 import BillForm, { KIND_COPY, defaultAccountCode, toBillPayload } from './_Form';
@@ -36,6 +36,7 @@ export default function Create({
 
     const { data, setData, processing, errors } = form;
     const copy = KIND_COPY[data.purchase_kind] || KIND_COPY.credit;
+    const { tax_codes: taxCodes = [] } = usePage().props;
 
     const submit = (e) => {
         e.preventDefault();
@@ -68,6 +69,7 @@ export default function Create({
                 expenseAccounts={expenseAccounts}
                 bankAccounts={bankAccounts}
                 products={products}
+                taxCodes={taxCodes}
             />
         </AuthenticatedLayout>
     );

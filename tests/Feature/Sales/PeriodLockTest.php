@@ -98,4 +98,32 @@ class PeriodLockTest extends TestCase
         app(InvoiceService::class)->post($invoice);
         $this->assertSame('unpaid', $invoice->fresh()->status);
     }
+
+    public function test_void_invoice_in_closed_period_is_rejected(): void
+    {
+        $issueDate = now()->startOfMonth()->toDateString();
+        $invoice = app(InvoiceService::class)->create([
+            'invoice_number' => 'INV-VOID-LOCK',
+            'msic_code'      => '70200',
+            'customer_id'    => $this->customer->id,
+            'issue_date'     => $issueDate,
+            'due_date'       => now()->addDays(30)->toDateString(),
+            'currency'       => 'MYR',
+            'shipping_amount'=> 0,
+        ], [[
+            'description' => 'Void lock', 'quantity' => 1, 'unit_price' => 40,
+            'tax_rate' => 0, 'discount_amount' => 0, 'item_classification' => '022',
+        ]]);
+        app(InvoiceService::class)->post($invoice);
+
+        AccountingPeriod::query()
+            ->whereDate('start_date', '<=', $issueDate)
+            ->whereDate('end_date', '>=', $issueDate)
+            ->update(['status' => 'closed', 'closed_at' => now()]);
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('closed');
+
+        app(InvoiceService::class)->void($invoice->fresh());
+    }
 }

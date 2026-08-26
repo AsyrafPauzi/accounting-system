@@ -116,6 +116,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        if (filled(config('sentry.dsn'))) {
+            \Sentry\Laravel\Integration::handles($exceptions);
+        }
+
         // PDPA defence: prevent any of these inputs being flashed back into
         // the session on a 422 / 500. If the framework re-renders the form
         // it'll see empty strings rather than the user's password etc.

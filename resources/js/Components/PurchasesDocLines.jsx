@@ -13,7 +13,7 @@ const lineTaxClass = `${lineControlClass} px-0.5 pr-5 text-center tabular-nums`;
 const linePickIconClass = 'relative shrink-0 h-8 w-8 rounded-lg border border-border-warm bg-cream/50 text-ink-muted hover:bg-cream hover:text-terracotta transition-colors';
 
 export function blankPurchaseLine(accountCode = '5000') {
-    return { description: '', quantity: 1, unit_price: 0, tax_rate: 0, discount_amount: 0, account_code: accountCode, product_id: null };
+    return { description: '', quantity: 1, unit_price: 0, tax_rate: 0, tax_code_id: null, discount_amount: 0, account_code: accountCode, product_id: null };
 }
 
 export function purchaseLineAmount(item) {
@@ -21,7 +21,7 @@ export function purchaseLineAmount(item) {
     return net + Math.max(0, net) * (Number(item.tax_rate) || 0) / 100;
 }
 
-export default function PurchasesDocLines({ items, onChange, products = [], expenseAccounts = [], disabled = false, showTax = true }) {
+export default function PurchasesDocLines({ items, onChange, products = [], expenseAccounts = [], taxCodes = [], disabled = false, showTax = true }) {
     const defaultAccount = expenseAccounts[0]?.code || '5000';
 
     const update = (index, patch) => {
@@ -131,11 +131,30 @@ export default function PurchasesDocLines({ items, onChange, products = [], expe
                                 </td>
                                 {showTax && (
                                     <td className="px-1 py-2 align-middle">
-                                        <select value={item.tax_rate} onChange={(e) => update(index, { tax_rate: e.target.value })} disabled={disabled} className={`${lineTaxClass} block`}>
-                                            <option value="0">0%</option>
-                                            <option value="6">6%</option>
-                                            <option value="8">8%</option>
-                                            <option value="16">16%</option>
+                                        <select
+                                            value={item.tax_code_id ?? item.tax_rate}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                const code = taxCodes.find((c) => String(c.id) === val);
+                                                if (code) {
+                                                    update(index, { tax_code_id: code.id, tax_rate: code.rate });
+                                                } else {
+                                                    update(index, { tax_code_id: null, tax_rate: val });
+                                                }
+                                            }}
+                                            disabled={disabled}
+                                            className={`${lineTaxClass} block`}
+                                        >
+                                            {taxCodes.length > 0 ? taxCodes.map((code) => (
+                                                <option key={code.id} value={code.id}>{code.code} ({code.rate}%)</option>
+                                            )) : (
+                                                <>
+                                                    <option value="0">0%</option>
+                                                    <option value="6">6%</option>
+                                                    <option value="8">8%</option>
+                                                    <option value="16">16%</option>
+                                                </>
+                                            )}
                                         </select>
                                     </td>
                                 )}

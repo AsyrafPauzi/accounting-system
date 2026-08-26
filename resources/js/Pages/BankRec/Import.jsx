@@ -27,7 +27,7 @@ export default function BankRecImport({ auth, bank_accounts = [] }) {
             header={
                 <div>
                     <h2 className="font-display text-2xl font-medium text-ink">Import bank statement</h2>
-                    <p className="text-sm text-ink-muted mt-1">Upload a CSV with date, description, and amount columns.</p>
+                    <p className="text-sm text-ink-muted mt-1">Upload a CSV or text-based PDF with date, description, and amount columns.</p>
                 </div>
             }
         >
@@ -52,18 +52,18 @@ export default function BankRecImport({ auth, bank_accounts = [] }) {
                     </div>
 
                     <div>
-                        <InputLabel htmlFor="file" value="CSV file" />
+                        <InputLabel htmlFor="file" value="Statement file (CSV or PDF)" />
                         <input
                             id="file"
                             type="file"
-                            accept=".csv,text/csv"
+                            accept=".csv,text/csv,.pdf,application/pdf"
                             className={inputClass}
                             onChange={(e) => form.setData('file', e.target.files[0])}
                             required
                         />
                         {form.errors.file && <p className="text-sm text-red-600 mt-1">{form.errors.file}</p>}
                         <p className="text-xs text-ink-muted mt-2">
-                            Required columns: date, amount. Optional: description, reference.
+                            Required columns: date, amount. Optional: description, reference. PDF must contain selectable text (not scanned images).
                         </p>
                     </div>
 

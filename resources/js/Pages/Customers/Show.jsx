@@ -1,6 +1,6 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { confirm } from '@/utils/swal';
 import { formatCurrency } from '@/utils/currency';
 import { formatDate } from '@/utils/dates';
@@ -75,6 +75,7 @@ export default function Show({
     delete_blocked_reason = null,
     myinvois_gaps = [],
 }) {
+    const { flash } = usePage().props;
     const currency = customer.currency || 'MYR';
     const outstanding = Number(stats.balance) || 0;
     const websiteUrl = customer.website
@@ -140,6 +141,11 @@ export default function Show({
                     <RowActionsMenu
                         items={[
                             { label: 'Statement', href: route('customer-statements.show', customer.id), icon: <ActionIcons.Pdf /> },
+                            {
+                                label: 'Portal link',
+                                icon: <ActionIcons.Open />,
+                                onClick: () => router.post(route('customers.portal-link', customer.id)),
+                            },
                             canReceive ? { label: 'Receive payment', href: route('ar-deposits.create', { customer_id: customer.id }), icon: <ActionIcons.Currency /> } : null,
                             { label: 'All invoices', href: route('invoices.index'), icon: <ActionIcons.Invoice /> },
                             canDelete ? {
@@ -155,6 +161,13 @@ export default function Show({
             }
         >
             <Head title={customer.name} />
+
+            {flash?.portal_url && (
+                <div className="mb-4 rounded-xl border border-forest/30 bg-forest/5 px-4 py-3 text-sm text-ink">
+                    <p className="font-semibold text-forest mb-1">Customer portal link</p>
+                    <a href={flash.portal_url} className="break-all text-terracotta hover:underline" target="_blank" rel="noreferrer">{flash.portal_url}</a>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start pb-8">
                 <article className="bg-white rounded-2xl border border-border-warm/70 shadow-[0_8px_30px_rgba(28,25,23,0.06)] overflow-hidden">

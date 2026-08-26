@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ReceiptUpload from '@/Components/ReceiptUpload';
 import PurchasesDocLines, { blankPurchaseLine } from '@/Components/PurchasesDocLines';
-import DocumentFormNotesTotals from '@/Components/DocumentFormNotesTotals';
+import DocumentFormNotesTotals, { computeDocTotals } from '@/Components/DocumentFormNotesTotals';
 
 const Icons = {
     Document: () => (
@@ -63,16 +63,19 @@ export function itemsFromBill(items, accountCode) {
         description: item.description || '',
         quantity: parseFloat(item.quantity) || 1,
         unit_price: parseFloat(item.unit_amount ?? item.unit_price) || 0,
-        tax_rate: 0,
+        tax_rate: parseFloat(item.tax_rate) || 0,
+        tax_code_id: item.tax_code_id ?? null,
         discount_amount: 0,
         product_id: item.product_id || null,
     }));
 }
 
 export function toBillPayload(data) {
+    const totals = computeDocTotals(data.items);
+    const taxAmount = totals.tax > 0 ? totals.tax : (Number(data.tax_amount) || 0);
     return {
         ...data,
-        tax_amount: data.tax_amount,
+        tax_amount: taxAmount,
         items: data.items.map((item) => {
             const unit = Number(item.unit_price ?? item.unit_amount) || 0;
             const qty = Number(item.quantity) || 0;
@@ -84,6 +87,8 @@ export function toBillPayload(data) {
                 quantity: item.quantity,
                 unit_amount: unit,
                 amount: Math.round((qty * unit - disc) * 100) / 100,
+                tax_code_id: item.tax_code_id ?? null,
+                tax_rate: Number(item.tax_rate) || 0,
             };
         }),
     };
@@ -115,6 +120,7 @@ export default function BillForm({
     expenseAccounts = [],
     bankAccounts = [],
     products = [],
+    taxCodes = [],
     showKind = true,
     disabled = false,
     receiptUrl = null,
@@ -296,8 +302,8 @@ export default function BillForm({
                 onChange={(items) => setData('items', items)}
                 products={products}
                 expenseAccounts={accounts}
+                taxCodes={taxCodes}
                 disabled={disabled}
-                showTax={false}
             />
             {errors.items && <p className="text-xs text-terracotta">{errors.items}</p>}
 
@@ -310,8 +316,6 @@ export default function BillForm({
                 notesPlaceholder="Not printed — for your team only"
                 notesDisabled={disabled}
                 items={data.items}
-                taxAmount={data.tax_amount}
-                onTaxAmountChange={(value) => setData('tax_amount', value)}
             />
         </form>
     );

@@ -33,6 +33,11 @@ class JournalEntry extends Model
         return $this->hasMany(JournalItem::class);
     }
 
+    public function payrollEmployeeLines()
+    {
+        return $this->hasMany(PayrollEmployeeLine::class);
+    }
+
     /**
      * Route to the source document when applicable; always falls back to GL show.
      */
@@ -55,6 +60,8 @@ class JournalEntry extends Model
             'AR Deposit', 'AR Deposit Application', 'AR Deposit Refund', 'AR Deposit Forfeit' => $ref !== '' ? "AR deposit {$ref}" : 'AR deposit',
             'AP Deposit', 'AP Deposit Application' => $ref !== '' ? "AP deposit {$ref}" : 'AP deposit',
             'Manual' => $ref !== '' ? "Manual journal {$ref}" : 'Manual journal',
+            'Invoice FX Revaluation' => $ref !== '' ? "Invoice FX reval {$ref}" : 'Invoice FX revaluation',
+            'Bill FX Revaluation' => $ref !== '' ? "Bill FX reval {$ref}" : 'Bill FX revaluation',
             default => match ($this->type) {
                 'deposit' => 'Deposit',
                 'withdrawal' => 'Withdrawal',
@@ -90,6 +97,8 @@ class JournalEntry extends Model
             'Supplier Debit Note' => $this->safeRoute('supplier-debit-notes.show', SupplierDebitNote::class, $this->reference_id),
             'AR Deposit', 'AR Deposit Application', 'AR Deposit Refund', 'AR Deposit Forfeit' => $this->safeRoute('ar-deposits.show', ArDeposit::class, $this->reference_id),
             'AP Deposit', 'AP Deposit Application' => $this->safeRoute('ap-deposits.show', ApDeposit::class, $this->reference_id),
+            'Invoice FX Revaluation' => $this->safeRoute('invoices.show', Invoice::class, $this->reference_id),
+            'Bill FX Revaluation' => $this->safeRoute('bills.show', Bill::class, $this->reference_id),
             default => null,
         };
     }

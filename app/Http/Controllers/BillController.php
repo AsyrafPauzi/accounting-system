@@ -179,7 +179,8 @@ class BillController extends Controller
                 $validated['payment_date'],
                 $validated['bank_account_code'],
                 $validated['reference'] ?? null,
-                $request->user()?->id
+                $request->user()?->id,
+                isset($validated['payment_exchange_rate']) ? (float) $validated['payment_exchange_rate'] : null,
             );
         } catch (\LogicException $e) {
             return redirect()->back()->with('error', $e->getMessage());

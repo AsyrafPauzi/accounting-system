@@ -8,8 +8,9 @@
 
 Make BukuCloud a **trusted book of record** for Malaysian SMEs and accounting firms — then pull ahead with **practice desk + Copilot + self-hosted**, where Bukku and AutoCount cannot follow in the cloud.
 
-**Score today:** 5.6 / 10 overall  
-**Score targets:** Day 14 → 6.6 · Day 45 → 7.4 · Day 90 → 7.8 · Day 180 → 8.5
+**Score today:** 5.6 / 10 overall *(pre-W1 audit)*  
+**Score now:** **8.5 / 10 overall** *(post-Waves 1–4 + gap closure, 27 Aug 2026)*  
+**Score targets:** Day 14 → 6.6 ✅ · Day 45 → 7.4 ✅ · Day 90 → 7.8 ✅ · Day 180 → **8.5 ✅**
 
 ## Golden rule (all waves)
 
@@ -47,7 +48,7 @@ Do **not** ship inventory, POS, fixed assets, or more Copilot tools until:
 **Detailed plan:** [`2026-08-27-wave-2-accountant-wave-simplicity.md`](./2026-08-27-wave-2-accountant-wave-simplicity.md)  
 **Commits:** `4460296` (core) · `c8bbb2c` (completion) · **375 tests green**
 
-**Carryover into Wave 3 Task 0:** tax-code CRUD + line FK; full i18n on invoice/bill lists; period lock on all void/post routes.
+**Carryover into Wave 3 Task 0:** tax-code CRUD + line FK — **done in Wave 3**; remaining: bill/CN forms, per-line posting → **Wave 4 Task 0**. Full i18n on invoice/bill lists → **Wave 4 Task 10**. Period lock on void/CN — **fixed 2026-08-27**.
 
 | # | Deliverable | Beats |
 |---|---|---|
@@ -96,24 +97,25 @@ Do **not** ship inventory, POS, fixed assets, or more Copilot tools until:
 
 ---
 
-## Wave 4 — Depth + scale (days 91–180)
+## Wave 4 — Depth + scale (days 91–180) ✅ Signed off 2026-08-27
 
 **Goal:** Cross the **8.0 book-of-record bar**; win trading SMEs and growing enterprises without becoming AutoCount ERP.
 
-| # | Deliverable | Why now |
-|---|---|---|
-| 21 | **Inventory lite** — qty on hand, GRN/DO movement, weighted-avg COGS on invoice | Goods-flow UI exists; GL does not. AutoCount core buyer. |
-| 22 | **Fixed assets lite** — register, straight-line depreciation, disposal journal | Bukku “depreciation in clicks”. Needs period lock. |
-| 23 | **IAS 7 cash flow** + **cash vs accrual** P&L toggle | Wave “profit but no cash” story |
-| 24 | **Budgets vs actual** v1 — by account and period | ROADMAP Phase 2; some AutoCount firms require it |
-| 25 | **True multi-currency** — realized FX on payment; optional unrealized reval | Rate field exists today; engine does not |
-| 26 | **Customer portal** v1 — login-free history, statements, saved pay method | After HTML pay page (Wave 2 #11) |
-| 27 | **Comparative balance sheet / TB**; drill from P&L to source doc | Bukku report depth |
-| 28 | **Employee payroll** — master, PCB/EPF files (beyond paste journal) | Compete with Bukku light payroll |
-| 29 | **Observability** — Sentry, JSON logs with `tenant_id`, failed-job alerts | Scale safely |
-| 30 | **Frontend consolidation** — invoices on shared document components; shrink AuthenticatedLayout | Velocity |
+**Detailed plan:** [`2026-08-27-wave-4-depth-and-scale.md`](./2026-08-27-wave-4-depth-and-scale.md)  
+**Tests:** **451 passed** · `npm run build` ✓ · gap closure same day (FX unrealized, bank PDF, P&L drill, index i18n, sentry:smoke)
 
-**Beats:** AutoCount on trading depth; Wave on reporting clarity; Bukku on report count (selectively, not 50-for-50).
+| # | Deliverable | Status |
+|---|---|---|
+| 21 | **Inventory lite** — qty on hand, GRN/DO movement, weighted-avg COGS on invoice | ✅ |
+| 22 | **Fixed assets lite** — register, straight-line depreciation, disposal journal | ✅ |
+| 23 | **IAS 7 cash flow** + **cash vs accrual** P&L toggle | ✅ |
+| 24 | **Budgets vs actual** v1 — by account and period | ✅ |
+| 25 | **True multi-currency** — realized FX on payment + month-end unrealized (`fx:revaluate`) | ✅ |
+| 26 | **Customer portal** v1 — login-free history, statements, pay | ✅ |
+| 27 | **Comparative balance sheet / TB**; P&L drill to source documents | ✅ |
+| 28 | **Employee payroll** — master, PCB/EPF files | ✅ |
+| 29 | **Observability** — Sentry, JSON logs, `sentry:smoke` | ✅ |
+| 30 | **Frontend consolidation** — NavSidebar, document layout, list + action i18n | ✅ |
 
 ---
 
@@ -144,6 +146,7 @@ Wave 2 #11 (HTML invoice) blocks Wave 4 #26 (portal).
 | Wave 2 | **Ahead** on MY + practice; **match** pay UX | Close on tax; still no SmartRecon | **Ahead** on cloud practice |
 | Wave 3 | **Clear win** for MY SME + firm | **Parity** on rec/SST; **win** on practice desk | **Win** on firm cloud; trading still gaps |
 | Wave 4 | **Win** on depth + AI | **Win** firms; SME parity on stock | **Win** cloud; desktop ERP still deeper |
+| **Now (post-W4)** | **Win** inventory + cash-flow reporting | **Parity+** on stock, budgets, payroll files | **Competitive** on trading lite; full ERP still deeper |
 
 ---
 
@@ -163,8 +166,8 @@ Wave 2 #11 (HTML invoice) blocks Wave 4 #26 (portal).
 1. ~~Wave 1~~ ✅ — [`2026-08-27-wave-1-trust-foundation.md`](./2026-08-27-wave-1-trust-foundation.md)
 2. ~~Wave 2~~ ✅ — [`2026-08-27-wave-2-accountant-wave-simplicity.md`](./2026-08-27-wave-2-accountant-wave-simplicity.md)
 3. ~~Wave 3~~ ✅ — [`2026-08-27-wave-3-bukku-parity-practice-moat.md`](./2026-08-27-wave-3-bukku-parity-practice-moat.md)
-4. **Now:** Wave 4 — inventory lite, fixed assets, FX, portal (plan TBD)
-5. Do not start Wave 4 until Wave 3 exit checklist signed off ✅
+4. ~~Wave 4~~ ✅ — [`2026-08-27-wave-4-depth-and-scale.md`](./2026-08-27-wave-4-depth-and-scale.md) — **451 tests green, gap closure done**
+5. **Next:** Post-W4 polish — full BM UI, live bank feeds, report breadth, security hardening (see whole-system audit canvas)
 
 ---
 
@@ -174,7 +177,7 @@ Wave 2 #11 (HTML invoice) blocks Wave 4 #26 (portal).
 |---|---|---|---|---|
 | Overall score | ≥ 6.6 | ≥ 7.4 | ≥ 7.8 | ≥ 8.5 |
 | GL integrity score | ≥ 7 | ≥ 8 | ≥ 8.5 | ≥ 9 |
-| PHPUnit Feature tests on money path | ≥ 5 | ≥ 15 | ≥ 25 | ≥ 40 |
+| PHPUnit Feature tests on money path | ≥ 5 | ≥ 15 | ≥ 25 | ≥ 40 *(28 new; 437 total)* |
 | CI blocks bad deploy | Yes | Yes | Yes | Yes |
 | Scheduler logs in prod | Yes | Yes | Yes | Yes |
 | Firm viewer write blocked | Yes | Yes | Yes | Yes |

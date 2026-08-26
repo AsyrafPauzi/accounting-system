@@ -81,7 +81,7 @@ export function partyShipping(party) {
     ]);
 }
 
-export function DocumentLines({ items = [], currency = 'MYR', formatCurrency }) {
+export function DocumentLines({ items = [], currency = 'MYR', formatCurrency, showTax = false }) {
     return (
         <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -90,6 +90,7 @@ export function DocumentLines({ items = [], currency = 'MYR', formatCurrency }) 
                         <th className="px-6 sm:px-10 py-3 text-left font-semibold">Description</th>
                         <th className="px-3 py-3 text-right font-semibold w-16">Qty</th>
                         <th className="px-3 py-3 text-right font-semibold w-24">Price</th>
+                        {showTax && <th className="px-3 py-3 text-right font-semibold w-16">Tax</th>}
                         <th className="px-6 sm:px-10 py-3 text-right font-semibold w-28">Amount</th>
                     </tr>
                 </thead>
@@ -99,6 +100,9 @@ export function DocumentLines({ items = [], currency = 'MYR', formatCurrency }) 
                             <td className="px-6 sm:px-10 py-3.5 whitespace-pre-wrap text-ink align-top">{item.description}</td>
                             <td className="px-3 py-3.5 text-right font-mono text-ink-muted tabular-nums align-top">{item.quantity}</td>
                             <td className="px-3 py-3.5 text-right font-mono text-ink-muted tabular-nums align-top">{formatCurrency(item.unit_price ?? item.unit_amount, currency)}</td>
+                            {showTax && (
+                                <td className="px-3 py-3.5 text-right font-mono text-ink-muted tabular-nums align-top">{item.tax_rate ?? 0}%</td>
+                            )}
                             <td className="px-6 sm:px-10 py-3.5 text-right font-mono text-ink tabular-nums align-top">{formatCurrency(item.amount, currency)}</td>
                         </tr>
                     ))}

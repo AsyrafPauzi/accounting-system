@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Models\Account;
+use App\Models\Employee;
 use App\Models\JournalEntry;
 use App\Models\JournalItem;
+use App\Models\PayrollEmployeeLine;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -126,6 +128,18 @@ class PayrollService
      *     pcb_payable:float|int|string,
      *     hrd_payable:float|int|string,
      *     net_pay:float|int|string,
+     *     employee_lines?:list<array{
+     *         employee_id:int,
+     *         gross_salary:float|int|string,
+     *         employee_epf?:float|int|string,
+     *         employer_epf?:float|int|string,
+     *         employee_socso?:float|int|string,
+     *         employer_socso?:float|int|string,
+     *         employee_eis?:float|int|string,
+     *         employer_eis?:float|int|string,
+     *         pcb?:float|int|string,
+     *         net_pay?:float|int|string,
+     *     }>,
      * } $data
      */
     public function record(array $data): JournalEntry
@@ -138,16 +152,16 @@ class PayrollService
         $f = static fn ($v) => round((float) ($v ?? 0), 2);
 
         $gross  = $f($data['gross_salaries']);
-        $eEpf   = $f($data['employer_epf']);
-        $eSocso = $f($data['employer_socso']);
-        $eEis   = $f($data['employer_eis']);
-        $eHrd   = $f($data['employer_hrd']);
+        $eEpf   = $f($data['employer_epf'] ?? 0);
+        $eSocso = $f($data['employer_socso'] ?? 0);
+        $eEis   = $f($data['employer_eis'] ?? 0);
+        $eHrd   = $f($data['employer_hrd'] ?? 0);
 
-        $epfP   = $f($data['epf_payable']);
-        $socsoP = $f($data['socso_payable']);
-        $eisP   = $f($data['eis_payable']);
-        $pcbP   = $f($data['pcb_payable']);
-        $hrdP   = $f($data['hrd_payable']);
+        $epfP   = $f($data['epf_payable'] ?? 0);
+        $socsoP = $f($data['socso_payable'] ?? 0);
+        $eisP   = $f($data['eis_payable'] ?? 0);
+        $pcbP   = $f($data['pcb_payable'] ?? 0);
+        $hrdP   = $f($data['hrd_payable'] ?? 0);
 
         $netPay = $f($data['net_pay']);
 
@@ -167,13 +181,16 @@ class PayrollService
         }
 
         $period      = $data['period_date'];
-        $description = $data['description'] ?: 'Payroll for ' . date('F Y', strtotime($period));
-        $reference   = $data['reference_number'] ?: 'PAY-' . date('Y-m', strtotime($period));
+        $description = ($data['description'] ?? null) ?: 'Payroll for ' . date('F Y', strtotime($period));
+        $reference   = ($data['reference_number'] ?? null) ?: 'PAY-' . date('Y-m', strtotime($period));
+
+        $employeeLines = $data['employee_lines'] ?? [];
 
         return DB::transaction(function () use (
             $period, $description, $reference, $accounts, $bank,
             $gross, $eEpf, $eSocso, $eEis, $eHrd,
-            $epfP, $socsoP, $eisP, $pcbP, $hrdP, $netPay
+            $epfP, $socsoP, $eisP, $pcbP, $hrdP, $netPay,
+            $employeeLines, $f
         ) {
             $journal = JournalEntry::create([
                 'date'             => $period,
@@ -224,8 +241,39 @@ class PayrollService
                 ]);
             }
 
+            if ($employeeLines !== []) {
+                $this->persistEmployeeLines($journal, $employeeLines, $f);
+            }
+
             return $journal;
         });
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $employeeLines
+     */
+    private function persistEmployeeLines(JournalEntry $journal, array $employeeLines, callable $f): void
+    {
+        foreach ($employeeLines as $line) {
+            $employeeId = (int) ($line['employee_id'] ?? 0);
+            if ($employeeId <= 0 || ! Employee::whereKey($employeeId)->exists()) {
+                throw new InvalidArgumentException('Each employee line must reference a valid employee.');
+            }
+
+            PayrollEmployeeLine::create([
+                'journal_entry_id' => $journal->id,
+                'employee_id'      => $employeeId,
+                'gross_salary'     => $f($line['gross_salary'] ?? 0),
+                'employee_epf'     => $f($line['employee_epf'] ?? 0),
+                'employer_epf'     => $f($line['employer_epf'] ?? 0),
+                'employee_socso'   => $f($line['employee_socso'] ?? 0),
+                'employer_socso'   => $f($line['employer_socso'] ?? 0),
+                'employee_eis'     => $f($line['employee_eis'] ?? 0),
+                'employer_eis'     => $f($line['employer_eis'] ?? 0),
+                'pcb'              => $f($line['pcb'] ?? 0),
+                'net_pay'          => $f($line['net_pay'] ?? 0),
+            ]);
+        }
     }
 
     /**

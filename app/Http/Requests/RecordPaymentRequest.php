@@ -26,6 +26,7 @@ class RecordPaymentRequest extends FormRequest
             'payment_date'      => ['required', 'date'],
             'bank_account_code' => ['required', 'string', 'exists:accounts,code'],
             'reference'         => ['nullable', 'string', 'max:120'],
+            'payment_exchange_rate' => ['nullable', 'numeric', 'min:0.000001'],
         ];
     }
 }

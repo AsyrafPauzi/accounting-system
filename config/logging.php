@@ -1,6 +1,8 @@
 <?php
 
 use App\Logging\Tap\ScrubSensitiveTap;
+use App\Logging\Tap\TenantContextTap;
+use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -108,7 +110,20 @@ return [
             ],
             'formatter' => env('LOG_STDERR_FORMATTER'),
             'processors' => [PsrLogMessageProcessor::class],
-            'tap' => [ScrubSensitiveTap::class],
+            'tap' => [ScrubSensitiveTap::class, TenantContextTap::class],
+        ],
+
+        // Structured JSON logs with tenant_id / user_id (CloudWatch-friendly).
+        // Set LOG_STACK=single,json or LOG_CHANNEL=json in production.
+        'json' => [
+            'driver' => 'monolog',
+            'level' => env('LOG_LEVEL', 'debug'),
+            'handler' => StreamHandler::class,
+            'handler_with' => [
+                'stream' => storage_path('logs/laravel-json.log'),
+            ],
+            'formatter' => JsonFormatter::class,
+            'tap' => [ScrubSensitiveTap::class, TenantContextTap::class],
         ],
 
         'syslog' => [

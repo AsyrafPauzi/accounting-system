@@ -45,6 +45,18 @@ class StorePayrollRequest extends FormRequest
             'hrd_payable'   => 'nullable|numeric|min:0',
 
             'net_pay' => 'required|numeric|min:0',
+
+            'employee_lines' => 'nullable|array',
+            'employee_lines.*.employee_id' => 'required|integer|exists:employees,id',
+            'employee_lines.*.gross_salary' => 'required|numeric|min:0',
+            'employee_lines.*.employee_epf' => 'nullable|numeric|min:0',
+            'employee_lines.*.employer_epf' => 'nullable|numeric|min:0',
+            'employee_lines.*.employee_socso' => 'nullable|numeric|min:0',
+            'employee_lines.*.employer_socso' => 'nullable|numeric|min:0',
+            'employee_lines.*.employee_eis' => 'nullable|numeric|min:0',
+            'employee_lines.*.employer_eis' => 'nullable|numeric|min:0',
+            'employee_lines.*.pcb' => 'nullable|numeric|min:0',
+            'employee_lines.*.net_pay' => 'nullable|numeric|min:0',
         ];
     }
 

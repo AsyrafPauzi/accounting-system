@@ -23,6 +23,7 @@ export default function Create({ auth, invoice, lhdn_reasons }) {
             quantity: item.quantity,
             unit_price: item.unit_price,
             tax_rate: item.tax_rate,
+            tax_code_id: item.tax_code_id ?? null,
             amount: item.amount,
         }))
     });

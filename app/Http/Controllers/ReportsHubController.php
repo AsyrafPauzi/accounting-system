@@ -6,6 +6,7 @@ use App\Models\Tenant;
 use App\Models\Invoice;
 use App\Support\CashMovement;
 use App\Support\Deployment;
+use App\Support\PostedJournalScope;
 use App\Support\ReportPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,7 +40,9 @@ class ReportsHubController extends Controller
                 ->join('journal_entries', 'journal_items.journal_entry_id', '=', 'journal_entries.id')
                 ->join('accounts', 'journal_items.account_code', '=', 'accounts.code')
                 ->whereIn('accounts.type', ['income', 'expense'])
-                ->whereBetween('journal_entries.date', [$month['date_from'], $month['date_to']])
+                ->whereBetween('journal_entries.date', [$month['date_from'], $month['date_to']]);
+            PostedJournalScope::apply($rows);
+            $rows = $rows
                 ->select([
                     'accounts.type',
                     DB::raw('SUM(journal_items.debit) as total_debit'),
@@ -113,7 +116,9 @@ class ReportsHubController extends Controller
                 'title' => 'Financial',
                 'reports' => [
                     ['title' => 'Profit & Loss', 'description' => 'Income and expenses from your ledger.', 'route_name' => 'profit-and-loss.index', 'permission' => 'reports.profit-loss'],
+                    ['title' => 'Budget vs actual', 'description' => 'Compare budget to posted P&L with variance %.', 'route_name' => 'reports.budget-vs-actual.index', 'permission' => 'reports.profit-loss'],
                     ['title' => 'Balance Sheet', 'description' => 'Assets, liabilities, and equity at a point in time.', 'route_name' => 'balance-sheet.index', 'permission' => 'reports.balance-sheet'],
+                    ['title' => 'Cash flow statement', 'description' => 'IAS 7 indirect method — where cash went.', 'route_name' => 'cash-flow-statement.index', 'permission' => 'reports.cashflow'],
                     ['title' => 'Trial Balance', 'description' => 'Check that ledger debits and credits balance.', 'route_name' => 'trial-balance.index', 'permission' => 'general-ledger.view'],
                     ['title' => 'General ledger', 'description' => 'Review every posting by account and journal entry.', 'route_name' => 'general-ledger.index', 'permission' => 'general-ledger.view'],
                 ],

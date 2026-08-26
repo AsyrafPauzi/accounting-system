@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { confirm } from '@/utils/swal';
 import Modal from '@/Components/Modal';
 import DocumentFormHeader from '@/Components/DocumentFormHeader';
@@ -37,6 +37,7 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
     });
 
     const { data, setData, processing, errors } = form;
+    const { tax_codes: taxCodes = [] } = usePage().props;
 
     const paymentForm = useForm({
         amount: balanceDue > 0 ? balanceDue.toFixed(2) : 0,
@@ -129,6 +130,7 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                 expenseAccounts={expenseAccounts}
                 bankAccounts={bankAccounts}
                 products={products}
+                taxCodes={taxCodes}
                 showKind={false}
                 disabled={!isDraft}
                 billId={bill.id}

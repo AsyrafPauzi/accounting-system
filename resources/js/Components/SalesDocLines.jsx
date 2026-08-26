@@ -12,8 +12,8 @@ const lineNumberClass = `${lineControlClass} font-mono tabular-nums [appearance:
 const lineTaxClass = `${lineControlClass} px-0.5 pr-5 text-center tabular-nums`;
 const linePickIconClass = 'relative shrink-0 h-8 w-8 rounded-lg border border-border-warm bg-cream/50 text-ink-muted hover:bg-cream hover:text-terracotta transition-colors';
 
-export function blankSalesLine() {
-    return { description: '', quantity: 1, unit_price: 0, tax_rate: 8, discount_amount: 0, product_id: null };
+export function blankSalesLine(extra = {}) {
+    return { description: '', quantity: 1, unit_price: 0, tax_rate: 8, tax_code_id: null, discount_amount: 0, product_id: null, item_classification: '011', ...extra };
 }
 
 export function lineAmount(item) {
@@ -21,7 +21,17 @@ export function lineAmount(item) {
     return net + Math.max(0, net) * (Number(item.tax_rate) || 0) / 100;
 }
 
-export default function SalesDocLines({ items, onChange, products = [], disabled = false, descriptionPlaceholder = 'What is this line for?' }) {
+export default function SalesDocLines({
+    items,
+    onChange,
+    products = [],
+    taxCodes = [],
+    lhdnCodes = [],
+    disabled = false,
+    descriptionPlaceholder = 'What is this line for?',
+}) {
+    const showLhdn = lhdnCodes.length > 0;
+    const addBlank = () => blankSalesLine(showLhdn ? { item_classification: lhdnCodes[0]?.id || '011' } : {});
     const update = (index, patch) => {
         onChange(items.map((row, i) => (i === index ? { ...row, ...patch } : row)));
     };
@@ -34,10 +44,11 @@ export default function SalesDocLines({ items, onChange, products = [], disabled
             description: p.description ? `${p.name} — ${p.description}` : p.name,
             unit_price: p.unit_price,
             tax_rate: p.tax_rate ?? 0,
+            item_classification: p.classification_code || items[index].item_classification,
         });
     };
 
-    const addItem = () => onChange([...items, blankSalesLine()]);
+    const addItem = () => onChange([...items, addBlank()]);
     const removeItem = (index) => {
         if (items.length <= 1) return;
         onChange(items.filter((_, i) => i !== index));
@@ -48,6 +59,7 @@ export default function SalesDocLines({ items, onChange, products = [], disabled
             <div className="overflow-x-auto overscroll-x-contain rounded-2xl">
                 <table className="w-full min-w-[40rem] text-left border-collapse">
                     <colgroup>
+                        {showLhdn && <col className="w-[5.5rem]" />}
                         <col />
                         <col className="w-16" />
                         <col className="w-[4.75rem]" />
@@ -58,6 +70,7 @@ export default function SalesDocLines({ items, onChange, products = [], disabled
                     </colgroup>
                     <thead>
                         <tr className="bg-cream/80 border-b border-border-warm text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest">
+                            {showLhdn && <th className="px-2 py-2">LHDN</th>}
                             <th className="px-2 py-2">Description</th>
                             <th className="px-1 py-2 text-center">Qty</th>
                             <th className="px-1 py-2 text-right">Price</th>
@@ -70,6 +83,20 @@ export default function SalesDocLines({ items, onChange, products = [], disabled
                     <tbody className="divide-y divide-border-warm">
                         {items.map((item, index) => (
                             <tr key={index} className="group hover:bg-surface-alt/20 transition-all duration-200">
+                                {showLhdn && (
+                                    <td className="px-2 py-2 align-middle">
+                                        <select
+                                            value={item.item_classification || lhdnCodes[0]?.id || '011'}
+                                            onChange={(e) => update(index, { item_classification: e.target.value })}
+                                            disabled={disabled}
+                                            className={`${lineControlClass} block truncate`}
+                                        >
+                                            {lhdnCodes.map((code) => (
+                                                <option key={code.id} value={code.id}>{code.id}</option>
+                                            ))}
+                                        </select>
+                                    </td>
+                                )}
                                 <td className="px-2 py-2 align-middle">
                                     <div className="flex items-center gap-1.5 min-w-0">
                                         <textarea
@@ -111,11 +138,30 @@ export default function SalesDocLines({ items, onChange, products = [], disabled
                                     <input type="number" step="0.01" value={item.discount_amount || 0} onChange={(e) => update(index, { discount_amount: e.target.value })} disabled={disabled} className={`${lineNumberClass} block text-right text-terracotta font-semibold`} />
                                 </td>
                                 <td className="px-1 py-2 align-middle">
-                                    <select value={item.tax_rate} onChange={(e) => update(index, { tax_rate: e.target.value })} disabled={disabled} className={`${lineTaxClass} block`}>
-                                        <option value="0">0%</option>
-                                        <option value="6">6%</option>
-                                        <option value="8">8%</option>
-                                        <option value="16">16%</option>
+                                    <select
+                                        value={item.tax_code_id ?? item.tax_rate}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            const code = taxCodes.find((c) => String(c.id) === val);
+                                            if (code) {
+                                                update(index, { tax_code_id: code.id, tax_rate: code.rate });
+                                            } else {
+                                                update(index, { tax_code_id: null, tax_rate: val });
+                                            }
+                                        }}
+                                        disabled={disabled}
+                                        className={`${lineTaxClass} block`}
+                                    >
+                                        {taxCodes.length > 0 ? taxCodes.map((code) => (
+                                            <option key={code.id} value={code.id}>{code.code} ({code.rate}%)</option>
+                                        )) : (
+                                            <>
+                                                <option value="0">0%</option>
+                                                <option value="6">6%</option>
+                                                <option value="8">8%</option>
+                                                <option value="16">16%</option>
+                                            </>
+                                        )}
                                     </select>
                                 </td>
                                 <td className="px-2 py-2 align-middle">

@@ -94,6 +94,20 @@ final class ReportPeriod
         ];
     }
 
+    /**
+     * Prior as-of date for balance sheet / trial balance comparison.
+     */
+    public static function compareAsOfDate(string $asOf, string $compare): ?string
+    {
+        $date = Carbon::parse($asOf)->startOfDay();
+
+        return match ($compare) {
+            'previous'  => $date->copy()->subMonthNoOverflow()->endOfMonth()->toDateString(),
+            'last_year' => $date->copy()->subYear()->toDateString(),
+            default     => null,
+        };
+    }
+
     public static function detectPreset(string $from, string $to, ?CarbonInterface $now = null): string
     {
         $now = Carbon::parse($now ?? now())->startOfDay();

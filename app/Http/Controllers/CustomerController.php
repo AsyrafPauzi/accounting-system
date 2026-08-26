@@ -8,6 +8,7 @@ use App\Models\CustomerContact;
 use App\Models\Invoice;
 use App\Models\User;
 use App\Services\InvoiceService;
+use App\Services\CustomerPortalService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Validation\Rule;
@@ -192,6 +193,19 @@ class CustomerController extends Controller
             'can_delete_customer' => $deleteBlockedReason === null,
             'delete_blocked_reason' => $deleteBlockedReason,
             'myinvois_gaps' => \App\Services\MyInvoisService::customerGaps($customer),
+        ]);
+    }
+
+    public function issuePortalLink(int $id)
+    {
+        $this->authorize('customers.view');
+
+        $customer = Customer::findOrFail($id);
+        $url = app(CustomerPortalService::class)->urlForCustomer($customer, auth()->id());
+
+        return redirect()->back()->with([
+            'success'    => 'Customer portal link ready — share it with '.$customer->name.'.',
+            'portal_url' => $url,
         ]);
     }
 

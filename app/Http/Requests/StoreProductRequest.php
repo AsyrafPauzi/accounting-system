@@ -26,6 +26,7 @@ class StoreProductRequest extends FormRequest
             'tax_rate'      => 'nullable|numeric|min:0|max:100',
             'classification_code' => 'nullable|string|max:10',
             'is_active'     => 'nullable|boolean',
+            'track_inventory' => 'nullable|boolean',
             'display_order' => 'nullable|integer|min:0',
         ];
     }
@@ -33,9 +34,10 @@ class StoreProductRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'is_active'     => $this->boolean('is_active', true),
-            'tax_rate'      => $this->input('tax_rate', 0),
-            'display_order' => $this->input('display_order', 0),
+            'is_active'       => $this->boolean('is_active', true),
+            'track_inventory' => $this->boolean('track_inventory', false),
+            'tax_rate'        => $this->input('tax_rate', 0),
+            'display_order'   => $this->input('display_order', 0),
         ]);
     }
 }

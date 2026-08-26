@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateJournalEntryRequest;
 use App\Models\Account;
 use App\Models\JournalEntry;
 use App\Models\JournalItem;
+use App\Support\JournalWriter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -192,6 +193,15 @@ class JournalController extends Controller
         if ($journal->status === 'posted') {
             return redirect()->back()->with('error', 'Journal entry is already posted.');
         }
+
+        $journal->load('items');
+        $lines = $journal->items->map(fn (JournalItem $item) => [
+            'account_code' => $item->account_code,
+            'debit'        => (float) $item->debit,
+            'credit'       => (float) $item->credit,
+        ])->all();
+
+        JournalWriter::assertBalanced($lines);
 
         $journal->update(['status' => 'posted']);
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Support\CurrentYearEarnings;
 use App\Support\PostedJournalScope;
+use App\Support\ReportCompare;
 use App\Support\ReportPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,15 +24,62 @@ class BalanceSheetController extends Controller
             $request->input('as_at_date')
         );
         $asAtDate = $resolved['as_of'];
-        $data = $this->buildBalanceSheetData($asAtDate);
+        $compare = $this->resolveCompare($request);
+        $data = $this->buildComparedBalanceSheetData($asAtDate, $compare);
 
         return Inertia::render('Reports/BalanceSheet', [
             ...$data,
             'filters' => [
                 'preset' => $resolved['preset'],
                 'as_at_date' => $asAtDate,
+                'compare' => $compare,
             ],
         ]);
+    }
+
+    protected function buildComparedBalanceSheetData(string $asAtDate, string $compare): array
+    {
+        $current = $this->buildBalanceSheetData($asAtDate);
+        $current['compare'] = $compare;
+        $current['compare_label'] = null;
+        $current['compare_as_at_date'] = null;
+        $current['compare_total_assets'] = null;
+        $current['compare_total_liabilities'] = null;
+        $current['compare_total_equity'] = null;
+        $current['assets_variance'] = null;
+        $current['liabilities_variance'] = null;
+        $current['equity_variance'] = null;
+
+        if ($compare === 'none') {
+            return $current;
+        }
+
+        $compareDate = ReportPeriod::compareAsOfDate($asAtDate, $compare);
+        if (! $compareDate) {
+            return $current;
+        }
+
+        $prior = $this->buildBalanceSheetData($compareDate);
+        $current['asset_accounts'] = ReportCompare::mergeLines($current['asset_accounts'], $prior['asset_accounts']);
+        $current['liability_accounts'] = ReportCompare::mergeLines($current['liability_accounts'], $prior['liability_accounts']);
+        $current['equity_accounts'] = ReportCompare::mergeLines($current['equity_accounts'], $prior['equity_accounts']);
+        $current['compare_label'] = $compare === 'last_year' ? 'Same date last year' : 'Prior month end';
+        $current['compare_as_at_date'] = $compareDate;
+        $current['compare_total_assets'] = $prior['total_assets'];
+        $current['compare_total_liabilities'] = $prior['total_liabilities'];
+        $current['compare_total_equity'] = $prior['total_equity'];
+        $current['assets_variance'] = round($current['total_assets'] - $prior['total_assets'], 2);
+        $current['liabilities_variance'] = round($current['total_liabilities'] - $prior['total_liabilities'], 2);
+        $current['equity_variance'] = round($current['total_equity'] - $prior['total_equity'], 2);
+
+        return $current;
+    }
+
+    protected function resolveCompare(Request $request): string
+    {
+        $compare = $request->input('compare', 'previous');
+
+        return in_array($compare, ['previous', 'last_year', 'none'], true) ? $compare : 'previous';
     }
 
     /**
@@ -114,7 +162,7 @@ class BalanceSheetController extends Controller
             $request->input('as_at_date')
         );
         $asAtDate = $resolved['as_of'];
-        $data = $this->buildBalanceSheetData($asAtDate);
+        $data = $this->buildComparedBalanceSheetData($asAtDate, $this->resolveCompare($request));
 
         $filename = 'balance-sheet-as-at-' . $asAtDate . '.csv';
         $headers = [
@@ -125,18 +173,31 @@ class BalanceSheetController extends Controller
         return new StreamedResponse(function () use ($data) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['section', 'code', 'name', 'amount']);
+            $hasCompare = ($data['compare'] ?? 'none') !== 'none';
+            fputcsv($out, $hasCompare
+                ? ['section', 'code', 'name', 'amount', 'compare_amount', 'variance']
+                : ['section', 'code', 'name', 'amount']);
             foreach ($data['asset_accounts'] as $row) {
-                fputcsv($out, ['Assets', $row['code'], $row['name'], $row['amount']]);
+                fputcsv($out, $hasCompare
+                    ? ['Assets', $row['code'], $row['name'], $row['amount'], $row['compare_amount'] ?? '', $row['variance'] ?? '']
+                    : ['Assets', $row['code'], $row['name'], $row['amount']]);
             }
-            fputcsv($out, ['', '', 'Total assets', $data['total_assets']]);
+            fputcsv($out, $hasCompare
+                ? ['', '', 'Total assets', $data['total_assets'], $data['compare_total_assets'] ?? '', $data['assets_variance'] ?? '']
+                : ['', '', 'Total assets', $data['total_assets']]);
             foreach ($data['liability_accounts'] as $row) {
-                fputcsv($out, ['Liabilities', $row['code'], $row['name'], $row['amount']]);
+                fputcsv($out, $hasCompare
+                    ? ['Liabilities', $row['code'], $row['name'], $row['amount'], $row['compare_amount'] ?? '', $row['variance'] ?? '']
+                    : ['Liabilities', $row['code'], $row['name'], $row['amount']]);
             }
             foreach ($data['equity_accounts'] as $row) {
-                fputcsv($out, ['Equity', $row['code'], $row['name'], $row['amount']]);
+                fputcsv($out, $hasCompare
+                    ? ['Equity', $row['code'], $row['name'], $row['amount'], $row['compare_amount'] ?? '', $row['variance'] ?? '']
+                    : ['Equity', $row['code'], $row['name'], $row['amount']]);
             }
-            fputcsv($out, ['', '', 'Total liabilities + equity', $data['total_liabilities_and_equity']]);
+            fputcsv($out, $hasCompare
+                ? ['', '', 'Total liabilities + equity', $data['total_liabilities_and_equity'], '', '']
+                : ['', '', 'Total liabilities + equity', $data['total_liabilities_and_equity']]);
             fputcsv($out, ['', '', 'Balanced', $data['balanced'] ? 'Yes' : 'No']);
             fclose($out);
         }, 200, $headers);
@@ -149,7 +210,7 @@ class BalanceSheetController extends Controller
             $request->input('as_at_date')
         );
         $asAtDate = $resolved['as_of'];
-        $data = $this->buildBalanceSheetData($asAtDate);
+        $data = $this->buildComparedBalanceSheetData($asAtDate, $this->resolveCompare($request));
         $company = $this->reportCompany();
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.balance-sheet', [
@@ -162,6 +223,8 @@ class BalanceSheetController extends Controller
             'total_liabilities_and_equity' => $data['total_liabilities_and_equity'],
             'balanced' => $data['balanced'],
             'as_at_date' => $asAtDate,
+            'compare_label' => $data['compare_label'] ?? null,
+            'compare_as_at_date' => $data['compare_as_at_date'] ?? null,
             'company' => $company,
         ])->setPaper('a4', 'portrait');
 

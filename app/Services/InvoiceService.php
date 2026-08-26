@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Invoice;
 use App\Models\InvoicePayment;
+use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Support\DocumentNumber;
 use App\Support\JournalWriter;
@@ -414,12 +415,15 @@ class InvoiceService
             \App\Support\AccountingPeriodResolver::assertOpenForDate(
                 Carbon::parse($invoice->issue_date)->toDateString()
             );
+
+            $rows = $this->postingRowsWithInventoryIssue($invoice);
+
             JournalWriter::postSystem([
                 'date'           => Carbon::parse($invoice->issue_date)->toDateString(),
                 'description'    => 'Posted Sales Invoice: '.$invoice->invoice_number,
                 'reference_type' => 'Invoice',
                 'reference_id'   => $invoice->id,
-            ], $this->buildPostingLineRows($invoice));
+            ], $rows);
             $invoice->update(['status' => 'unpaid']);
         });
     }
@@ -434,6 +438,9 @@ class InvoiceService
         }
 
         DB::transaction(function () use ($invoice) {
+            \App\Support\AccountingPeriodResolver::assertOpenForDate(
+                Carbon::parse($invoice->issue_date)->toDateString()
+            );
             $this->reverseLatestJournal($invoice, 'Invoice', 'VOID REVERSAL: '.$invoice->invoice_number);
             $invoice->update(['status' => 'void', 'amount_paid' => 0]);
         });
@@ -442,13 +449,13 @@ class InvoiceService
     /**
      * Record a payment against an invoice.
      */
-    public function recordPayment(Invoice $invoice, float $amount, string $paymentDate, string $bankAccountCode, ?string $reference = null, ?int $createdBy = null): InvoicePayment
+    public function recordPayment(Invoice $invoice, float $amount, string $paymentDate, string $bankAccountCode, ?string $reference = null, ?int $createdBy = null, ?float $paymentExchangeRate = null): InvoicePayment
     {
         if (in_array($invoice->status, ['draft', 'void'], true)) {
             throw new \LogicException('Cannot record payment for a draft or void invoice.');
         }
 
-        return DB::transaction(function () use ($invoice, $amount, $paymentDate, $bankAccountCode, $reference, $createdBy) {
+        return DB::transaction(function () use ($invoice, $amount, $paymentDate, $bankAccountCode, $reference, $createdBy, $paymentExchangeRate) {
             \App\Support\AccountingPeriodResolver::assertOpenForDate($paymentDate);
             $newAmountPaid = (float) $invoice->amount_paid + $amount;
             $status = ($newAmountPaid >= (float) $invoice->total_amount) ? 'paid' : 'partially paid';
@@ -467,18 +474,27 @@ class InvoiceService
                 'created_by'        => $createdBy,
             ]);
 
-            $m = $this->ledgerBaseMultiplier($invoice);
-            $amountBase = $amount * $m;
+            $docRate = $this->ledgerBaseMultiplier($invoice);
+            $fx = app(FxGainLossService::class);
+            $currency = strtoupper((string) ($invoice->currency ?: 'MYR'));
+
+            if ($fx->isForeignCurrency($currency, $this->tenantBaseCurrency())) {
+                $paymentRate = $fx->resolvePaymentRate($docRate, $paymentExchangeRate);
+                $lines = $fx->invoiceReceiptLines($amount, $docRate, $paymentRate, $bankAccountCode);
+            } else {
+                $amountBase = round($amount * $docRate, 2);
+                $lines = [
+                    ['account_code' => $bankAccountCode, 'debit' => $amountBase, 'credit' => 0],
+                    ['account_code' => '1100', 'debit' => 0, 'credit' => $amountBase],
+                ];
+            }
 
             JournalWriter::postSystem([
                 'date'           => $paymentDate,
                 'description'    => 'Payment for '.$invoice->invoice_number,
                 'reference_type' => 'Invoice Payment',
                 'reference_id'   => $payment->id,
-            ], [
-                ['account_code' => $bankAccountCode, 'debit' => $amountBase, 'credit' => 0],
-                ['account_code' => '1100', 'debit' => 0, 'credit' => $amountBase],
-            ]);
+            ], $lines);
 
             $this->recalculateStatus($invoice->fresh());
 
@@ -494,6 +510,9 @@ class InvoiceService
 
         DB::transaction(function () use ($payment, $reversedBy) {
             $invoice = Invoice::query()->findOrFail($payment->invoice_id);
+            \App\Support\AccountingPeriodResolver::assertOpenForDate(
+                Carbon::parse($payment->payment_date)->toDateString()
+            );
             if (! $this->reverseLatestJournalByReference('Invoice Payment', (int) $payment->id, 'REVERSE PAYMENT: '.$invoice->invoice_number)) {
                 $legacy = DB::table('journal_entries as j')
                     ->join('journal_items as i', 'i.journal_entry_id', '=', 'j.id')
@@ -646,38 +665,98 @@ class InvoiceService
         return $rows;
     }
 
-    /**
-     * @return list<array<string, mixed>>
-     */
-    private function buildPostingLines(Invoice $invoice, int $journalId): array
-    {
-        $now = now();
-
-        return array_map(static fn (array $line): array => [
-            'journal_entry_id' => $journalId,
-            'account_id'       => $line['account_id'] ?? null,
-            'account_code'     => $line['account_code'],
-            'debit'            => $line['debit'],
-            'credit'           => $line['credit'],
-            'created_at'       => $now,
-            'updated_at'       => $now,
-        ], $this->buildPostingLineRows($invoice));
-    }
-
     private function syncJournalEntry(Invoice $invoice, array $totals): void
     {
         $journal = DB::table('journal_entries')
             ->where('reference_type', 'Invoice')
             ->where('reference_id', $invoice->id)
-            ->latest()
+            ->where('status', 'posted')
+            ->latest('id')
             ->first();
 
         if (! $journal) {
             return;
         }
 
-        DB::table('journal_items')->where('journal_entry_id', $journal->id)->delete();
-        DB::table('journal_items')->insert($this->buildPostingLines($invoice, (int) $journal->id));
+        $issueDate = Carbon::parse($invoice->issue_date)->toDateString();
+        \App\Support\AccountingPeriodResolver::assertOpenForDate($issueDate);
+
+        JournalWriter::postReversalFromJournal(
+            (int) $journal->id,
+            'ADJUSTMENT REVERSAL: '.$invoice->invoice_number,
+            $issueDate,
+            'Invoice',
+            $invoice->id,
+        );
+
+        JournalWriter::postSystem([
+            'date'           => $issueDate,
+            'description'    => 'Posted Sales Invoice: '.$invoice->invoice_number,
+            'reference_type' => 'Invoice',
+            'reference_id'   => $invoice->id,
+        ], $this->postingRowsWithExistingCogs($invoice));
+    }
+
+    private function postingRowsWithExistingCogs(Invoice $invoice): array
+    {
+        $rows = $this->buildPostingLineRows($invoice);
+        $cogsTotal = $this->cogsFromExistingMovements($invoice);
+        if ($cogsTotal > 0) {
+            $rows = array_merge($rows, app(InventoryService::class)->cogsJournalLines($cogsTotal));
+        }
+
+        return $rows;
+    }
+
+    private function postingRowsWithInventoryIssue(Invoice $invoice): array
+    {
+        $rows = $this->buildPostingLineRows($invoice);
+        $cogsTotal = $this->issueInventoryForInvoice($invoice);
+        if ($cogsTotal > 0) {
+            $rows = array_merge($rows, app(InventoryService::class)->cogsJournalLines($cogsTotal));
+        }
+
+        return $rows;
+    }
+
+    private function cogsFromExistingMovements(Invoice $invoice): float
+    {
+        return round((float) InventoryMovement::query()
+            ->where('reference_type', 'Invoice')
+            ->where('reference_id', $invoice->id)
+            ->where('type', 'issue')
+            ->get()
+            ->sum(fn (InventoryMovement $movement) => (float) $movement->qty * (float) $movement->unit_cost), 2);
+    }
+
+    private function issueInventoryForInvoice(Invoice $invoice): float
+    {
+        $inventory = app(InventoryService::class);
+        $issueDate = Carbon::parse($invoice->issue_date)->toDateString();
+        $cogsTotal = 0.0;
+
+        foreach ($invoice->items as $item) {
+            if (! $item->product_id) {
+                continue;
+            }
+            $product = Product::query()->find($item->product_id);
+            if (! $product || ! $product->track_inventory) {
+                continue;
+            }
+            $qty = (float) $item->quantity;
+            if ($qty <= 0) {
+                continue;
+            }
+            $cogsTotal += $inventory->issue(
+                $product,
+                $qty,
+                $issueDate,
+                'Invoice',
+                (int) $invoice->id,
+            );
+        }
+
+        return round($cogsTotal, 2);
     }
 
     private function reverseLatestJournal(Invoice $invoice, string $referenceType, string $description): void

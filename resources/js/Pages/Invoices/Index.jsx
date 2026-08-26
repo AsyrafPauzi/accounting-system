@@ -3,6 +3,7 @@ import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useForm } from '@inertiajs/react';
+import { useTranslation } from '@/i18n';
 import { confirm } from '@/utils/swal';
 import {
     currencySymbol,
@@ -49,7 +50,18 @@ function formatInvoiceBalance(invoice) {
     return formatCurrency(balance, invoice.currency);
 }
 
+function invoiceStatusKey(status) {
+    return String(status || '').replace(/\s+/g, '_').toLowerCase();
+}
+
+function invoiceStatusLabel(t, status) {
+    const key = `invoices.status.${invoiceStatusKey(status)}`;
+    const translated = t(key);
+    return translated === key ? status : translated;
+}
+
 export default function Index({ auth, invoices = [], bankAccounts = [], totalOutstanding = 0, totalCollected = 0, totalCount = 0, paginator = {}, filters = {} }) {
+    const { t } = useTranslation();
     const { current_page = 1, last_page = 1, per_page = 10, total = 0, from = 0, to = 0 } = paginator;
     const { search = '', status: statusFilter = '', per_page: perPageFilter = 10 } = filters;
 
@@ -63,7 +75,12 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
     const toggleAll = () => setSelectedIds(allSelected ? selectedIds.filter((id) => !pageIds.includes(id)) : [...new Set([...selectedIds, ...pageIds])]);
     const canEmail = Boolean(auth.planPermissions?.['invoices.email']) && (auth.permissions || []).includes('invoices.email');
     const bulkEmail = async () => {
-        const ok = await confirm({ title: `Email ${selectedIds.length} invoice PDF(s)?`, text: 'Queued to each customer email on file. Rows without email are skipped.', confirmText: 'Send', icon: 'question' });
+        const ok = await confirm({
+            title: t('invoices.confirm.bulk_email_title', { count: selectedIds.length }),
+            text: t('invoices.confirm.bulk_email_text'),
+            confirmText: t('invoices.confirm.bulk_email_confirm'),
+            icon: 'question',
+        });
         if (ok) router.post(route('invoices.bulk-email'), { ids: selectedIds });
     };
     const bulkPdf = () => {
@@ -86,17 +103,34 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
     };
 
     const handlePostToLedger = async (id) => {
-        const ok = await confirm({ title: 'Post to Ledger?', text: 'This will lock the invoice details and create General Ledger entries.', confirmText: 'Post', icon: 'question' });
+        const ok = await confirm({
+            title: t('invoices.confirm.post_title'),
+            text: t('invoices.confirm.post_text'),
+            confirmText: t('invoices.confirm.post_confirm'),
+            icon: 'question',
+        });
         if (ok) router.post(route('invoices.post', id));
     };
 
     const handleVoid = async (id) => {
-        const ok = await confirm({ title: 'Void Invoice?', text: 'This creates a reversal entry and cancels the balance. This action cannot be undone.', confirmText: 'Void', confirmColor: '#dc2626', icon: 'warning' });
+        const ok = await confirm({
+            title: t('invoices.confirm.void_title'),
+            text: t('invoices.confirm.void_text'),
+            confirmText: t('invoices.confirm.void_confirm'),
+            confirmColor: '#dc2626',
+            icon: 'warning',
+        });
         if (ok) router.post(route('invoices.void', id));
     };
 
     const handleDelete = async (id) => {
-        const ok = await confirm({ title: 'Delete Draft?', text: 'This cannot be undone.', confirmText: 'Delete', confirmColor: '#dc2626', icon: 'warning' });
+        const ok = await confirm({
+            title: t('invoices.confirm.delete_title'),
+            text: t('invoices.confirm.delete_text'),
+            confirmText: t('invoices.confirm.delete_confirm'),
+            confirmColor: '#dc2626',
+            icon: 'warning',
+        });
         if (ok) router.delete(route('invoices.destroy', id));
     };
 
@@ -106,7 +140,12 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
     };
 
     const handleEmailInvoice = async (id) => {
-        const ok = await confirm({ title: 'Email Invoice PDF?', text: 'This will send the PDF to the customer email on file.', confirmText: 'Send', icon: 'question' });
+        const ok = await confirm({
+            title: t('invoices.confirm.email_title'),
+            text: t('invoices.confirm.email_text'),
+            confirmText: t('invoices.confirm.email_confirm'),
+            icon: 'question',
+        });
         if (ok) router.post(route('invoices.email', id), { onStart: () => setEmailingId(id), onFinish: () => setEmailingId(null) });
     };
 
@@ -122,21 +161,21 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
                 </Link>
             </td>
             <td className="px-4 sm:px-6 py-3 sm:py-4">
-                <div className="font-medium text-ink">{invoice.customer_name || 'Walk-in'}</div>
-                <p className="text-xs text-ink-muted truncate max-w-[140px] sm:max-w-none">{invoice.customer_email || 'No email'}</p>
+                <div className="font-medium text-ink">{invoice.customer_name || t('invoices.actions.walk_in')}</div>
+                <p className="text-xs text-ink-muted truncate max-w-[140px] sm:max-w-none">{invoice.customer_email || t('invoices.actions.no_email')}</p>
             </td>
             <td className="px-4 sm:px-6 py-3 sm:py-4">
-                    <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${getStatusBadge(invoice.status)}`}>{invoice.status}</span>
-                    {invoice.last_viewed_at && <p className="text-[10px] text-ink-muted mt-1">Viewed</p>}
+                    <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${getStatusBadge(invoice.status)}`}>{invoiceStatusLabel(t, invoice.status)}</span>
+                    {invoice.last_viewed_at && <p className="text-[10px] text-ink-muted mt-1">{t('invoices.actions.viewed')}</p>}
             </td>
             <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
                 <div className="font-mono text-sm font-semibold text-ink">{formatInvoiceAmount(invoice)}</div>
                 {parseFloat(invoice.amount_paid) > 0 && invoice.status !== 'paid' && (
-                    <p className="text-xs text-terracotta tabular-nums">Bal: {formatInvoiceBalance(invoice)}</p>
+                    <p className="text-xs text-terracotta tabular-nums">{t('invoices.actions.balance_short')} {formatInvoiceBalance(invoice)}</p>
                 )}
             </td>
             <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
-                <ActionsCell auth={auth} invoice={invoice} setSelectedInvoice={setSelectedInvoice} setData={setData} defaultBankCode={defaultBankCode} handlePostToLedger={handlePostToLedger} handleVoid={handleVoid} handleDelete={handleDelete} handleEmailInvoice={handleEmailInvoice} emailingId={emailingId} />
+                <ActionsCell t={t} auth={auth} invoice={invoice} setSelectedInvoice={setSelectedInvoice} setData={setData} defaultBankCode={defaultBankCode} handlePostToLedger={handlePostToLedger} handleVoid={handleVoid} handleDelete={handleDelete} handleEmailInvoice={handleEmailInvoice} emailingId={emailingId} />
             </td>
         </>
     );
@@ -145,87 +184,87 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
         <AuthenticatedLayout user={auth.user} header={
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                 <div>
-                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Sales Invoices</h2>
-                    <p className="text-ink-muted text-sm font-medium mt-1">Create, manage and track revenue documents</p>
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">{t('invoices.page_title')}</h2>
+                    <p className="text-ink-muted text-sm font-medium mt-1">{t('invoices.subtitle')}</p>
                 </div>
                 {auth.permissions.includes('invoices.create') && (
                     <div className="flex flex-wrap gap-2">
                         <Link href={route('invoices.cash-sale')} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">
-                            Cash sale
+                            {t('invoices.cash_sale')}
                         </Link>
                         <Link href={route('invoices.batch')} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:bg-cream">
-                            Batch
+                            {t('invoices.batch')}
                         </Link>
                         <Link href={route('invoices.create')} className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta shadow-lg  transition-all duration-200">
-                            <Icons.Plus /> Create Invoice
+                            <Icons.Plus /> {t('invoices.create')}
                         </Link>
                     </div>
                 )}
             </div>
         }>
-            <Head title="Invoices" />
+            <Head title={t('invoices.title')} />
 
             <div className="space-y-4 sm:space-y-6 min-w-0">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     <div className="relative overflow-hidden bg-terracotta text-white rounded-2xl p-4 sm:p-6 shadow-lg">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Total Invoices</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">{t('invoices.total_invoices')}</span>
                             <span className="p-2 rounded-xl bg-surface/10"><Icons.Document /></span>
                         </div>
                         <p className="text-xl sm:text-2xl font-bold tabular-nums">{totalCount}</p>
-                        <p className="text-xs text-terracotta mt-1">Draft · Unpaid · Paid</p>
+                        <p className="text-xs text-terracotta mt-1">{t('invoices.total_invoices_hint')}</p>
                     </div>
                     <div className="bg-surface rounded-2xl p-4 sm:p-6 border border-border-warm shadow-sm">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Outstanding (AR)</span>
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">{t('invoices.outstanding_ar')}</span>
                             <span className="p-2 rounded-xl bg-terracotta/10 text-terracotta"><Icons.Exclamation /></span>
                         </div>
                         <p className="text-lg sm:text-xl font-bold text-terracotta font-mono tabular-nums">RM {totalOutstanding.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
-                        <p className="text-xs text-ink-muted mt-1">Awaiting collection</p>
+                        <p className="text-xs text-ink-muted mt-1">{t('invoices.outstanding_hint')}</p>
                     </div>
                     <div className="bg-surface rounded-2xl p-4 sm:p-6 border border-border-warm shadow-sm">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Collected</span>
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">{t('invoices.collected')}</span>
                             <span className="p-2 rounded-xl bg-forest/10 text-forest"><Icons.Check /></span>
                         </div>
                         <p className="text-lg sm:text-xl font-bold text-forest font-mono tabular-nums">RM {totalCollected.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
-                        <p className="text-xs text-ink-muted mt-1">Cash received</p>
+                        <p className="text-xs text-ink-muted mt-1">{t('invoices.collected_hint')}</p>
                     </div>
                 </div>
 
                 <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
                     {selectedIds.length > 0 && (
                         <div className="px-4 sm:px-6 py-3 border-b border-border-warm bg-cream flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-semibold text-ink">{selectedIds.length} selected</span>
-                            <button type="button" onClick={bulkPdf} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-border-warm bg-surface hover:bg-cream">Download PDFs</button>
+                            <span className="text-sm font-semibold text-ink">{t('invoices.bulk.selected', { count: selectedIds.length })}</span>
+                            <button type="button" onClick={bulkPdf} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-border-warm bg-surface hover:bg-cream">{t('invoices.bulk.download_pdfs')}</button>
                             {canEmail && (
-                                <button type="button" onClick={bulkEmail} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-border-warm bg-surface hover:bg-cream">Email selected</button>
+                                <button type="button" onClick={bulkEmail} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-border-warm bg-surface hover:bg-cream">{t('invoices.bulk.email_selected')}</button>
                             )}
-                            <button type="button" onClick={() => setSelectedIds([])} className="text-xs text-ink-muted">Clear</button>
+                            <button type="button" onClick={() => setSelectedIds([])} className="text-xs text-ink-muted">{t('invoices.bulk.clear')}</button>
                         </div>
                     )}
                     <form onSubmit={(e) => { e.preventDefault(); applyFilters({ page: 1 }); }} className="px-4 sm:px-6 py-4 border-b border-border-warm flex flex-wrap items-center gap-3 bg-cream/50">
                         <div className="relative flex-1 min-w-0 max-w-full sm:max-w-xs">
                             <span className="absolute inset-y-0 left-3 flex items-center text-ink-muted"><Icons.MagnifyingGlass /></span>
-                            <input type="text" placeholder="Search by invoice # or customer..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onBlur={() => applyFilters({ page: 1 })} className="pl-9 w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta" />
+                            <input type="text" placeholder={t('invoices.search_placeholder')} value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onBlur={() => applyFilters({ page: 1 })} className="pl-9 w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta" />
                         </div>
                         <select value={statusFilter} onChange={(e) => applyFilters({ status: e.target.value, page: 1 })} className="border border-border-warm rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta min-w-[140px]">
-                            <option value="">All statuses</option>
-                            <option value="draft">Draft</option>
-                            <option value="unpaid">Unpaid</option>
-                            <option value="partially paid">Partially Paid</option>
-                            <option value="paid">Paid</option>
-                            <option value="void">Void</option>
+                            <option value="">{t('invoices.all_statuses')}</option>
+                            <option value="draft">{t('invoices.status.draft')}</option>
+                            <option value="unpaid">{t('invoices.status.unpaid')}</option>
+                            <option value="partially paid">{t('invoices.status.partially_paid')}</option>
+                            <option value="paid">{t('invoices.status.paid')}</option>
+                            <option value="void">{t('invoices.status.void')}</option>
                         </select>
                         <select value={perPageFilter} onChange={(e) => applyFilters({ per_page: Number(e.target.value), page: 1 })} className="border border-border-warm rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta min-w-[140px]">
-                            <option value={10}>10 per page</option>
-                            <option value={25}>25 per page</option>
-                            <option value={50}>50 per page</option>
-                            <option value={100}>100 per page</option>
+                            <option value={10}>{t('invoices.filters.per_page', { count: 10 })}</option>
+                            <option value={25}>{t('invoices.filters.per_page', { count: 25 })}</option>
+                            <option value={50}>{t('invoices.filters.per_page', { count: 50 })}</option>
+                            <option value={100}>{t('invoices.filters.per_page', { count: 100 })}</option>
                         </select>
-                        <button type="submit" className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta">Apply</button>
+                        <button type="submit" className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-terracotta hover:bg-terracotta">{t('invoices.filters.apply')}</button>
                         <span className="text-ink-muted text-sm font-medium ml-auto whitespace-nowrap">
-                            {total > 0 ? `${from}–${to} of ${total}` : '0 of 0'}
+                            {total > 0 ? t('invoices.pagination.range', { from, to, total }) : t('invoices.pagination.empty')}
                         </span>
                     </form>
 
@@ -235,11 +274,11 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
                             <thead>
                                 <tr className="text-left text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
                                     <th className="px-3 py-3 w-10"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-border-warm" /></th>
-                                    <th className="px-4 sm:px-6 py-3">Invoice</th>
-                                    <th className="px-4 sm:px-6 py-3">Customer</th>
-                                    <th className="px-4 sm:px-6 py-3">Status</th>
-                                    <th className="px-4 sm:px-6 py-3 text-right">Amount</th>
-                                    <th className="px-4 sm:px-6 py-3 text-right w-28">Actions</th>
+                                    <th className="px-4 sm:px-6 py-3">{t('invoices.table_invoice')}</th>
+                                    <th className="px-4 sm:px-6 py-3">{t('invoices.table_customer')}</th>
+                                    <th className="px-4 sm:px-6 py-3">{t('invoices.table_status')}</th>
+                                    <th className="px-4 sm:px-6 py-3 text-right">{t('invoices.table_amount')}</th>
+                                    <th className="px-4 sm:px-6 py-3 text-right w-28">{t('invoices.table_actions')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -248,7 +287,7 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
                                         <InvoiceRow invoice={invoice} />
                                     </tr>
                                 )) : (
-                                    <tr><td colSpan={6} className="px-6 py-16 text-center text-ink-muted text-sm">{totalCount === 0 ? 'No invoices yet. Create your first invoice to get started.' : 'No invoices match your filters.'}</td></tr>
+                                    <tr><td colSpan={6} className="px-6 py-16 text-center text-ink-muted text-sm">{totalCount === 0 ? t('invoices.empty_none') : t('invoices.empty_filtered')}</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -264,26 +303,26 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
                                         <Link href={route('invoices.show', invoice.id)} className="font-semibold text-ink hover:text-terracotta">{invoice.invoice_number}</Link>
                                         <p className="text-xs text-ink-muted mt-0.5">{invoice.customer_name || 'Walk-in'}</p>
                                         <p className="text-sm font-mono font-semibold text-ink mt-1">{formatInvoiceAmount(invoice)}</p>
-                                        <span className={`inline-flex mt-2 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${getStatusBadge(invoice.status)}`}>{invoice.status}</span>
+                                        <span className={`inline-flex mt-2 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${getStatusBadge(invoice.status)}`}>{invoiceStatusLabel(t, invoice.status)}</span>
                                     </div>
-                                    <ActionsCell auth={auth} invoice={invoice} setSelectedInvoice={setSelectedInvoice} setData={setData} defaultBankCode={defaultBankCode} handlePostToLedger={handlePostToLedger} handleVoid={handleVoid} handleDelete={handleDelete} handleEmailInvoice={handleEmailInvoice} emailingId={emailingId} />
+                                    <ActionsCell t={t} auth={auth} invoice={invoice} setSelectedInvoice={setSelectedInvoice} setData={setData} defaultBankCode={defaultBankCode} handlePostToLedger={handlePostToLedger} handleVoid={handleVoid} handleDelete={handleDelete} handleEmailInvoice={handleEmailInvoice} emailingId={emailingId} />
                                 </div>
                             </div>
                         )) : (
-                            <div className="px-4 py-16 text-center text-ink-muted text-sm">{totalCount === 0 ? 'No invoices yet. Create your first invoice to get started.' : 'No invoices match your filters.'}</div>
+                            <div className="px-4 py-16 text-center text-ink-muted text-sm">{totalCount === 0 ? t('invoices.empty_none') : t('invoices.empty_filtered')}</div>
                         )}
                     </div>
 
                     {/* Pagination */}
                     {last_page > 1 && (
                         <div className="px-4 sm:px-6 py-4 border-t border-border-warm flex flex-wrap items-center justify-between gap-3 bg-cream/30">
-                            <p className="text-sm text-ink">Page {current_page} of {last_page}</p>
+                            <p className="text-sm text-ink">{t('invoices.pagination.page_of', { current: current_page, last: last_page })}</p>
                             <div className="flex items-center gap-2">
                                 <Link href={route('invoices.index', { search: searchInput || undefined, status: statusFilter || undefined, per_page: perPageFilter, page: Math.max(1, current_page - 1) })} className={`inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold border ${current_page <= 1 ? 'pointer-events-none text-ink-muted border-border-warm' : 'text-ink border-border-warm hover:bg-cream'}`}>
-                                    <Icons.ChevronLeft /> Previous
+                                    <Icons.ChevronLeft /> {t('invoices.pagination.previous')}
                                 </Link>
                                 <Link href={route('invoices.index', { search: searchInput || undefined, status: statusFilter || undefined, per_page: perPageFilter, page: Math.min(last_page, current_page + 1) })} className={`inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold border ${current_page >= last_page ? 'pointer-events-none text-ink-muted border-border-warm' : 'text-ink border-border-warm hover:bg-cream'}`}>
-                                    Next <Icons.ChevronRight />
+                                    {t('invoices.pagination.next')} <Icons.ChevronRight />
                                 </Link>
                             </div>
                         </div>
@@ -296,13 +335,13 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
                             <div className="flex items-center gap-3 mb-6">
                                 <span className="p-2.5 rounded-xl bg-forest/10 text-forest"><Icons.Currency /></span>
                                 <div>
-                                    <h3 className="text-xl font-display font-medium text-ink">Record Receipt</h3>
-                                    <p className="text-sm text-ink-muted">Payment for {selectedInvoice.invoice_number}</p>
+                                    <h3 className="text-xl font-display font-medium text-ink">{t('invoices.payment_modal.title')}</h3>
+                                    <p className="text-sm text-ink-muted">{t('invoices.payment_modal.subtitle', { number: selectedInvoice.invoice_number })}</p>
                                 </div>
                             </div>
                             <form onSubmit={handlePaymentSubmit} className="space-y-5">
                                 <div>
-                                    <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">Amount ({normalizeCurrency(selectedInvoice.currency)})</label>
+                                    <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">{t('invoices.payment_modal.amount')} ({normalizeCurrency(selectedInvoice.currency)})</label>
                                     <div className="relative">
                                         <span className="absolute inset-y-0 left-4 flex items-center text-ink-muted font-medium">{currencySymbol(selectedInvoice.currency)}</span>
                                         <input type="number" value={data.amount} onChange={e => setData('amount', e.target.value)} className={`w-full pl-12 pr-4 py-3 border rounded-xl font-semibold text-ink focus:ring-2 focus:ring-terracotta ${errors.amount ? 'border-terracotta ring-1 ring-terracotta' : 'border-border-warm'}`} step={currencyInputStep(selectedInvoice.currency)} required />
@@ -311,15 +350,15 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">Date</label>
+                                        <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">{t('invoices.payment_modal.date')}</label>
                                         <input type="date" value={data.payment_date} onChange={e => setData('payment_date', e.target.value)} className={`w-full border rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-terracotta ${errors.payment_date ? 'border-terracotta' : 'border-border-warm'}`} required />
                                         {errors.payment_date && <p className="text-terracotta text-[10px] mt-1.5 font-bold uppercase tracking-tight">{errors.payment_date}</p>}
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">Account</label>
+                                        <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">{t('invoices.payment_modal.account')}</label>
                                         <select value={data.bank_account_code} onChange={e => setData('bank_account_code', e.target.value)} className={`w-full border rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-terracotta ${errors.bank_account_code ? 'border-terracotta' : 'border-border-warm'}`}>
                                             {(bankAccounts || []).length === 0 && (
-                                                <option value="">No bank/cash accounts — add one in Chart of Accounts</option>
+                                                <option value="">{t('invoices.payment_modal.no_bank_accounts')}</option>
                                             )}
                                             {(bankAccounts || []).map((a) => (
                                                 <option key={a.value} value={a.value}>{a.label}</option>
@@ -329,8 +368,8 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
                                     </div>
                                 </div>
                                 <div className="flex gap-3 pt-4">
-                                    <button type="button" onClick={() => { setSelectedInvoice(null); reset(); }} className="flex-1 py-3 rounded-xl font-semibold text-ink border border-border-warm hover:bg-cream">Cancel</button>
-                                    <button type="submit" disabled={processing} className="flex-[2] py-3 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50"> {processing ? 'Processing...' : 'Confirm Receipt'}</button>
+                                    <button type="button" onClick={() => { setSelectedInvoice(null); reset(); }} className="flex-1 py-3 rounded-xl font-semibold text-ink border border-border-warm hover:bg-cream">{t('invoices.payment_modal.cancel')}</button>
+                                    <button type="submit" disabled={processing} className="flex-[2] py-3 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50"> {processing ? t('invoices.payment_modal.processing') : t('invoices.payment_modal.confirm')}</button>
                                 </div>
                             </form>
                         </div>
@@ -341,7 +380,7 @@ export default function Index({ auth, invoices = [], bankAccounts = [], totalOut
     );
 }
 
-function ActionsCell({ auth, invoice, setSelectedInvoice, setData, defaultBankCode, handlePostToLedger, handleVoid, handleDelete, handleEmailInvoice, emailingId }) {
+function ActionsCell({ t, auth, invoice, setSelectedInvoice, setData, defaultBankCode, handlePostToLedger, handleVoid, handleDelete, handleEmailInvoice, emailingId }) {
     const isDraft = invoice.status === 'draft';
     const isVoid = invoice.status === 'void';
 
@@ -357,24 +396,24 @@ function ActionsCell({ auth, invoice, setSelectedInvoice, setData, defaultBankCo
             >
                 <MenuItem>
                     <Link href={route('invoices.show', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-cream">
-                        <Icons.ChevronRight className="w-4 h-4" /> Open
+                        <Icons.ChevronRight className="w-4 h-4" /> {t('invoices.actions.open')}
                     </Link>
                 </MenuItem>
                 {auth.permissions.includes('invoices.create') && (
                     <MenuItem>
                         <button type="button" onClick={() => router.post(route('invoices.duplicate', invoice.id))} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-cream">
-                            Duplicate
+                            {t('invoices.actions.duplicate')}
                         </button>
                     </MenuItem>
                 )}
                 <MenuItem>
                     <a href={route('invoices.preview', invoice.id)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-cream">
-                        <Icons.Eye /> Preview PDF
+                        <Icons.Eye /> {t('invoices.actions.preview_pdf')}
                     </a>
                 </MenuItem>
                 <MenuItem>
                     <a href={route('invoices.pdf', invoice.id)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-cream">
-                        <Icons.ArrowDownTray /> Download PDF
+                        <Icons.ArrowDownTray /> {t('invoices.actions.download_pdf')}
                     </a>
                 </MenuItem>
                 {isDraft && (
@@ -382,21 +421,21 @@ function ActionsCell({ auth, invoice, setSelectedInvoice, setData, defaultBankCo
                         {auth.permissions.includes('invoices.post') && (
                             <MenuItem>
                                 <button type="button" onClick={() => handlePostToLedger(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-terracotta hover:bg-surface-alt">
-                                    <Icons.Check /> Post to ledger
+                                    <Icons.Check /> {t('invoices.actions.post_to_ledger')}
                                 </button>
                             </MenuItem>
                         )}
                         {auth.permissions.includes('invoices.edit') && (
                             <MenuItem>
                                 <Link href={route('invoices.edit', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-cream">
-                                    <Icons.Pencil /> Edit
+                                    <Icons.Pencil /> {t('invoices.actions.edit')}
                                 </Link>
                             </MenuItem>
                         )}
                         {auth.permissions.includes('invoices.delete') && (
                             <MenuItem>
                                 <button type="button" onClick={() => handleDelete(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-terracotta hover:bg-terracotta/10">
-                                    Delete draft
+                                    {t('invoices.actions.delete_draft')}
                                 </button>
                             </MenuItem>
                         )}
@@ -407,28 +446,28 @@ function ActionsCell({ auth, invoice, setSelectedInvoice, setData, defaultBankCo
                         {invoice.status !== 'paid' && auth.planPermissions['invoices.record-payment'] && auth.permissions.includes('invoices.record-payment') && (
                             <MenuItem>
                                 <button type="button" onClick={() => { setSelectedInvoice(invoice); setData('amount', (parseFloat(invoice.balance_due ?? 0)).toFixed(currencyDecimals(invoice.currency))); setData('bank_account_code', defaultBankCode); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-forest hover:bg-forest/10">
-                                    <Icons.Currency /> Record payment
+                                    <Icons.Currency /> {t('invoices.actions.record_payment')}
                                 </button>
                             </MenuItem>
                         )}
                         {auth.planPermissions['credit-notes.view'] && auth.permissions.includes('credit-notes.create') && (
                             <MenuItem>
                                 <Link href={route('credit-notes.create', invoice.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-cream">
-                                    <Icons.ReceiptRefund /> Credit note
+                                    <Icons.ReceiptRefund /> {t('invoices.actions.credit_note')}
                                 </Link>
                             </MenuItem>
                         )}
                         {invoice.customer_email && auth.planPermissions['invoices.email'] && auth.permissions.includes('invoices.email') && (
                             <MenuItem>
                                 <button type="button" onClick={() => handleEmailInvoice(invoice.id)} disabled={emailingId === invoice.id} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-ink hover:bg-cream disabled:opacity-50">
-                                    <Icons.PaperAirplane /> {emailingId === invoice.id ? 'Emailing…' : 'Email'}
+                                    <Icons.PaperAirplane /> {emailingId === invoice.id ? t('invoices.actions.emailing') : t('invoices.actions.email')}
                                 </button>
                             </MenuItem>
                         )}
                         {auth.permissions.includes('invoices.void') && (
                             <MenuItem>
                                 <button type="button" onClick={() => handleVoid(invoice.id)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-terracotta hover:bg-terracotta/10">
-                                    Void invoice
+                                    {t('invoices.actions.void_invoice')}
                                 </button>
                             </MenuItem>
                         )}

@@ -96,27 +96,182 @@
 
     "invoices": {
         "title": "Invois",
+        "page_title": "Invois jualan",
+        "subtitle": "Cipta, urus dan jejak dokumen hasil",
         "new": "Invois baharu",
+        "create": "Cipta invois",
+        "cash_sale": "Jualan tunai",
+        "batch": "Kelompok",
         "balance_due": "Baki perlu bayar",
+        "total_invoices": "Jumlah invois",
+        "total_invoices_hint": "Draf · Belum bayar · Dibayar",
+        "outstanding_ar": "Belum terima (AR)",
+        "outstanding_hint": "Menunggu kutipan",
+        "collected": "Dikutip",
+        "collected_hint": "Tunai diterima",
+        "search_placeholder": "Cari mengikut no. invois atau pelanggan…",
+        "all_statuses": "Semua status",
+        "table_invoice": "Invois",
+        "table_customer": "Pelanggan",
+        "table_status": "Status",
+        "table_amount": "Amaun",
+        "table_actions": "Tindakan",
+        "empty_none": "Tiada invois lagi. Cipta invois pertama anda untuk bermula.",
+        "empty_filtered": "Tiada invois sepadan dengan penapis.",
         "status": {
             "draft": "Draf",
             "unpaid": "Belum bayar",
             "partially_paid": "Separa bayar",
             "paid": "Dibayar",
             "void": "Batal"
+        },
+        "actions": {
+            "open": "Buka",
+            "duplicate": "Salin",
+            "preview_pdf": "Pratonton PDF",
+            "download_pdf": "Muat turun PDF",
+            "post_to_ledger": "Pos ke lejar",
+            "edit": "Edit",
+            "delete_draft": "Padam draf",
+            "record_payment": "Rekod bayaran",
+            "credit_note": "Nota kredit",
+            "email": "E-mel",
+            "emailing": "Menghantar…",
+            "void_invoice": "Batalkan invois",
+            "viewed": "Dilihat",
+            "walk_in": "Pelanggan walk-in",
+            "no_email": "Tiada e-mel",
+            "balance_short": "Baki:"
+        },
+        "confirm": {
+            "bulk_email_title": "E-mel :count PDF invois?",
+            "bulk_email_text": "Dihantar ke e-mel pelanggan yang direkod. Baris tanpa e-mel dilangkau.",
+            "bulk_email_confirm": "Hantar",
+            "post_title": "Pos ke lejar?",
+            "post_text": "Butiran invois akan dikunci dan entri lejar am dicipta.",
+            "post_confirm": "Pos",
+            "void_title": "Batalkan invois?",
+            "void_text": "Entri songsangan dicipta dan baki dibatalkan. Tindakan ini tidak boleh dibuat asal.",
+            "void_confirm": "Batalkan",
+            "delete_title": "Padam draf?",
+            "delete_text": "Tindakan ini tidak boleh dibuat asal.",
+            "delete_confirm": "Padam",
+            "email_title": "E-mel PDF invois?",
+            "email_text": "PDF akan dihantar ke e-mel pelanggan yang direkod.",
+            "email_confirm": "Hantar"
+        },
+        "bulk": {
+            "selected": ":count dipilih",
+            "download_pdfs": "Muat turun PDF",
+            "email_selected": "E-mel dipilih",
+            "clear": "Kosongkan"
+        },
+        "filters": {
+            "apply": "Guna",
+            "per_page": ":count setiap halaman"
+        },
+        "pagination": {
+            "page_of": "Halaman :current daripada :last",
+            "previous": "Sebelum",
+            "next": "Seterusnya",
+            "range": ":from–:to daripada :total",
+            "empty": "0 daripada 0"
+        },
+        "payment_modal": {
+            "title": "Rekod resit",
+            "subtitle": "Bayaran untuk :number",
+            "amount": "Amaun",
+            "date": "Tarikh",
+            "account": "Akaun",
+            "no_bank_accounts": "Tiada akaun bank/tunai — tambah dalam Carta Akaun",
+            "cancel": "Batal",
+            "confirm": "Sahkan resit",
+            "processing": "Memproses..."
         }
     },
 
     "bills": {
         "title": "Bil / Belian",
+        "page_title": "Bil & belian",
+        "subtitle": "Rekod perbelanjaan dan jejak hutang",
         "new": "Bil baharu",
+        "create": "Cipta bil",
+        "batch": "Kelompok",
         "balance_due": "Baki perlu bayar",
+        "total_bills": "Jumlah bil",
+        "total_bills_hint": "Draf · Belum bayar · Dibayar",
+        "outstanding_ap": "Belum bayar (AP)",
+        "outstanding_hint": "Amaun perlu dibayar kepada pembekal",
+        "paid_period": "Dibayar (tempoh)",
+        "paid_hint": "Bayaran direkod",
+        "search_placeholder": "Cari mengikut no. bil atau pembekal…",
+        "all_suppliers": "Semua pembekal",
+        "table_bill": "Bil",
+        "table_supplier": "Pembekal",
+        "table_due_date": "Tarikh akhir",
+        "table_status": "Status",
+        "table_receipt": "Resit",
+        "table_total": "Jumlah",
+        "table_balance": "Baki",
+        "table_actions": "Tindakan",
+        "empty_none": "Tiada bil lagi. Cipta bil pertama anda untuk bermula.",
+        "empty_filtered": "Tiada bil sepadan dengan penapis.",
         "status": {
             "draft": "Draf",
             "unpaid": "Belum bayar",
             "partially_paid": "Separa bayar",
             "paid": "Dibayar",
             "void": "Batal"
+        },
+        "actions": {
+            "open": "Buka",
+            "duplicate": "Salin",
+            "preview_pdf": "Pratonton PDF",
+            "download_pdf": "Muat turun PDF",
+            "post_to_ledger": "Pos ke lejar",
+            "edit": "Edit",
+            "delete_draft": "Padam draf",
+            "record_payment": "Rekod bayaran",
+            "view_receipt": "Lihat resit",
+            "void_bill": "Batalkan bil",
+            "balance_short": "Baki:"
+        },
+        "confirm": {
+            "post_title": "Pos ke lejar?",
+            "post_text": "Butiran bil akan dikunci dan entri lejar am dicipta.",
+            "post_confirm": "Pos",
+            "void_title": "Batalkan bil?",
+            "void_text": "Entri songsangan dicipta dan baki dibatalkan. Tindakan ini tidak boleh dibuat asal.",
+            "void_confirm": "Batalkan",
+            "delete_title": "Padam draf?",
+            "delete_text": "Tindakan ini tidak boleh dibuat asal.",
+            "delete_confirm": "Padam"
+        },
+        "bulk": {
+            "selected": ":count dipilih",
+            "clear": "Kosongkan"
+        },
+        "filters": {
+            "apply": "Guna",
+            "per_page": ":count setiap halaman"
+        },
+        "pagination": {
+            "page_of": "Halaman :current daripada :last",
+            "previous": "Sebelum",
+            "next": "Seterusnya",
+            "range": ":from–:to daripada :total",
+            "empty": "0 daripada 0"
+        },
+        "payment_modal": {
+            "title": "Rekod bayaran",
+            "subtitle": "Bil :number",
+            "amount": "Amaun",
+            "date": "Tarikh",
+            "account": "Akaun",
+            "no_bank_accounts": "Tiada akaun bank/tunai — tambah dalam Carta Akaun",
+            "cancel": "Batal",
+            "confirm": "Sahkan bayaran",
+            "processing": "Memproses..."
         }
     },
 

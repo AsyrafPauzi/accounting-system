@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Support\PostedJournalScope;
 use App\Support\ReportCompare;
 use App\Support\ReportPeriod;
+use App\Services\PlSourceDocumentsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -26,7 +27,8 @@ class ProfitAndLossController extends Controller
         $dateFrom = $resolved['date_from'];
         $dateTo = $resolved['date_to'];
         $compare = $this->resolveCompare($request);
-        $data = $this->buildComparedPlData($dateFrom, $dateTo, $compare);
+        $basis = $this->resolveBasis($request);
+        $data = $this->buildComparedPlData($dateFrom, $dateTo, $compare, $basis);
 
         return Inertia::render('Reports/ProfitAndLoss', [
             ...$data,
@@ -35,15 +37,59 @@ class ProfitAndLossController extends Controller
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
                 'compare' => $compare,
+                'basis' => $basis,
+            ],
+        ]);
+    }
+
+    public function sources(Request $request, PlSourceDocumentsService $sources): Response
+    {
+        $resolved = ReportPeriod::range(
+            $request->input('preset'),
+            $request->input('date_from'),
+            $request->input('date_to')
+        );
+        $dateFrom = $resolved['date_from'];
+        $dateTo = $resolved['date_to'];
+        $accountCode = (string) $request->input('account_code', '');
+        $account = \App\Models\Account::query()->where('code', $accountCode)->firstOrFail();
+
+        return Inertia::render('Reports/ProfitAndLossSources', [
+            'account' => [
+                'code' => $account->code,
+                'name' => $account->name,
+                'type' => $account->type,
+            ],
+            'sources' => $sources->forAccount($accountCode, $dateFrom, $dateTo),
+            'filters' => [
+                'preset' => $resolved['preset'],
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
+                'account_code' => $accountCode,
+                'basis' => $this->resolveBasis($request),
             ],
         ]);
     }
 
     /**
+     * Public entry for other report services (e.g. cash flow statement).
+     *
+     * @return array<string, mixed>
+     */
+    public function buildPlDataPublic(string $dateFrom, string $dateTo, string $basis = 'accrual'): array
+    {
+        return $this->buildPlData($dateFrom, $dateTo, $basis);
+    }
+
+    /**
      * Build P&L data for the given date range.
      */
-    protected function buildPlData(string $dateFrom, string $dateTo): array
+    protected function buildPlData(string $dateFrom, string $dateTo, string $basis = 'accrual'): array
     {
+        if ($basis === 'cash') {
+            return $this->buildCashBasisPlData($dateFrom, $dateTo);
+        }
+
         $rows = DB::table('journal_items')
             ->join('journal_entries', 'journal_items.journal_entry_id', '=', 'journal_entries.id')
             ->join('accounts', 'journal_items.account_code', '=', 'accounts.code')
@@ -89,12 +135,59 @@ class ProfitAndLossController extends Controller
             'net_profit' => round($netProfit, 2),
             'date_from' => $dateFrom,
             'date_to' => $dateTo,
+            'basis' => $basis,
         ];
     }
 
-    protected function buildComparedPlData(string $dateFrom, string $dateTo, string $compare): array
+    /**
+     * Cash-basis P&L — revenue when collected, expenses when paid (bank/cash journal lines).
+     *
+     * @return array<string, mixed>
+     */
+    protected function buildCashBasisPlData(string $dateFrom, string $dateTo): array
     {
-        $current = $this->buildPlData($dateFrom, $dateTo);
+        $cashInQuery = DB::table('journal_items as ji')
+            ->join('journal_entries as je', 'je.id', '=', 'ji.journal_entry_id')
+            ->join('accounts as a', 'a.code', '=', 'ji.account_code')
+            ->where('je.reference_type', 'Invoice Payment')
+            ->whereBetween('je.date', [$dateFrom, $dateTo])
+            ->whereIn('a.sub_type', ['bank', 'cash']);
+        PostedJournalScope::apply($cashInQuery, 'je');
+        $cashIn = (float) $cashInQuery->sum('ji.debit');
+
+        $cashOutQuery = DB::table('journal_items as ji')
+            ->join('journal_entries as je', 'je.id', '=', 'ji.journal_entry_id')
+            ->join('accounts as a', 'a.code', '=', 'ji.account_code')
+            ->where('je.reference_type', 'Bill Payment')
+            ->whereBetween('je.date', [$dateFrom, $dateTo])
+            ->whereIn('a.sub_type', ['bank', 'cash']);
+        PostedJournalScope::apply($cashOutQuery, 'je');
+        $cashOut = (float) $cashOutQuery->sum('ji.credit');
+
+        $revenueAccounts = $cashIn > 0
+            ? [['code' => '4000', 'name' => 'Cash collected from customers', 'amount' => round($cashIn, 2)]]
+            : [];
+        $expenseAccounts = $cashOut > 0
+            ? [['code' => '5000', 'name' => 'Cash paid to suppliers', 'amount' => round($cashOut, 2)]]
+            : [];
+
+        $netProfit = round($cashIn - $cashOut, 2);
+
+        return [
+            'revenue_accounts' => $revenueAccounts,
+            'expense_accounts' => $expenseAccounts,
+            'total_revenue'    => round($cashIn, 2),
+            'total_expenses'   => round($cashOut, 2),
+            'net_profit'       => $netProfit,
+            'date_from'        => $dateFrom,
+            'date_to'          => $dateTo,
+            'basis'            => 'cash',
+        ];
+    }
+
+    protected function buildComparedPlData(string $dateFrom, string $dateTo, string $compare, string $basis = 'accrual'): array
+    {
+        $current = $this->buildPlData($dateFrom, $dateTo, $basis);
         $current['compare'] = $compare;
         $current['compare_label'] = null;
         $current['compare_from'] = null;
@@ -113,7 +206,7 @@ class ProfitAndLossController extends Controller
         $window = $compare === 'last_year'
             ? ReportPeriod::lastYearSameDates($dateFrom, $dateTo)
             : ReportPeriod::previousOfSameLength($dateFrom, $dateTo);
-        $prior = $this->buildPlData($window['date_from'], $window['date_to']);
+        $prior = $this->buildPlData($window['date_from'], $window['date_to'], $basis);
 
         $current['revenue_accounts'] = ReportCompare::mergeLines(
             $current['revenue_accounts'],
@@ -136,6 +229,13 @@ class ProfitAndLossController extends Controller
         return $current;
     }
 
+    protected function resolveBasis(Request $request): string
+    {
+        $basis = $request->input('basis', 'accrual');
+
+        return in_array($basis, ['accrual', 'cash'], true) ? $basis : 'accrual';
+    }
+
     protected function resolveCompare(Request $request): string
     {
         $compare = $request->input('compare', 'previous');
@@ -152,7 +252,8 @@ class ProfitAndLossController extends Controller
         );
         $dateFrom = $resolved['date_from'];
         $dateTo = $resolved['date_to'];
-        $data = $this->buildComparedPlData($dateFrom, $dateTo, $this->resolveCompare($request));
+        $basis = $this->resolveBasis($request);
+        $data = $this->buildComparedPlData($dateFrom, $dateTo, $this->resolveCompare($request), $basis);
 
         $filename = 'profit-and-loss-' . $dateFrom . '-to-' . $dateTo . '.csv';
         $headers = [
@@ -186,13 +287,15 @@ class ProfitAndLossController extends Controller
         );
         $dateFrom = $resolved['date_from'];
         $dateTo = $resolved['date_to'];
-        $data = $this->buildComparedPlData($dateFrom, $dateTo, $this->resolveCompare($request));
+        $basis = $this->resolveBasis($request);
+        $data = $this->buildComparedPlData($dateFrom, $dateTo, $this->resolveCompare($request), $basis);
         $company = $this->reportCompany();
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.profit-and-loss', [
             ...$data,
             'date_from' => $dateFrom,
             'date_to' => $dateTo,
+            'basis' => $basis,
             'company' => $company,
         ])->setPaper('a4', 'portrait');
 

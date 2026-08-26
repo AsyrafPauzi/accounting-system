@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import { useTranslation } from '@/i18n';
 import { confirm } from '@/utils/swal';
 import Modal from '@/Components/Modal';
 import IndexFilterBar from '@/Components/IndexFilterBar';
@@ -36,15 +37,26 @@ function getStatusBadge(status) {
 }
 
 const SEARCH_KEYS = ['bill_number', 'supplier_name'];
-const BILL_STATUSES = [
-    { value: 'draft', label: 'Draft' },
-    { value: 'unpaid', label: 'Unpaid' },
-    { value: 'partially paid', label: 'Partially paid' },
-    { value: 'paid', label: 'Paid' },
-    { value: 'void', label: 'Void' },
-];
+
+function billStatusKey(status) {
+    return String(status || '').replace(/\s+/g, '_').toLowerCase();
+}
+
+function billStatusLabel(t, status) {
+    const key = `bills.status.${billStatusKey(status)}`;
+    const translated = t(key);
+    return translated === key ? status : translated;
+}
 
 export default function Index({ auth, bills = [], suppliers = [], bankAccounts = [], totalOutstanding = 0, totalPaidPeriod = 0 }) {
+    const { t } = useTranslation();
+    const billStatuses = useMemo(() => ([
+        { value: 'draft', label: t('bills.status.draft') },
+        { value: 'unpaid', label: t('bills.status.unpaid') },
+        { value: 'partially paid', label: t('bills.status.partially_paid') },
+        { value: 'paid', label: t('bills.status.paid') },
+        { value: 'void', label: t('bills.status.void') },
+    ]), [t]);
     const [supplierFilter, setSupplierFilter] = useState('');
     const [selectedBillForReceipt, setSelectedBillForReceipt] = useState(null);
     const [selectedBill, setSelectedBill] = useState(null);
@@ -65,9 +77,9 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
 
     const handlePost = async (id) => {
         const ok = await confirm({
-            title: 'Post to Ledger?',
-            text: 'This will create General Ledger entries (DR expense, CR Accounts Payable).',
-            confirmText: 'Post',
+            title: t('bills.confirm.post_title'),
+            text: t('bills.confirm.post_text'),
+            confirmText: t('bills.confirm.post_confirm'),
             icon: 'question',
         });
         if (ok) router.post(route('bills.post', id));
@@ -75,9 +87,9 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
 
     const handleVoid = async (id) => {
         const ok = await confirm({
-            title: 'Void Bill?',
-            text: 'This creates a reversal entry and sets the bill to void. This action cannot be undone.',
-            confirmText: 'Void',
+            title: t('bills.confirm.void_title'),
+            text: t('bills.confirm.void_text'),
+            confirmText: t('bills.confirm.void_confirm'),
             confirmColor: '#dc2626',
             icon: 'warning',
         });
@@ -86,9 +98,9 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
 
     const handleDelete = async (id) => {
         const ok = await confirm({
-            title: 'Delete Draft?',
-            text: 'This cannot be undone.',
-            confirmText: 'Delete',
+            title: t('bills.confirm.delete_title'),
+            text: t('bills.confirm.delete_text'),
+            confirmText: t('bills.confirm.delete_confirm'),
             confirmColor: '#dc2626',
             icon: 'warning',
         });
@@ -120,8 +132,8 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
             header={
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                     <div>
-                        <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Bills & Purchases</h2>
-                        <p className="text-ink-muted text-sm font-medium mt-1">Record expenses and track payables</p>
+                        <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">{t('bills.page_title')}</h2>
+                        <p className="text-ink-muted text-sm font-medium mt-1">{t('bills.subtitle')}</p>
                     </div>
                     {auth.permissions.includes('bills.create') && (
                         <div className="flex flex-wrap gap-2">
@@ -129,47 +141,47 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                                 href={route('bills.batch')}
                                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:bg-cream"
                             >
-                                Batch
+                                {t('bills.batch')}
                             </Link>
                             <Link
                                 href={route('bills.create')}
                                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta shadow-lg  transition-all duration-200"
                             >
-                                <Icons.Plus /> Create bill
+                                <Icons.Plus /> {t('bills.create')}
                             </Link>
                         </div>
                     )}
                 </div>
             }
         >
-            <Head title="Bills" />
+            <Head title={t('bills.title')} />
 
 
             <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="relative overflow-hidden bg-mustard text-white rounded-2xl p-6 shadow-lg">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Total bills</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-widest opacity-90">{t('bills.total_bills')}</span>
                             <span className="p-2 rounded-xl bg-surface/10"><Icons.Document /></span>
                         </div>
                         <p className="text-2xl font-bold tabular-nums">{bills.length}</p>
-                        <p className="text-xs text-mustard mt-1">Draft · Unpaid · Paid</p>
+                        <p className="text-xs text-mustard mt-1">{t('bills.total_bills_hint')}</p>
                     </div>
                     <div className="bg-surface rounded-2xl p-6 border border-border-warm shadow-sm">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Outstanding (AP)</span>
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">{t('bills.outstanding_ap')}</span>
                             <span className="p-2 rounded-xl bg-terracotta/10 text-terracotta"><Icons.Exclamation /></span>
                         </div>
                         <p className="text-xl font-bold text-terracotta font-mono tabular-nums">RM {formatMoney(totalOutstanding)}</p>
-                        <p className="text-xs text-ink-muted mt-1">Amount due to suppliers</p>
+                        <p className="text-xs text-ink-muted mt-1">{t('bills.outstanding_hint')}</p>
                     </div>
                     <div className="bg-surface rounded-2xl p-6 border border-border-warm shadow-sm">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Paid (period)</span>
+                            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">{t('bills.paid_period')}</span>
                             <span className="p-2 rounded-xl bg-forest/10 text-forest"><Icons.Check /></span>
                         </div>
                         <p className="text-xl font-bold text-forest font-mono tabular-nums">RM {formatMoney(totalPaidPeriod)}</p>
-                        <p className="text-xs text-ink-muted mt-1">Payments recorded</p>
+                        <p className="text-xs text-ink-muted mt-1">{t('bills.paid_hint')}</p>
                     </div>
                 </div>
 
@@ -177,16 +189,16 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                     <IndexFilterBar
                         search={filters.searchInput}
                         onSearchChange={filters.setSearchInput}
-                        searchPlaceholder="Search by bill # or supplier..."
+                        searchPlaceholder={t('bills.search_placeholder')}
                         status={filters.status}
-                        statuses={BILL_STATUSES}
+                        statuses={billStatuses}
                         extraFilters={
                             <select
                                 value={supplierFilter}
                                 onChange={(e) => { setSupplierFilter(e.target.value); filters.apply({ page: 1 }); }}
                                 className="border border-border-warm rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta min-w-[160px]"
                             >
-                                <option value="">All suppliers</option>
+                                <option value="">{t('bills.all_suppliers')}</option>
                                 {(suppliers || []).map((s) => (
                                     <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
                                 ))}
@@ -203,14 +215,14 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                         <table className="w-full">
                             <thead>
                                 <tr className="text-left text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
-                                    <th className="px-6 py-4">Bill</th>
-                                    <th className="px-6 py-4">Supplier</th>
-                                    <th className="px-6 py-4">Due date</th>
-                                    <th className="px-6 py-4">Status</th>
-                                    <th className="px-6 py-4">Receipt</th>
-                                    <th className="px-6 py-4 text-right">Total</th>
-                                    <th className="px-6 py-4 text-right">Balance</th>
-                                    <th className="px-6 py-4 text-right">Actions</th>
+                                    <th className="px-6 py-4">{t('bills.table_bill')}</th>
+                                    <th className="px-6 py-4">{t('bills.table_supplier')}</th>
+                                    <th className="px-6 py-4">{t('bills.table_due_date')}</th>
+                                    <th className="px-6 py-4">{t('bills.table_status')}</th>
+                                    <th className="px-6 py-4">{t('bills.table_receipt')}</th>
+                                    <th className="px-6 py-4 text-right">{t('bills.table_total')}</th>
+                                    <th className="px-6 py-4 text-right">{t('bills.table_balance')}</th>
+                                    <th className="px-6 py-4 text-right">{t('bills.table_actions')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -232,7 +244,7 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`inline-flex w-fit px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${getStatusBadge(bill.status)}`}>
-                                                    {bill.status}
+                                                    {billStatusLabel(t, bill.status)}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
@@ -257,13 +269,13 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <RowActionsMenu items={[
-                                                    { label: 'Open', href: route('bills.show', bill.id), icon: <ActionIcons.Open /> },
-                                                    { label: 'View receipt', icon: <ActionIcons.Pdf />, show: Boolean(bill.receipt_url), onClick: () => setSelectedBillForReceipt(bill) },
-                                                    { label: 'Post to ledger', icon: <ActionIcons.Check />, show: bill.status === 'draft' && permissions.includes('bills.post'), onClick: () => handlePost(bill.id) },
-                                                    { label: 'Edit', href: route('bills.edit', bill.id), icon: <ActionIcons.Pencil />, show: bill.status === 'draft' && permissions.includes('bills.edit') },
-                                                    { label: 'Record payment', icon: <ActionIcons.Currency />, show: bill.status !== 'draft' && bill.status !== 'void' && balanceDue > 0 && permissions.includes('bills.record-payment'), onClick: () => openPaymentModal(bill) },
-                                                    { label: 'Delete draft', icon: <ActionIcons.Trash />, danger: true, show: bill.status === 'draft' && permissions.includes('bills.delete'), onClick: () => handleDelete(bill.id) },
-                                                    { label: 'Void bill', icon: <ActionIcons.Trash />, danger: true, show: bill.status !== 'draft' && bill.status !== 'void' && permissions.includes('bills.void'), onClick: () => handleVoid(bill.id) },
+                                                    { label: t('bills.actions.open'), href: route('bills.show', bill.id), icon: <ActionIcons.Open /> },
+                                                    { label: t('bills.actions.view_receipt'), icon: <ActionIcons.Pdf />, show: Boolean(bill.receipt_url), onClick: () => setSelectedBillForReceipt(bill) },
+                                                    { label: t('bills.actions.post_to_ledger'), icon: <ActionIcons.Check />, show: bill.status === 'draft' && permissions.includes('bills.post'), onClick: () => handlePost(bill.id) },
+                                                    { label: t('bills.actions.edit'), href: route('bills.edit', bill.id), icon: <ActionIcons.Pencil />, show: bill.status === 'draft' && permissions.includes('bills.edit') },
+                                                    { label: t('bills.actions.record_payment'), icon: <ActionIcons.Currency />, show: bill.status !== 'draft' && bill.status !== 'void' && balanceDue > 0 && permissions.includes('bills.record-payment'), onClick: () => openPaymentModal(bill) },
+                                                    { label: t('bills.actions.delete_draft'), icon: <ActionIcons.Trash />, danger: true, show: bill.status === 'draft' && permissions.includes('bills.delete'), onClick: () => handleDelete(bill.id) },
+                                                    { label: t('bills.actions.void_bill'), icon: <ActionIcons.Trash />, danger: true, show: bill.status !== 'draft' && bill.status !== 'void' && permissions.includes('bills.void'), onClick: () => handleVoid(bill.id) },
                                                 ]} />
                                             </td>
                                         </tr>
@@ -272,7 +284,7 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                                     <tr>
                                         <td colSpan={8} className="px-6 py-16 text-center">
                                             <p className="text-ink-muted text-sm font-medium">
-                                                {filters.searchInput || filters.status || supplierFilter ? 'No bills match your filters.' : 'No bills yet. Create your first bill to get started.'}
+                                                {filters.searchInput || filters.status || supplierFilter ? t('bills.empty_filtered') : t('bills.empty_none')}
                                             </p>
                                         </td>
                                     </tr>
@@ -345,13 +357,13 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                                     <Icons.Currency />
                                 </span>
                                 <div>
-                                    <h3 className="text-xl font-display font-medium text-ink">Record payment</h3>
-                                    <p className="text-sm text-ink-muted">Bill {selectedBill.bill_number}</p>
+                                    <h3 className="text-xl font-display font-medium text-ink">{t('bills.payment_modal.title')}</h3>
+                                    <p className="text-sm text-ink-muted">{t('bills.payment_modal.subtitle', { number: selectedBill.bill_number })}</p>
                                 </div>
                             </div>
                             <form onSubmit={handlePaymentSubmit} className="space-y-5">
                                 <div>
-                                    <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">Amount (RM)</label>
+                                    <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">{t('bills.payment_modal.amount')} (RM)</label>
                                     <div className="relative">
                                         <span className="absolute inset-y-0 left-4 flex items-center text-ink-muted font-medium">RM</span>
                                         <input
@@ -367,7 +379,7 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">Date</label>
+                                        <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">{t('bills.payment_modal.date')}</label>
                                         <input
                                             type="date"
                                             value={data.payment_date}
@@ -377,14 +389,14 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">Bank account</label>
+                                        <label className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-2">{t('bills.payment_modal.account')}</label>
                                         <select
                                             value={data.bank_account_code}
                                             onChange={(e) => setData('bank_account_code', e.target.value)}
                                             className="w-full border border-border-warm rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-terracotta"
                                         >
                                             {(bankAccounts || []).length === 0 && (
-                                                <option value="">No bank/cash accounts — add one in Chart of Accounts</option>
+                                                <option value="">{t('bills.payment_modal.no_bank_accounts')}</option>
                                             )}
                                             {(bankAccounts || []).map((a) => (
                                                 <option key={a.value} value={a.value}>{a.label}</option>
@@ -398,14 +410,14 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                                         onClick={() => { setSelectedBill(null); reset(); }}
                                         className="flex-1 py-3 rounded-xl font-semibold text-ink border border-border-warm hover:bg-cream"
                                     >
-                                        Cancel
+                                        {t('bills.payment_modal.cancel')}
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={processing}
                                         className="flex-[2] py-3 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50 shadow-lg "
                                     >
-                                        {processing ? 'Processing...' : 'Confirm payment'}
+                                        {processing ? t('bills.payment_modal.processing') : t('bills.payment_modal.confirm')}
                                     </button>
                                 </div>
                             </form>

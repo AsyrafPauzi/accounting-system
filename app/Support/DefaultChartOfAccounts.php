@@ -80,6 +80,9 @@ final class DefaultChartOfAccounts
             ['code' => '1220', 'name' => 'Undeposited Funds',     'type' => 'asset',     'display_order' => 6,  'description' => 'Money received but not yet deposited into the bank.'],
             ['code' => '1300', 'name' => 'Supplier Prepayments',  'type' => 'asset',     'display_order' => 7,  'description' => 'Deposits paid to suppliers waiting to knock off bills.'],
             ['code' => '1310', 'name' => 'Staff Advances',        'type' => 'asset',     'display_order' => 8,  'description' => 'Temporary advances given to employees or team members.'],
+            ['code' => '1400', 'name' => 'Inventory',             'type' => 'asset',     'display_order' => 9,  'description' => 'Stock on hand at weighted-average cost.'],
+            ['code' => '1500', 'name' => 'Property, Plant & Equipment', 'type' => 'asset', 'display_order' => 10, 'description' => 'Fixed assets at cost.'],
+            ['code' => '1510', 'name' => 'Accumulated Depreciation', 'type' => 'asset',  'display_order' => 11, 'description' => 'Contra-asset — accumulated depreciation on PPE.'],
 
             // Liabilities
             ['code' => '2000', 'name' => 'Liabilities',           'type' => 'liability', 'display_order' => 20, 'description' => 'Top-level header for all liability accounts.'],
@@ -97,18 +100,22 @@ final class DefaultChartOfAccounts
             // Income
             ['code' => '4000', 'name' => 'Revenue',               'type' => 'income',    'display_order' => 40, 'description' => 'Sales revenue (auto-posted by invoices).'],
             ['code' => '4100', 'name' => 'Other Income',          'type' => 'income',    'display_order' => 41, 'description' => 'Non-core income such as rebates, commission, or miscellaneous gains.'],
+            ['code' => '4200', 'name' => 'Foreign Exchange Gain', 'type' => 'income',    'display_order' => 42, 'description' => 'Realized gain when settling foreign-currency AR/AP at a favourable rate.'],
 
             // Expenses
             ['code' => '5000', 'name' => 'Expenses',              'type' => 'expense',   'display_order' => 50, 'description' => 'Top-level expense bucket — used as the default account on bills if none chosen.'],
-            ['code' => '5100', 'name' => 'Salaries and Wages',    'type' => 'expense',   'display_order' => 51, 'description' => 'Payroll, wages, and fixed staff compensation.'],
-            ['code' => '5200', 'name' => 'Rent and Office',       'type' => 'expense',   'display_order' => 52, 'description' => 'Office rent, workspace charges, and shared premises costs.'],
-            ['code' => '5300', 'name' => 'Utilities',             'type' => 'expense',   'display_order' => 53, 'description' => 'Electricity, water, internet, and phone bills.'],
-            ['code' => '5400', 'name' => 'Travel and Transport',  'type' => 'expense',   'display_order' => 54, 'description' => 'Taxi, mileage, toll, parking, flights, and travel claims.'],
-            ['code' => '5500', 'name' => 'Professional Fees',     'type' => 'expense',   'display_order' => 55, 'description' => 'Accounting, legal, secretarial, and consulting fees.'],
-            ['code' => '5600', 'name' => 'Software and Subscriptions', 'type' => 'expense', 'display_order' => 56, 'description' => 'SaaS tools, licenses, and recurring subscriptions.'],
-            ['code' => '5700', 'name' => 'Marketing and Advertising', 'type' => 'expense', 'display_order' => 57, 'description' => 'Ads, promotions, and marketing campaign spend.'],
-            ['code' => '5800', 'name' => 'Repairs and Maintenance', 'type' => 'expense', 'display_order' => 58, 'description' => 'Equipment repairs, upkeep, and maintenance services.'],
-            ['code' => '5900', 'name' => 'Staff Welfare and Claims', 'type' => 'expense', 'display_order' => 59, 'description' => 'Meals, minor reimbursements, and staff welfare costs.'],
+            ['code' => '5010', 'name' => 'Cost of Goods Sold',    'type' => 'expense',   'display_order' => 51, 'description' => 'Inventory cost relieved on sales (auto-posted when products track stock).'],
+            ['code' => '5100', 'name' => 'Salaries and Wages',    'type' => 'expense',   'display_order' => 52, 'description' => 'Payroll, wages, and fixed staff compensation.'],
+            ['code' => '5200', 'name' => 'Rent and Office',       'type' => 'expense',   'display_order' => 53, 'description' => 'Office rent, workspace charges, and shared premises costs.'],
+            ['code' => '5300', 'name' => 'Utilities',             'type' => 'expense',   'display_order' => 54, 'description' => 'Electricity, water, internet, and phone bills.'],
+            ['code' => '5400', 'name' => 'Travel and Transport',  'type' => 'expense',   'display_order' => 55, 'description' => 'Taxi, mileage, toll, parking, flights, and travel claims.'],
+            ['code' => '5500', 'name' => 'Professional Fees',     'type' => 'expense',   'display_order' => 56, 'description' => 'Accounting, legal, secretarial, and consulting fees.'],
+            ['code' => '5600', 'name' => 'Software and Subscriptions', 'type' => 'expense', 'display_order' => 57, 'description' => 'SaaS tools, licenses, and recurring subscriptions.'],
+            ['code' => '5700', 'name' => 'Marketing and Advertising', 'type' => 'expense', 'display_order' => 58, 'description' => 'Ads, promotions, and marketing campaign spend.'],
+            ['code' => '5800', 'name' => 'Repairs and Maintenance', 'type' => 'expense', 'display_order' => 59, 'description' => 'Equipment repairs, upkeep, and maintenance services.'],
+            ['code' => '5810', 'name' => 'Depreciation Expense',  'type' => 'expense',   'display_order' => 60, 'description' => 'Monthly straight-line depreciation on fixed assets.'],
+            ['code' => '5900', 'name' => 'Staff Welfare and Claims', 'type' => 'expense', 'display_order' => 61, 'description' => 'Meals, minor reimbursements, and staff welfare costs.'],
+            ['code' => '4300', 'name' => 'Foreign Exchange Loss', 'type' => 'expense',   'display_order' => 62, 'description' => 'Realized loss when settling foreign-currency AR/AP at an unfavourable rate.'],
         ];
     }
 }

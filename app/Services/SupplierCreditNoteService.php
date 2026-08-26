@@ -145,6 +145,9 @@ class SupplierCreditNoteService
         }
 
         DB::transaction(function () use ($cn) {
+            \App\Support\AccountingPeriodResolver::assertOpenForDate(
+                \Carbon\Carbon::parse($cn->issue_date)->toDateString()
+            );
             foreach (SupplierCreditNoteRefund::query()->where('supplier_credit_note_id', $cn->id)->get() as $refund) {
                 $this->reverseJournal('Supplier Credit Note Refund', $refund->id, 'VOID REFUND: '.$cn->scn_number);
             }

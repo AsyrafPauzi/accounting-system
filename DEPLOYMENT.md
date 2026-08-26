@@ -226,7 +226,41 @@ If GitHub Actions is unavailable, you can deploy manually from your local machin
 
 Ensure `RUN_MIGRATIONS=true` on the service so new tasks apply migrations on boot.
 
-## 6. Troubleshooting
+## 6. Observability (Sentry + structured logs)
+
+### Sentry (optional)
+
+Set on the ECS task definition (or `.env` for self-hosted):
+
+```
+SENTRY_LARAVEL_DSN=https://…@…sentry.io/…
+SENTRY_ENVIRONMENT=production
+SENTRY_TRACES_SAMPLE_RATE=0.1
+```
+
+When `SENTRY_LARAVEL_DSN` is empty, Sentry is fully disabled — self-hosted installs work without it.
+
+Tenant context is attached automatically:
+
+- **Exceptions** include a `tenant_id` tag when tenancy is initialized.
+- **Failed queue jobs** are logged to the `json` channel and reported to Sentry when configured.
+
+Verify in staging: run `php artisan sentry:smoke` with `SENTRY_LARAVEL_DSN` set, or trigger a test exception inside a tenant session and confirm the event shows `tenant_id` in Sentry.
+
+### Structured JSON logs
+
+The `json` log channel writes one JSON object per line to `storage/logs/laravel-json.log`, with `tenant_id` and `user_id` in `extra` when available. Sensitive keys are redacted (same rules as the default log channel).
+
+Recommended production stack:
+
+```
+LOG_STACK=stderr,json
+LOG_LEVEL=info
+```
+
+On ECS, `stderr` is captured by CloudWatch; `json` keeps a structured file inside the task for grep/debug.
+
+## 7. Troubleshooting
 - **Logs**: View application logs in **AWS CloudWatch** under the log group associated with the ECS Task.
 - **Scheduled jobs** (subscription renewals, invoice reminders, recurring invoices): the ECS container runs Laravel's scheduler via Supervisor (`docker/supervisor.conf`, program `laravel-scheduler`). Check `storage/logs/scheduler.log` inside the task if renewals or reminders stop firing.
 - **500 after deploy on central features** (profile theme, `/admin/ocr`): usually missing central migrations — run `php artisan migrate --force` and confirm pending migrations in `migrate:status`.

@@ -44,7 +44,7 @@ class Bill extends Model
     protected $fillable = [
         'bill_number', 'supplier_id', 'purchase_order_id', 'goods_receipt_id',
         'bill_date', 'due_date', 'status', 'purchase_kind',
-        'total_amount', 'amount_paid', 'tax_amount', 'currency',
+        'total_amount', 'amount_paid', 'tax_amount', 'currency', 'exchange_rate',
         'private_notes', 'reference', 'created_by',
         'receipt_path', 'ocr_status', 'ocr_data', 'audit_status',
         'audited_at', 'audited_by',
@@ -60,6 +60,7 @@ class Bill extends Model
             'total_amount' => 'decimal:2',
             'amount_paid' => 'decimal:2',
             'tax_amount' => 'decimal:2',
+            'exchange_rate' => 'decimal:6',
             'ocr_data' => 'array',
             'audited_at' => 'datetime',
             'lhdn_submitted_at' => 'datetime',

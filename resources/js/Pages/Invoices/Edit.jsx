@@ -1,13 +1,7 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, Link } from '@inertiajs/react';
-import {
-    SUPPORTED_CURRENCIES,
-    currencySymbol,
-    currencyRoundStep,
-    roundingLabel,
-    normalizeCurrency,
-} from '@/utils/currency';
+import { Head, useForm, Link, usePage } from '@inertiajs/react';
+import InvoiceForm, { itemsFromInvoice } from './_Form';
 
 const Icons = {
     ChevronLeft: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>,
@@ -15,25 +9,29 @@ const Icons = {
     ArrowDownTray: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>,
     Eye: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
     LockClosed: () => <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>,
-    Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
-    Product: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>,
 };
 
-const inputClass = "w-full h-11 border border-border-warm rounded-xl px-4 text-sm font-medium text-ink focus:ring-2 focus:ring-terracotta focus:border-terracotta transition-colors";
-const inputReadonlyClass = "w-full h-11 flex items-center border border-border-warm rounded-xl px-4 text-sm font-medium text-ink-muted bg-cream";
-const labelClass = "block text-[10px] font-semibold text-ink-muted uppercase tracking-wider mb-1.5 leading-none h-4";
-const lineControlClass = "w-full h-8 border border-border-warm rounded-lg py-1 px-1.5 text-xs font-medium text-ink bg-surface focus:ring-1 focus:ring-terracotta";
-const lineDescClass = "block flex-1 min-w-0 h-8 border border-border-warm rounded-lg py-1.5 px-1.5 text-xs leading-4 font-medium text-ink bg-surface focus:ring-1 focus:ring-terracotta resize-y";
-const lineNumberClass = `${lineControlClass} font-mono tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`;
-const lineTaxClass = `${lineControlClass} px-0.5 pr-5 text-center tabular-nums`;
-const linePickIconClass = "relative shrink-0 h-8 w-8 rounded-lg border border-border-warm bg-cream/50 text-ink-muted hover:bg-cream hover:text-terracotta transition-colors";
-
-function currencyPrefix(currency) {
-    return currencySymbol(currency);
+function initialExchangeRate(invoice, baseCurrency) {
+    const cur = (invoice.currency || 'MYR').toUpperCase();
+    const base = (baseCurrency || 'MYR').toUpperCase();
+    if (cur === base) return '1';
+    const er = invoice.exchange_rate;
+    if (er != null && Number(er) > 0) return String(Number(er));
+    return '';
 }
 
-export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], journal_entry_id = null, base_currency = 'MYR', products = [] }) {
-    // Initialize form with existing invoice data and its nested items
+export default function Edit({
+    auth,
+    invoice,
+    customers = [],
+    lhdn_codes = [],
+    journal_entry_id = null,
+    base_currency = 'MYR',
+    products = [],
+}) {
+    const { tax_codes: taxCodes = [] } = usePage().props;
+    const isLocked = invoice.status === 'paid' || invoice.status === 'void';
+
     const { data, setData, put, processing, errors } = useForm({
         customer_id: invoice.customer_id || '',
         invoice_number: invoice.invoice_number || '',
@@ -44,112 +42,9 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
         customer_notes: invoice.customer_notes || '',
         show_signature: invoice.show_signature ?? true,
         currency: (invoice.currency || 'MYR').toUpperCase(),
-        exchange_rate: (() => {
-            const cur = (invoice.currency || 'MYR').toUpperCase();
-            const base = (base_currency || 'MYR').toUpperCase();
-            if (cur === base) {
-                return '1';
-            }
-            const er = invoice.exchange_rate;
-            if (er != null && Number(er) > 0) {
-                return String(Number(er));
-            }
-            return '';
-        })(),
-        // Map existing items from the database to the form state
-        items: invoice.items && invoice.items.length > 0 
-            ? invoice.items.map(item => ({
-                description: item.description,
-                quantity: parseFloat(item.quantity),
-                unit_price: parseFloat(item.unit_price),
-                tax_rate: parseFloat(item.tax_rate),
-                discount_amount: parseFloat(item.discount_amount || 0),
-                item_classification: item.item_classification || '011'
-            })) 
-            : [{ description: '', quantity: 1, unit_price: 0, tax_rate: 8, discount_amount: 0, item_classification: '011' }],
+        exchange_rate: initialExchangeRate(invoice, base_currency),
+        items: itemsFromInvoice(invoice),
     });
-
-    useEffect(() => {
-        const cur = (data.currency || 'MYR').toUpperCase();
-        const base = (base_currency || 'MYR').toUpperCase();
-        if (cur === base) {
-            if (String(data.exchange_rate) !== '1') {
-                setData('exchange_rate', '1');
-            }
-            return;
-        }
-        if (data.exchange_rate === '1' || data.exchange_rate === 1) {
-            setData('exchange_rate', '');
-        }
-    }, [data.currency, base_currency]);
-
-    const addItem = () => {
-        setData('items', [
-            ...data.items,
-            { description: '', quantity: 1, unit_price: 0, tax_rate: 8, discount_amount: 0, item_classification: '011' }
-        ]);
-    };
-
-    const removeItem = (index) => {
-        if (data.items.length > 1) {
-            const newItems = data.items.filter((_, i) => i !== index);
-            setData('items', newItems);
-        }
-    };
-
-    const updateItem = (index, field, value) => {
-        const newItems = [...data.items];
-        newItems[index][field] = value;
-        setData('items', newItems);
-    };
-
-    /**
-     * Apply a saved product to a line on the edit page. Same behaviour as
-     * Create.jsx — replaces description, unit price and tax rate while
-     * preserving quantity and discount.
-     */
-    const applyProduct = (index, productId) => {
-        if (!productId) return;
-        const product = products.find(p => String(p.id) === String(productId));
-        if (!product) return;
-        const newItems = [...data.items];
-        newItems[index] = {
-            ...newItems[index],
-            description: product.description ? `${product.name} — ${product.description}` : product.name,
-            unit_price: parseFloat(product.unit_price) || 0,
-            tax_rate: parseFloat(product.tax_rate) || 0,
-            product_id: product.id,
-            item_classification: product.classification_code || newItems[index].item_classification,
-        };
-        setData('items', newItems);
-    };
-
-    // --- Enterprise Math Engine ---
-    const calculateSubtotal = () => {
-        return data.items.reduce((sum, item) => sum + (parseFloat(item.quantity || 0) * parseFloat(item.unit_price || 0)), 0);
-    };
-
-    const calculateTotalDiscount = () => {
-        return data.items.reduce((sum, item) => sum + (parseFloat(item.discount_amount || 0)), 0);
-    };
-
-    const calculateTax = () => {
-        return data.items.reduce((sum, item) => {
-            const lineAmount = (parseFloat(item.quantity || 0) * parseFloat(item.unit_price || 0)) - parseFloat(item.discount_amount || 0);
-            return sum + (Math.max(0, lineAmount) * parseFloat(item.tax_rate || 0) / 100);
-        }, 0);
-    };
-
-    const subtotal = calculateSubtotal();
-    const totalDiscount = calculateTotalDiscount();
-    const totalTax = calculateTax();
-    const shipping = parseFloat(data.shipping_amount || 0);
-    const invCur = normalizeCurrency(data.currency);
-    const roundStep = currencyRoundStep(invCur);
-    const rawTotal = (subtotal - totalDiscount) + totalTax + shipping;
-    const roundedTotal = (Math.round(rawTotal / roundStep) * roundStep);
-    const roundingAdjustment = roundedTotal - rawTotal;
-    const curSym = currencyPrefix(data.currency);
 
     const submit = (e) => {
         e.preventDefault();
@@ -168,10 +63,10 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
     };
 
     return (
-        <AuthenticatedLayout 
-            user={auth.user} 
+        <AuthenticatedLayout
+            user={auth.user}
             header={
-                (invoice.status === 'paid' || invoice.status === 'void') ? (
+                isLocked ? (
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                         <div className="flex items-start sm:items-center gap-4">
                             <Link href={route('invoices.index')} className="p-2.5 rounded-xl text-ink-muted hover:text-ink hover:bg-surface-alt transition-all duration-200">
@@ -219,7 +114,7 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                                         <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Edit Invoice</h2>
                                         <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-semibold uppercase ${getStatusBadge()}`}>{invoice.status}</span>
                                     </div>
-                                    <p className="text-ink-muted text-sm font-medium mt-1">{invoice.invoice_number} · {customers.find(c => c.id == invoice.customer_id)?.name || 'Customer'}</p>
+                                    <p className="text-ink-muted text-sm font-medium mt-1">{invoice.invoice_number} · {customers.find((c) => c.id == invoice.customer_id)?.name || 'Customer'}</p>
                                 </div>
                             </div>
                         </div>
@@ -233,7 +128,7 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                             <Link href={route('invoices.index')} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-ink bg-surface border border-border-warm hover:border-border-warm hover:bg-cream transition-all duration-200">
                                 Cancel
                             </Link>
-                            <button type="submit" form="invoice-edit-form" disabled={processing} className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50 shadow-lg  transition-all duration-200">
+                            <button type="submit" form="invoice-edit-form" disabled={processing} className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white bg-terracotta hover:bg-terracotta disabled:opacity-50 shadow-lg transition-all duration-200">
                                 {processing ? 'Saving...' : 'Save Changes'}
                             </button>
                         </div>
@@ -244,8 +139,7 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
             <Head title={`Edit ${invoice.invoice_number}`} />
 
             <div className="space-y-6 pb-12">
-                {/* Locked state: Paid or Void */}
-                {(invoice.status === 'paid' || invoice.status === 'void') ? (
+                {isLocked ? (
                     <div className="bg-surface p-12 rounded-2xl border border-border-warm/80 shadow-sm text-center space-y-6">
                         <div className="flex justify-center">
                             <span className="p-4 rounded-2xl bg-surface-alt text-ink-muted">
@@ -255,8 +149,8 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                         <div>
                             <h3 className="text-xl font-display font-medium text-ink mb-2">Document Locked</h3>
                             <p className="text-ink-muted max-w-md mx-auto leading-relaxed text-sm">
-                                This invoice is marked as <strong className="text-ink">{invoice.status}</strong>. 
-                                To maintain audit integrity, finalized documents cannot be modified. 
+                                This invoice is marked as <strong className="text-ink">{invoice.status}</strong>.
+                                To maintain audit integrity, finalized documents cannot be modified.
                                 Issue a <strong>Credit Note</strong> to reverse charges.
                             </p>
                         </div>
@@ -273,271 +167,19 @@ export default function Edit({ auth, invoice, customers = [], lhdn_codes = [], j
                         </div>
                     </div>
                 ) : (
-                    <form id="invoice-edit-form" onSubmit={submit} className="space-y-6">
-                        {/* Section 1: Core Details */}
-                        <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
-                            <div className="flex items-center gap-2 mb-6">
-                                <span className="p-2 rounded-xl bg-surface-alt text-ink"><Icons.Document /></span>
-                                <h3 className="font-semibold text-ink text-sm uppercase tracking-wider">Invoice Details</h3>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-x-6 gap-y-5 items-start">
-                                <div className="min-w-0">
-                                    <label className={labelClass}>Invoice Number</label>
-                                    <input
-                                        type="text"
-                                        value={data.invoice_number}
-                                        onChange={e => setData('invoice_number', e.target.value)}
-                                        className={`${inputClass} font-mono text-ink`}
-                                        required
-                                    />
-                                    {errors.invoice_number && <p className="text-terracotta text-xs font-medium mt-1">{errors.invoice_number}</p>}
-                                    <p className="text-xs text-ink-muted mt-1.5">Must be unique. Another invoice cannot reuse this number while it exists.</p>
-                                </div>
-                                <div className="min-w-0">
-                                    <label className={`${labelClass} flex items-center gap-1.5`}>
-                                        MSIC Code
-                                        <span className="relative inline-flex group/msic">
-                                            <button
-                                                type="button"
-                                                className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-border-warm text-[9px] font-bold text-ink-muted hover:text-ink hover:border-ink-muted focus:outline-none focus:ring-2 focus:ring-terracotta"
-                                                aria-describedby="msic-code-help-edit"
-                                                aria-label="What is MSIC Code?"
-                                            >
-                                                ?
-                                            </button>
-                                            <span
-                                                id="msic-code-help-edit"
-                                                role="tooltip"
-                                                className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-64 -translate-x-1/2 rounded-xl border border-border-warm bg-surface px-3 py-2 text-[11px] font-medium normal-case tracking-normal text-ink shadow-lg opacity-0 transition-opacity duration-150 group-hover/msic:opacity-100 group-focus-within/msic:opacity-100"
-                                            >
-                                                <span className="font-semibold text-ink">Malaysia Standard Industrial Classification</span>
-                                                <span className="mt-1 block text-ink-muted font-normal leading-snug">
-                                                    5-digit business activity code required for LHDN MyInvois e-invoicing. Example: <span className="font-mono text-ink">62011</span> for computer programming.
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </label>
-                                    <input type="text" value={data.msic_code} onChange={e => setData('msic_code', e.target.value)} className={inputClass} placeholder="e.g. 62011" />
-                                    {errors.msic_code && <p className="text-terracotta text-xs font-medium mt-1">{errors.msic_code}</p>}
-                                </div>
-                                <div className="md:col-span-2 min-w-0">
-                                    <label className={labelClass}>Customer</label>
-                                    <select value={data.customer_id} onChange={e => setData('customer_id', e.target.value)} className={inputClass} required>
-                                        <option value="">Select customer...</option>
-                                        {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </select>
-                                    {errors.customer_id && <p className="text-terracotta text-xs font-medium mt-1">{errors.customer_id}</p>}
-                                </div>
-                                <div className="min-w-0">
-                                    <label className={labelClass}>Issue Date</label>
-                                    <input type="date" value={data.issue_date} onChange={e => setData('issue_date', e.target.value)} className={inputClass} required />
-                                </div>
-                                <div className="min-w-0">
-                                    <label className={labelClass}>Due Date</label>
-                                    <input type="date" value={data.due_date} onChange={e => setData('due_date', e.target.value)} className={inputClass} />
-                                </div>
-                                <div className="md:col-span-2 min-w-0">
-                                    <label className={labelClass}>Invoice currency</label>
-                                    <select value={data.currency} onChange={e => setData('currency', e.target.value)} className={inputClass}>
-                                        {SUPPORTED_CURRENCIES.map((c) => (
-                                            <option key={c.value} value={c.value}>{c.label}</option>
-                                        ))}
-                                    </select>
-                                    {errors.currency && <p className="text-terracotta text-xs font-medium mt-1">{errors.currency}</p>}
-                                </div>
-                                {(data.currency || 'MYR').toUpperCase() !== (base_currency || 'MYR').toUpperCase() && (
-                                    <div className="md:col-span-2 min-w-0">
-                                        <label className={labelClass}>Exchange rate ({(base_currency || 'MYR').toUpperCase()} per 1 {data.currency})</label>
-                                        <input type="number" step="0.000001" min="0.000001" value={data.exchange_rate} onChange={e => setData('exchange_rate', e.target.value)} className={inputClass} />
-                                        <p className="text-xs text-ink-muted mt-1.5">Ledger posting converts amounts using this rate.</p>
-                                        {errors.exchange_rate && <p className="text-terracotta text-xs font-medium mt-1">{errors.exchange_rate}</p>}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Section 2: Line Items */}
-                        <div className="bg-surface rounded-2xl shadow-sm border border-border-warm/80 overflow-hidden min-w-0">
-                            <div className="overflow-x-auto overscroll-x-contain">
-                            <table className="w-full table-fixed text-left border-collapse">
-                                <colgroup>
-                                    <col className="w-[9.5rem]" />
-                                    <col />
-                                    <col className="w-16" />
-                                    <col className="w-[4.75rem]" />
-                                    <col className="w-[4.5rem]" />
-                                    <col className="w-16" />
-                                    <col className="w-[5.25rem]" />
-                                    <col className="w-9" />
-                                </colgroup>
-                                <thead>
-                                    <tr className="bg-cream/80 border-b border-border-warm text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest">
-                                        <th className="px-2 py-2">LHDN</th>
-                                        <th className="px-2 py-2">Description</th>
-                                        <th className="px-1 py-2 text-center">Qty</th>
-                                        <th className="px-1 py-2 text-right">Price</th>
-                                        <th className="px-1 py-2 text-right">Disc</th>
-                                        <th className="px-1 py-2 text-center">Tax</th>
-                                        <th className="px-2 py-2 text-right">Total</th>
-                                        <th className="px-1 py-2"></th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border-warm">
-                                    {data.items.map((item, index) => (
-                                        <tr key={index} className="group hover:bg-surface-alt/20 transition-all duration-200">
-                                            <td className="px-2 py-2 align-top">
-                                                <select
-                                                    value={item.item_classification}
-                                                    onChange={e => updateItem(index, 'item_classification', e.target.value)}
-                                                    className={lineControlClass}
-                                                    title={(() => {
-                                                        const selected = lhdn_codes.find((code) => String(code.id) === String(item.item_classification));
-                                                        return selected ? `${selected.id} — ${selected.name}` : '';
-                                                    })()}
-                                                >
-                                                    {lhdn_codes.map(code => (
-                                                        <option key={code.id} value={code.id}>{code.id} — {code.name}</option>
-                                                    ))}
-                                                </select>
-                                            </td>
-                                            <td className="px-2 py-2 align-middle">
-                                                <div className="flex items-center gap-1.5 min-w-0">
-                                                    <textarea
-                                                        value={item.description}
-                                                        onChange={e => updateItem(index, 'description', e.target.value)}
-                                                        rows={1}
-                                                        className={lineDescClass}
-                                                        required
-                                                    />
-                                                    {products.length > 0 && (
-                                                        <div className={linePickIconClass} title="Pick a saved product to fill description, price & tax">
-                                                            <span className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
-                                                                <Icons.Product />
-                                                            </span>
-                                                            <select
-                                                                value=""
-                                                                onChange={e => { applyProduct(index, e.target.value); e.target.value = ''; }}
-                                                                className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
-                                                                aria-label="Pick product for this line"
-                                                            >
-                                                                <option value="">Pick product…</option>
-                                                                {products.map(p => (
-                                                                    <option key={p.id} value={p.id}>{p.name}{p.code ? ` (${p.code})` : ''}</option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-1 py-2 align-top">
-                                                <input type="number" value={item.quantity} onChange={e => updateItem(index, 'quantity', e.target.value)} className={`${lineNumberClass} text-center font-semibold`} />
-                                            </td>
-                                            <td className="px-1 py-2 align-top">
-                                                <input type="number" value={item.unit_price} onChange={e => updateItem(index, 'unit_price', e.target.value)} className={`${lineNumberClass} text-right font-semibold`} />
-                                            </td>
-                                            <td className="px-1 py-2 align-top">
-                                                <input type="number" value={item.discount_amount} onChange={e => updateItem(index, 'discount_amount', e.target.value)} className={`${lineNumberClass} text-right text-terracotta font-semibold`} />
-                                            </td>
-                                            <td className="px-1 py-2 align-top">
-                                                <select value={item.tax_rate} onChange={e => updateItem(index, 'tax_rate', e.target.value)} className={lineTaxClass}>
-                                                    <option value="0">0%</option>
-                                                    <option value="6">6%</option>
-                                                    <option value="8">8%</option>
-                                                    <option value="16">16%</option>
-                                                </select>
-                                            </td>
-                                            <td className="px-2 py-2 align-middle">
-                                                <div className="h-8 flex items-center justify-end text-xs font-semibold text-ink font-mono tabular-nums whitespace-nowrap">
-                                                    {((parseFloat(item.quantity || 0) * parseFloat(item.unit_price || 0)) - (parseFloat(item.discount_amount || 0))).toLocaleString('en-MY', {minimumFractionDigits: 2})}
-                                                </div>
-                                            </td>
-                                            <td className="px-1 py-2 align-middle text-center">
-                                                <button type="button" onClick={() => removeItem(index)} className="inline-flex items-center justify-center h-8 w-8 text-ink-muted hover:text-terracotta transition-colors opacity-0 group-hover:opacity-100">
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            </div>
-                            <div className="p-4 bg-cream/80 border-t border-border-warm">
-                                <button type="button" onClick={addItem} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-terracotta bg-surface-alt hover:bg-surface-alt border border-border-warm transition-colors">
-                                    <Icons.Plus /> Add Line Item
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Section 3: Footer & Calculations */}
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <div className="lg:col-span-2 space-y-6">
-                                <div className="bg-mustard/15 border border-mustard/40/80 p-6 rounded-2xl shadow-sm">
-                                    <h4 className="font-semibold text-ink text-xs uppercase tracking-wider mb-2">Audit Notice</h4>
-                                    <p className="text-mustard text-sm leading-relaxed">
-                                        Draft edits won&apos;t affect the ledger. Posted invoices will <strong>auto-sync</strong> GL entries on save.
-                                    </p>
-                                </div>
-                                <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">
-                                    <label className={labelClass}>Customer Notes (on PDF)</label>
-                                    <textarea 
-                                        value={data.customer_notes} 
-                                        onChange={e => setData('customer_notes', e.target.value)}
-                                        className={`${inputClass} resize-none h-28`}
-                                        placeholder="Payment instructions, thank you message..."
-                                    />
-                                    <div className="flex items-start gap-3 mt-4 pt-4 border-t border-border-warm">
-                                        <input
-                                            type="checkbox"
-                                            id="invoice-show-signature-edit"
-                                            checked={Boolean(data.show_signature)}
-                                            onChange={(e) => setData('show_signature', e.target.checked)}
-                                            className="mt-1 h-4 w-4 rounded border-border-warm text-terracotta focus:ring-terracotta"
-                                        />
-                                        <label htmlFor="invoice-show-signature-edit" className="text-sm text-ink cursor-pointer select-none">
-                                            <span className="font-semibold text-ink">Show signature lines on PDF</span>
-                                            <span className="block text-ink-muted text-xs mt-0.5">When enabled, customer and authorized signature blocks appear at the bottom of the invoice PDF. Turn off for a computer-generated layout only.</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-4 min-w-0">
-                                <div className="bg-surface p-6 rounded-2xl border border-border-warm shadow-sm space-y-3 overflow-hidden min-w-0">
-                                    <div className="flex justify-between items-baseline">
-                                        <span className="text-eyebrow font-semibold text-ink-muted uppercase">Subtotal (Gross)</span>
-                                        <span className="text-sm font-mono font-tabular text-ink">{curSym} {subtotal.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
-                                    </div>
-                                    <div className="flex justify-between items-baseline">
-                                        <span className="text-eyebrow font-semibold text-terracotta uppercase">Line Discounts</span>
-                                        <span className="text-sm font-mono font-tabular text-terracotta">- {curSym} {totalDiscount.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
-                                    </div>
-                                    <div className="flex justify-between items-baseline">
-                                        <span className="text-eyebrow font-semibold text-ink-muted uppercase">SST (Tax)</span>
-                                        <span className="text-sm font-mono font-tabular text-ink">+ {curSym} {totalTax.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 min-w-0 pt-3 border-t border-border-warm">
-                                        <span className="text-eyebrow font-semibold text-ink-muted uppercase min-w-0 flex-1 leading-tight">Shipping</span>
-                                        <input
-                                            type="number"
-                                            value={data.shipping_amount}
-                                            onChange={e => setData('shipping_amount', e.target.value)}
-                                            className="w-20 max-w-[45%] shrink-0 text-right text-sm border-border-warm rounded-xl font-mono font-tabular text-ink px-2 py-1.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                        />
-                                    </div>
-                                    <div className="flex justify-between text-xs text-ink-muted">
-                                        <span>{roundingLabel(invCur)}</span>
-                                        <span className="font-mono font-tabular">{roundingAdjustment.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-baseline pt-3 border-t border-border-warm">
-                                        <span className="text-eyebrow font-semibold text-ink uppercase">Grand Total</span>
-                                        <span className="text-lg font-mono font-tabular font-semibold text-terracotta">
-                                            {curSym} {roundedTotal.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
+                    <InvoiceForm
+                        formId="invoice-edit-form"
+                        data={data}
+                        setData={setData}
+                        errors={errors}
+                        onSubmit={submit}
+                        customers={customers}
+                        lhdn_codes={lhdn_codes}
+                        products={products}
+                        taxCodes={taxCodes}
+                        base_currency={base_currency}
+                        mode="edit"
+                    />
                 )}
             </div>
         </AuthenticatedLayout>

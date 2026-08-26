@@ -81,6 +81,12 @@ export default function Company({ auth, company, canEdit = false }) {
                             Legal, contact and accounting details that flow through your books.
                         </p>
                     </div>
+                    <Link
+                        href={route('settings.changelog')}
+                        className="text-sm font-semibold text-terracotta hover:text-terracotta whitespace-nowrap"
+                    >
+                        What&apos;s new →
+                    </Link>
                     {canViewTeam && (
                         <Link
                             href={route('settings.team.index')}

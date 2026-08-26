@@ -1,6 +1,6 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import DocumentFormHeader from '@/Components/DocumentFormHeader';
 import SalesDocLines from '@/Components/SalesDocLines';
 import DocumentFormNotesTotals from '@/Components/DocumentFormNotesTotals';
@@ -33,11 +33,13 @@ export default function Edit({
             quantity: i.quantity,
             unit_price: i.unit_price,
             tax_rate: i.tax_rate ?? 0,
+            tax_code_id: i.tax_code_id ?? null,
             product_id: i.product_id || null,
             discount_amount: i.discount_amount || 0,
         })),
     });
     const { data, setData, processing } = form;
+    const { tax_codes: taxCodes = [] } = usePage().props;
 
     const submit = (e) => {
         e.preventDefault();
@@ -100,7 +102,7 @@ export default function Edit({
                     </div>
                 </div>
                 {!lines_locked && (
-                    <SalesDocLines items={data.items} onChange={(items) => setData('items', items)} products={products} disabled={!editable} />
+                    <SalesDocLines items={data.items} onChange={(items) => setData('items', items)} products={products} taxCodes={taxCodes} disabled={!editable} />
                 )}
                 <DocumentFormNotesTotals
                     notesValue={data.customer_notes}

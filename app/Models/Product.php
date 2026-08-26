@@ -29,6 +29,9 @@ class Product extends Model
         'tax_rate',
         'classification_code',
         'is_active',
+        'track_inventory',
+        'qty_on_hand',
+        'avg_cost',
         'display_order',
     ];
 
@@ -36,6 +39,9 @@ class Product extends Model
         'unit_price'    => 'decimal:2',
         'tax_rate'      => 'decimal:2',
         'is_active'     => 'boolean',
+        'track_inventory' => 'boolean',
+        'qty_on_hand'   => 'decimal:4',
+        'avg_cost'      => 'decimal:4',
         'display_order' => 'integer',
     ];
 

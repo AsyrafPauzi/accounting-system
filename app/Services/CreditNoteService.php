@@ -8,6 +8,7 @@ use App\Models\CreditNoteRefund;
 use App\Models\Invoice;
 use App\Support\DocumentNumber;
 use App\Support\JournalWriter;
+use App\Support\TaxCodeResolver;
 use Illuminate\Support\Facades\DB;
 
 class CreditNoteService
@@ -28,7 +29,10 @@ class CreditNoteService
             $line = ((float) $item['quantity'] * (float) $item['unit_price'])
                 - (float) ($item['discount_amount'] ?? 0);
             $net += $line;
-            $tax += ($line * (float) ($item['tax_rate'] ?? 0)) / 100;
+            $rate = ! empty($item['tax_code_id'])
+                ? TaxCodeResolver::normalizeLineItem($item)['tax_rate']
+                : (float) ($item['tax_rate'] ?? 0);
+            $tax += ($line * $rate) / 100;
         }
 
         return [
@@ -149,6 +153,9 @@ class CreditNoteService
         }
 
         DB::transaction(function () use ($cn) {
+            \App\Support\AccountingPeriodResolver::assertOpenForDate(
+                \Carbon\Carbon::parse($cn->issue_date)->toDateString()
+            );
             $this->reverseRefunds($cn);
             $this->reverseJournal($cn);
 
@@ -308,19 +315,24 @@ class CreditNoteService
     private function syncItems(CreditNote $cn, array $items): void
     {
         foreach (array_values($items) as $item) {
+            $tax = TaxCodeResolver::normalizeLineItem($item);
             $line = ((float) $item['quantity'] * (float) $item['unit_price'])
                 - (float) ($item['discount_amount'] ?? 0);
-            $cn->items()->create([
+            $payload = [
                 'product_id'          => $item['product_id'] ?? null,
                 'account_code'        => $item['account_code'] ?? null,
                 'description'         => $item['description'],
                 'quantity'            => $item['quantity'],
                 'unit_price'          => $item['unit_price'],
-                'tax_rate'            => $item['tax_rate'] ?? 0,
+                'tax_rate'            => $tax['tax_rate'],
                 'discount_amount'     => $item['discount_amount'] ?? 0,
                 'item_classification' => $item['item_classification'] ?? null,
                 'amount'              => $line,
-            ]);
+            ];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('credit_note_items', 'tax_code_id')) {
+                $payload['tax_code_id'] = $tax['tax_code_id'];
+            }
+            $cn->items()->create($payload);
         }
     }
 
@@ -352,8 +364,34 @@ class CreditNoteService
             }
             $lines[] = ['account_code' => $code, 'debit' => $debit, 'credit' => 0];
         }
-        if ($taxBase > 0) {
-            $lines[] = ['account_code' => '2100', 'debit' => $taxBase, 'credit' => 0];
+        $taxByAccount = [];
+        foreach ($cn->items as $item) {
+            $line = ((float) $item->quantity * (float) $item->unit_price) - (float) $item->discount_amount;
+            $rate = (float) ($item->tax_rate ?? 0);
+            if ($rate <= 0 || $line <= 0) {
+                continue;
+            }
+            $tax = round($line * $rate / 100 * $m, 2);
+            if ($tax <= 0) {
+                continue;
+            }
+            $code = TaxCodeResolver::resolve(
+                \Illuminate\Support\Facades\Schema::hasColumn('credit_note_items', 'tax_code_id')
+                    ? (int) ($item->tax_code_id ?? 0) ?: null
+                    : null,
+                $rate,
+            );
+            $account = TaxCodeResolver::outputAccount($code);
+            $taxByAccount[$account] = ($taxByAccount[$account] ?? 0) + $tax;
+        }
+        if ($taxByAccount === [] && $taxBase > 0) {
+            $taxByAccount['2100'] = $taxBase;
+        }
+        foreach ($taxByAccount as $accountCode => $taxDebit) {
+            if (round($taxDebit, 2) == 0.0) {
+                continue;
+            }
+            $lines[] = ['account_code' => $accountCode, 'debit' => round($taxDebit, 2), 'credit' => 0];
         }
 
         JournalWriter::postSystem([

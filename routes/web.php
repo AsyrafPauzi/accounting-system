@@ -21,6 +21,7 @@ use App\Http\Controllers\GeneralLedgerController;
 use App\Http\Controllers\ProfitAndLossController;
 use App\Http\Controllers\BalanceSheetController;
 use App\Http\Controllers\CashflowSummaryController;
+use App\Http\Controllers\CashFlowStatementController;
 use App\Http\Controllers\AgedReceivablesController;
 use App\Http\Controllers\JournalController;
 use App\Http\Controllers\PayrollRemittanceController;
@@ -56,6 +57,11 @@ Route::get('/public/invoices/{uuid}/open.gif', [InvoiceController::class, 'publi
 Route::get('/public/invoices/{uuid}/pay-return', [InvoiceController::class, 'publicPayReturn'])
     ->name('public.invoices.pay.return')
     ->middleware('signed');
+
+Route::middleware('signed')->group(function () {
+    Route::get('/portal/{token}', [\App\Http\Controllers\CustomerPortalController::class, 'dashboard'])->name('portal.dashboard');
+    Route::get('/portal/{token}/statement.pdf', [\App\Http\Controllers\CustomerPortalController::class, 'statementPdf'])->name('portal.statement.pdf');
+});
 
 Route::get('/public/credit-notes/{uuid}/download', [CreditNoteController::class, 'publicDownloadPdf'])
     ->name('public.credit-notes.download')
@@ -238,6 +244,7 @@ Route::middleware(['auth'])->group(function () {
     // Company settings (tenant-level)
     Route::get('/settings/company', [CompanySettingsController::class, 'edit'])->name('settings.company');
     Route::patch('/settings/company', [CompanySettingsController::class, 'update'])->name('settings.company.update');
+    Route::get('/settings/changelog', [\App\Http\Controllers\Settings\ChangelogController::class, 'index'])->name('settings.changelog');
     Route::get('/settings/document-numbers', [\App\Http\Controllers\DocumentNumberSettingsController::class, 'edit'])->name('settings.document-numbers.edit');
     Route::patch('/settings/document-numbers', [\App\Http\Controllers\DocumentNumberSettingsController::class, 'update'])->name('settings.document-numbers.update');
     Route::get('/settings/accounting-periods', [\App\Http\Controllers\AccountingPeriodController::class, 'index'])->name('settings.accounting-periods.index');
@@ -776,6 +783,23 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/journal/manual/{journal}', [JournalController::class, 'destroy'])->name('journal.destroy');
     });
 
+    // --- Fixed assets ---
+    Route::middleware(['permission:journal.view', 'plan.permission:journal.view'])->group(function () {
+        Route::get('/fixed-assets', [\App\Http\Controllers\FixedAssetController::class, 'index'])->name('fixed-assets.index');
+    });
+    Route::middleware(['permission:journal.create', 'plan.permission:journal.create'])->group(function () {
+        Route::get('/fixed-assets/create', [\App\Http\Controllers\FixedAssetController::class, 'create'])->name('fixed-assets.create');
+        Route::post('/fixed-assets', [\App\Http\Controllers\FixedAssetController::class, 'store'])->name('fixed-assets.store');
+    });
+    Route::middleware(['permission:journal.edit', 'plan.permission:journal.create'])->group(function () {
+        Route::get('/fixed-assets/{id}/edit', [\App\Http\Controllers\FixedAssetController::class, 'edit'])->name('fixed-assets.edit');
+        Route::put('/fixed-assets/{id}', [\App\Http\Controllers\FixedAssetController::class, 'update'])->name('fixed-assets.update');
+    });
+    Route::middleware(['permission:journal.post', 'plan.permission:journal.create'])->group(function () {
+        Route::post('/fixed-assets/{id}/depreciate', [\App\Http\Controllers\FixedAssetController::class, 'depreciate'])->name('fixed-assets.depreciate');
+        Route::post('/fixed-assets/{id}/dispose', [\App\Http\Controllers\FixedAssetController::class, 'dispose'])->name('fixed-assets.dispose');
+    });
+
     // --- Payroll ---
     // Advertised as a Corporate-tier bullet, so gate by `payroll.run` plan
     // permission as well as the role-based `journal.create` (a payroll run
@@ -789,6 +813,19 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/payroll', [\App\Http\Controllers\PayrollController::class, 'store'])
             ->middleware('throttle:creation')
             ->name('payroll.store');
+        Route::get('/payroll/runs/{journal}/export/epf', [\App\Http\Controllers\PayrollController::class, 'exportEpf'])
+            ->name('payroll.export.epf');
+        Route::get('/payroll/runs/{journal}/export/pcb', [\App\Http\Controllers\PayrollController::class, 'exportPcb'])
+            ->name('payroll.export.pcb');
+
+        Route::get('/payroll/employees', [\App\Http\Controllers\EmployeeController::class, 'index'])->name('payroll.employees.index');
+        Route::post('/payroll/employees', [\App\Http\Controllers\EmployeeController::class, 'store'])
+            ->middleware('throttle:creation')
+            ->name('payroll.employees.store');
+        Route::patch('/payroll/employees/{id}', [\App\Http\Controllers\EmployeeController::class, 'update'])
+            ->name('payroll.employees.update');
+        Route::delete('/payroll/employees/{id}', [\App\Http\Controllers\EmployeeController::class, 'destroy'])
+            ->name('payroll.employees.destroy');
     });
 
     Route::middleware(['permission:journal.create', 'plan.permission:payroll.run'])->group(function () {
@@ -804,6 +841,10 @@ Route::middleware(['auth'])->group(function () {
     // --- Individual Reports (Plan Gated) ---
     Route::middleware(['permission:reports.profit-loss', 'plan.permission:reports.profit-loss'])->group(function () {
         Route::get('/profit-and-loss', [ProfitAndLossController::class, 'index'])->name('profit-and-loss.index');
+        Route::get('/profit-and-loss/sources', [ProfitAndLossController::class, 'sources'])->name('profit-and-loss.sources');
+        Route::get('/budgets', [\App\Http\Controllers\BudgetController::class, 'index'])->name('budgets.index');
+        Route::patch('/budgets/{budget}', [\App\Http\Controllers\BudgetController::class, 'update'])->name('budgets.update');
+        Route::get('/reports/budget-vs-actual', [\App\Http\Controllers\BudgetVsActualController::class, 'index'])->name('reports.budget-vs-actual.index');
     });
 
     Route::middleware(['permission:reports.sales', 'plan.permission:reports.sales'])->group(function () {
@@ -817,6 +858,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::middleware(['permission:reports.cashflow', 'plan.permission:reports.cashflow'])->group(function () {
         Route::get('/cashflow-summary', [CashflowSummaryController::class, 'index'])->name('cashflow-summary.index');
+        Route::get('/cash-flow-statement', [CashFlowStatementController::class, 'index'])->name('cash-flow-statement.index');
     });
 
     Route::middleware(['permission:reports.aged-reports', 'plan.permission:reports.aged-reports'])->group(function () {
@@ -855,11 +897,14 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['permission:reports.export.limited|reports.export.full'])->group(function () {
         Route::get('/profit-and-loss/export/csv', [ProfitAndLossController::class, 'exportCsv'])->name('profit-and-loss.export.csv');
         Route::get('/balance-sheet/export/csv', [BalanceSheetController::class, 'exportCsv'])->name('balance-sheet.export.csv');
+        Route::get('/cash-flow-statement/export/csv', [CashFlowStatementController::class, 'exportCsv'])->name('cash-flow-statement.export.csv');
+        Route::get('/reports/budget-vs-actual/export/csv', [\App\Http\Controllers\BudgetVsActualController::class, 'exportCsv'])->name('reports.budget-vs-actual.export.csv');
     });
 
     Route::middleware(['permission:reports.export.full'])->group(function () {
         Route::get('/profit-and-loss/export/pdf', [ProfitAndLossController::class, 'exportPdf'])->name('profit-and-loss.export.pdf');
         Route::get('/balance-sheet/export/pdf', [BalanceSheetController::class, 'exportPdf'])->name('balance-sheet.export.pdf');
+        Route::get('/cash-flow-statement/export/pdf', [CashFlowStatementController::class, 'exportPdf'])->name('cash-flow-statement.export.pdf');
     });
 
     // --- Customers ---
@@ -899,6 +944,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/customer-statements/{customerId}/email', [\App\Http\Controllers\CustomerStatementController::class, 'email'])
             ->middleware(['throttle:sensitive', \App\Http\Middleware\EnsureEmailVerifiedForOutbound::class])
             ->name('customer-statements.email');
+        Route::post('/customers/{id}/portal-link', [CustomerController::class, 'issuePortalLink'])
+            ->middleware('throttle:sensitive')
+            ->name('customers.portal-link');
     });
 
     // --- Recurring Invoices (scheduled templates) ---
@@ -986,6 +1034,10 @@ Route::middleware(['auth'])->group(function () {
     });
     Route::middleware(['permission:products.delete', 'plan.permission:products.view'])->group(function () {
         Route::delete('/products/{id}', [\App\Http\Controllers\ProductController::class, 'destroy'])->name('products.destroy');
+    });
+
+    Route::middleware(['permission:products.view', 'plan.permission:products.view'])->group(function () {
+        Route::get('/inventory', [\App\Http\Controllers\InventoryController::class, 'index'])->name('inventory.index');
     });
 });
 

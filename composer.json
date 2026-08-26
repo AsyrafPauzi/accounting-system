@@ -17,6 +17,7 @@
         "league/flysystem-aws-s3-v3": "^3.0",
         "pragmarx/google2fa-laravel": "*",
         "resend/resend-php": "*",
+        "sentry/sentry-laravel": "^4.27",
         "smalot/pdfparser": "^2.12",
         "spatie/laravel-permission": "^7.2",
         "stancl/tenancy": "^3.9",

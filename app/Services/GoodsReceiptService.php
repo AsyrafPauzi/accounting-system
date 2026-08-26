@@ -13,6 +13,7 @@ class GoodsReceiptService
     public function __construct(
         private BillService $bills,
         private PurchaseOrderService $orders,
+        private InventoryService $inventory,
     ) {}
 
     public function nextNumber(): string
@@ -56,6 +57,19 @@ class GoodsReceiptService
                     'qty_billed'             => 0,
                     'display_order'          => $idx,
                 ]);
+                if ($line->product_id) {
+                    $product = \App\Models\Product::query()->find($line->product_id);
+                    if ($product?->track_inventory) {
+                        $this->inventory->receive(
+                            $product,
+                            $qty,
+                            (float) ($line->unit_price ?? 0),
+                            $grn->received_date,
+                            'GoodsReceipt',
+                            (int) $grn->id,
+                        );
+                    }
+                }
                 $line->qty_received = (float) $line->qty_received + $qty;
                 $line->save();
             }

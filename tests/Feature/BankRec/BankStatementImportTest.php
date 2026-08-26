@@ -105,4 +105,59 @@ CSV;
         $this->assertDatabaseCount('bank_statements', 1);
         $this->assertDatabaseCount('bank_statement_lines', 3);
     }
+
+    public function test_import_endpoint_accepts_pdf_upload(): void
+    {
+        $text = <<<'TXT'
+2026-08-10 Rental received 500.00
+2026-08-11 Utilities -120.00
+TXT;
+
+        $pdfPath = sys_get_temp_dir().'/bank-upload-test.pdf';
+        $this->writeMinimalTextPdf($pdfPath, $text);
+
+        try {
+            $file = new \Illuminate\Http\UploadedFile($pdfPath, 'statement.pdf', 'application/pdf', null, true);
+
+            $response = $this->actingAs($this->user)->post(route('bank-rec.import.store'), [
+                'account_id' => $this->bankAccount->id,
+                'file' => $file,
+            ]);
+
+            $response->assertRedirect();
+            $this->assertDatabaseHas('bank_statements', ['source' => 'pdf']);
+        } finally {
+            @unlink($pdfPath);
+        }
+    }
+
+    private function writeMinimalTextPdf(string $path, string $text): void
+    {
+        $escaped = str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $text);
+        $content = "BT /F1 12 Tf 50 750 Td ({$escaped}) Tj ET";
+        $objects = [
+            "1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n",
+            "2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n",
+            "3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>endobj\n",
+            "4 0 obj<< /Length ".strlen($content)." >>stream\n{$content}\nendstream\nendobj\n",
+            "5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n",
+        ];
+
+        $pdf = "%PDF-1.4\n";
+        $offsets = [0];
+        foreach ($objects as $object) {
+            $offsets[] = strlen($pdf);
+            $pdf .= $object;
+        }
+
+        $xrefPos = strlen($pdf);
+        $pdf .= "xref\n0 ".(count($objects) + 1)."\n";
+        $pdf .= "0000000000 65535 f \n";
+        for ($i = 1; $i <= count($objects); $i++) {
+            $pdf .= sprintf("%010d 00000 n \n", $offsets[$i]);
+        }
+        $pdf .= "trailer<< /Size ".(count($objects) + 1)." /Root 1 0 R >>\nstartxref\n{$xrefPos}\n%%EOF";
+
+        file_put_contents($path, $pdf);
+    }
 }

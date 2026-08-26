@@ -50,7 +50,7 @@ class InitializeTenancyByLoggedInUser
 
         // 1. Public customer-facing links (PDF, tracking pixel, Pay Now return)
         if ($request->has('tenant_id') && (
-            $request->is('public/*') || $request->is('pay/*')
+            $request->is('public/*') || $request->is('pay/*') || $request->is('portal/*')
         )) {
             $tenant = Tenant::find($request->input('tenant_id'));
             if ($tenant) {

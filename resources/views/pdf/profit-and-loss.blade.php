@@ -35,6 +35,9 @@
             <div class="header-right">
                 <div class="report-title">Profit &amp; Loss</div>
                 <div class="report-period">From {{ \Carbon\Carbon::parse($date_from)->format('d M Y') }} to {{ \Carbon\Carbon::parse($date_to)->format('d M Y') }}</div>
+                @if(($basis ?? 'accrual') === 'cash')
+                <div class="report-period">Cash basis</div>
+                @endif
                 @if($compare !== 'none')
                 <div class="report-period">{{ $compare_label }}: {{ \Carbon\Carbon::parse($compare_from)->format('d M Y') }} to {{ \Carbon\Carbon::parse($compare_to)->format('d M Y') }}</div>
                 @endif

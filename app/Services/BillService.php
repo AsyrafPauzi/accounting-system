@@ -6,6 +6,7 @@ use App\Models\Bill;
 use App\Models\BillPayment;
 use App\Support\DocumentNumber;
 use App\Support\JournalWriter;
+use App\Support\TaxCodeResolver;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -147,6 +148,15 @@ class BillService
     public function computeTotals(array $items, float $taxAmount = 0.0): array
     {
         $subtotal = collect($items)->sum(fn ($i) => (float) $i['amount']);
+        $lineTax = collect($items)->sum(function ($item) {
+            $net = (float) ($item['amount'] ?? 0);
+            $tax = TaxCodeResolver::normalizeLineItem($item);
+
+            return round($net * $tax['tax_rate'] / 100, 2);
+        });
+        if ($lineTax > 0) {
+            $taxAmount = $lineTax;
+        }
         $total = $subtotal + $taxAmount;
 
         return compact('subtotal', 'taxAmount', 'total');
@@ -182,7 +192,7 @@ class BillService
                 'total_amount'       => $totals['total'],
                 'amount_paid'        => 0,
                 'tax_amount'         => $totals['taxAmount'],
-                'currency'           => 'MYR',
+                'currency'           => strtoupper((string) ($data['currency'] ?? 'MYR')),
                 'private_notes'      => $notes,
                 'reference'          => $data['reference'] ?? null,
                 'created_by'         => $data['created_by'] ?? null,
@@ -195,6 +205,9 @@ class BillService
             ];
             if (Schema::hasColumn('bills', 'purchase_kind')) {
                 $payload['purchase_kind'] = $kind;
+            }
+            if (Schema::hasColumn('bills', 'exchange_rate')) {
+                $payload['exchange_rate'] = (float) ($data['exchange_rate'] ?? 1);
             }
 
             $bill = Bill::create($payload);
@@ -237,6 +250,7 @@ class BillService
                 'due_date'      => $data['due_date'] ?? null,
                 'total_amount'  => $totals['total'],
                 'tax_amount'    => $totals['taxAmount'],
+                'currency'      => strtoupper((string) ($data['currency'] ?? $bill->currency ?? 'MYR')),
                 'private_notes' => $data['private_notes'] ?? null,
                 'reference'     => $data['reference'] ?? null,
                 'receipt_path'  => $data['receipt_path'] ?? $bill->receipt_path,
@@ -246,6 +260,9 @@ class BillService
                 'audited_at'    => $data['audited_at'] ?? $bill->audited_at,
                 'audited_by'    => $data['audited_by'] ?? $bill->audited_by,
             ]);
+            if (Schema::hasColumn('bills', 'exchange_rate') && array_key_exists('exchange_rate', $data)) {
+                $bill->update(['exchange_rate' => (float) $data['exchange_rate']]);
+            }
 
             $bill->items()->delete();
             $this->syncItems($bill, $items);
@@ -272,10 +289,17 @@ class BillService
                     'credit'       => 0,
                 ];
             }
-            if ($bill->tax_amount > 0) {
+            $taxByAccount = $this->inputTaxByAccount($bill);
+            if ($taxByAccount === [] && (float) $bill->tax_amount > 0) {
+                $taxByAccount['1110'] = (float) $bill->tax_amount;
+            }
+            foreach ($taxByAccount as $accountCode => $taxDebit) {
+                if (round($taxDebit, 2) == 0.0) {
+                    continue;
+                }
                 $lines[] = [
-                    'account_code' => '1110',
-                    'debit'        => (float) $bill->tax_amount,
+                    'account_code' => $accountCode,
+                    'debit'        => round($taxDebit, 2),
                     'credit'       => 0,
                 ];
             }
@@ -303,6 +327,9 @@ class BillService
         }
 
         DB::transaction(function () use ($bill) {
+            \App\Support\AccountingPeriodResolver::assertOpenForDate(
+                Carbon::parse($bill->bill_date)->toDateString()
+            );
             JournalWriter::postReversalByReference(
                 'Bill',
                 (int) $bill->id,
@@ -314,13 +341,13 @@ class BillService
         });
     }
 
-    public function recordPayment(Bill $bill, float $amount, string $paymentDate, string $bankAccountCode, ?string $reference = null, ?int $createdBy = null): ?BillPayment
+    public function recordPayment(Bill $bill, float $amount, string $paymentDate, string $bankAccountCode, ?string $reference = null, ?int $createdBy = null, ?float $paymentExchangeRate = null): ?BillPayment
     {
         if (in_array($bill->status, ['draft', 'void'], true)) {
             throw new \LogicException('Cannot record payment for a draft or void bill.');
         }
 
-        return DB::transaction(function () use ($bill, $amount, $paymentDate, $bankAccountCode, $reference, $createdBy) {
+        return DB::transaction(function () use ($bill, $amount, $paymentDate, $bankAccountCode, $reference, $createdBy, $paymentExchangeRate) {
             \App\Support\AccountingPeriodResolver::assertOpenForDate($paymentDate);
             $apply = round(min($amount, $this->remainingBalance($bill)), 2);
             if ($apply <= 0) {
@@ -342,20 +369,82 @@ class BillService
             $bill->amount_paid = round((float) $bill->amount_paid + $apply, 2);
             $bill->save();
 
+            $docRate = $this->ledgerBaseMultiplier($bill);
+            $fx = app(FxGainLossService::class);
+            $currency = strtoupper((string) ($bill->currency ?: 'MYR'));
+
+            if ($fx->isForeignCurrency($currency, $this->tenantBaseCurrency())) {
+                $paymentRate = $fx->resolvePaymentRate($docRate, $paymentExchangeRate);
+                $lines = $fx->billPaymentLines($apply, $docRate, $paymentRate, $bankAccountCode);
+            } else {
+                $lines = [
+                    ['account_code' => self::AP_ACCOUNT, 'debit' => $apply, 'credit' => 0],
+                    ['account_code' => $bankAccountCode, 'debit' => 0, 'credit' => $apply],
+                ];
+            }
+
             JournalWriter::postSystem([
                 'date'           => $paymentDate,
                 'description'    => 'Payment for Bill '.$bill->bill_number,
                 'reference_type' => 'Bill Payment',
-                'reference_id'   => $bill->id,
-            ], [
-                ['account_code' => self::AP_ACCOUNT, 'debit' => $apply, 'credit' => 0],
-                ['account_code' => $bankAccountCode, 'debit' => 0, 'credit' => $apply],
-            ]);
+                'reference_id'   => $payment?->id ?? $bill->id,
+            ], $lines);
 
             $this->recalculateStatus($bill->fresh());
 
             return $payment;
         });
+    }
+
+    /**
+     * @return array<string, float> input tax account => debit amount
+     */
+    private function ledgerBaseMultiplier(Bill $bill): float
+    {
+        $currency = strtoupper((string) ($bill->currency ?: 'MYR'));
+        $base = $this->tenantBaseCurrency();
+        if ($currency === $base) {
+            return 1.0;
+        }
+        $rate = 1.0;
+        if (Schema::hasColumn('bills', 'exchange_rate')) {
+            $rate = (float) ($bill->exchange_rate ?? 0);
+        }
+
+        return $rate > 0 ? $rate : 1.0;
+    }
+
+    private function tenantBaseCurrency(): string
+    {
+        if (function_exists('tenant') && tenant()) {
+            return strtoupper((string) (tenant()->base_currency ?? 'MYR'));
+        }
+
+        return 'MYR';
+    }
+
+    private function inputTaxByAccount(Bill $bill): array
+    {
+        $taxByAccount = [];
+        foreach ($bill->items as $item) {
+            $net = (float) $item->amount;
+            $rate = (float) ($item->tax_rate ?? 0);
+            if ($rate <= 0 || $net <= 0) {
+                continue;
+            }
+            $tax = round($net * $rate / 100, 2);
+            if ($tax <= 0) {
+                continue;
+            }
+            $code = TaxCodeResolver::resolve(
+                Schema::hasColumn('bill_items', 'tax_code_id') ? (int) ($item->tax_code_id ?? 0) ?: null : null,
+                $rate,
+            );
+            $account = TaxCodeResolver::inputAccount($code);
+            $taxByAccount[$account] = ($taxByAccount[$account] ?? 0) + $tax;
+        }
+
+        return $taxByAccount;
     }
 
     private function syncItems(Bill $bill, array $items): void

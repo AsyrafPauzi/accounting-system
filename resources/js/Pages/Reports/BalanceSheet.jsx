@@ -1,6 +1,6 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { alertUpgrade } from '@/utils/swal';
 import ReportPeriodChips from '@/Components/ReportPeriodChips';
 
@@ -18,7 +18,13 @@ function formatMoney(n) {
     return (Number(n) || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function AccountTable({ title, accounts, total, emptyMessage, ledgerUrl, amountClass = 'text-ink' }) {
+function varianceClass(value) {
+    if (Number(value) > 0) return 'text-forest';
+    if (Number(value) < 0) return 'text-terracotta';
+    return 'text-ink-muted';
+}
+
+function AccountTable({ title, accounts, total, compareTotal, variance, emptyMessage, ledgerUrl, amountClass = 'text-ink', comparisonOn = false, compareLabel = '' }) {
     return (
         <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-border-warm bg-cream/80">
@@ -30,6 +36,12 @@ function AccountTable({ title, accounts, total, emptyMessage, ledgerUrl, amountC
                         <tr className="text-[10px] font-display font-medium text-ink-muted uppercase tracking-widest border-b border-border-warm bg-cream/80">
                             <th className="px-6 py-4">Account</th>
                             <th className="px-6 py-4 text-right">Amount</th>
+                            {comparisonOn && (
+                                <>
+                                    <th className="px-6 py-4 text-right">{compareLabel || 'Compare'}</th>
+                                    <th className="px-6 py-4 text-right">Variance</th>
+                                </>
+                            )}
                         </tr>
                     </thead>
                     <tbody>
@@ -45,11 +57,21 @@ function AccountTable({ title, accounts, total, emptyMessage, ledgerUrl, amountC
                                     <td className={`px-6 py-4 text-right font-mono tabular-nums font-semibold ${amountClass}`}>
                                         RM {formatMoney(acc.amount)}
                                     </td>
+                                    {comparisonOn && (
+                                        <>
+                                            <td className="px-6 py-4 text-right font-mono tabular-nums text-ink-muted">
+                                                RM {formatMoney(acc.compare_amount)}
+                                            </td>
+                                            <td className={`px-6 py-4 text-right font-mono tabular-nums font-semibold ${varianceClass(acc.variance)}`}>
+                                                RM {formatMoney(acc.variance)}
+                                            </td>
+                                        </>
+                                    )}
                                 </tr>
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={2} className="px-6 py-8 text-center text-ink-muted text-sm">
+                                <td colSpan={comparisonOn ? 4 : 2} className="px-6 py-8 text-center text-ink-muted text-sm">
                                     {emptyMessage}
                                 </td>
                             </tr>
@@ -59,6 +81,12 @@ function AccountTable({ title, accounts, total, emptyMessage, ledgerUrl, amountC
                         <tr className="border-t-2 border-border-warm bg-cream/80 font-semibold">
                             <td className="px-6 py-4">Total</td>
                             <td className={`px-6 py-4 text-right font-mono tabular-nums ${amountClass}`}>RM {formatMoney(total)}</td>
+                            {comparisonOn && (
+                                <>
+                                    <td className="px-6 py-4 text-right font-mono tabular-nums text-ink-muted">RM {formatMoney(compareTotal)}</td>
+                                    <td className={`px-6 py-4 text-right font-mono tabular-nums ${varianceClass(variance)}`}>RM {formatMoney(variance)}</td>
+                                </>
+                            )}
                         </tr>
                     </tfoot>
                 </table>
@@ -67,9 +95,34 @@ function AccountTable({ title, accounts, total, emptyMessage, ledgerUrl, amountC
     );
 }
 
-export default function BalanceSheet({ auth, asset_accounts = [], liability_accounts = [], equity_accounts = [], total_assets = 0, total_liabilities = 0, total_equity = 0, total_liabilities_and_equity = 0, balanced = false, filters = {} }) {
+export default function BalanceSheet({
+    auth,
+    asset_accounts = [],
+    liability_accounts = [],
+    equity_accounts = [],
+    total_assets = 0,
+    total_liabilities = 0,
+    total_equity = 0,
+    total_liabilities_and_equity = 0,
+    balanced = false,
+    compare_label = null,
+    compare_as_at_date = null,
+    compare_total_assets = null,
+    compare_total_liabilities = null,
+    compare_total_equity = null,
+    assets_variance = null,
+    liabilities_variance = null,
+    equity_variance = null,
+    filters = {},
+}) {
     const { flash } = usePage().props;
-    const { preset = 'custom', as_at_date = '' } = filters;
+    const { preset = 'custom', as_at_date = '', compare = 'previous' } = filters;
+    const comparisonOn = compare !== 'none';
+    const changeCompare = (value) => router.get(route('balance-sheet.index'), {
+        preset,
+        as_at_date,
+        compare: value,
+    }, { preserveScroll: true, preserveState: false });
     const ledgerUrl = (code) => route('general-ledger.report', {
         account_code: code,
         date_to: filters.as_at_date,
@@ -103,16 +156,37 @@ export default function BalanceSheet({ auth, asset_accounts = [], liability_acco
                                 mode="as_of"
                                 asOfKey="as_at_date"
                                 asOf={as_at_date}
+                                extraParams={{ compare }}
                             />
+                            <div className="flex flex-wrap gap-1.5">
+                                {[
+                                    ['previous', 'vs prior month'],
+                                    ['last_year', 'vs last year'],
+                                    ['none', 'Off'],
+                                ].map(([value, label]) => (
+                                    <button
+                                        key={value}
+                                        type="button"
+                                        onClick={() => changeCompare(value)}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
+                                            compare === value
+                                                ? 'bg-forest text-white border-forest'
+                                                : 'bg-surface text-ink border-border-warm hover:bg-cream'
+                                        }`}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
                             <div className="flex flex-wrap items-center gap-3">
                                 <a
-                                    href={`${route('balance-sheet.export.csv')}?${new URLSearchParams({ preset, as_at_date: as_at_date || '' })}`}
+                                    href={`${route('balance-sheet.export.csv')}?${new URLSearchParams({ preset, as_at_date: as_at_date || '', compare })}`}
                                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream transition-all active:scale-95"
                                 >
                                     <Icons.ArrowDownTray /> Download CSV
                                 </a>
                                 <a
-                                    href={auth.planPermissions['reports.export.full'] ? `${route('balance-sheet.export.pdf')}?${new URLSearchParams({ preset, as_at_date: as_at_date || '' })}` : '#'}
+                                    href={auth.planPermissions['reports.export.full'] ? `${route('balance-sheet.export.pdf')}?${new URLSearchParams({ preset, as_at_date: as_at_date || '', compare })}` : '#'}
                                     onClick={(e) => {
                                         if (!auth.planPermissions['reports.export.full']) {
                                             e.preventDefault();
@@ -168,26 +242,38 @@ export default function BalanceSheet({ auth, asset_accounts = [], liability_acco
                         title="Assets"
                         accounts={asset_accounts}
                         total={total_assets}
+                        compareTotal={compare_total_assets}
+                        variance={assets_variance}
                         emptyMessage="No asset balances as at this date."
                         ledgerUrl={ledgerUrl}
                         amountClass="text-terracotta"
+                        comparisonOn={comparisonOn}
+                        compareLabel={compare_label}
                     />
                     <div className="space-y-6">
                         <AccountTable
                             title="Liabilities"
                             accounts={liability_accounts}
                             total={total_liabilities}
+                            compareTotal={compare_total_liabilities}
+                            variance={liabilities_variance}
                             emptyMessage="No liability balances as at this date."
                             ledgerUrl={ledgerUrl}
                             amountClass="text-mustard"
+                            comparisonOn={comparisonOn}
+                            compareLabel={compare_label}
                         />
                         <AccountTable
                             title="Equity"
                             accounts={equity_accounts}
                             total={total_equity}
+                            compareTotal={compare_total_equity}
+                            variance={equity_variance}
                             emptyMessage="No equity balances as at this date."
                             ledgerUrl={ledgerUrl}
                             amountClass="text-terracotta"
+                            comparisonOn={comparisonOn}
+                            compareLabel={compare_label}
                         />
                     </div>
                 </div>

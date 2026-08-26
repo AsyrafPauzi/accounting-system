@@ -60,6 +60,11 @@ class InvoiceEmail extends Mailable
             $signedParams
         );
 
+        $portalUrl = null;
+        if ($customer) {
+            $portalUrl = app(\App\Services\CustomerPortalService::class)->urlForCustomer($customer);
+        }
+
         return $this->from(config('mail.from.address'), $company['name'] ?? config('app.name'))
             ->subject($subject)
             ->view('emails.invoice', [
@@ -69,6 +74,7 @@ class InvoiceEmail extends Mailable
                 'view_pay_url' => $viewPayUrl,
                 'download_url' => $downloadUrl,
                 'pixel_url' => $pixelUrl,
+                'portal_url' => $portalUrl,
             ]);
     }
 }

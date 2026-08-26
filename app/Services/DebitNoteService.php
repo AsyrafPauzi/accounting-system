@@ -90,6 +90,9 @@ class DebitNoteService
         }
 
         DB::transaction(function () use ($dn) {
+            \App\Support\AccountingPeriodResolver::assertOpenForDate(
+                \Carbon\Carbon::parse($dn->issue_date)->toDateString()
+            );
             $journal = DB::table('journal_entries')
                 ->where('reference_type', 'Debit Note')
                 ->where('reference_id', $dn->id)

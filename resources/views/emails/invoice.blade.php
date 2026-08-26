@@ -48,6 +48,12 @@
                 <a href="{{ $download_url }}" style="display: inline-block; background-color: #ffffff; color: #000000; padding: 14px 32px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 14px; border: 2px solid #000000;">
                     Download PDF
                 </a>
+                @if(!empty($portal_url))
+                <br><br>
+                <a href="{{ $portal_url }}" style="display: inline-block; background-color: #0f766e; color: #ffffff; padding: 14px 32px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 14px;">
+                    View all invoices (customer portal)
+                </a>
+                @endif
             </div>
 
             <div style="padding-top: 30px; border-top: 1px solid #f1f5f9; font-size: 13px; color: #64748b; line-height: 1.6;">

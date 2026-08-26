@@ -41,7 +41,7 @@ export default function ProfitAndLoss({
     filters = {},
 }) {
     const { flash } = usePage().props;
-    const { preset = 'custom', date_from = '', date_to = '', compare = 'previous' } = filters;
+    const { preset = 'custom', date_from = '', date_to = '', compare = 'previous', basis = 'accrual' } = filters;
     const comparisonOn = compare !== 'none';
     const isProfit = net_profit >= 0;
     const changeCompare = (value) => router.get(route('profit-and-loss.index'), {
@@ -49,12 +49,27 @@ export default function ProfitAndLoss({
         date_from,
         date_to,
         compare: value,
+        basis,
+    }, { preserveScroll: true, preserveState: false });
+    const changeBasis = (value) => router.get(route('profit-and-loss.index'), {
+        preset,
+        date_from,
+        date_to,
+        compare,
+        basis: value,
     }, { preserveScroll: true, preserveState: false });
     const ledgerUrl = (code) => route('general-ledger.report', {
         account_code: code,
         date_from: filters.date_from,
         date_to: filters.date_to,
         from: 'pl',
+    });
+    const sourcesUrl = (code) => route('profit-and-loss.sources', {
+        account_code: code,
+        preset: filters.preset,
+        date_from: filters.date_from,
+        date_to: filters.date_to,
+        basis,
     });
 
     return (
@@ -65,7 +80,9 @@ export default function ProfitAndLoss({
                     <div>
                         <h2 className="text-2xl lg:text-3xl font-display font-medium text-ink tracking-tight">Profit &amp; Loss</h2>
                         <p className="text-ink-muted text-sm font-medium mt-1">
-                            Real-time report of Income vs Expenses from your general ledger.
+                            {basis === 'cash'
+                                ? 'Cash basis — income when collected, expenses when paid.'
+                                : 'Accrual basis — income and expenses from your general ledger.'}
                         </p>
                     </div>
                 </div>
@@ -82,8 +99,27 @@ export default function ProfitAndLoss({
                             preset={preset}
                             dateFrom={date_from}
                             dateTo={date_to}
-                            extraParams={{ compare }}
+                            extraParams={{ compare, basis }}
                         />
+                        <div className="flex flex-wrap gap-1.5">
+                            {[
+                                ['accrual', 'Accrual'],
+                                ['cash', 'Cash'],
+                            ].map(([value, label]) => (
+                                <button
+                                    key={value}
+                                    type="button"
+                                    onClick={() => changeBasis(value)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
+                                        basis === value
+                                            ? 'bg-terracotta text-white border-terracotta'
+                                            : 'bg-surface text-ink border-border-warm hover:bg-cream'
+                                    }`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
                         <div className="flex flex-wrap gap-1.5">
                             {[
                                 ['previous', 'vs previous'],
@@ -106,13 +142,13 @@ export default function ProfitAndLoss({
                         </div>
                         <div className="flex flex-wrap items-center gap-3">
                             <a
-                                href={`${route('profit-and-loss.export.csv')}?${new URLSearchParams({ preset, date_from: date_from || '', date_to: date_to || '', compare })}`}
+                                href={`${route('profit-and-loss.export.csv')}?${new URLSearchParams({ preset, date_from: date_from || '', date_to: date_to || '', compare, basis })}`}
                                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-ink bg-surface border border-border-warm hover:bg-cream transition-colors"
                             >
                                 <Icons.ArrowDownTray /> Download CSV
                             </a>
                             <a
-                                href={auth.planPermissions?.['reports.export.full'] ? `${route('profit-and-loss.export.pdf')}?${new URLSearchParams({ preset, date_from: date_from || '', date_to: date_to || '', compare })}` : '#'}
+                                href={auth.planPermissions?.['reports.export.full'] ? `${route('profit-and-loss.export.pdf')}?${new URLSearchParams({ preset, date_from: date_from || '', date_to: date_to || '', compare, basis })}` : '#'}
                                 onClick={(e) => {
                                     if (!auth.planPermissions?.['reports.export.full']) {
                                         e.preventDefault();
@@ -190,6 +226,11 @@ export default function ProfitAndLoss({
                                                         <span className="font-mono text-ink text-xs group-hover:text-terracotta">{acc.code}</span>
                                                         <span className="block font-medium text-ink group-hover:text-terracotta">{acc.name}</span>
                                                     </Link>
+                                                    {basis === 'accrual' && (
+                                                        <Link href={sourcesUrl(acc.code)} className="text-[10px] text-terracotta hover:underline mt-1 inline-block">
+                                                            Source documents
+                                                        </Link>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 text-right font-mono tabular-nums text-forest font-semibold">
                                                     RM {formatMoney(acc.amount)}
@@ -249,6 +290,11 @@ export default function ProfitAndLoss({
                                                         <span className="font-mono text-ink text-xs group-hover:text-terracotta">{acc.code}</span>
                                                         <span className="block font-medium text-ink group-hover:text-terracotta">{acc.name}</span>
                                                     </Link>
+                                                    {basis === 'accrual' && (
+                                                        <Link href={sourcesUrl(acc.code)} className="text-[10px] text-terracotta hover:underline mt-1 inline-block">
+                                                            Source documents
+                                                        </Link>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 text-right font-mono tabular-nums text-terracotta font-semibold">
                                                     RM {formatMoney(acc.amount)}

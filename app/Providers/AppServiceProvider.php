@@ -2,10 +2,15 @@
 
 namespace App\Providers;
 
+use App\Listeners\NotifyFailedJob;
+use App\Listeners\SetSentryTenantContext;
 use App\Models\FirmClient;
 use App\Support\FirmActingPermissions;
+use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
+use Stancl\Tenancy\Events\TenancyInitialized;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -89,6 +94,13 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->configureRateLimiting();
+        $this->configureObservability();
+    }
+
+    protected function configureObservability(): void
+    {
+        Event::listen(TenancyInitialized::class, SetSentryTenantContext::class);
+        Event::listen(JobFailed::class, NotifyFailedJob::class);
     }
 
     /**

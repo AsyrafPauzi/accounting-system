@@ -65,7 +65,7 @@ class BankReconciliationController extends Controller
 
         $validated = $request->validate([
             'account_id' => 'required|exists:accounts,id',
-            'file' => 'required|file|mimes:csv,txt|max:5120',
+            'file' => 'required|file|mimes:csv,txt,pdf|max:5120',
             'opening_balance' => 'nullable|numeric',
             'closing_balance' => 'nullable|numeric',
         ]);
@@ -76,15 +76,28 @@ class BankReconciliationController extends Controller
             ->firstOrFail();
 
         $path = $request->file('file')->store('bank-statements', UploadDisk::name());
-        $contents = UploadDisk::disk()->get($path);
+        $disk = UploadDisk::disk();
+        $extension = strtolower($request->file('file')->getClientOriginalExtension());
 
-        $result = $importService->importFromCsv(
-            $contents,
-            $account,
-            $path,
-            isset($validated['opening_balance']) ? (float) $validated['opening_balance'] : null,
-            isset($validated['closing_balance']) ? (float) $validated['closing_balance'] : null,
-        );
+        if ($extension === 'pdf') {
+            $absolute = $disk->path($path);
+            $result = $importService->importFromPdf(
+                $absolute,
+                $account,
+                $path,
+                isset($validated['opening_balance']) ? (float) $validated['opening_balance'] : null,
+                isset($validated['closing_balance']) ? (float) $validated['closing_balance'] : null,
+            );
+        } else {
+            $contents = $disk->get($path);
+            $result = $importService->importFromCsv(
+                $contents,
+                $account,
+                $path,
+                isset($validated['opening_balance']) ? (float) $validated['opening_balance'] : null,
+                isset($validated['closing_balance']) ? (float) $validated['closing_balance'] : null,
+            );
+        }
 
         return redirect()
             ->route('bank-rec.match', $result['statement'])
