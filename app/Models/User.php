@@ -51,6 +51,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'deletion_requested_at',
         'welcomed_at',
         'verify_reminder_at',
+        'onboarding_steps',
     ];
 
     /**
@@ -82,6 +83,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'deletion_requested_at'  => 'datetime',
             'welcomed_at'            => 'datetime',
             'verify_reminder_at'     => 'datetime',
+            'onboarding_steps'       => 'array',
             'password'               => 'hashed',
             'is_active'              => 'boolean',
         ];

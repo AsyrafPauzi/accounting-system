@@ -34,10 +34,10 @@ class InvoicePayNowService
         };
     }
 
-    public function paymentUrl(Invoice $invoice): ?string
+    public function paymentUrl(Invoice $invoice, ?Tenant $tenant = null): ?string
     {
         $invoice->loadMissing('customer');
-        $tenant = tenant();
+        $tenant ??= function_exists('tenant') ? tenant() : null;
         if (! $this->isConfigured($tenant)) {
             return null;
         }

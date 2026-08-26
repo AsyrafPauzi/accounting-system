@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Mail\CustomerStatementEmail;
 use App\Models\Customer;
-use App\Models\Invoice;
 use App\Models\Tenant;
 use App\Services\CustomerStatementService;
 use App\Support\IndexFilters;
@@ -12,14 +11,16 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class CustomerStatementController extends Controller
 {
-    public function __construct(private CustomerStatementService $statements) {}
+    public function __construct(
+        private CustomerStatementService $statements,
+        private \App\Services\InvoiceService $invoiceService,
+    ) {}
 
     /**
      * Customer picker page. Shows the directory with current outstanding so
@@ -32,32 +33,33 @@ class CustomerStatementController extends Controller
         $filters = IndexFilters::from($request, 10);
         $search = $filters['search'];
         $status = $filters['status'];
-        $openInvoice = fn ($q) => $q->whereNotIn('status', ['draft', 'void'])
-            ->whereColumn('amount_paid', '<', 'total_amount');
+        $byCustomer = $this->invoiceService->outstandingByCustomer();
+        $countsByCustomer = $this->invoiceService->openInvoiceCountByCustomer();
+        $outstandingCustomerIds = array_keys(array_filter($byCustomer, fn ($amount) => $amount > 0));
 
         $customers = Customer::query()
             ->select(['id', 'name', 'email', 'tin'])
-            ->withCount(['invoices as outstanding_invoices_count' => $openInvoice])
-            ->withSum(['invoices as outstanding_amount' => function ($q) {
-                $q->whereNotIn('status', ['draft', 'void']);
-            }], DB::raw('total_amount - amount_paid'))
             ->when($search !== '', fn ($q) => $q->where(function ($qq) use ($search) {
                 $qq->where('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
                     ->orWhere('tin', 'like', "%{$search}%");
             }))
-            ->when($status === 'outstanding', fn ($q) => $q->whereHas('invoices', $openInvoice))
-            ->when($status === 'settled', fn ($q) => $q->whereDoesntHave('invoices', $openInvoice))
+            ->when($status === 'outstanding', fn ($q) => $q->whereIn('id', $outstandingCustomerIds ?: [-1]))
+            ->when($status === 'settled', fn ($q) => $q->whereNotIn('id', $outstandingCustomerIds ?: [-1]))
             ->orderBy('name')
             ->paginate($filters['per_page'])
             ->withQueryString();
 
+        $customers->getCollection()->transform(function ($customer) use ($byCustomer, $countsByCustomer) {
+            $customer->outstanding_amount = $byCustomer[$customer->id] ?? 0.0;
+            $customer->outstanding_invoices_count = $countsByCustomer[$customer->id] ?? 0;
+
+            return $customer;
+        });
+
         $totalCount = Customer::count();
-        $outstandingCount = Customer::whereHas('invoices', $openInvoice)->count();
-        $outstandingTotal = (float) Invoice::query()
-            ->whereNotIn('status', ['draft', 'void'])
-            ->selectRaw('COALESCE(SUM(total_amount - amount_paid), 0) as t')
-            ->value('t');
+        $outstandingCount = count($outstandingCustomerIds);
+        $outstandingTotal = round(array_sum($byCustomer), 2);
 
         return Inertia::render('CustomerStatements/Index', [
             'customers' => $customers,
@@ -66,7 +68,7 @@ class CustomerStatementController extends Controller
             'totalCount' => $totalCount,
             'outstandingCount' => $outstandingCount,
             'settledCount' => $totalCount - $outstandingCount,
-            'outstandingTotal' => round($outstandingTotal, 2),
+            'outstandingTotal' => $outstandingTotal,
         ]);
     }
 

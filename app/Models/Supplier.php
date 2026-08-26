@@ -7,7 +7,6 @@ use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\DB;
 
 class Supplier extends Model
 {
@@ -31,12 +30,12 @@ class Supplier extends Model
     }
 
     /**
-     * Sum of (total_amount - amount_paid) for non-draft, non-void bills.
+     * Sum of open AP after payments, supplier credits, and deposits.
      */
     public function getBalanceAttribute(): float
     {
-        return (float) $this->bills()
-            ->whereNotIn('status', ['draft', 'void'])
-            ->sum(DB::raw('total_amount - amount_paid'));
+        return app(\App\Services\BillService::class)->sumOutstanding(
+            $this->bills()->whereNotIn('status', ['draft', 'void'])
+        );
     }
 }

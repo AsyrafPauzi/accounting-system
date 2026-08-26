@@ -4,7 +4,9 @@ namespace App\Services\Practice;
 
 use App\Models\Firm;
 use App\Models\FirmClient;
+use App\Models\Invoice;
 use App\Models\Tenant;
+use App\Services\InvoiceService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -135,18 +137,22 @@ class PracticeMetricsService
 
             $today = Carbon::now()->toDateString();
 
+            $invoiceService = app(InvoiceService::class);
+
             $headline = [
                 'revenue_mtd'      => (float) DB::table('invoices')
                     ->where('status', 'paid')
                     ->where('issue_date', '>=', $monthStart->toDateString())
                     ->sum('total_amount'),
-                'ar_outstanding'   => (float) DB::table('invoices')
-                    ->whereNotIn('status', ['paid', 'void', 'draft'])
-                    ->sum(DB::raw('total_amount - coalesce(amount_paid, 0)')),
-                'overdue_count'    => DB::table('invoices')
+                'ar_outstanding'   => $invoiceService->sumOutstanding(
+                    Invoice::query()->whereNotIn('status', ['paid', 'void', 'draft'])
+                ),
+                'overdue_count'    => Invoice::query()
                     ->whereNotIn('status', ['paid', 'void', 'draft'])
                     ->whereNotNull('due_date')
                     ->where('due_date', '<', $today)
+                    ->get()
+                    ->filter(fn (Invoice $invoice) => $invoiceService->remainingBalance($invoice) > 0)
                     ->count(),
                 'last_activity_at' => DB::table('invoices')->max('created_at')
                     ?: (Schema::hasTable('bills') ? DB::table('bills')->max('created_at') : null),
@@ -193,8 +199,9 @@ class PracticeMetricsService
 
         // Pull each unpaid line and bucket in PHP — the math is small,
         // and it sidesteps SQLite vs MySQL date-diff dialect noise.
-        $rows = DB::table('invoices')
-            ->select('total_amount', 'amount_paid', 'due_date')
+        $invoiceService = app(InvoiceService::class);
+        $rows = Invoice::query()
+            ->select('id', 'total_amount', 'amount_paid', 'due_date', 'status')
             ->whereNotIn('status', ['paid', 'void', 'draft'])
             ->whereNotNull('due_date')
             ->get();
@@ -202,7 +209,7 @@ class PracticeMetricsService
         $todayCarbon = Carbon::parse($today);
 
         foreach ($rows as $row) {
-            $balance = (float) $row->total_amount - (float) ($row->amount_paid ?? 0);
+            $balance = $invoiceService->remainingBalance($row);
             if ($balance <= 0) {
                 continue;
             }

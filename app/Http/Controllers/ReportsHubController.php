@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Tenant;
+use App\Models\Invoice;
 use App\Support\CashMovement;
 use App\Support\Deployment;
 use App\Support\ReportPeriod;
@@ -13,6 +14,8 @@ use Inertia\Response;
 
 class ReportsHubController extends Controller
 {
+    public function __construct(private \App\Services\InvoiceService $invoiceService) {}
+
     /**
      * Reports hub: single entry point for all financial reports.
      */
@@ -75,17 +78,18 @@ class ReportsHubController extends Controller
         }
 
         if ($this->hasReportAccess($request, 'reports.aged-reports')) {
-            $overdue = DB::table('invoices')
+            $overdueInvoices = Invoice::query()
                 ->whereIn('status', ['unpaid', 'partially paid'])
                 ->whereDate('due_date', '<', $today)
                 ->whereNull('deleted_at')
-                ->select(['total_amount', 'amount_paid'])
-                ->get()
-                ->map(fn ($invoice) => (float) $invoice->total_amount - (float) $invoice->amount_paid)
+                ->get();
+
+            $overdueBalances = $overdueInvoices
+                ->map(fn (Invoice $invoice) => $this->invoiceService->remainingBalance($invoice))
                 ->filter(fn ($balance) => $balance > 0);
 
-            $snapshot['overdue_ar_amount'] = round($overdue->sum(), 2);
-            $snapshot['overdue_ar_count'] = $overdue->count();
+            $snapshot['overdue_ar_amount'] = round($overdueBalances->sum(), 2);
+            $snapshot['overdue_ar_count'] = $overdueBalances->count();
         }
 
         if ($this->hasReportAccess($request, 'journal.view')) {

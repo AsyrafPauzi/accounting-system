@@ -89,6 +89,14 @@ export default function Company({ auth, company, canEdit = false }) {
                             Team & Roles →
                         </Link>
                     )}
+                    {isAdmin && (
+                        <Link
+                            href={route('settings.document-numbers.edit')}
+                            className="text-sm font-semibold text-terracotta hover:text-terracotta whitespace-nowrap"
+                        >
+                            Document numbering →
+                        </Link>
+                    )}
                 </div>
             }
         >

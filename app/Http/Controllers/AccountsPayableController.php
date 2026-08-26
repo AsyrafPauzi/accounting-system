@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Account;
 use App\Models\Bill;
+use App\Services\BillService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class AccountsPayableController extends Controller
 {
+    public function __construct(private BillService $billService) {}
+
     /**
      * AP dashboard: unpaid/partially paid bills with aging and totals.
      */
@@ -33,7 +36,7 @@ class AccountsPayableController extends Controller
         $overdueCount = 0;
 
         foreach ($bills as $bill) {
-            $balanceDue = (float) $bill->total_amount - (float) $bill->amount_paid;
+            $balanceDue = $this->billService->remainingBalance($bill);
             if ($balanceDue <= 0) {
                 continue;
             }

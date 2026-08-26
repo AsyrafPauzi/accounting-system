@@ -4,23 +4,25 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSupplierRequest;
 use App\Http\Requests\UpdateSupplierRequest;
-use App\Models\Bill;
 use App\Models\Supplier;
+use App\Services\BillService;
 use App\Services\MyInvoisService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
 
 class SupplierController extends Controller
 {
+    public function __construct(private BillService $billService) {}
+
     public function index(): Response
     {
-        $suppliers = Supplier::orderBy('name')->get()->map(function (Supplier $supplier) {
-            $supplier->balance = (float) Bill::where('supplier_id', $supplier->id)
-                ->whereNotIn('status', ['draft', 'void'])
-                ->sum(DB::raw('total_amount - amount_paid'));
+        $outstandingBySupplier = $this->billService->outstandingBySupplier();
+
+        $suppliers = Supplier::orderBy('name')->get()->map(function (Supplier $supplier) use ($outstandingBySupplier) {
+            $supplier->balance = $outstandingBySupplier[$supplier->id] ?? 0.0;
+
             return $supplier;
         });
 

@@ -472,7 +472,7 @@ class PlanSeeder extends Seeder
         // PlanCap::guardCustomers / guardBankAccounts in the controllers,
         // not by Spatie permissions.
         $startup->syncPermissions([
-            'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.delete', 'invoices.post', 'invoices.void',
+            'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.delete', 'invoices.post', 'invoices.void', 'invoices.record-payment',
             'customers.view', 'customers.create', 'customers.edit', 'customers.delete',
             'accounts.view', // they need to see their seeded COA / bank account
             'settings.view', 'settings.edit', 'dashboard.basic',

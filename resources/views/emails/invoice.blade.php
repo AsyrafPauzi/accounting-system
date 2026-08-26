@@ -34,13 +34,19 @@
             <!-- Summary Box -->
             <div style="background-color: #f8fafc; border-radius: 12px; padding: 25px; margin-bottom: 35px; border: 1px solid #e2e8f0; text-align: center;">
                 <span style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">Amount Due</span>
-                <span style="font-size: 28px; font-weight: 800; color: #000000;">{{ number_format($invoice->total_amount - $invoice->amount_paid, 2) }} {{ strtoupper($invoice->currency ?? 'MYR') }}</span>
+                <span style="font-size: 28px; font-weight: 800; color: #000000;">{{ number_format($invoice->balance_due, 2) }} {{ strtoupper($invoice->currency ?? 'MYR') }}</span>
             </div>
 
-            <!-- Button -->
+            <!-- Buttons -->
             <div style="text-align: center; margin-bottom: 40px;">
-                <a href="{{ $download_url }}" style="display: inline-block; background-color: #000000; color: #ffffff; padding: 16px 36px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 15px;">
-                    Download PDF Invoice
+                @if(!empty($view_pay_url))
+                <a href="{{ $view_pay_url }}" style="display: inline-block; background-color: #000000; color: #ffffff; padding: 16px 36px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 15px; margin-bottom: 12px;">
+                    View &amp; Pay Invoice
+                </a>
+                <br>
+                @endif
+                <a href="{{ $download_url }}" style="display: inline-block; background-color: #ffffff; color: #000000; padding: 14px 32px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 14px; border: 2px solid #000000;">
+                    Download PDF
                 </a>
             </div>
 

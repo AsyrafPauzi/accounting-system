@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Invoice;
 use App\Support\ReportPeriod;
+use App\Services\InvoiceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -24,6 +26,8 @@ use Inertia\Response;
  */
 class IncomeByCustomerController extends Controller
 {
+    public function __construct(private InvoiceService $invoiceService) {}
+
     public function index(Request $request): Response
     {
         $request->validate([
@@ -39,31 +43,40 @@ class IncomeByCustomerController extends Controller
         $start = $resolved['date_from'];
         $end = $resolved['date_to'];
 
-        $rows = DB::table('invoices as i')
-            ->leftJoin('customers as c', 'c.id', '=', 'i.customer_id')
-            ->select([
-                'i.customer_id',
-                'c.name as customer_name',
-                'c.email as customer_email',
-                DB::raw('SUM(i.total_amount) as total_invoiced'),
-                DB::raw('SUM(i.amount_paid) as total_paid'),
-                DB::raw('SUM(i.total_amount - i.amount_paid) as total_unpaid'),
-                DB::raw('COUNT(i.id) as invoice_count'),
-            ])
-            ->whereNotIn('i.status', ['draft', 'void'])
-            ->whereBetween('i.issue_date', [$start, $end])
-            ->whereNull('i.deleted_at')
-            ->groupBy('i.customer_id', 'c.name', 'c.email')
-            ->orderByDesc('total_invoiced')
-            ->get()
+        $grouped = [];
+        foreach (Invoice::with('customer:id,name,email')
+            ->whereNotIn('status', ['draft', 'void'])
+            ->whereBetween('issue_date', [$start, $end])
+            ->get() as $invoice) {
+            $customerId = $invoice->customer_id;
+            if (! isset($grouped[$customerId])) {
+                $grouped[$customerId] = [
+                    'customer_id'    => $customerId,
+                    'customer_name'  => $invoice->customer?->name ?? '— Deleted customer —',
+                    'customer_email' => $invoice->customer?->email,
+                    'total_invoiced' => 0.0,
+                    'total_paid'     => 0.0,
+                    'total_unpaid'   => 0.0,
+                    'invoice_count'  => 0,
+                ];
+            }
+            $grouped[$customerId]['total_invoiced'] += (float) $invoice->total_amount;
+            $grouped[$customerId]['total_paid'] += (float) $invoice->amount_paid;
+            $grouped[$customerId]['total_unpaid'] += max(0, $this->invoiceService->remainingBalance($invoice));
+            $grouped[$customerId]['invoice_count']++;
+        }
+
+        $rows = collect($grouped)
+            ->sortByDesc('total_invoiced')
+            ->values()
             ->map(fn ($r) => [
-                'customer_id'    => $r->customer_id,
-                'customer_name'  => $r->customer_name ?? '— Deleted customer —',
-                'customer_email' => $r->customer_email,
-                'total_invoiced' => round((float) $r->total_invoiced, 2),
-                'total_paid'     => round((float) $r->total_paid, 2),
-                'total_unpaid'   => round((float) $r->total_unpaid, 2),
-                'invoice_count'  => (int) $r->invoice_count,
+                'customer_id'    => $r['customer_id'],
+                'customer_name'  => $r['customer_name'],
+                'customer_email' => $r['customer_email'],
+                'total_invoiced' => round($r['total_invoiced'], 2),
+                'total_paid'     => round($r['total_paid'], 2),
+                'total_unpaid'   => round($r['total_unpaid'], 2),
+                'invoice_count'  => (int) $r['invoice_count'],
             ])
             ->all();
 

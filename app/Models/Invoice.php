@@ -102,4 +102,13 @@ class Invoice extends Model
     {
         return $this->hasMany(CreditNoteApplication::class);
     }
+
+    public function getBalanceDueAttribute(): float
+    {
+        if (in_array($this->status, ['draft', 'void'], true)) {
+            return 0.0;
+        }
+
+        return app(\App\Services\InvoiceService::class)->remainingBalance($this);
+    }
 }

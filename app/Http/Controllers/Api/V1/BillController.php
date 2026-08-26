@@ -47,7 +47,7 @@ class BillController extends Controller
                 'currency'        => $bill->currency,
                 'total_amount'    => (float) $bill->total_amount,
                 'amount_paid'     => (float) $bill->amount_paid,
-                'balance_due'     => round((float) $bill->total_amount - (float) $bill->amount_paid, 2),
+                'balance_due'     => $bill->balance_due,
                 'supplier' => $bill->supplier ? [
                     'id'    => $bill->supplier->id,
                     'name'  => $bill->supplier->name,

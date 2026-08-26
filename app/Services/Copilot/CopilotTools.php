@@ -225,7 +225,7 @@ class CopilotTools
         ];
 
         foreach ($invoices as $invoice) {
-            $balance = (float) $invoice->total_amount - (float) $invoice->amount_paid;
+            $balance = $this->invoices->remainingBalance($invoice);
             if ($balance <= 0) {
                 continue;
             }

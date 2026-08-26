@@ -2,56 +2,58 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Bill;
 use App\Models\Supplier;
 use App\Services\BillService;
 use App\Services\SupplierStatementService;
 use App\Support\IndexFilters;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class SupplierStatementController extends Controller
 {
-    public function __construct(private SupplierStatementService $statements) {}
+    public function __construct(
+        private SupplierStatementService $statements,
+        private BillService $billService,
+    ) {}
 
     public function index(Request $request)
     {
         $filters = IndexFilters::from($request, 10);
         $search = $filters['search'];
         $status = $filters['status'];
-        $openBill = fn ($q) => $q->whereNotIn('status', ['draft', 'void'])
-            ->whereColumn('amount_paid', '<', 'total_amount');
+        $bySupplier = $this->billService->outstandingBySupplier();
+        $countsBySupplier = $this->billService->openBillCountBySupplier();
+        $outstandingSupplierIds = array_keys(array_filter($bySupplier, fn ($amount) => $amount > 0));
 
         $suppliers = Supplier::query()
             ->select(['id', 'name', 'email', 'tin'])
-            ->withCount(['bills as outstanding_bills_count' => $openBill])
-            ->withSum(['bills as outstanding_amount' => function ($q) {
-                $q->whereNotIn('status', ['draft', 'void']);
-            }], DB::raw('total_amount - amount_paid'))
             ->when($search !== '', fn ($q) => $q->where(function ($qq) use ($search) {
                 $qq->where('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
                     ->orWhere('tin', 'like', "%{$search}%");
             }))
-            ->when($status === 'outstanding', fn ($q) => $q->whereHas('bills', $openBill))
-            ->when($status === 'settled', fn ($q) => $q->whereDoesntHave('bills', $openBill))
+            ->when($status === 'outstanding', fn ($q) => $q->whereIn('id', $outstandingSupplierIds ?: [-1]))
+            ->when($status === 'settled', fn ($q) => $q->whereNotIn('id', $outstandingSupplierIds ?: [-1]))
             ->orderBy('name')
             ->paginate($filters['per_page'])
             ->withQueryString();
 
+        $suppliers->getCollection()->transform(function ($supplier) use ($bySupplier, $countsBySupplier) {
+            $supplier->outstanding_amount = $bySupplier[$supplier->id] ?? 0.0;
+            $supplier->outstanding_bills_count = $countsBySupplier[$supplier->id] ?? 0;
+
+            return $supplier;
+        });
+
         $totalCount = Supplier::count();
-        $outstandingCount = Supplier::whereHas('bills', $openBill)->count();
-        $outstandingTotal = (float) Bill::query()
-            ->whereNotIn('status', ['draft', 'void'])
-            ->selectRaw('COALESCE(SUM(total_amount - amount_paid), 0) as t')
-            ->value('t');
+        $outstandingCount = count($outstandingSupplierIds);
+        $outstandingTotal = round(array_sum($bySupplier), 2);
 
         return Inertia::render('SupplierStatements/Index', [
             'suppliers' => $suppliers,
             'filters' => $filters,
-            'base_currency' => 'MYR',
+            'base_currency' => $this->tenantBaseCurrency(),
             'totalCount' => $totalCount,
             'outstandingCount' => $outstandingCount,
             'settledCount' => $totalCount - $outstandingCount,
@@ -71,5 +73,14 @@ class SupplierStatementController extends Controller
             'statement' => $statement,
             'openBills' => app(BillService::class)->openBillsForSupplier($supplier->id),
         ]);
+    }
+
+    private function tenantBaseCurrency(): string
+    {
+        if (function_exists('tenant') && tenant()) {
+            return strtoupper((string) (tenant()->base_currency ?? 'MYR'));
+        }
+
+        return 'MYR';
     }
 }

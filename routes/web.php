@@ -36,6 +36,14 @@ Route::get('/', function () {
 Route::get('/privacy', [\App\Http\Controllers\PrivacyController::class, 'show'])
     ->name('privacy.show');
 
+Route::get('/pay/invoice/{uuid}', [\App\Http\Controllers\PublicInvoiceController::class, 'show'])
+    ->name('public.invoices.show')
+    ->middleware('signed');
+
+Route::get('/pay/invoice/{uuid}/pay', [\App\Http\Controllers\PublicInvoiceController::class, 'pay'])
+    ->name('public.invoices.pay')
+    ->middleware('signed');
+
 Route::get('/public/invoices/{uuid}/download', [InvoiceController::class, 'publicDownloadPdf'])
     ->name('public.invoices.download')
     ->middleware('signed');
@@ -176,6 +184,8 @@ Route::middleware(['auth'])->group(function () {
     // welcomed_at = now() so the modal never shows again.
     Route::post('/onboarding/dismiss', [\App\Http\Controllers\WelcomeTourController::class, 'dismiss'])
         ->name('onboarding.dismiss');
+    Route::post('/onboarding/checklist/dismiss', [\App\Http\Controllers\WelcomeTourController::class, 'dismissChecklist'])
+        ->name('onboarding.checklist.dismiss');
 
     // Verify-email reminder dismissal. Stamps verify_reminder_at = now()
     // so the modal cools down for 2 days. Deliberately auth-only (not
@@ -221,6 +231,8 @@ Route::middleware(['auth'])->group(function () {
     // Company settings (tenant-level)
     Route::get('/settings/company', [CompanySettingsController::class, 'edit'])->name('settings.company');
     Route::patch('/settings/company', [CompanySettingsController::class, 'update'])->name('settings.company.update');
+    Route::get('/settings/document-numbers', [\App\Http\Controllers\DocumentNumberSettingsController::class, 'edit'])->name('settings.document-numbers.edit');
+    Route::patch('/settings/document-numbers', [\App\Http\Controllers\DocumentNumberSettingsController::class, 'update'])->name('settings.document-numbers.update');
     Route::post('/settings/company/myinvois-test', [CompanySettingsController::class, 'testMyInvois'])->name('settings.company.myinvois-test');
     Route::get('/settings/plan', [SubscriptionController::class, 'planSettings'])->name('settings.plan.index');
     Route::post('/settings/plan/copilot-credits', [SubscriptionController::class, 'buyCopilotCredits'])

@@ -39,22 +39,25 @@ class InvoiceEmail extends Mailable
             ':company' => $company['name'] ?? config('app.name'),
         ]);
 
+        $tenantId = function_exists('tenant') && tenant() ? tenant('id') : auth()->user()?->tenant_id;
+        $signedParams = ['uuid' => $invoice->uuid, 'tenant_id' => $tenantId];
+
+        $viewPayUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'public.invoices.show',
+            now()->addDays(30),
+            $signedParams
+        );
+
         $downloadUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
             'public.invoices.download',
             now()->addDays(30),
-            [
-                'uuid' => $invoice->uuid,
-                'tenant_id' => function_exists('tenant') && tenant() ? tenant('id') : auth()->user()?->tenant_id,
-            ]
+            $signedParams
         );
 
         $pixelUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
             'public.invoices.pixel',
             now()->addDays(30),
-            [
-                'uuid' => $invoice->uuid,
-                'tenant_id' => function_exists('tenant') && tenant() ? tenant('id') : auth()->user()?->tenant_id,
-            ]
+            $signedParams
         );
 
         return $this->from(config('mail.from.address'), $company['name'] ?? config('app.name'))
@@ -63,6 +66,7 @@ class InvoiceEmail extends Mailable
                 'invoice' => $invoice,
                 'customer' => $customer,
                 'company' => $company,
+                'view_pay_url' => $viewPayUrl,
                 'download_url' => $downloadUrl,
                 'pixel_url' => $pixelUrl,
             ]);

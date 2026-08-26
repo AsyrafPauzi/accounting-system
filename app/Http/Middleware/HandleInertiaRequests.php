@@ -283,6 +283,13 @@ class HandleInertiaRequests extends Middleware
             'company_flags' => [
                 'show_goods_flow' => ! $tenant || $tenant->show_goods_flow !== false,
             ],
+            'onboarding_checklist' => function () use ($user, $tenant) {
+                if (! $user || ! $tenant || $user->isFirmUser()) {
+                    return null;
+                }
+
+                return \App\Support\OnboardingChecklist::forUser($user, $tenant);
+            },
         ];
     }
 

@@ -45,6 +45,64 @@ class BillService
     }
 
     /**
+     * Sum open balances for bills matching the query.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Eloquent\Relations\Relation|null  $query
+     */
+    public function sumOutstanding(
+        \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Eloquent\Relations\Relation|null $query = null
+    ): float {
+        if ($query instanceof \Illuminate\Database\Eloquent\Relations\Relation) {
+            $bills = $query->get();
+        } else {
+            $query ??= Bill::query()->whereNotIn('status', ['draft', 'void']);
+            $bills = $query->get();
+        }
+        $total = 0.0;
+        foreach ($bills as $bill) {
+            $balance = $this->remainingBalance($bill);
+            if ($balance > 0) {
+                $total += $balance;
+            }
+        }
+
+        return round($total, 2);
+    }
+
+    /**
+     * @return array<int, float> supplier_id => outstanding
+     */
+    public function outstandingBySupplier(?\Illuminate\Database\Eloquent\Builder $query = null): array
+    {
+        $query ??= Bill::query()->whereNotIn('status', ['draft', 'void']);
+        $map = [];
+        foreach ($query->get() as $bill) {
+            $balance = max(0, $this->remainingBalance($bill));
+            if ($balance > 0 && $bill->supplier_id) {
+                $map[$bill->supplier_id] = ($map[$bill->supplier_id] ?? 0) + $balance;
+            }
+        }
+
+        return array_map(fn ($v) => round($v, 2), $map);
+    }
+
+    /**
+     * @return array<int, int> supplier_id => open bill count
+     */
+    public function openBillCountBySupplier(?\Illuminate\Database\Eloquent\Builder $query = null): array
+    {
+        $query ??= Bill::query()->whereNotIn('status', ['draft', 'void']);
+        $map = [];
+        foreach ($query->get() as $bill) {
+            if ($this->remainingBalance($bill) > 0 && $bill->supplier_id) {
+                $map[$bill->supplier_id] = ($map[$bill->supplier_id] ?? 0) + 1;
+            }
+        }
+
+        return $map;
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     public function openBillsForSupplier(int $supplierId): array
@@ -202,6 +260,9 @@ class BillService
 
         DB::transaction(function () use ($bill) {
             $bill->load('items');
+            \App\Support\AccountingPeriodResolver::assertOpenForDate(
+                Carbon::parse($bill->bill_date)->toDateString()
+            );
 
             $lines = [];
             foreach ($bill->items as $item) {
@@ -213,7 +274,7 @@ class BillService
             }
             if ($bill->tax_amount > 0) {
                 $lines[] = [
-                    'account_code' => '2100',
+                    'account_code' => '1110',
                     'debit'        => (float) $bill->tax_amount,
                     'credit'       => 0,
                 ];
@@ -260,6 +321,7 @@ class BillService
         }
 
         return DB::transaction(function () use ($bill, $amount, $paymentDate, $bankAccountCode, $reference, $createdBy) {
+            \App\Support\AccountingPeriodResolver::assertOpenForDate($paymentDate);
             $apply = round(min($amount, $this->remainingBalance($bill)), 2);
             if ($apply <= 0) {
                 throw new \LogicException('Nothing left to pay on this bill.');

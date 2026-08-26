@@ -2,6 +2,136 @@
     "_meta": {
         "language_code": "ms",
         "language_name": "Bahasa Malaysia",
-        "_note": "BukuCloud — Bahasa Malaysia. Translation pass scheduled for Phase 7. Until then, missing keys fall back to en.json automatically."
+        "_note": "Wave 2 partial translation — nav, dashboard, invoices, bills. Missing keys fall back to en.json."
+    },
+
+    "navigation": {
+        "groups": {
+            "main": "Utama",
+            "sales": "Jualan (Hasil)",
+            "purchases": "Belian (Perbelanjaan)",
+            "accounting": "Perakaunan",
+            "reports": "Laporan",
+            "admin": "Pentadbir",
+            "company": "Syarikat"
+        },
+        "links": {
+            "dashboard": "Papan Pemuka",
+            "invoices": "Invois",
+            "credit_notes": "Nota Kredit",
+            "customers": "Pelanggan",
+            "suppliers": "Pembekal",
+            "bills": "Bil / Belian",
+            "accounts_payable": "Akaun Belum Bayar",
+            "chart_of_accounts": "Carta Akaun",
+            "general_ledger": "Lejar Am",
+            "manual_journal": "Entri Jurnal Manual",
+            "trial_balance": "Imbangan Duga",
+            "reports": "Laporan",
+            "tenants": "Penyewa",
+            "plan_catalog": "Katalog Pelan",
+            "platform_users": "Pengguna Platform",
+            "audit_log": "Log Audit",
+            "company_settings": "Tetapan syarikat",
+            "audit_compliance": "Audit & Pematuhan",
+            "team_roles": "Pasukan & Peranan",
+            "audit_logs": "Log Audit",
+            "plan_usage": "Pelan & Penggunaan",
+            "settings": "Tetapan",
+            "logout": "Log keluar"
+        },
+        "free_tier_banner": "Anda menggunakan pelan Percuma."
+    },
+
+    "dashboard": {
+        "eyebrow": "Papan Pemuka",
+        "welcome": "Selamat kembali, :name.",
+        "subtitle_basic": "Buku anda sepintas lalu.",
+        "subtitle_full": "Buku hari ini, keputusan hari ini.",
+        "kpi": {
+            "receivables": "Belum terima",
+            "payables": "Belum bayar",
+            "this_month": "Bulan ini",
+            "collection_rate": "Kadar kutipan",
+            "to_collect": "Perlu kutip",
+            "to_pay": "Perlu bayar",
+            "overdue": ":count lewat tempoh",
+            "sales_minus_expenses": "Jualan − perbelanjaan",
+            "invoiced_collected": "Invois → terkutip"
+        },
+        "sections": {
+            "revenue_analysis": "Analisis hasil",
+            "payables_analysis": "Analisis belum bayar",
+            "compliance_status": "Status pematuhan"
+        },
+        "labels": {
+            "invoiced": "Diinvois",
+            "collected": "Terkutip",
+            "outstanding": "Belum selesai",
+            "overdue": "Lewat tempoh",
+            "suppliers": "Pembekal",
+            "active_count": ":count aktif",
+            "unpaid_bills": "Bil belum bayar",
+            "total_items": "Jumlah item",
+            "verified": "Disahkan",
+            "unaudited": "Belum diaudit",
+            "flagged": "Dibenderakan"
+        },
+        "links": {
+            "invoices": "Invois",
+            "bills": "Bil",
+            "review": "Semak",
+            "aged_receivables": "Belum terima mengikut usia",
+            "accounts_payable": "Akaun belum bayar",
+            "cashflow": "Aliran tunai",
+            "cashflow_desc": "Jualan vs perbelanjaan",
+            "reports_hub": "Hab laporan",
+            "reports_hub_desc": "Untung & rugi, jualan & lagi",
+            "credit_notes": "Nota kredit",
+            "credit_notes_desc": ":count dikeluarkan",
+            "audit_logs": "Log audit",
+            "audit_logs_desc": "Jejak setiap perubahan"
+        }
+    },
+
+    "invoices": {
+        "title": "Invois",
+        "new": "Invois baharu",
+        "balance_due": "Baki perlu bayar",
+        "status": {
+            "draft": "Draf",
+            "unpaid": "Belum bayar",
+            "partially_paid": "Separa bayar",
+            "paid": "Dibayar",
+            "void": "Batal"
+        }
+    },
+
+    "bills": {
+        "title": "Bil / Belian",
+        "new": "Bil baharu",
+        "balance_due": "Baki perlu bayar",
+        "status": {
+            "draft": "Draf",
+            "unpaid": "Belum bayar",
+            "partially_paid": "Separa bayar",
+            "paid": "Dibayar",
+            "void": "Batal"
+        }
+    },
+
+    "common": {
+        "actions": {
+            "save": "Simpan",
+            "cancel": "Batal",
+            "edit": "Edit",
+            "delete": "Padam",
+            "create": "Cipta",
+            "back": "Kembali",
+            "view": "Lihat",
+            "download": "Muat turun",
+            "send": "Hantar",
+            "record_payment": "Rekod bayaran"
+        }
     }
 }

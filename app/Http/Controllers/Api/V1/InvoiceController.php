@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
+use App\Services\InvoiceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -19,6 +20,8 @@ use Illuminate\Http\Request;
  */
 class InvoiceController extends Controller
 {
+    public function __construct(private InvoiceService $invoiceService) {}
+
     public function index(Request $request): JsonResponse
     {
         $request->validate([
@@ -52,7 +55,7 @@ class InvoiceController extends Controller
                 'tax_amount'         => (float) $inv->tax_amount,
                 'total_amount'       => (float) $inv->total_amount,
                 'amount_paid'        => (float) $inv->amount_paid,
-                'balance_due'        => round((float) $inv->total_amount - (float) $inv->amount_paid, 2),
+                'balance_due'        => $this->invoiceService->remainingBalance($inv),
                 'customer' => $inv->customer ? [
                     'id'    => $inv->customer->id,
                     'name'  => $inv->customer->name,

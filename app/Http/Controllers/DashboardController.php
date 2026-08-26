@@ -7,6 +7,8 @@ use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Supplier;
 use App\Models\Tenant;
+use App\Services\BillService;
+use App\Services\InvoiceService;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +29,11 @@ use Inertia\Inertia;
  */
 class DashboardController extends Controller
 {
+    public function __construct(
+        private InvoiceService $invoiceService,
+        private BillService $billService,
+    ) {}
+
     public function index()
     {
         // Defence-in-depth for firm (Practice) users:
@@ -72,16 +79,18 @@ class DashboardController extends Controller
             SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) as paid_count,
             SUM(CASE WHEN status = 'void' THEN 1 ELSE 0 END) as void_count,
             SUM(CASE WHEN status NOT IN ('draft','void') THEN total_amount ELSE 0 END) as total_invoiced,
-            SUM(amount_paid) as total_collected,
-            SUM(CASE WHEN status NOT IN ('draft','void') THEN (total_amount - amount_paid) ELSE 0 END) as total_outstanding
+            SUM(amount_paid) as total_collected
         ")->first();
 
-        $totalCustomerOutstanding = (float) ($invoiceStats->total_outstanding ?? 0);
+        $totalCustomerOutstanding = $this->invoiceService->sumOutstanding(
+            Invoice::query()->whereNotIn('status', ['draft', 'void'])
+        );
 
         $overdueInvoicesCount = Invoice::whereIn('status', ['unpaid', 'partially paid'])
             ->whereNotNull('due_date')
             ->where('due_date', '<', $today)
-            ->whereRaw('(total_amount - amount_paid) > 0')
+            ->get()
+            ->filter(fn (Invoice $invoice) => $this->invoiceService->remainingBalance($invoice) > 0)
             ->count();
 
         $salesThisMonth = (float) Invoice::whereIn('status', ['unpaid', 'partially paid', 'paid'])
@@ -104,9 +113,13 @@ class DashboardController extends Controller
                 SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) as draft_count,
                 SUM(CASE WHEN status IN ('unpaid','partially paid') THEN 1 ELSE 0 END) as unpaid_count,
                 SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) as paid_count,
-                SUM(CASE WHEN status NOT IN ('draft','void') THEN total_amount ELSE 0 END) as total_billed,
-                SUM(CASE WHEN status NOT IN ('draft','void') THEN (total_amount - amount_paid) ELSE 0 END) as total_ap
+                SUM(CASE WHEN status NOT IN ('draft','void') THEN total_amount ELSE 0 END) as total_billed
             ")->first();
+
+            $totalAp = $this->billService->sumOutstanding(
+                Bill::query()->whereNotIn('status', ['draft', 'void'])
+            );
+            $billStats->total_ap = $totalAp;
 
             $expensesThisMonth = (float) Bill::whereIn('status', ['unpaid', 'partially paid', 'paid'])
                 ->whereBetween('bill_date', [$startOfMonth, $endOfMonth])
@@ -115,7 +128,8 @@ class DashboardController extends Controller
             $overdueBillsCount = Bill::whereIn('status', ['unpaid', 'partially paid'])
                 ->whereNotNull('due_date')
                 ->where('due_date', '<', $today)
-                ->whereRaw('(total_amount - amount_paid) > 0')
+                ->get()
+                ->filter(fn (Bill $bill) => $this->billService->remainingBalance($bill) > 0)
                 ->count();
         } else {
             $billStats = null;
@@ -443,15 +457,18 @@ class DashboardController extends Controller
         $query = $kind === 'receivables'
             ? Invoice::query()
                 ->whereIn('status', ['unpaid', 'partially paid'])
-                ->whereRaw('(total_amount - amount_paid) > 0')
-                ->select(['due_date', DB::raw('(total_amount - amount_paid) as balance')])
+                ->get(['id', 'due_date', 'total_amount', 'amount_paid', 'status'])
             : Bill::query()
                 ->whereIn('status', ['unpaid', 'partially paid'])
-                ->whereRaw('(total_amount - amount_paid) > 0')
-                ->select(['due_date', DB::raw('(total_amount - amount_paid) as balance')]);
+                ->get(['id', 'due_date', 'total_amount', 'amount_paid', 'status']);
 
-        foreach ($query->get() as $row) {
-            $bal = (float) $row->balance;
+        foreach ($query as $row) {
+            $bal = $kind === 'receivables'
+                ? $this->invoiceService->remainingBalance($row)
+                : $this->billService->remainingBalance($row);
+            if ($bal <= 0) {
+                continue;
+            }
             if (! $row->due_date) {
                 $buckets['coming_due'] += $bal;
                 continue;
@@ -479,12 +496,14 @@ class DashboardController extends Controller
             ->whereIn('status', ['unpaid', 'partially paid'])
             ->whereNotNull('due_date')
             ->where('due_date', '<', $today)
-            ->whereRaw('(total_amount - amount_paid) > 0')
             ->orderBy('due_date')
             ->limit(5)
             ->get(['id', 'invoice_number', 'customer_id', 'due_date', 'total_amount', 'amount_paid', 'currency'])
             ->map(function ($i) use ($today) {
-                $balance = (float) $i->total_amount - (float) $i->amount_paid;
+                $balance = $this->invoiceService->remainingBalance($i);
+                if ($balance <= 0) {
+                    return null;
+                }
                 $daysOverdue = (int) Carbon::parse($i->due_date)->startOfDay()->diffInDays($today, false);
                 return [
                     'id'             => $i->id,
@@ -496,6 +515,8 @@ class DashboardController extends Controller
                     'currency'       => $i->currency ?? 'MYR',
                 ];
             })
+            ->filter()
+            ->values()
             ->all();
     }
 
@@ -545,12 +566,14 @@ class DashboardController extends Controller
             ->whereIn('status', ['unpaid', 'partially paid'])
             ->whereNotNull('due_date')
             ->where('due_date', '<', $today)
-            ->whereRaw('(total_amount - amount_paid) > 0')
             ->orderBy('due_date')
             ->limit(5)
             ->get(['id', 'bill_number', 'supplier_id', 'due_date', 'total_amount', 'amount_paid', 'currency'])
             ->map(function ($b) use ($today) {
-                $balance = (float) $b->total_amount - (float) $b->amount_paid;
+                $balance = $this->billService->remainingBalance($b);
+                if ($balance <= 0) {
+                    return null;
+                }
                 $daysOverdue = (int) Carbon::parse($b->due_date)->startOfDay()->diffInDays($today, false);
                 return [
                     'id'            => $b->id,
@@ -562,6 +585,8 @@ class DashboardController extends Controller
                     'currency'      => $b->currency ?? 'MYR',
                 ];
             })
+            ->filter()
+            ->values()
             ->all();
     }
 }

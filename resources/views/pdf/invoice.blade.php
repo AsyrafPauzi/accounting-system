@@ -295,7 +295,7 @@
                         <table class="balance-table">
                             <tr>
                                 <td class="balance-label">Balance Due</td>
-                                <td class="balance-value">{{ number_format($invoice->total_amount - $invoice->amount_paid, 2) }} {{ $invoiceCurrency }}</td>
+                                <td class="balance-value">{{ number_format($invoice->balance_due, 2) }} {{ $invoiceCurrency }}</td>
                             </tr>
                         </table>
                     </div>

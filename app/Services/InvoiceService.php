@@ -89,6 +89,64 @@ class InvoiceService
         );
     }
 
+    /**
+     * Sum open balances for invoices matching the query.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Eloquent\Relations\Relation|null  $query
+     */
+    public function sumOutstanding(
+        \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Eloquent\Relations\Relation|null $query = null
+    ): float {
+        if ($query instanceof \Illuminate\Database\Eloquent\Relations\Relation) {
+            $invoices = $query->get();
+        } else {
+            $query ??= Invoice::query()->whereNotIn('status', ['draft', 'void']);
+            $invoices = $query->get();
+        }
+        $total = 0.0;
+        foreach ($invoices as $invoice) {
+            $balance = $this->remainingBalance($invoice);
+            if ($balance > 0) {
+                $total += $balance;
+            }
+        }
+
+        return round($total, 2);
+    }
+
+    /**
+     * @return array<int, float> customer_id => outstanding
+     */
+    public function outstandingByCustomer(?\Illuminate\Database\Eloquent\Builder $query = null): array
+    {
+        $query ??= Invoice::query()->whereNotIn('status', ['draft', 'void']);
+        $map = [];
+        foreach ($query->get() as $invoice) {
+            $balance = max(0, $this->remainingBalance($invoice));
+            if ($balance > 0 && $invoice->customer_id) {
+                $map[$invoice->customer_id] = ($map[$invoice->customer_id] ?? 0) + $balance;
+            }
+        }
+
+        return array_map(fn ($v) => round($v, 2), $map);
+    }
+
+    /**
+     * @return array<int, int> customer_id => open invoice count
+     */
+    public function openInvoiceCountByCustomer(?\Illuminate\Database\Eloquent\Builder $query = null): array
+    {
+        $query ??= Invoice::query()->whereNotIn('status', ['draft', 'void']);
+        $map = [];
+        foreach ($query->get() as $invoice) {
+            if ($this->remainingBalance($invoice) > 0 && $invoice->customer_id) {
+                $map[$invoice->customer_id] = ($map[$invoice->customer_id] ?? 0) + 1;
+            }
+        }
+
+        return $map;
+    }
+
     public static function lateFeeAmount(float $balance, float $percent): float
     {
         return round($balance * $percent / 100, 2);
@@ -353,6 +411,9 @@ class InvoiceService
 
         DB::transaction(function () use ($invoice) {
             $invoice->loadMissing('items');
+            \App\Support\AccountingPeriodResolver::assertOpenForDate(
+                Carbon::parse($invoice->issue_date)->toDateString()
+            );
             JournalWriter::postSystem([
                 'date'           => Carbon::parse($invoice->issue_date)->toDateString(),
                 'description'    => 'Posted Sales Invoice: '.$invoice->invoice_number,
@@ -388,6 +449,7 @@ class InvoiceService
         }
 
         return DB::transaction(function () use ($invoice, $amount, $paymentDate, $bankAccountCode, $reference, $createdBy) {
+            \App\Support\AccountingPeriodResolver::assertOpenForDate($paymentDate);
             $newAmountPaid = (float) $invoice->amount_paid + $amount;
             $status = ($newAmountPaid >= (float) $invoice->total_amount) ? 'paid' : 'partially paid';
 

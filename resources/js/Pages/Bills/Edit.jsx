@@ -16,7 +16,7 @@ function formatMoney(n) {
 export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [], bankAccounts = [], products = [], journal_entry_id = null }) {
     const isDraft = bill.status === 'draft';
     const isVoid = bill.status === 'void';
-    const balanceDue = isDraft || isVoid ? 0 : Math.max(0, (parseFloat(bill.total_amount) || 0) - (parseFloat(bill.amount_paid) || 0));
+    const balanceDue = isDraft || isVoid ? 0 : parseFloat(bill.balance_due ?? 0);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [showReceiptModal, setShowReceiptModal] = useState(false);
     const [receiptUrl, setReceiptUrl] = useState(bill.receipt_url || null);

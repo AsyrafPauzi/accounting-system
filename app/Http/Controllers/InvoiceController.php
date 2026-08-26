@@ -114,18 +114,28 @@ class InvoiceController extends Controller
         // Use select(DB::raw(...)): selectRaw() addSelect() would keep invoices.* from
         // $baseQuery and break ONLY_FULL_GROUP_BY. reorder() drops orderBy on the clone.
         $totalCount = (clone $baseQuery)->count();
-        $totalOutstanding = (clone $baseQuery)
-            ->reorder()
-            ->whereNotIn('invoices.status', ['draft', 'void'])
-            ->select(DB::raw('COALESCE(SUM(invoices.total_amount - invoices.amount_paid), 0) as total'))
-            ->value('total') ?? 0;
+        $totalOutstanding = $this->invoiceService->sumOutstanding(
+            Invoice::query()
+                ->whereIn('id', (clone $baseQuery)
+                    ->reorder()
+                    ->whereNotIn('invoices.status', ['draft', 'void'])
+                    ->pluck('invoices.id'))
+        );
         $totalCollected = (clone $baseQuery)
             ->reorder()
             ->select(DB::raw('COALESCE(SUM(invoices.amount_paid), 0) as total'))
             ->value('total') ?? 0;
 
         $paginator = $baseQuery->paginate($perPage)->withQueryString();
-        $invoices = $paginator->items();
+        $invoiceModels = Invoice::whereIn('id', collect($paginator->items())->pluck('id'))
+            ->get()
+            ->keyBy('id');
+        $invoices = collect($paginator->items())->map(function ($row) use ($invoiceModels) {
+            $model = $invoiceModels->get($row->id);
+            $row->balance_due = $model ? $this->invoiceService->remainingBalance($model) : 0.0;
+
+            return $row;
+        })->all();
 
         $bankAccounts = Account::bankOrCash()
             ->active()
@@ -503,6 +513,11 @@ class InvoiceController extends Controller
 
         $tenantId = function_exists('tenant') && tenant() ? tenant('id') : null;
         $share = $invoice->uuid ? ShareLink::publicSigned(
+            'public.invoices.show',
+            ['uuid' => $invoice->uuid, 'tenant_id' => $tenantId],
+            'Invoice '.$invoice->invoice_number
+        ) : ['public_url' => null, 'whatsapp_url' => null];
+        $pdfShare = $invoice->uuid ? ShareLink::publicSigned(
             'public.invoices.download',
             ['uuid' => $invoice->uuid, 'tenant_id' => $tenantId],
             'Invoice '.$invoice->invoice_number
@@ -519,7 +534,8 @@ class InvoiceController extends Controller
             'myinvois_gaps'       => $myinvois->readiness($invoice),
             'can_cancel_einvoice' => $invoice->lhdn_uuid && $invoice->lhdn_submitted_at && now()->diffInHours($invoice->lhdn_submitted_at) <= 72,
             'pay_now_configured'  => app(\App\Services\InvoicePayNowService::class)->isConfigured(),
-            'public_pdf_url'      => $share['public_url'],
+            'public_pdf_url'      => $pdfShare['public_url'],
+            'public_html_url'     => $share['public_url'],
             'whatsapp_url'        => $share['whatsapp_url'],
             'company'             => tenant()?->getCompanyDetails() ?? [],
             'base_currency'       => $this->tenantBaseCurrency(),

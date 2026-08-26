@@ -7,13 +7,15 @@ use App\Models\CustomerAuditLog;
 use App\Models\CustomerContact;
 use App\Models\Invoice;
 use App\Models\User;
+use App\Services\InvoiceService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Illuminate\Validation\Rule;
 
 class CustomerController extends Controller
 {
+    public function __construct(private InvoiceService $invoiceService) {}
+
     /**
      * Account manager must belong to the same tenant as the authenticated user.
      */
@@ -32,10 +34,10 @@ class CustomerController extends Controller
 
     public function index()
     {
-        $customers = Customer::all()->map(function ($customer) {
-            $customer->balance = Invoice::where('customer_id', $customer->id)
-                ->whereNotIn('status', ['draft', 'void'])
-                ->sum(DB::raw('total_amount - amount_paid'));
+        $outstandingByCustomer = $this->invoiceService->outstandingByCustomer();
+
+        $customers = Customer::all()->map(function ($customer) use ($outstandingByCustomer) {
+            $customer->balance = $outstandingByCustomer[$customer->id] ?? 0.0;
             $customer->has_overdue = Invoice::where('customer_id', $customer->id)
                 ->whereNotIn('status', ['draft', 'void', 'paid'])
                 ->whereNotNull('due_date')
@@ -145,14 +147,19 @@ class CustomerController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $balance = $invoices->whereNotIn('status', ['draft', 'void'])->sum(fn($i) => $i->total_amount - $i->amount_paid);
+        $balance = $this->invoiceService->sumOutstanding(
+            $invoices->whereNotIn('status', ['draft', 'void'])
+        );
         $creditLimit = (float) ($customer->credit_limit ?? 0);
         $remainingLimit = $creditLimit > 0 ? max(0, $creditLimit - $balance) : null;
 
         $openInvoices = $invoices->whereNotIn('status', ['draft', 'void', 'paid']);
         $aging = ['0_30' => 0, '31_60' => 0, '61_90' => 0, '90_plus' => 0];
         foreach ($openInvoices as $inv) {
-            $amount = (float) $inv->total_amount - (float) $inv->amount_paid;
+            $amount = max(0, $this->invoiceService->remainingBalance($inv));
+            if ($amount <= 0) {
+                continue;
+            }
             $due = $inv->due_date ? \Carbon\Carbon::parse($inv->due_date) : null;
             if (!$due) {
                 $aging['0_30'] += $amount;

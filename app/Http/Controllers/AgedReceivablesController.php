@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Account;
 use App\Models\Invoice;
+use App\Services\InvoiceService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -11,6 +12,8 @@ use Inertia\Response;
 
 class AgedReceivablesController extends Controller
 {
+    public function __construct(private InvoiceService $invoiceService) {}
+
     /**
      * Aged Receivables: Who hasn't paid you — 30, 60, 90+ days overdue.
      */
@@ -34,7 +37,7 @@ class AgedReceivablesController extends Controller
         $overdueCount = 0;
 
         foreach ($invoices as $invoice) {
-            $balanceDue = (float) $invoice->total_amount - (float) $invoice->amount_paid;
+            $balanceDue = $this->invoiceService->remainingBalance($invoice);
             if ($balanceDue <= 0) {
                 continue;
             }

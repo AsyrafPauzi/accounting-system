@@ -45,7 +45,7 @@ function formatInvoiceAmount(invoice) {
 }
 
 function formatInvoiceBalance(invoice) {
-    const balance = parseFloat(invoice.total_amount || 0) - parseFloat(invoice.amount_paid || 0);
+    const balance = parseFloat(invoice.balance_due ?? 0);
     return formatCurrency(balance, invoice.currency);
 }
 
@@ -406,7 +406,7 @@ function ActionsCell({ auth, invoice, setSelectedInvoice, setData, defaultBankCo
                     <>
                         {invoice.status !== 'paid' && auth.planPermissions['invoices.record-payment'] && auth.permissions.includes('invoices.record-payment') && (
                             <MenuItem>
-                                <button type="button" onClick={() => { setSelectedInvoice(invoice); setData('amount', (parseFloat(invoice.total_amount) - parseFloat(invoice.amount_paid)).toFixed(currencyDecimals(invoice.currency))); setData('bank_account_code', defaultBankCode); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-forest hover:bg-forest/10">
+                                <button type="button" onClick={() => { setSelectedInvoice(invoice); setData('amount', (parseFloat(invoice.balance_due ?? 0)).toFixed(currencyDecimals(invoice.currency))); setData('bank_account_code', defaultBankCode); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-forest hover:bg-forest/10">
                                     <Icons.Currency /> Record payment
                                 </button>
                             </MenuItem>

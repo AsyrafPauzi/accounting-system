@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import OnboardingChecklist from '@/Components/OnboardingChecklist';
 import { Head, Link } from '@inertiajs/react';
 import {
     BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -125,6 +126,8 @@ export default function Dashboard({ auth, stats = {} }) {
             <Head title="Dashboard" />
 
             <div className="space-y-6 sm:space-y-8 pb-8 min-w-0 w-full">
+                <OnboardingChecklist />
+
                 {/* ───────── Quick action buttons ───────── */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                     {planPermissions['estimates.create'] && (

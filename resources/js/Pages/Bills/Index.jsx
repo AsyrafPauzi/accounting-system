@@ -107,7 +107,7 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
     };
 
     const openPaymentModal = (bill) => {
-        const balance = (parseFloat(bill.total_amount) || 0) - (parseFloat(bill.amount_paid) || 0);
+        const balance = parseFloat(bill.balance_due ?? 0);
         setSelectedBill(bill);
         setData('amount', balance > 0 ? balance.toFixed(2) : 0);
         setData('payment_date', new Date().toISOString().split('T')[0]);
@@ -215,7 +215,7 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                             </thead>
                             <tbody>
                                 {filteredBills.length > 0 ? filteredBills.map((bill) => {
-                                    const balanceDue = (parseFloat(bill.total_amount) || 0) - (parseFloat(bill.amount_paid) || 0);
+                                    const balanceDue = parseFloat(bill.balance_due ?? 0);
                                     return (
                                         <tr key={bill.id} className={`border-b border-border-warm last:border-0 hover:bg-cream/80 transition-colors group ${bill.status === 'void' ? 'opacity-60' : ''}`}>
                                             <td className="px-6 py-4">

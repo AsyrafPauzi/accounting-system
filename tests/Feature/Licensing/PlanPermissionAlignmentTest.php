@@ -89,18 +89,15 @@ class PlanPermissionAlignmentTest extends TestCase
     {
         $perms = $this->permsFor('startup');
 
-        // "Basic invoicing" (issue + edit + post + void; NO record-payment
-        // and NO email — those move users up to Solo).
+        // "Basic invoicing" (issue + edit + post + void + record-payment for day-1 collect).
         $this->assertContains('invoices.view', $perms);
         $this->assertContains('invoices.create', $perms);
         // "Up to 5 active customers" (cap enforced by PlanCap)
         $this->assertContains('customers.create', $perms);
         // "Single bank account" — they must be able to view their CoA
         $this->assertContains('accounts.view', $perms);
-        // "Receipts" intentionally NOT in the bullet — Startup has
-        // neither OCR receipt scanning (ocr.use, Solo+) nor invoice
-        // payment recording (invoices.record-payment, Solo+).
-        $this->assertNotContains('invoices.record-payment', $perms);
+        // Startup can record manual payments on invoices (Wave 2 day-1 collect).
+        $this->assertContains('invoices.record-payment', $perms);
         $this->assertNotContains('ocr.use', $perms);
         $this->assertNotContains('copilot.use', $perms);
     }

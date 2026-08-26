@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Bill;
 use App\Support\ReportPeriod;
+use App\Services\BillService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -21,6 +23,8 @@ use Inertia\Response;
  */
 class PurchasesByVendorController extends Controller
 {
+    public function __construct(private BillService $billService) {}
+
     public function index(Request $request): Response
     {
         $request->validate([
@@ -36,31 +40,40 @@ class PurchasesByVendorController extends Controller
         $start = $resolved['date_from'];
         $end = $resolved['date_to'];
 
-        $rows = DB::table('bills as b')
-            ->leftJoin('suppliers as s', 's.id', '=', 'b.supplier_id')
-            ->select([
-                'b.supplier_id',
-                's.name as supplier_name',
-                's.email as supplier_email',
-                DB::raw('SUM(b.total_amount) as total_billed'),
-                DB::raw('SUM(b.amount_paid) as total_paid'),
-                DB::raw('SUM(b.total_amount - b.amount_paid) as total_unpaid'),
-                DB::raw('COUNT(b.id) as bill_count'),
-            ])
-            ->where('b.status', '!=', 'void')
-            ->whereBetween('b.bill_date', [$start, $end])
-            ->whereNull('b.deleted_at')
-            ->groupBy('b.supplier_id', 's.name', 's.email')
-            ->orderByDesc('total_billed')
-            ->get()
+        $grouped = [];
+        foreach (Bill::with('supplier:id,name,email')
+            ->where('status', '!=', 'void')
+            ->whereBetween('bill_date', [$start, $end])
+            ->get() as $bill) {
+            $supplierId = $bill->supplier_id;
+            if (! isset($grouped[$supplierId])) {
+                $grouped[$supplierId] = [
+                    'supplier_id'    => $supplierId,
+                    'supplier_name'  => $bill->supplier?->name ?? '— Deleted supplier —',
+                    'supplier_email' => $bill->supplier?->email,
+                    'total_billed'   => 0.0,
+                    'total_paid'     => 0.0,
+                    'total_unpaid'   => 0.0,
+                    'bill_count'     => 0,
+                ];
+            }
+            $grouped[$supplierId]['total_billed'] += (float) $bill->total_amount;
+            $grouped[$supplierId]['total_paid'] += (float) $bill->amount_paid;
+            $grouped[$supplierId]['total_unpaid'] += max(0, $this->billService->remainingBalance($bill));
+            $grouped[$supplierId]['bill_count']++;
+        }
+
+        $rows = collect($grouped)
+            ->sortByDesc('total_billed')
+            ->values()
             ->map(fn ($r) => [
-                'supplier_id'    => $r->supplier_id,
-                'supplier_name'  => $r->supplier_name ?? '— Deleted supplier —',
-                'supplier_email' => $r->supplier_email,
-                'total_billed'   => round((float) $r->total_billed, 2),
-                'total_paid'     => round((float) $r->total_paid, 2),
-                'total_unpaid'   => round((float) $r->total_unpaid, 2),
-                'bill_count'     => (int) $r->bill_count,
+                'supplier_id'    => $r['supplier_id'],
+                'supplier_name'  => $r['supplier_name'],
+                'supplier_email' => $r['supplier_email'],
+                'total_billed'   => round($r['total_billed'], 2),
+                'total_paid'     => round($r['total_paid'], 2),
+                'total_unpaid'   => round($r['total_unpaid'], 2),
+                'bill_count'     => (int) $r['bill_count'],
             ])
             ->all();
 

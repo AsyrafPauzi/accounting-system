@@ -13,7 +13,7 @@
             <p>Hello <strong>{{ $customer->name ?? 'there' }}</strong>,</p>
             <p>Invoice <strong>{{ $invoice->invoice_number }}</strong> from {{ $company['name'] ?? '' }} is <strong>{{ $when }}</strong>.</p>
             <p style="font-size: 24px; font-weight: 800;">
-                {{ number_format($invoice->total_amount - $invoice->amount_paid, 2) }} {{ strtoupper($invoice->currency ?? 'MYR') }}
+                {{ number_format($invoice->balance_due, 2) }} {{ strtoupper($invoice->currency ?? 'MYR') }}
             </p>
             <div style="text-align: center; margin: 28px 0;">
                 <a href="{{ $download_url }}" style="display: inline-block; background-color: #000000; color: #ffffff; padding: 14px 32px; border-radius: 8px; font-weight: 700; text-decoration: none;">View invoice</a>

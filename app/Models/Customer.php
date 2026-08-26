@@ -7,7 +7,6 @@ use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\DB;
 
 class Customer extends Model
 {
@@ -79,12 +78,12 @@ class Customer extends Model
     }
 
     /**
-     * Sum of (total_amount - amount_paid) for non-draft, non-void invoices.
+     * Sum of open AR after payments, credit notes, and deposits.
      */
     public function getBalanceAttribute(): float
     {
-        return (float) $this->invoices()
-            ->whereNotIn('status', ['draft', 'void'])
-            ->sum(DB::raw('total_amount - amount_paid'));
+        return app(\App\Services\InvoiceService::class)->sumOutstanding(
+            $this->invoices()->whereNotIn('status', ['draft', 'void'])
+        );
     }
 }
