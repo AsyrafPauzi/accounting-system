@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\DebitNote;
 use App\Models\Invoice;
 use App\Support\DocumentNumber;
+use App\Support\JournalWriter;
 use Illuminate\Support\Facades\DB;
 
 class DebitNoteService
@@ -95,32 +96,16 @@ class DebitNoteService
                 ->latest('id')
                 ->first();
             if ($journal) {
-                $items = DB::table('journal_items')->where('journal_entry_id', $journal->id)->get();
-                $reversalId = DB::table('journal_entries')->insertGetId([
-                    'date'           => now(),
-                    'description'    => 'VOID REVERSAL: '.$dn->dn_number,
-                    'reference_type' => 'Debit Note',
-                    'reference_id'   => $dn->id,
-                'type'           => 'system',
-                'status'         => 'posted',
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-            $now = now();
-                $rows = [];
-                foreach ($items as $item) {
-                    $rows[] = [
-                        'journal_entry_id' => $reversalId,
-                        'account_id'       => $item->account_id,
-                        'account_code'     => $item->account_code,
-                        'debit'            => $item->credit,
-                        'credit'           => $item->debit,
-                        'created_at'       => $now,
-                        'updated_at'       => $now,
-                    ];
-                }
-                if ($rows !== []) {
-                    DB::table('journal_items')->insert($rows);
+                try {
+                    JournalWriter::postReversalFromJournal(
+                        (int) $journal->id,
+                        'VOID REVERSAL: '.$dn->dn_number,
+                        now()->toDateString(),
+                        'Debit Note',
+                        $dn->id,
+                    );
+                } catch (\LogicException) {
+                    // no-op
                 }
             }
             $dn->update(['status' => 'void']);
@@ -205,34 +190,17 @@ class DebitNoteService
         if (! $journal) {
             return;
         }
-        $items = DB::table('journal_items')->where('journal_entry_id', $journal->id)->get();
-        if ($items->isEmpty()) {
+        try {
+            JournalWriter::postReversalFromJournal(
+                (int) $journal->id,
+                'EDIT REVERSAL: '.$dn->dn_number,
+                now()->toDateString(),
+                'Debit Note',
+                $dn->id,
+            );
+        } catch (\LogicException) {
             return;
         }
-        $reversalId = DB::table('journal_entries')->insertGetId([
-            'date'           => now(),
-            'description'    => 'EDIT REVERSAL: '.$dn->dn_number,
-            'reference_type' => 'Debit Note',
-            'reference_id'   => $dn->id,
-                'type'           => 'system',
-                'status'         => 'posted',
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-            $now = now();
-        $rows = [];
-        foreach ($items as $item) {
-            $rows[] = [
-                'journal_entry_id' => $reversalId,
-                'account_id'       => $item->account_id,
-                'account_code'     => $item->account_code,
-                'debit'            => $item->credit,
-                'credit'           => $item->debit,
-                'created_at'       => $now,
-                'updated_at'       => $now,
-            ];
-        }
-        DB::table('journal_items')->insert($rows);
     }
 
     private function postJournal(DebitNote $dn): void
@@ -247,33 +215,10 @@ class DebitNoteService
             $m = $rate > 0 ? $rate : 1.0;
         }
 
-        $codes = ['1100', '4000', '2100'];
-        foreach ($dn->items as $item) {
-            if ($item->account_code) {
-                $codes[] = $item->account_code;
-            }
-        }
-        $accountMap = DB::table('accounts')->whereIn('code', array_unique($codes))->pluck('id', 'code');
-        $journalId = DB::table('journal_entries')->insertGetId([
-            'date'           => $dn->issue_date,
-            'description'    => 'Debit Note Issued: '.$dn->dn_number,
-            'reference_type' => 'Debit Note',
-            'reference_id'   => $dn->id,
-            'type'           => 'system',
-            'status'         => 'posted',
-            'created_at'     => now(),
-            'updated_at'     => now(),
-        ]);
-
-        $now = now();
-        $rows = [[
-            'journal_entry_id' => $journalId,
-            'account_id'       => $accountMap['1100'] ?? null,
-            'account_code'     => '1100',
-            'debit'            => (float) $dn->total_amount * $m,
-            'credit'           => 0,
-            'created_at'       => $now,
-            'updated_at'       => $now,
+        $lines = [[
+            'account_code' => '1100',
+            'debit'        => (float) $dn->total_amount * $m,
+            'credit'       => 0,
         ]];
         $byCode = [];
         foreach ($dn->items as $item) {
@@ -282,27 +227,21 @@ class DebitNoteService
             $byCode[$code] = ($byCode[$code] ?? 0) + $line * $m;
         }
         foreach ($byCode as $code => $credit) {
-            $rows[] = [
-                'journal_entry_id' => $journalId,
-                'account_id'       => $accountMap[$code] ?? $accountMap['4000'] ?? null,
-                'account_code'     => $code,
-                'debit'            => 0,
-                'credit'           => $credit,
-                'created_at'       => $now,
-                'updated_at'       => $now,
-            ];
+            $lines[] = ['account_code' => $code, 'debit' => 0, 'credit' => $credit];
         }
         if ((float) $dn->tax_amount > 0) {
-            $rows[] = [
-                'journal_entry_id' => $journalId,
-                'account_id'       => $accountMap['2100'] ?? null,
-                'account_code'     => '2100',
-                'debit'            => 0,
-                'credit'           => (float) $dn->tax_amount * $m,
-                'created_at'       => $now,
-                'updated_at'       => $now,
+            $lines[] = [
+                'account_code' => '2100',
+                'debit'        => 0,
+                'credit'       => (float) $dn->tax_amount * $m,
             ];
         }
-        DB::table('journal_items')->insert($rows);
+
+        JournalWriter::postSystem([
+            'date'           => $dn->issue_date,
+            'description'    => 'Debit Note Issued: '.$dn->dn_number,
+            'reference_type' => 'Debit Note',
+            'reference_id'   => $dn->id,
+        ], $lines);
     }
 }

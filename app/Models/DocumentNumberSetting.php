@@ -42,6 +42,8 @@ class DocumentNumberSetting extends Model
             'goods_receipt'        => ['prefix' => 'GRN', 'table' => 'goods_receipts', 'column' => 'grn_number'],
             'supplier_credit_note' => ['prefix' => 'SCN', 'table' => 'supplier_credit_notes', 'column' => 'scn_number'],
             'supplier_debit_note'  => ['prefix' => 'SDN', 'table' => 'supplier_debit_notes', 'column' => 'sdn_number'],
+            'ar_deposit'           => ['prefix' => 'DEP', 'table' => 'ar_deposits', 'column' => 'id'],
+            'ap_deposit'           => ['prefix' => 'APD', 'table' => 'ap_deposits', 'column' => 'id'],
         ];
     }
 }

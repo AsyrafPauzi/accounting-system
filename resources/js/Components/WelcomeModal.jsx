@@ -222,15 +222,15 @@ function smeSteps(productName, trial = null) {
             items: [
                 {
                     title: 'Send invoices and track payments',
-                    body: 'Create estimates and invoices, email them to customers, and record payments. Customers and credit notes live in the same place.',
+                    body: 'Create and post invoices, record payments, and add customers — included on Startup (Free).',
                 },
                 {
-                    title: 'Record bills and pay suppliers',
-                    body: 'Add suppliers, capture bills (with OCR receipt scan on paid plans), and track what you owe in Accounts Payable.',
+                    title: 'Upgrade for bills and credit notes',
+                    body: 'Supplier bills, credit notes, OCR receipt scanning, and full reports unlock on Solo and above.',
                 },
                 {
                     title: 'See the numbers that matter',
-                    body: 'Open the Dashboard for cash position, then Reports for P&L, balance sheet, and tax summaries.',
+                    body: 'Open the Dashboard for cash position. P&L and balance sheet reports unlock on paid plans.',
                 },
             ],
         },

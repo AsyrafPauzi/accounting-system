@@ -7,6 +7,7 @@ use App\Models\CreditNoteApplication;
 use App\Models\CreditNoteRefund;
 use App\Models\Invoice;
 use App\Support\DocumentNumber;
+use App\Support\JournalWriter;
 use Illuminate\Support\Facades\DB;
 
 class CreditNoteService
@@ -262,40 +263,15 @@ class CreditNoteService
             $cn->save();
 
             $base = round($amount * $this->ledgerMultiplier($cn), 2);
-            $accountMap = DB::table('accounts')
-                ->whereIn('code', [$bankAccountCode, '1100'])
-                ->pluck('id', 'code');
 
-            $journalId = DB::table('journal_entries')->insertGetId([
+            JournalWriter::postSystem([
                 'date'           => $paymentDate,
                 'description'    => 'Refund of credit note '.$cn->cn_number,
                 'reference_type' => 'Credit Note Refund',
                 'reference_id'   => $refund->id,
-                'type'           => 'system',
-                'status'         => 'posted',
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-            $now = now();
-            DB::table('journal_items')->insert([
-                [
-                    'journal_entry_id' => $journalId,
-                    'account_id'       => $accountMap['1100'] ?? null,
-                    'account_code'     => '1100',
-                    'debit'            => $base,
-                    'credit'           => 0,
-                    'created_at'       => $now,
-                    'updated_at'       => $now,
-                ],
-                [
-                    'journal_entry_id' => $journalId,
-                    'account_id'       => $accountMap[$bankAccountCode] ?? null,
-                    'account_code'     => $bankAccountCode,
-                    'debit'            => 0,
-                    'credit'           => $base,
-                    'created_at'       => $now,
-                    'updated_at'       => $now,
-                ],
+            ], [
+                ['account_code' => '1100', 'debit' => $base, 'credit' => 0],
+                ['account_code' => $bankAccountCode, 'debit' => 0, 'credit' => $base],
             ]);
 
             return $refund;
@@ -314,34 +290,17 @@ class CreditNoteService
             if (! $journal) {
                 continue;
             }
-            $items = DB::table('journal_items')->where('journal_entry_id', $journal->id)->get();
-            if ($items->isEmpty()) {
+            try {
+                JournalWriter::postReversalFromJournal(
+                    (int) $journal->id,
+                    'VOID REFUND REVERSAL: '.$cn->cn_number,
+                    now()->toDateString(),
+                    'Credit Note Refund',
+                    $refund->id,
+                );
+            } catch (\LogicException) {
                 continue;
             }
-            $reversalId = DB::table('journal_entries')->insertGetId([
-                'date'           => now(),
-                'description'    => 'VOID REFUND REVERSAL: '.$cn->cn_number,
-                'reference_type' => 'Credit Note Refund',
-                'reference_id'   => $refund->id,
-                'type'           => 'system',
-                'status'         => 'posted',
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-            $now = now();
-            $rows = [];
-            foreach ($items as $item) {
-                $rows[] = [
-                    'journal_entry_id' => $reversalId,
-                    'account_id'       => $item->account_id,
-                    'account_code'     => $item->account_code,
-                    'debit'            => $item->credit,
-                    'credit'           => $item->debit,
-                    'created_at'       => $now,
-                    'updated_at'       => $now,
-                ];
-            }
-            DB::table('journal_items')->insert($rows);
             $refund->delete();
         }
     }
@@ -372,37 +331,10 @@ class CreditNoteService
         $taxBase = (float) $cn->tax_amount * $m;
         $totalBase = (float) $cn->total_amount * $m;
 
-        $codes = ['1100', '4000', '2100'];
         $cn->loadMissing('items');
-        foreach ($cn->items as $item) {
-            if ($item->account_code) {
-                $codes[] = $item->account_code;
-            }
-        }
-        $accountMap = DB::table('accounts')->whereIn('code', array_unique($codes))->pluck('id', 'code');
 
-        $journalId = DB::table('journal_entries')->insertGetId([
-            'date'           => $cn->issue_date,
-            'description'    => 'Credit Note Issued: '.$cn->cn_number,
-            'reference_type' => 'Credit Note',
-            'reference_id'   => $cn->id,
-            'type'           => 'system',
-            'status'         => 'posted',
-            'created_at'     => now(),
-            'updated_at'     => now(),
-        ]);
-
-        $now = now();
-        $rows = [
-            [
-                'journal_entry_id' => $journalId,
-                'account_id'       => $accountMap['1100'] ?? null,
-                'account_code'     => '1100',
-                'debit'            => 0,
-                'credit'           => $totalBase,
-                'created_at'       => $now,
-                'updated_at'       => $now,
-            ],
+        $lines = [
+            ['account_code' => '1100', 'debit' => 0, 'credit' => $totalBase],
         ];
 
         $byCode = [];
@@ -418,29 +350,18 @@ class CreditNoteService
             if (round($debit, 2) == 0.0) {
                 continue;
             }
-            $rows[] = [
-                'journal_entry_id' => $journalId,
-                'account_id'       => $accountMap[$code] ?? $accountMap['4000'] ?? null,
-                'account_code'     => $code,
-                'debit'            => $debit,
-                'credit'           => 0,
-                'created_at'       => $now,
-                'updated_at'       => $now,
-            ];
+            $lines[] = ['account_code' => $code, 'debit' => $debit, 'credit' => 0];
         }
         if ($taxBase > 0) {
-            $rows[] = [
-                'journal_entry_id' => $journalId,
-                'account_id'       => $accountMap['2100'] ?? null,
-                'account_code'     => '2100',
-                'debit'            => $taxBase,
-                'credit'           => 0,
-                'created_at'       => $now,
-                'updated_at'       => $now,
-            ];
+            $lines[] = ['account_code' => '2100', 'debit' => $taxBase, 'credit' => 0];
         }
 
-        DB::table('journal_items')->insert($rows);
+        JournalWriter::postSystem([
+            'date'           => $cn->issue_date,
+            'description'    => 'Credit Note Issued: '.$cn->cn_number,
+            'reference_type' => 'Credit Note',
+            'reference_id'   => $cn->id,
+        ], $lines);
     }
 
     private function reverseJournal(CreditNote $cn): void
@@ -455,36 +376,17 @@ class CreditNoteService
             return;
         }
 
-        $items = DB::table('journal_items')->where('journal_entry_id', $journal->id)->get();
-        if ($items->isEmpty()) {
+        try {
+            JournalWriter::postReversalFromJournal(
+                (int) $journal->id,
+                'VOID REVERSAL: '.$cn->cn_number,
+                now()->toDateString(),
+                'Credit Note',
+                $cn->id,
+            );
+        } catch (\LogicException) {
             return;
         }
-
-        $reversalId = DB::table('journal_entries')->insertGetId([
-            'date'           => now(),
-            'description'    => 'VOID REVERSAL: '.$cn->cn_number,
-            'reference_type' => 'Credit Note',
-            'reference_id'   => $cn->id,
-            'type'           => 'system',
-            'status'         => 'posted',
-            'created_at'     => now(),
-            'updated_at'     => now(),
-        ]);
-
-        $now = now();
-        $rows = [];
-        foreach ($items as $item) {
-            $rows[] = [
-                'journal_entry_id' => $reversalId,
-                'account_id'       => $item->account_id,
-                'account_code'     => $item->account_code,
-                'debit'            => $item->credit,
-                'credit'           => $item->debit,
-                'created_at'       => $now,
-                'updated_at'       => $now,
-            ];
-        }
-        DB::table('journal_items')->insert($rows);
     }
 
     private function ledgerMultiplier(CreditNote $cn): float

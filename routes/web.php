@@ -233,6 +233,9 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/settings/company', [CompanySettingsController::class, 'update'])->name('settings.company.update');
     Route::get('/settings/document-numbers', [\App\Http\Controllers\DocumentNumberSettingsController::class, 'edit'])->name('settings.document-numbers.edit');
     Route::patch('/settings/document-numbers', [\App\Http\Controllers\DocumentNumberSettingsController::class, 'update'])->name('settings.document-numbers.update');
+    Route::get('/settings/accounting-periods', [\App\Http\Controllers\AccountingPeriodController::class, 'index'])->name('settings.accounting-periods.index');
+    Route::post('/settings/accounting-periods/{period}/close', [\App\Http\Controllers\AccountingPeriodController::class, 'close'])->name('settings.accounting-periods.close');
+    Route::post('/settings/accounting-periods/{period}/reopen', [\App\Http\Controllers\AccountingPeriodController::class, 'reopen'])->name('settings.accounting-periods.reopen');
     Route::post('/settings/company/myinvois-test', [CompanySettingsController::class, 'testMyInvois'])->name('settings.company.myinvois-test');
     Route::get('/settings/plan', [SubscriptionController::class, 'planSettings'])->name('settings.plan.index');
     Route::post('/settings/plan/copilot-credits', [SubscriptionController::class, 'buyCopilotCredits'])
@@ -412,7 +415,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/invoices/bulk-email', [InvoiceController::class, 'bulkEmail'])->name('invoices.bulk-email');
         Route::post('/invoices/{id}/email', [InvoiceController::class, 'emailPdf'])->name('invoices.email');
     });
-    Route::middleware(['permission:invoices.record-payment', 'plan.permission:invoices.record-payment'])->group(function () {
+    Route::middleware(['permission:invoices.record-payment', 'plan.permission:invoices.record-payment', 'period.open:payment_date'])->group(function () {
         Route::post('/invoices/{id}/payments', [InvoiceController::class, 'recordPayment'])->name('invoices.record-payment');
         Route::post('/invoices/{id}/payments/{paymentId}/reverse', [InvoiceController::class, 'reversePayment'])->whereNumber(['id', 'paymentId'])->name('invoices.reverse-payment');
     });
@@ -585,7 +588,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['permission:bills.void', 'plan.permission:bills.view'])->group(function () {
         Route::post('/bills/{id}/void', [BillController::class, 'voidBill'])->name('bills.void');
     });
-    Route::middleware(['permission:bills.record-payment', 'plan.permission:bills.view'])->group(function () {
+    Route::middleware(['permission:bills.record-payment', 'plan.permission:bills.view', 'period.open:payment_date'])->group(function () {
         Route::post('/bills/{id}/payments', [BillController::class, 'recordPayment'])->name('bills.record-payment');
     });
     Route::middleware(['permission:myinvois.submit', 'plan.permission:myinvois.submit'])->group(function () {

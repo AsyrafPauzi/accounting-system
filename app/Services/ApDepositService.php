@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ApDeposit;
 use App\Models\ApDepositApplication;
 use App\Models\Bill;
+use App\Support\JournalWriter;
 use Illuminate\Support\Facades\DB;
 
 class ApDepositService
@@ -31,24 +32,15 @@ class ApDepositService
                 'created_by'        => $data['created_by'] ?? null,
             ]);
 
-            $accountMap = DB::table('accounts')
-                ->whereIn('code', [$data['bank_account_code'], '1300'])
-                ->pluck('id', 'code');
-            $journalId = DB::table('journal_entries')->insertGetId([
+            $amount = (float) $data['amount'];
+            JournalWriter::postSystem([
                 'date'           => $data['payment_date'],
                 'description'    => 'Supplier deposit '.$deposit->id.(! empty($data['reference']) ? ' '.$data['reference'] : ''),
                 'reference_type' => 'AP Deposit',
                 'reference_id'   => $deposit->id,
-                'type'           => 'system',
-                'status'         => 'posted',
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-            $now = now();
-            $amount = (float) $data['amount'];
-            DB::table('journal_items')->insert([
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['1300'] ?? null, 'account_code' => '1300', 'debit' => $amount, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap[$data['bank_account_code']] ?? null, 'account_code' => $data['bank_account_code'], 'debit' => 0, 'credit' => $amount, 'created_at' => $now, 'updated_at' => $now],
+            ], [
+                ['account_code' => '1300', 'debit' => $amount, 'credit' => 0],
+                ['account_code' => $data['bank_account_code'], 'debit' => 0, 'credit' => $amount],
             ]);
 
             return $deposit;
@@ -105,21 +97,14 @@ class ApDepositService
             $deposit->status = $deposit->openAmount() <= 0 ? 'applied' : 'open';
             $deposit->save();
 
-            $accountMap = DB::table('accounts')->whereIn('code', ['1300', '2110'])->pluck('id', 'code');
-            $journalId = DB::table('journal_entries')->insertGetId([
-                'date'           => now(),
+            JournalWriter::postSystem([
+                'date'           => now()->toDateString(),
                 'description'    => 'Apply supplier deposit to '.$bill->bill_number,
                 'reference_type' => 'AP Deposit Application',
                 'reference_id'   => $deposit->id,
-                'type'           => 'system',
-                'status'         => 'posted',
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-            $now = now();
-            DB::table('journal_items')->insert([
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2110'] ?? null, 'account_code' => '2110', 'debit' => $apply, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['1300'] ?? null, 'account_code' => '1300', 'debit' => 0, 'credit' => $apply, 'created_at' => $now, 'updated_at' => $now],
+            ], [
+                ['account_code' => '2110', 'debit' => $apply, 'credit' => 0],
+                ['account_code' => '1300', 'debit' => 0, 'credit' => $apply],
             ]);
 
             $this->bills->recalculateStatus($bill->fresh());

@@ -97,12 +97,7 @@ class CustomerStatementService
             ->whereNull('je.deleted_at')
             ->sum('ji.credit');
 
-        $creditsBefore = (float) DB::table('credit_notes')
-            ->where('customer_id', $customer->id)
-            ->where('status', '!=', 'void')
-            ->where('issue_date', '<', $from->toDateString())
-            ->whereNull('deleted_at')
-            ->sum('total_amount');
+        $creditsBefore = $this->appliedCreditNotesBefore($customer, $from);
 
         $debitNotesBefore = 0.0;
         if (Schema::hasTable('debit_notes')) {
@@ -365,6 +360,25 @@ class CustomerStatementService
         }
 
         return $query;
+    }
+
+    private function appliedCreditNotesBefore(Customer $customer, CarbonInterface $from): float
+    {
+        if (Schema::hasTable('credit_note_applications')) {
+            return (float) DB::table('credit_note_applications as cna')
+                ->join('credit_notes as cn', 'cn.id', '=', 'cna.credit_note_id')
+                ->where('cn.customer_id', $customer->id)
+                ->where('cn.status', '!=', 'void')
+                ->where('cna.created_at', '<', $from->toDateString())
+                ->sum('cna.amount');
+        }
+
+        return (float) DB::table('credit_notes')
+            ->where('customer_id', $customer->id)
+            ->where('status', '!=', 'void')
+            ->where('issue_date', '<', $from->toDateString())
+            ->whereNull('deleted_at')
+            ->sum('total_amount');
     }
 
     /**

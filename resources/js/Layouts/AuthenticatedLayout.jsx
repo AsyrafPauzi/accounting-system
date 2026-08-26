@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import { useTranslation } from '@/i18n';
 import { Link, usePage } from '@inertiajs/react';
 import MobileQuickAction from '@/Components/MobileQuickAction';
 import WelcomeModal from '@/Components/WelcomeModal';
@@ -39,17 +40,17 @@ const Icons = {
 };
 
 const navConfig = [
-    { group: 'Main', links: [{ name: 'Dashboard', route: 'dashboard', Icon: Icons.ChartBar, subtitle: 'Overview of sales, bills, and cash' }] },
-    { group: 'Sales (Revenue)', subgroups: [
+    { group: 'Main', groupKey: 'navigation.groups.main', links: [{ name: 'Dashboard', nameKey: 'navigation.links.dashboard', route: 'dashboard', Icon: Icons.ChartBar, subtitle: 'Overview of sales, bills, and cash' }] },
+    { group: 'Sales (Revenue)', groupKey: 'navigation.groups.sales', subgroups: [
         { name: 'Quotes & orders', links: [
             { name: 'Estimates', route: 'estimates.index', Icon: Icons.ClipboardList, planPermission: 'estimates.view', userPermission: 'estimates.view', subtitle: 'Quotations sent to customers' },
             { name: 'Sales Orders', route: 'sales-orders.index', Icon: Icons.ClipboardList, planPermission: 'estimates.view', userPermission: 'sales-orders.view', requiresGoodsFlow: true, subtitle: 'Confirmed orders before delivery' },
             { name: 'Delivery Orders', route: 'delivery-orders.index', Icon: Icons.ClipboardList, planPermission: 'estimates.view', userPermission: 'delivery-orders.view', requiresGoodsFlow: true, subtitle: 'Goods dispatched to customers' },
         ]},
         { name: 'Billing', links: [
-            { name: 'Invoices', route: 'invoices.index', Icon: Icons.Document, planPermission: 'invoices.view', userPermission: 'invoices.view', subtitle: 'Bills sent to customers' },
+            { name: 'Invoices', nameKey: 'navigation.links.invoices', route: 'invoices.index', Icon: Icons.Document, planPermission: 'invoices.view', userPermission: 'invoices.view', subtitle: 'Bills sent to customers' },
             { name: 'Recurring Invoices', route: 'recurring-invoices.index', Icon: Icons.ArrowPath, planPermission: 'recurring-invoices.view', userPermission: 'recurring-invoices.view', subtitle: 'Auto-generate, post, and email on a schedule' },
-            { name: 'Credit Notes', route: 'credit-notes.index', Icon: Icons.ReceiptRefund, planPermission: 'credit-notes.view', userPermission: 'credit-notes.view', subtitle: 'Refunds and reductions for customers' },
+            { name: 'Credit Notes', nameKey: 'navigation.links.credit_notes', route: 'credit-notes.index', Icon: Icons.ReceiptRefund, planPermission: 'credit-notes.view', userPermission: 'credit-notes.view', subtitle: 'Refunds and reductions for customers' },
             { name: 'Debit Notes', route: 'debit-notes.index', Icon: Icons.Document, planPermission: 'credit-notes.view', userPermission: 'debit-notes.view', subtitle: 'Additional charges to customers' },
         ]},
         { name: 'Collections', links: [
@@ -57,17 +58,17 @@ const navConfig = [
             { name: 'Customer Statements', route: 'customer-statements.index', Icon: Icons.DocumentChart, planPermission: 'customer-statements.view', userPermission: 'customers.view', subtitle: 'Balance forward report per customer' },
         ]},
         { name: 'Masters', links: [
-            { name: 'Customers', route: 'customers.index', Icon: Icons.Users, planPermission: 'customers.view', userPermission: 'customers.view', subtitle: 'People and companies you bill' },
+            { name: 'Customers', nameKey: 'navigation.links.customers', route: 'customers.index', Icon: Icons.Users, planPermission: 'customers.view', userPermission: 'customers.view', subtitle: 'People and companies you bill' },
             { name: 'Products & Services', route: 'products.index', Icon: Icons.Tag, planPermission: 'products.view', userPermission: 'products.view', subtitle: 'Reusable invoice line items' },
         ]},
     ]},
-    { group: 'Purchases (Expenses)', subgroups: [
+    { group: 'Purchases (Expenses)', groupKey: 'navigation.groups.purchases', subgroups: [
         { name: 'Ordering', links: [
             { name: 'Purchase Orders', route: 'purchase-orders.index', Icon: Icons.ClipboardList, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Orders placed with suppliers' },
             { name: 'Goods Receipts', route: 'goods-receipts.index', Icon: Icons.ClipboardList, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Stock received from suppliers' },
         ]},
         { name: 'Bills', links: [
-            { name: 'Bills / Purchases', route: 'bills.index', Icon: Icons.ShoppingCart, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Supplier invoices to pay' },
+            { name: 'Bills / Purchases', nameKey: 'navigation.links.bills', route: 'bills.index', Icon: Icons.ShoppingCart, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Supplier invoices to pay' },
             { name: 'Recurring Bills', route: 'recurring-bills.index', Icon: Icons.ArrowPath, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Auto-generate supplier bills on a schedule' },
             { name: 'Supplier Credit Notes', route: 'supplier-credit-notes.index', Icon: Icons.ReceiptRefund, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Credits from suppliers' },
             { name: 'Supplier Debit Notes', route: 'supplier-debit-notes.index', Icon: Icons.Document, planPermission: 'bills.view', userPermission: 'bills.view', subtitle: 'Additional charges from suppliers' },
@@ -78,10 +79,10 @@ const navConfig = [
             { name: 'Accounts Payable', route: 'accounts-payable.index', Icon: Icons.Document, planPermission: 'reports.aged-reports', userPermission: 'reports.aged-reports', subtitle: 'Outstanding and aging' },
         ]},
         { name: 'Masters', links: [
-            { name: 'Suppliers', route: 'suppliers.index', Icon: Icons.BuildingOffice, planPermission: 'suppliers.view', userPermission: 'suppliers.view', subtitle: 'Companies you buy from' },
+            { name: 'Suppliers', nameKey: 'navigation.links.suppliers', route: 'suppliers.index', Icon: Icons.BuildingOffice, planPermission: 'suppliers.view', userPermission: 'suppliers.view', subtitle: 'Companies you buy from' },
         ]},
     ]},
-    { group: 'Accounting', links: [
+    { group: 'Accounting', groupKey: 'navigation.groups.accounting', links: [
         { name: 'Transactions', route: 'transactions.index', Icon: Icons.CreditCard, planPermission: 'journal.view', userPermission: 'journal.view', subtitle: 'Bank & cash movements feed', activeRoutes: ['transactions.index', 'transactions.deposit.create', 'transactions.withdrawal.create'] },
         { name: 'Chart of Accounts', route: 'chart-of-accounts.index', Icon: Icons.Folder, planPermission: 'accounts.view', userPermission: 'accounts.view', subtitle: 'Accounts used in postings and reports' },
         { name: 'General Ledger', route: 'general-ledger.index', Icon: Icons.BookOpen, planPermission: 'general-ledger.view', userPermission: 'general-ledger.view', subtitle: 'By journal entry' },
@@ -89,8 +90,8 @@ const navConfig = [
         { name: 'Payroll', route: 'payroll.create', Icon: Icons.Users, planPermission: 'payroll.run', userPermission: 'journal.create', subtitle: 'Record monthly salaries & statutory' },
         { name: 'Trial Balance', route: 'trial-balance.index', Icon: Icons.Scale, planPermission: 'general-ledger.view', userPermission: 'general-ledger.view', subtitle: 'Verify account balances' },
     ]},
-    { group: 'Reports', links: [
-        { name: 'Reports', route: 'reports.index', Icon: Icons.ChartPie, planPermission: 'reports.view', userPermission: 'reports.view', subtitle: 'Financial statements & analysis', activeRoutes: ['reports.index', 'general-ledger.index', 'general-ledger.report', 'trial-balance.index', 'profit-and-loss.index', 'reports.sales.index', 'balance-sheet.index', 'cashflow-summary.index', 'aged-receivables.index', 'accounts-payable.index', 'reports.sales-tax.index', 'reports.payroll-remittance', 'reports.income-by-customer.index', 'reports.customer-credits.index', 'reports.purchases-by-vendor.index'] },
+    { group: 'Reports', groupKey: 'navigation.groups.reports', links: [
+        { name: 'Reports', nameKey: 'navigation.links.reports', route: 'reports.index', Icon: Icons.ChartPie, planPermission: 'reports.view', userPermission: 'reports.view', subtitle: 'Financial statements & analysis', activeRoutes: ['reports.index', 'general-ledger.index', 'general-ledger.report', 'trial-balance.index', 'profit-and-loss.index', 'reports.sales.index', 'balance-sheet.index', 'cashflow-summary.index', 'aged-receivables.index', 'accounts-payable.index', 'reports.sales-tax.index', 'reports.payroll-remittance', 'reports.income-by-customer.index', 'reports.customer-credits.index', 'reports.purchases-by-vendor.index'] },
     ]},
 ];
 
@@ -124,6 +125,9 @@ const iconWrapClasses = (active) => (active ? 'text-white' : 'text-terracotta/80
 
 export default function Authenticated({ user: propUser, header, children }) {
     const page = usePage();
+    const { t } = useTranslation();
+    const linkName = (link) => (link.nameKey ? t(link.nameKey) : link.name);
+    const sectionName = (section) => (section.groupKey ? t(section.groupKey) : section.group);
     const { flash, auth, company_flags } = page.props;
     const url = page.url;
     const user = propUser || auth?.user || {};
@@ -415,7 +419,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                                         <Icon />
                                     </span>
                                     <span className={navLabelClass(sidebarCollapsed)}>
-                                        <span className="block truncate">{link.name}</span>
+                                        <span className="block truncate">{linkName(link)}</span>
                                         {link.subtitle && (
                                             <span className={`block text-[10px] font-normal mt-0.5 truncate ${active ? 'text-white/80' : 'text-ink-muted'}`}>
                                                 {link.subtitle}
@@ -445,7 +449,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                                         onClick={() => toggleGroup(section.group)}
                                         className={`w-full flex items-center justify-between px-3 py-2 text-eyebrow font-semibold text-ink-muted uppercase hover:bg-surface-alt rounded-lg transition-colors ${sidebarCollapsed ? 'lg:hidden' : ''}`}
                                     >
-                                        <span>{section.group}</span>
+                                        <span>{sectionName(section)}</span>
                                         <span className={`transition-transform duration-200 ${isOpen ? 'rotate-0' : '-rotate-90 text-ink-muted/60'}`}>
                                             <Icons.ChevronDown />
                                         </span>
@@ -517,7 +521,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                                     onClick={() => toggleGroup(section.group)}
                                     className={`w-full flex items-center justify-between px-3 py-2 text-eyebrow font-semibold text-ink-muted uppercase hover:bg-surface-alt rounded-lg transition-colors ${sidebarCollapsed ? 'lg:hidden' : ''}`}
                                 >
-                                    <span>{section.group}</span>
+                                    <span>{sectionName(section)}</span>
                                     <span className={`transition-transform duration-200 ${isOpen ? 'rotate-0' : '-rotate-90 text-ink-muted/60'}`}>
                                         <Icons.ChevronDown />
                                     </span>
@@ -564,7 +568,7 @@ export default function Authenticated({ user: propUser, header, children }) {
                                                 <link.Icon />
                                             </span>
                                             <span className={navLabelClass(sidebarCollapsed)}>
-                                                <span className="block truncate">{link.name}</span>
+                                                <span className="block truncate">{linkName(link)}</span>
                                                 {link.subtitle && (
                                                     <span className={`block text-[10px] font-normal mt-0.5 truncate ${active ? 'text-white/80' : 'text-ink-muted'}`}>
                                                         {link.subtitle}

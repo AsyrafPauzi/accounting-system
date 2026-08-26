@@ -7,6 +7,7 @@ use App\Models\SupplierCreditNote;
 use App\Models\SupplierCreditNoteApplication;
 use App\Models\SupplierCreditNoteRefund;
 use App\Support\DocumentNumber;
+use App\Support\JournalWriter;
 use Illuminate\Support\Facades\DB;
 
 class SupplierCreditNoteService
@@ -123,21 +124,14 @@ class SupplierCreditNoteService
             $cn->refunded_amount = round((float) ($cn->refunded_amount ?? 0) + $amount, 2);
             $cn->save();
 
-            $accountMap = DB::table('accounts')->whereIn('code', [$bankAccountCode, '2110'])->pluck('id', 'code');
-            $journalId = DB::table('journal_entries')->insertGetId([
+            JournalWriter::postSystem([
                 'date'           => $paymentDate,
                 'description'    => 'Refund of supplier credit '.$cn->scn_number,
                 'reference_type' => 'Supplier Credit Note Refund',
                 'reference_id'   => $refund->id,
-                'type'           => 'system',
-                'status'         => 'posted',
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-            $now = now();
-            DB::table('journal_items')->insert([
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap[$bankAccountCode] ?? null, 'account_code' => $bankAccountCode, 'debit' => $amount, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2110'] ?? null, 'account_code' => '2110', 'debit' => 0, 'credit' => $amount, 'created_at' => $now, 'updated_at' => $now],
+            ], [
+                ['account_code' => $bankAccountCode, 'debit' => $amount, 'credit' => 0],
+                ['account_code' => '2110', 'debit' => 0, 'credit' => $amount],
             ]);
 
             return $refund;
@@ -175,31 +169,10 @@ class SupplierCreditNoteService
 
     private function postJournal(SupplierCreditNote $cn): void
     {
-        $codes = ['2110', '5000', '2100'];
-        foreach ($cn->items as $item) {
-            if ($item->account_code) {
-                $codes[] = $item->account_code;
-            }
-        }
-        $accountMap = DB::table('accounts')->whereIn('code', array_unique($codes))->pluck('id', 'code');
-        $journalId = DB::table('journal_entries')->insertGetId([
-            'date'           => $cn->issue_date,
-            'description'    => 'Supplier Credit Note: '.$cn->scn_number,
-            'reference_type' => 'Supplier Credit Note',
-            'reference_id'   => $cn->id,
-            'created_at'     => now(),
-            'updated_at'     => now(),
-        ]);
-
-        $now = now();
-        $rows = [[
-            'journal_entry_id' => $journalId,
-            'account_id'       => $accountMap['2110'] ?? null,
-            'account_code'     => '2110',
-            'debit'            => (float) $cn->total_amount,
-            'credit'           => 0,
-            'created_at'       => $now,
-            'updated_at'       => $now,
+        $lines = [[
+            'account_code' => '2110',
+            'debit'        => (float) $cn->total_amount,
+            'credit'       => 0,
         ]];
         $byCode = [];
         foreach ($cn->items as $item) {
@@ -208,66 +181,31 @@ class SupplierCreditNoteService
             $byCode[$code] = ($byCode[$code] ?? 0) + $line;
         }
         foreach ($byCode as $code => $credit) {
-            $rows[] = [
-                'journal_entry_id' => $journalId,
-                'account_id'       => $accountMap[$code] ?? $accountMap['5000'] ?? null,
-                'account_code'     => $code,
-                'debit'            => 0,
-                'credit'           => $credit,
-                'created_at'       => $now,
-                'updated_at'       => $now,
-            ];
+            $lines[] = ['account_code' => $code, 'debit' => 0, 'credit' => $credit];
         }
         if ((float) $cn->tax_amount > 0) {
-            $rows[] = [
-                'journal_entry_id' => $journalId,
-                'account_id'       => $accountMap['2100'] ?? null,
-                'account_code'     => '2100',
-                'debit'            => 0,
-                'credit'           => (float) $cn->tax_amount,
-                'created_at'       => $now,
-                'updated_at'       => $now,
+            $lines[] = [
+                'account_code' => '2100',
+                'debit'        => 0,
+                'credit'       => (float) $cn->tax_amount,
             ];
         }
-        DB::table('journal_items')->insert($rows);
+
+        JournalWriter::postSystem([
+            'date'           => $cn->issue_date,
+            'description'    => 'Supplier Credit Note: '.$cn->scn_number,
+            'reference_type' => 'Supplier Credit Note',
+            'reference_id'   => $cn->id,
+        ], $lines);
     }
 
     private function reverseJournal(string $type, int $referenceId, string $description): void
     {
-        $journal = DB::table('journal_entries')
-            ->where('reference_type', $type)
-            ->where('reference_id', $referenceId)
-            ->latest('id')
-            ->first();
-        if (! $journal) {
-            return;
-        }
-        $items = DB::table('journal_items')->where('journal_entry_id', $journal->id)->get();
-        $reversalId = DB::table('journal_entries')->insertGetId([
-            'date'           => now(),
-            'description'    => $description,
-            'reference_type' => $type,
-            'reference_id'   => $referenceId,
-            'type'           => 'system',
-            'status'         => 'posted',
-            'created_at'     => now(),
-            'updated_at'     => now(),
-        ]);
-        $now = now();
-        $rows = [];
-        foreach ($items as $item) {
-            $rows[] = [
-                'journal_entry_id' => $reversalId,
-                'account_id'       => $item->account_id,
-                'account_code'     => $item->account_code,
-                'debit'            => $item->credit,
-                'credit'           => $item->debit,
-                'created_at'       => $now,
-                'updated_at'       => $now,
-            ];
-        }
-        if ($rows !== []) {
-            DB::table('journal_items')->insert($rows);
-        }
+        JournalWriter::postReversalByReference(
+            $type,
+            $referenceId,
+            $description,
+            now()->toDateString(),
+        );
     }
 }

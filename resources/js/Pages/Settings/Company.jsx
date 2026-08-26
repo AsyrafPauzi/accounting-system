@@ -90,12 +90,20 @@ export default function Company({ auth, company, canEdit = false }) {
                         </Link>
                     )}
                     {isAdmin && (
-                        <Link
-                            href={route('settings.document-numbers.edit')}
-                            className="text-sm font-semibold text-terracotta hover:text-terracotta whitespace-nowrap"
-                        >
-                            Document numbering →
-                        </Link>
+                        <>
+                            <Link
+                                href={route('settings.document-numbers.edit')}
+                                className="text-sm font-semibold text-terracotta hover:text-terracotta whitespace-nowrap"
+                            >
+                                Document numbering →
+                            </Link>
+                            <Link
+                                href={route('settings.accounting-periods.index')}
+                                className="text-sm font-semibold text-terracotta hover:text-terracotta whitespace-nowrap"
+                            >
+                                Accounting periods →
+                            </Link>
+                        </>
                     )}
                 </div>
             }

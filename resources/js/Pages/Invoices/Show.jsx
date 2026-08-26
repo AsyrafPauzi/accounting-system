@@ -94,6 +94,7 @@ export default function Show({
     can_cancel_einvoice = false,
     pay_now_configured = false,
     public_pdf_url = null,
+    public_html_url = null,
     whatsapp_url = null,
     document_trail = [],
     reminder_offsets = [-14, -7, -3, 0, 3, 7, 14],
@@ -118,7 +119,7 @@ export default function Show({
 
     const postAction = (url, body = {}) => router.post(url, body, { preserveScroll: true });
     const canEmail = invoice.customer?.email && auth.permissions.includes('invoices.email');
-    const canShare = Boolean(public_pdf_url || whatsapp_url);
+    const canShare = Boolean(public_html_url || public_pdf_url || whatsapp_url);
     const billTo = customerAddress(invoice.customer);
     const shipTo = customerShipping(invoice.customer);
     const fromLines = companyAddress(company);
@@ -340,8 +341,11 @@ export default function Show({
                             <button type="button" className={primary} onClick={() => postAction(route('invoices.email', invoice.id))}>Email customer</button>
                         )}
                         <a href={route('invoices.preview', invoice.id)} target="_blank" rel="noreferrer" className={btn}>View PDF</a>
+                        {public_html_url && (
+                            <a href={public_html_url} target="_blank" rel="noreferrer" className={primary}>View & Pay</a>
+                        )}
                         {canShare && (
-                            <ShareButtons publicUrl={public_pdf_url} whatsappUrl={whatsapp_url} className={btn} />
+                            <ShareButtons publicUrl={public_html_url || public_pdf_url} whatsappUrl={whatsapp_url} className={btn} />
                         )}
                         {auth.planPermissions?.['general-ledger.view'] && journal_entry_id && (
                             <Link href={route('general-ledger.show', journal_entry_id)} className={btn}>View journal</Link>

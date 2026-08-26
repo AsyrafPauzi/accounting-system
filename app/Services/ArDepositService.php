@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ArDeposit;
 use App\Models\ArDepositApplication;
 use App\Models\Invoice;
+use App\Support\JournalWriter;
 use Illuminate\Support\Facades\DB;
 
 class ArDepositService
@@ -29,25 +30,15 @@ class ArDepositService
                 'created_by'        => $data['created_by'] ?? null,
             ]);
 
-            $accountMap = DB::table('accounts')
-                ->whereIn('code', [$data['bank_account_code'], '2250'])
-                ->pluck('id', 'code');
-
-            $journalId = DB::table('journal_entries')->insertGetId([
+            $amount = (float) $data['amount'];
+            JournalWriter::postSystem([
                 'date'           => $data['payment_date'],
                 'description'    => 'Customer receipt '.$deposit->id.(! empty($data['reference']) ? ' '.$data['reference'] : ''),
                 'reference_type' => 'AR Deposit',
                 'reference_id'   => $deposit->id,
-                'type'           => 'system',
-                'status'         => 'posted',
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-            $now = now();
-            $amount = (float) $data['amount'];
-            DB::table('journal_items')->insert([
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap[$data['bank_account_code']] ?? null, 'account_code' => $data['bank_account_code'], 'debit' => $amount, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2250'] ?? null, 'account_code' => '2250', 'debit' => 0, 'credit' => $amount, 'created_at' => $now, 'updated_at' => $now],
+            ], [
+                ['account_code' => $data['bank_account_code'], 'debit' => $amount, 'credit' => 0],
+                ['account_code' => '2250', 'debit' => 0, 'credit' => $amount],
             ]);
 
             return $deposit;
@@ -106,21 +97,14 @@ class ArDepositService
             $deposit->status = $deposit->openAmount() <= 0 ? 'applied' : 'open';
             $deposit->save();
 
-            $accountMap = DB::table('accounts')->whereIn('code', ['2250', '1100'])->pluck('id', 'code');
-            $journalId = DB::table('journal_entries')->insertGetId([
-                'date'           => now(),
+            JournalWriter::postSystem([
+                'date'           => now()->toDateString(),
                 'description'    => 'Apply deposit to '.$invoice->invoice_number,
                 'reference_type' => 'AR Deposit Application',
                 'reference_id'   => $deposit->id,
-                'type'           => 'system',
-                'status'         => 'posted',
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-            $now = now();
-            DB::table('journal_items')->insert([
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2250'] ?? null, 'account_code' => '2250', 'debit' => $apply, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['1100'] ?? null, 'account_code' => '1100', 'debit' => 0, 'credit' => $apply, 'created_at' => $now, 'updated_at' => $now],
+            ], [
+                ['account_code' => '2250', 'debit' => $apply, 'credit' => 0],
+                ['account_code' => '1100', 'debit' => 0, 'credit' => $apply],
             ]);
 
             $this->invoices->recalculateStatus($invoice->fresh());
@@ -135,23 +119,14 @@ class ArDepositService
         }
 
         DB::transaction(function () use ($deposit, $amount, $paymentDate, $reference) {
-            $accountMap = DB::table('accounts')
-                ->whereIn('code', [$deposit->bank_account_code, '2250'])
-                ->pluck('id', 'code');
-            $journalId = DB::table('journal_entries')->insertGetId([
+            JournalWriter::postSystem([
                 'date'           => $paymentDate,
                 'description'    => 'Refund leftover deposit '.$deposit->id,
                 'reference_type' => 'AR Deposit Refund',
                 'reference_id'   => $deposit->id,
-                'type'           => 'system',
-                'status'         => 'posted',
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-            $now = now();
-            DB::table('journal_items')->insert([
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2250'] ?? null, 'account_code' => '2250', 'debit' => $amount, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap[$deposit->bank_account_code] ?? null, 'account_code' => $deposit->bank_account_code, 'debit' => 0, 'credit' => $amount, 'created_at' => $now, 'updated_at' => $now],
+            ], [
+                ['account_code' => '2250', 'debit' => $amount, 'credit' => 0],
+                ['account_code' => $deposit->bank_account_code, 'debit' => 0, 'credit' => $amount],
             ]);
             $deposit->refunded_amount = round((float) ($deposit->refunded_amount ?? 0) + $amount, 2);
             $this->refreshStatus($deposit);
@@ -168,21 +143,14 @@ class ArDepositService
         }
 
         DB::transaction(function () use ($deposit, $amount, $date) {
-            $accountMap = DB::table('accounts')->whereIn('code', ['2250', '4000'])->pluck('id', 'code');
-            $journalId = DB::table('journal_entries')->insertGetId([
+            JournalWriter::postSystem([
                 'date'           => $date,
                 'description'    => 'Forfeit leftover deposit '.$deposit->id,
                 'reference_type' => 'AR Deposit Forfeit',
                 'reference_id'   => $deposit->id,
-                'type'           => 'system',
-                'status'         => 'posted',
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-            $now = now();
-            DB::table('journal_items')->insert([
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2250'] ?? null, 'account_code' => '2250', 'debit' => $amount, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['4000'] ?? null, 'account_code' => '4000', 'debit' => 0, 'credit' => $amount, 'created_at' => $now, 'updated_at' => $now],
+            ], [
+                ['account_code' => '2250', 'debit' => $amount, 'credit' => 0],
+                ['account_code' => '4000', 'debit' => 0, 'credit' => $amount],
             ]);
             $deposit->forfeited_amount = round((float) ($deposit->forfeited_amount ?? 0) + $amount, 2);
             $this->refreshStatus($deposit);
@@ -261,56 +229,30 @@ class ArDepositService
         if (! $journal) {
             return;
         }
-        $items = DB::table('journal_items')->where('journal_entry_id', $journal->id)->get();
-        if ($items->isEmpty()) {
+        try {
+            JournalWriter::postReversalFromJournal(
+                (int) $journal->id,
+                'EDIT REVERSAL deposit '.$deposit->id,
+                now()->toDateString(),
+                'AR Deposit',
+                $deposit->id,
+            );
+        } catch (\LogicException) {
             return;
         }
-        $reversalId = DB::table('journal_entries')->insertGetId([
-            'date'           => now(),
-            'description'    => 'EDIT REVERSAL deposit '.$deposit->id,
-            'reference_type' => 'AR Deposit',
-            'reference_id'   => $deposit->id,
-            'type'           => 'system',
-            'status'         => 'posted',
-            'created_at'     => now(),
-            'updated_at'     => now(),
-        ]);
-        $now = now();
-        $rows = [];
-        foreach ($items as $item) {
-            $rows[] = [
-                'journal_entry_id' => $reversalId,
-                'account_id'       => $item->account_id,
-                'account_code'     => $item->account_code,
-                'debit'            => $item->credit,
-                'credit'           => $item->debit,
-                'created_at'       => $now,
-                'updated_at'       => $now,
-            ];
-        }
-        DB::table('journal_items')->insert($rows);
     }
 
     private function repostReceiveJournal(ArDeposit $deposit): void
     {
-        $accountMap = DB::table('accounts')
-            ->whereIn('code', [$deposit->bank_account_code, '2250'])
-            ->pluck('id', 'code');
-        $journalId = DB::table('journal_entries')->insertGetId([
+        $amount = (float) $deposit->amount;
+        JournalWriter::postSystem([
             'date'           => $deposit->payment_date,
             'description'    => 'Customer receipt '.$deposit->id.(! empty($deposit->reference) ? ' '.$deposit->reference : ''),
             'reference_type' => 'AR Deposit',
             'reference_id'   => $deposit->id,
-            'type'           => 'system',
-            'status'         => 'posted',
-            'created_at'     => now(),
-            'updated_at'     => now(),
-        ]);
-        $now = now();
-        $amount = (float) $deposit->amount;
-        DB::table('journal_items')->insert([
-            ['journal_entry_id' => $journalId, 'account_id' => $accountMap[$deposit->bank_account_code] ?? null, 'account_code' => $deposit->bank_account_code, 'debit' => $amount, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
-            ['journal_entry_id' => $journalId, 'account_id' => $accountMap['2250'] ?? null, 'account_code' => '2250', 'debit' => 0, 'credit' => $amount, 'created_at' => $now, 'updated_at' => $now],
+        ], [
+            ['account_code' => $deposit->bank_account_code, 'debit' => $amount, 'credit' => 0],
+            ['account_code' => '2250', 'debit' => 0, 'credit' => $amount],
         ]);
     }
 }

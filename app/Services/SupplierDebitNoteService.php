@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\SupplierDebitNote;
 use App\Support\DocumentNumber;
+use App\Support\JournalWriter;
 use Illuminate\Support\Facades\DB;
 
 class SupplierDebitNoteService
@@ -71,32 +72,16 @@ class SupplierDebitNoteService
                 ->latest('id')
                 ->first();
             if ($journal) {
-                $items = DB::table('journal_items')->where('journal_entry_id', $journal->id)->get();
-                $reversalId = DB::table('journal_entries')->insertGetId([
-                    'date'           => now(),
-                    'description'    => 'VOID REVERSAL: '.$dn->sdn_number,
-                    'reference_type' => 'Supplier Debit Note',
-                    'reference_id'   => $dn->id,
-                'type'           => 'system',
-                'status'         => 'posted',
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-            $now = now();
-                $rows = [];
-                foreach ($items as $item) {
-                    $rows[] = [
-                        'journal_entry_id' => $reversalId,
-                        'account_id'       => $item->account_id,
-                        'account_code'     => $item->account_code,
-                        'debit'            => $item->credit,
-                        'credit'           => $item->debit,
-                        'created_at'       => $now,
-                        'updated_at'       => $now,
-                    ];
-                }
-                if ($rows !== []) {
-                    DB::table('journal_items')->insert($rows);
+                try {
+                    JournalWriter::postReversalFromJournal(
+                        (int) $journal->id,
+                        'VOID REVERSAL: '.$dn->sdn_number,
+                        now()->toDateString(),
+                        'Supplier Debit Note',
+                        $dn->id,
+                    );
+                } catch (\LogicException) {
+                    // no-op
                 }
             }
             $dn->update(['status' => 'void']);
@@ -105,26 +90,7 @@ class SupplierDebitNoteService
 
     private function postJournal(SupplierDebitNote $dn): void
     {
-        $codes = ['2110', '5000', '2100'];
-        foreach ($dn->items as $item) {
-            if ($item->account_code) {
-                $codes[] = $item->account_code;
-            }
-        }
-        $accountMap = DB::table('accounts')->whereIn('code', array_unique($codes))->pluck('id', 'code');
-        $journalId = DB::table('journal_entries')->insertGetId([
-            'date'           => $dn->issue_date,
-            'description'    => 'Supplier Debit Note: '.$dn->sdn_number,
-            'reference_type' => 'Supplier Debit Note',
-            'reference_id'   => $dn->id,
-            'type'           => 'system',
-            'status'         => 'posted',
-            'created_at'     => now(),
-            'updated_at'     => now(),
-        ]);
-
-        $now = now();
-        $rows = [];
+        $lines = [];
         $byCode = [];
         foreach ($dn->items as $item) {
             $code = $item->account_code ?: '5000';
@@ -132,36 +98,26 @@ class SupplierDebitNoteService
             $byCode[$code] = ($byCode[$code] ?? 0) + $line;
         }
         foreach ($byCode as $code => $debit) {
-            $rows[] = [
-                'journal_entry_id' => $journalId,
-                'account_id'       => $accountMap[$code] ?? $accountMap['5000'] ?? null,
-                'account_code'     => $code,
-                'debit'            => $debit,
-                'credit'           => 0,
-                'created_at'       => $now,
-                'updated_at'       => $now,
-            ];
+            $lines[] = ['account_code' => $code, 'debit' => $debit, 'credit' => 0];
         }
         if ((float) $dn->tax_amount > 0) {
-            $rows[] = [
-                'journal_entry_id' => $journalId,
-                'account_id'       => $accountMap['2100'] ?? null,
-                'account_code'     => '2100',
-                'debit'            => (float) $dn->tax_amount,
-                'credit'           => 0,
-                'created_at'       => $now,
-                'updated_at'       => $now,
+            $lines[] = [
+                'account_code' => '2100',
+                'debit'        => (float) $dn->tax_amount,
+                'credit'       => 0,
             ];
         }
-        $rows[] = [
-            'journal_entry_id' => $journalId,
-            'account_id'       => $accountMap['2110'] ?? null,
-            'account_code'     => '2110',
-            'debit'            => 0,
-            'credit'           => (float) $dn->total_amount,
-            'created_at'       => $now,
-            'updated_at'       => $now,
+        $lines[] = [
+            'account_code' => '2110',
+            'debit'        => 0,
+            'credit'       => (float) $dn->total_amount,
         ];
-        DB::table('journal_items')->insert($rows);
+
+        JournalWriter::postSystem([
+            'date'           => $dn->issue_date,
+            'description'    => 'Supplier Debit Note: '.$dn->sdn_number,
+            'reference_type' => 'Supplier Debit Note',
+            'reference_id'   => $dn->id,
+        ], $lines);
     }
 }

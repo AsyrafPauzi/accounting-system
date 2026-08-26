@@ -129,6 +129,9 @@ class InitializeTenancyByLoggedInUser
 
         try {
             DefaultChartOfAccountsSeeder::seedMissing();
+            \App\Support\DocumentNumberDefaults::seedMissing();
+            \App\Support\TaxCodeDefaults::seedMissing();
+            \App\Support\AccountingPeriodResolver::ensurePeriodsExist();
         } catch (\Throwable) {
             return;
         }

@@ -59,6 +59,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Settings & Admin
             'settings.view', 'settings.edit',
+            'periods.view', 'periods.lock', 'periods.reopen',
             'admin.tenants', 'admin.plans', 'admin.users', 'admin.audit',
             'users.view', 'users.create', 'users.edit', 'users.delete',
             'roles.manage', 'permissions.manage',
@@ -115,6 +116,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'reports.view', 'reports.profit-loss', 'reports.sales', 'reports.balance-sheet', 'reports.cashflow', 'reports.aged-reports', 'reports.export.full',
             'reports.sales-tax', 'reports.customer-credits', 'reports.purchases-by-vendor',
             'settings.view', 'audit-logs.view', 'integrations.view', 'myinvois.submit',
+            'periods.view', 'periods.lock', 'periods.reopen',
             'ocr.use', 'copilot.use',
             'dashboard.basic', 'dashboard.standard', 'dashboard.advanced',
         ]);

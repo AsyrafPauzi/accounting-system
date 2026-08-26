@@ -118,8 +118,13 @@ class SalesTaxReportController extends Controller
 
         // ── Output tax (collected on sales) ────────────────────────────────
         $outputTax = (float) (clone $invoiceBase)->sum('tax_amount');
+        $outputTax += $this->sumDocumentTax('debit_notes', 'issue_date', $start, $end);
+        $outputTax -= $this->sumDocumentTax('credit_notes', 'issue_date', $start, $end);
+
         $invoiceCount = (int) (clone $invoiceBase)->count();
         $taxableSales = (float) (clone $invoiceBase)->sum('amount_before_tax');
+        $taxableSales += $this->sumDocumentTaxable('debit_notes', 'issue_date', $start, $end, 'total_amount', 'tax_amount');
+        $taxableSales -= $this->sumDocumentTaxable('credit_notes', 'issue_date', $start, $end, 'total_amount', 'tax_amount');
 
         // ── Input tax (paid on purchases) ──────────────────────────────────
         $billBase = DB::table('bills')
@@ -128,6 +133,8 @@ class SalesTaxReportController extends Controller
             ->whereNull('deleted_at');
 
         $inputTax = (float) (clone $billBase)->sum('tax_amount');
+        $inputTax += $this->sumDocumentTax('supplier_debit_notes', 'issue_date', $start, $end);
+        $inputTax -= $this->sumDocumentTax('supplier_credit_notes', 'issue_date', $start, $end);
         $billCount = (int) (clone $billBase)->count();
         $taxablePurchases = (float) (clone $billBase)->sum(DB::raw('total_amount - tax_amount'));
 
@@ -325,5 +332,37 @@ class SalesTaxReportController extends Controller
         }
 
         return 'MYR';
+    }
+
+    private function sumDocumentTax(string $table, string $dateColumn, string $start, string $end): float
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasTable($table)) {
+            return 0.0;
+        }
+
+        return (float) DB::table($table)
+            ->where('status', '!=', 'void')
+            ->whereBetween($dateColumn, [$start, $end])
+            ->whereNull('deleted_at')
+            ->sum('tax_amount');
+    }
+
+    private function sumDocumentTaxable(
+        string $table,
+        string $dateColumn,
+        string $start,
+        string $end,
+        string $totalColumn,
+        string $taxColumn
+    ): float {
+        if (! \Illuminate\Support\Facades\Schema::hasTable($table)) {
+            return 0.0;
+        }
+
+        return (float) DB::table($table)
+            ->where('status', '!=', 'void')
+            ->whereBetween($dateColumn, [$start, $end])
+            ->whereNull('deleted_at')
+            ->sum(DB::raw("{$totalColumn} - {$taxColumn}"));
     }
 }

@@ -99,6 +99,7 @@ return Application::configure(basePath: dirname(__DIR__))
             // on `internal.bukucloud.com` (when INTERNAL_ADMIN_HOST is
             // set). No-op when the config is null (local dev).
             'internal.host' => \App\Http\Middleware\InternalAdminHost::class,
+            'period.open' => \App\Http\Middleware\EnsurePeriodOpen::class,
             // External /api/v1 partner authentication. Resolves
             // Authorization: Bearer <api_key> to a tenant_api_credentials
             // row, initialises tenancy, and re-checks the api.access

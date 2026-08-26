@@ -70,4 +70,32 @@ class PeriodLockTest extends TestCase
 
         app(InvoiceService::class)->post($invoice);
     }
+
+    public function test_reopen_period_allows_posting_again(): void
+    {
+        $issueDate = now()->startOfMonth()->toDateString();
+        $period = AccountingPeriod::query()
+            ->whereDate('start_date', '<=', $issueDate)
+            ->whereDate('end_date', '>=', $issueDate)
+            ->firstOrFail();
+
+        $period->update(['status' => 'closed', 'closed_at' => now()]);
+        $period->update(['status' => 'open', 'closed_at' => null, 'closed_by' => null]);
+
+        $invoice = app(InvoiceService::class)->create([
+            'invoice_number' => 'INV-REOPEN-001',
+            'msic_code'      => '70200',
+            'customer_id'    => $this->customer->id,
+            'issue_date'     => $issueDate,
+            'due_date'       => now()->addDays(30)->toDateString(),
+            'currency'       => 'MYR',
+            'shipping_amount'=> 0,
+        ], [[
+            'description' => 'After reopen', 'quantity' => 1, 'unit_price' => 25,
+            'tax_rate' => 0, 'discount_amount' => 0, 'item_classification' => '022',
+        ]]);
+
+        app(InvoiceService::class)->post($invoice);
+        $this->assertSame('unpaid', $invoice->fresh()->status);
+    }
 }

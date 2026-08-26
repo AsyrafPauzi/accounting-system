@@ -49,8 +49,8 @@ class WelcomeTourController extends Controller
 
     public function dismissChecklist(Request $request): RedirectResponse
     {
-        $user = $request->user();
-        if ($user && ! $user->isFirmUser()) {
+        $user = $request->user()?->fresh();
+        if ($user && ! $user->isFirmUser() && \Illuminate\Support\Facades\Schema::connection($user->getConnectionName())->hasColumn('users', 'onboarding_steps')) {
             $progress = is_array($user->onboarding_steps) ? $user->onboarding_steps : [];
             $progress['dismissed_at'] = now()->toIso8601String();
             $user->forceFill(['onboarding_steps' => $progress])->save();
