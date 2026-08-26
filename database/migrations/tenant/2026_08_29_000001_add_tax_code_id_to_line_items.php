@@ -27,8 +27,11 @@ return new class extends Migration
                 continue;
             }
 
-            Schema::table($table, function (Blueprint $table): void {
-                $table->foreignId('tax_code_id')->nullable()->after('tax_rate')->constrained('tax_codes')->nullOnDelete();
+            Schema::table($table, function (Blueprint $blueprint) use ($table): void {
+                $column = $blueprint->foreignId('tax_code_id')->nullable()->constrained('tax_codes')->nullOnDelete();
+                if (Schema::hasColumn($table, 'tax_rate')) {
+                    $column->after('tax_rate');
+                }
             });
         }
 

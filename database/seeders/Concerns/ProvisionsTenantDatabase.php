@@ -37,6 +37,14 @@ trait ProvisionsTenantDatabase
             MigrateDatabase::dispatchSync($tenant);
         }
 
+        // Seeders often run with WithoutModelEvents, so QueueTenantProvisioning
+        // never fires. Mark ready here or the login screen polls forever.
+        $tenant->update([
+            'provision_status' => 'ready',
+            'provision_error' => null,
+            'provisioned_at' => now(),
+        ]);
+
         return $tenant;
     }
 

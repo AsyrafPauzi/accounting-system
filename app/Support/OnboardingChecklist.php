@@ -38,9 +38,13 @@ final class OnboardingChecklist
             $hasCollection = Invoice::query()
                 ->whereNotIn('status', ['draft', 'void'])
                 ->where(function ($q) {
-                    $q->where('amount_paid', '>', 0)
-                        ->orWhereNotNull('sent_at')
-                        ->orWhereNotNull('viewed_at');
+                    $q->where('amount_paid', '>', 0);
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('invoices', 'last_emailed_at')) {
+                        $q->orWhereNotNull('last_emailed_at');
+                    }
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('invoices', 'last_viewed_at')) {
+                        $q->orWhereNotNull('last_viewed_at');
+                    }
                 })
                 ->exists();
         }

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Onboarding;
 
+use App\Models\Customer;
+use App\Models\Invoice;
 use App\Models\Plan;
 use App\Models\Role;
 use App\Models\Subscription;
@@ -60,5 +62,47 @@ class OnboardingChecklistTest extends TestCase
         $user->refresh();
         $checklist = OnboardingChecklist::forUser($user, $tenant);
         $this->assertFalse($checklist['visible']);
+    }
+
+    public function test_collect_step_uses_emailed_and_viewed_columns(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $this->seed(PlanSeeder::class);
+
+        $tenant = $this->createTenantWithDatabase();
+        Subscription::create([
+            'tenant_id' => $tenant->id,
+            'plan_id'   => Plan::where('slug', 'startup')->firstOrFail()->id,
+            'status'    => 'active',
+            'interval'  => 'lifetime',
+            'gateway'   => 'system',
+        ]);
+
+        $user = User::factory()->create(['tenant_id' => $tenant->id]);
+
+        tenancy()->initialize($tenant);
+
+        $customer = Customer::create([
+            'name' => 'Collect Customer', 'code' => 'C-ONB', 'billing_country' => 'Malaysia', 'is_active' => true,
+        ]);
+        Invoice::create([
+            'invoice_number'     => 'INV-ONB-001',
+            'customer_id'        => $customer->id,
+            'issue_date'         => now()->toDateString(),
+            'due_date'           => now()->addDays(14)->toDateString(),
+            'amount_before_tax'  => 100,
+            'tax_amount'         => 0,
+            'total_amount'       => 100,
+            'amount_paid'        => 0,
+            'status'             => 'unpaid',
+            'currency'           => 'MYR',
+            'last_emailed_at'    => now(),
+        ]);
+
+        $checklist = OnboardingChecklist::forUser($user, $tenant);
+        $collect = collect($checklist['steps'])->firstWhere('key', 'collect');
+
+        $this->assertNotNull($collect);
+        $this->assertTrue($collect['done']);
     }
 }
