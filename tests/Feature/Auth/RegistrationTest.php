@@ -2,12 +2,22 @@
 
 namespace Tests\Feature\Auth;
 
+use Database\Factories\UserFactory;
+use Database\Seeders\PlanSeeder;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $this->seed(PlanSeeder::class);
+    }
 
     public function test_registration_screen_can_be_rendered(): void
     {
@@ -21,11 +31,13 @@ class RegistrationTest extends TestCase
         $response = $this->post('/register', [
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'password' => UserFactory::DEFAULT_PASSWORD,
+            'password_confirmation' => UserFactory::DEFAULT_PASSWORD,
+            'accept_privacy' => true,
         ]);
 
-        $this->assertAuthenticated();
+        $response->assertSessionHasNoErrors();
         $response->assertRedirect(route('dashboard', absolute: false));
+        $this->assertAuthenticated();
     }
 }

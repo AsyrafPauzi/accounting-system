@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\FirmClient;
+use App\Support\FirmActingPermissions;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
@@ -58,6 +60,19 @@ class AppServiceProvider extends ServiceProvider
             if (! function_exists('tenancy') || ! tenancy()->initialized) {
                 return null;
             }
+
+            $level = FirmClient::query()
+                ->where('firm_id', $user->firm_id)
+                ->where('tenant_id', tenant('id'))
+                ->where('status', 'active')
+                ->value('permission_level');
+
+            $allowed = FirmActingPermissions::allowedForLevel($level ?? 'viewer');
+
+            if (! in_array($ability, $allowed, true)) {
+                return false;
+            }
+
             return true;
         });
 

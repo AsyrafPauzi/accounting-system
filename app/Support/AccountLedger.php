@@ -40,6 +40,7 @@ class AccountLedger
         if ($beforeDate) {
             $query->where('journal_entries.date', '<', $beforeDate);
         }
+        PostedJournalScope::apply($query, 'journal_entries');
 
         $totals = $query
             ->selectRaw('COALESCE(SUM(journal_items.debit), 0) as total_debit, COALESCE(SUM(journal_items.credit), 0) as total_credit')
@@ -71,8 +72,9 @@ class AccountLedger
             ->whereIn('journal_items.account_code', $accountCodes)
             ->where('journal_entries.date', '<=', $asOfDate)
             ->whereNull('journal_items.deleted_at')
-            ->whereNull('journal_entries.deleted_at')
-            ->selectRaw('journal_items.account_code, COALESCE(SUM(journal_items.debit), 0) as total_debit, COALESCE(SUM(journal_items.credit), 0) as total_credit')
+            ->whereNull('journal_entries.deleted_at');
+        PostedJournalScope::apply($rows, 'journal_entries');
+        $rows = $rows->selectRaw('journal_items.account_code, COALESCE(SUM(journal_items.debit), 0) as total_debit, COALESCE(SUM(journal_items.credit), 0) as total_credit')
             ->groupBy('journal_items.account_code')
             ->get();
 

@@ -213,6 +213,7 @@ Ensure `RUN_MIGRATIONS=true` on the service so new tasks apply migrations on boo
 
 ## 6. Troubleshooting
 - **Logs**: View application logs in **AWS CloudWatch** under the log group associated with the ECS Task.
+- **Scheduled jobs** (subscription renewals, invoice reminders, recurring invoices): the ECS container runs Laravel's scheduler via Supervisor (`docker/supervisor.conf`, program `laravel-scheduler`). Check `storage/logs/scheduler.log` inside the task if renewals or reminders stop firing.
 - **500 after deploy on central features** (profile theme, `/admin/ocr`): usually missing central migrations — run `php artisan migrate --force` and confirm pending migrations in `migrate:status`.
 - **500 on tenant features** (bills, invoices): usually missing tenant migrations — run `php artisan tenants:migrate --force`.
 - **Service Stability**: If a deployment hangs, check the ECS Service "Events" tab for errors (e.g., health check failures). Slow `tenants:migrate` on many DBs can delay health checks — see scaling note above.

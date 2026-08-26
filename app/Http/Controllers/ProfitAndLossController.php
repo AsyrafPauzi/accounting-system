@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\PostedJournalScope;
 use App\Support\ReportCompare;
 use App\Support\ReportPeriod;
 use Illuminate\Http\Request;
@@ -48,8 +49,9 @@ class ProfitAndLossController extends Controller
             ->join('accounts', 'journal_items.account_code', '=', 'accounts.code')
             ->whereIn('accounts.type', ['income', 'expense'])
             ->where('journal_entries.date', '>=', $dateFrom)
-            ->where('journal_entries.date', '<=', $dateTo)
-            ->select(
+            ->where('journal_entries.date', '<=', $dateTo);
+        PostedJournalScope::apply($rows);
+        $rows = $rows->select(
                 'accounts.code',
                 'accounts.name',
                 'accounts.type',

@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Bill;
 use App\Models\BillPayment;
 use App\Support\DocumentNumber;
+use App\Support\JournalWriter;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -201,54 +203,33 @@ class BillService
         DB::transaction(function () use ($bill) {
             $bill->load('items');
 
-            $journalId = DB::table('journal_entries')->insertGetId([
-                'date'           => $bill->bill_date,
-                'description'    => 'Posted Bill: ' . $bill->bill_number,
-                'reference_type' => 'Bill',
-                'reference_id'   => $bill->id,
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-
-            $codes = $bill->items->pluck('account_code')->push('2100')->unique()->toArray();
-            $accountMap = DB::table('accounts')->whereIn('code', $codes)->pluck('id', 'code');
-
-            $debitRows = [];
+            $lines = [];
             foreach ($bill->items as $item) {
-                $debitRows[] = [
-                    'journal_entry_id' => $journalId,
-                    'account_id'       => $accountMap[$item->account_code] ?? null,
-                    'account_code'     => $item->account_code,
-                    'debit'            => $item->amount,
-                    'credit'           => 0,
-                    'created_at'       => now(),
-                    'updated_at'       => now(),
+                $lines[] = [
+                    'account_code' => $item->account_code,
+                    'debit'        => (float) $item->amount,
+                    'credit'       => 0,
                 ];
             }
             if ($bill->tax_amount > 0) {
-                $debitRows[] = [
-                    'journal_entry_id' => $journalId,
-                    'account_id'       => $accountMap['2100'] ?? null,
-                    'account_code'     => '2100',
-                    'debit'            => $bill->tax_amount,
-                    'credit'           => 0,
-                    'created_at'       => now(),
-                    'updated_at'       => now(),
+                $lines[] = [
+                    'account_code' => '2100',
+                    'debit'        => (float) $bill->tax_amount,
+                    'credit'       => 0,
                 ];
             }
-            DB::table('journal_items')->insert($debitRows);
+            $lines[] = [
+                'account_code' => self::AP_ACCOUNT,
+                'debit'        => 0,
+                'credit'       => (float) $bill->total_amount,
+            ];
 
-            $apAccountId = DB::table('accounts')->where('code', self::AP_ACCOUNT)->value('id');
-
-            DB::table('journal_items')->insert([
-                'journal_entry_id' => $journalId,
-                'account_id'       => $apAccountId,
-                'account_code'     => self::AP_ACCOUNT,
-                'debit'            => 0,
-                'credit'           => $bill->total_amount,
-                'created_at'       => now(),
-                'updated_at'       => now(),
-            ]);
+            JournalWriter::postSystem([
+                'date'           => Carbon::parse($bill->bill_date)->toDateString(),
+                'description'    => 'Posted Bill: '.$bill->bill_number,
+                'reference_type' => 'Bill',
+                'reference_id'   => $bill->id,
+            ], $lines);
 
             $bill->update(['status' => 'unpaid']);
         });
@@ -261,56 +242,12 @@ class BillService
         }
 
         DB::transaction(function () use ($bill) {
-            $bill->load('items');
-
-            $journalId = DB::table('journal_entries')->insertGetId([
-                'date'           => now(),
-                'description'    => 'VOID REVERSAL: ' . $bill->bill_number,
-                'reference_type' => 'Bill',
-                'reference_id'   => $bill->id,
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-
-            $codes = $bill->items->pluck('account_code')->push('2100')->unique()->toArray();
-            $accountMap = DB::table('accounts')->whereIn('code', $codes)->pluck('id', 'code');
-
-            $creditRows = [];
-            foreach ($bill->items as $item) {
-                $creditRows[] = [
-                    'journal_entry_id' => $journalId,
-                    'account_id'       => $accountMap[$item->account_code] ?? null,
-                    'account_code'     => $item->account_code,
-                    'debit'            => 0,
-                    'credit'           => $item->amount,
-                    'created_at'       => now(),
-                    'updated_at'       => now(),
-                ];
-            }
-            if ($bill->tax_amount > 0) {
-                $creditRows[] = [
-                    'journal_entry_id' => $journalId,
-                    'account_id'       => $accountMap['2100'] ?? null,
-                    'account_code'     => '2100',
-                    'debit'            => 0,
-                    'credit'           => $bill->tax_amount,
-                    'created_at'       => now(),
-                    'updated_at'       => now(),
-                ];
-            }
-            DB::table('journal_items')->insert($creditRows);
-
-            $apAccountId = DB::table('accounts')->where('code', self::AP_ACCOUNT)->value('id');
-
-            DB::table('journal_items')->insert([
-                'journal_entry_id' => $journalId,
-                'account_id'       => $apAccountId,
-                'account_code'     => self::AP_ACCOUNT,
-                'debit'            => $bill->total_amount,
-                'credit'           => 0,
-                'created_at'       => now(),
-                'updated_at'       => now(),
-            ]);
+            JournalWriter::postReversalByReference(
+                'Bill',
+                (int) $bill->id,
+                'VOID REVERSAL: '.$bill->bill_number,
+                now()->toDateString(),
+            );
 
             $bill->update(['status' => 'void', 'amount_paid' => 0]);
         });
@@ -343,20 +280,14 @@ class BillService
             $bill->amount_paid = round((float) $bill->amount_paid + $apply, 2);
             $bill->save();
 
-            $journalId = DB::table('journal_entries')->insertGetId([
+            JournalWriter::postSystem([
                 'date'           => $paymentDate,
                 'description'    => 'Payment for Bill '.$bill->bill_number,
                 'reference_type' => 'Bill Payment',
                 'reference_id'   => $bill->id,
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-
-            $accountMap = DB::table('accounts')->whereIn('code', [self::AP_ACCOUNT, $bankAccountCode])->pluck('id', 'code');
-            $now = now();
-            DB::table('journal_items')->insert([
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap[self::AP_ACCOUNT] ?? null, 'account_code' => self::AP_ACCOUNT, 'debit' => $apply, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap[$bankAccountCode] ?? null, 'account_code' => $bankAccountCode, 'debit' => 0, 'credit' => $apply, 'created_at' => $now, 'updated_at' => $now],
+            ], [
+                ['account_code' => self::AP_ACCOUNT, 'debit' => $apply, 'credit' => 0],
+                ['account_code' => $bankAccountCode, 'debit' => 0, 'credit' => $apply],
             ]);
 
             $this->recalculateStatus($bill->fresh());

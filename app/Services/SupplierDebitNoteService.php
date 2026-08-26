@@ -77,10 +77,12 @@ class SupplierDebitNoteService
                     'description'    => 'VOID REVERSAL: '.$dn->sdn_number,
                     'reference_type' => 'Supplier Debit Note',
                     'reference_id'   => $dn->id,
-                    'created_at'     => now(),
-                    'updated_at'     => now(),
-                ]);
-                $now = now();
+                'type'           => 'system',
+                'status'         => 'posted',
+                'created_at'     => now(),
+                'updated_at'     => now(),
+            ]);
+            $now = now();
                 $rows = [];
                 foreach ($items as $item) {
                     $rows[] = [
@@ -115,6 +117,8 @@ class SupplierDebitNoteService
             'description'    => 'Supplier Debit Note: '.$dn->sdn_number,
             'reference_type' => 'Supplier Debit Note',
             'reference_id'   => $dn->id,
+            'type'           => 'system',
+            'status'         => 'posted',
             'created_at'     => now(),
             'updated_at'     => now(),
         ]);

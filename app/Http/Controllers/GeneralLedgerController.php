@@ -7,6 +7,7 @@ use App\Models\JournalEntry;
 use App\Models\JournalItem;
 use App\Models\Tenant;
 use App\Support\AccountLedger;
+use App\Support\PostedJournalScope;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -45,6 +46,7 @@ class GeneralLedgerController extends Controller
         if ($accountCode) {
             $baseQuery->where('journal_items.account_code', $accountCode);
         }
+        PostedJournalScope::apply($baseQuery, 'journal_entries');
 
         $account = $isAccountLedger
             ? Account::query()->where('code', $accountCode)->firstOrFail()
@@ -118,6 +120,7 @@ class GeneralLedgerController extends Controller
             ->when($dateTo, fn ($q) => $q->where('journal_entries.date', '<=', $dateTo))
             ->when($referenceType && in_array($referenceType, self::REFERENCE_TYPES, true), fn ($q) => $q->where('journal_entries.reference_type', $referenceType))
             ->when($accountCode, fn ($q) => $q->where('journal_items.account_code', $accountCode));
+        PostedJournalScope::apply($statsQuery, 'journal_entries');
 
         $totalDebits = (float) (clone $statsQuery)->sum('journal_items.debit');
         $totalCredits = (float) (clone $statsQuery)->sum('journal_items.credit');
@@ -194,6 +197,8 @@ class GeneralLedgerController extends Controller
             $query->where('reference_type', $referenceType);
         }
 
+        PostedJournalScope::apply($query, 'journal_entries');
+
         $perPage = in_array((int) $request->input('per_page'), [10, 25, 50, 100], true)
             ? (int) $request->input('per_page')
             : 25;
@@ -227,6 +232,7 @@ class GeneralLedgerController extends Controller
             ->when($dateFrom, fn ($q) => $q->where('date', '>=', $dateFrom))
             ->when($dateTo, fn ($q) => $q->where('date', '<=', $dateTo))
             ->when($referenceType && in_array($referenceType, self::REFERENCE_TYPES, true), fn ($q) => $q->where('reference_type', $referenceType));
+        PostedJournalScope::apply($statsQuery, 'journal_entries');
 
         $entriesForStats = $statsQuery->get();
         $totalDebits = $entriesForStats->sum(fn ($e) => $e->items->sum(fn ($i) => (float) $i->debit));
@@ -323,6 +329,7 @@ class GeneralLedgerController extends Controller
         if ($referenceType && in_array($referenceType, self::REFERENCE_TYPES, true)) {
             $query->where('reference_type', $referenceType);
         }
+        PostedJournalScope::apply($query, 'journal_entries');
         $entries = $query->limit(self::EXPORT_LIMIT)->get();
 
         $filename = 'general-ledger-entries-'.($dateFrom ?: 'all').'-to-'.($dateTo ?: 'all').'.csv';
@@ -372,6 +379,7 @@ class GeneralLedgerController extends Controller
         if ($referenceType && in_array($referenceType, self::REFERENCE_TYPES, true)) {
             $query->where('reference_type', $referenceType);
         }
+        PostedJournalScope::apply($query, 'journal_entries');
         $entries = $query->limit(self::EXPORT_LIMIT)->get()->map(function (JournalEntry $entry) {
             $totalDebit = $entry->items->sum(fn ($i) => (float) $i->debit);
             $totalCredit = $entry->items->sum(fn ($i) => (float) $i->credit);
@@ -428,6 +436,7 @@ class GeneralLedgerController extends Controller
         if ($accountCode) {
             $query->where('journal_items.account_code', $accountCode);
         }
+        PostedJournalScope::apply($query, 'journal_entries');
         $items = $query->limit(self::EXPORT_LIMIT)->get();
         $accountCodes = $items->pluck('account_code')->unique()->filter()->values()->all();
         $accountsMap = $accountCodes ? Account::whereIn('code', $accountCodes)->pluck('name', 'code')->toArray() : [];
@@ -487,6 +496,7 @@ class GeneralLedgerController extends Controller
         if ($accountCode) {
             $query->where('journal_items.account_code', $accountCode);
         }
+        PostedJournalScope::apply($query, 'journal_entries');
         $items = $query->limit(self::EXPORT_LIMIT)->get();
         $accountCodes = $items->pluck('account_code')->unique()->filter()->values()->all();
         $accountsMap = $accountCodes ? Account::whereIn('code', $accountCodes)->pluck('name', 'code')->toArray() : [];

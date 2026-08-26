@@ -150,6 +150,17 @@ return new class extends Migration
 
     private function indexExists(string $table, string $indexName): bool
     {
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+            $rows = DB::select(
+                'SELECT COUNT(*) AS c FROM sqlite_master WHERE type = ? AND tbl_name = ? AND name = ?',
+                ['index', $table, $indexName]
+            );
+
+            return ! empty($rows) && (int) $rows[0]->c > 0;
+        }
+
         $database = DB::connection()->getDatabaseName();
         $rows = DB::select(
             'SELECT COUNT(*) AS c FROM information_schema.statistics

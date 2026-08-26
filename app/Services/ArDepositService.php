@@ -38,6 +38,8 @@ class ArDepositService
                 'description'    => 'Customer receipt '.$deposit->id.(! empty($data['reference']) ? ' '.$data['reference'] : ''),
                 'reference_type' => 'AR Deposit',
                 'reference_id'   => $deposit->id,
+                'type'           => 'system',
+                'status'         => 'posted',
                 'created_at'     => now(),
                 'updated_at'     => now(),
             ]);
@@ -110,6 +112,8 @@ class ArDepositService
                 'description'    => 'Apply deposit to '.$invoice->invoice_number,
                 'reference_type' => 'AR Deposit Application',
                 'reference_id'   => $deposit->id,
+                'type'           => 'system',
+                'status'         => 'posted',
                 'created_at'     => now(),
                 'updated_at'     => now(),
             ]);
@@ -139,6 +143,8 @@ class ArDepositService
                 'description'    => 'Refund leftover deposit '.$deposit->id,
                 'reference_type' => 'AR Deposit Refund',
                 'reference_id'   => $deposit->id,
+                'type'           => 'system',
+                'status'         => 'posted',
                 'created_at'     => now(),
                 'updated_at'     => now(),
             ]);
@@ -168,6 +174,8 @@ class ArDepositService
                 'description'    => 'Forfeit leftover deposit '.$deposit->id,
                 'reference_type' => 'AR Deposit Forfeit',
                 'reference_id'   => $deposit->id,
+                'type'           => 'system',
+                'status'         => 'posted',
                 'created_at'     => now(),
                 'updated_at'     => now(),
             ]);
@@ -262,6 +270,8 @@ class ArDepositService
             'description'    => 'EDIT REVERSAL deposit '.$deposit->id,
             'reference_type' => 'AR Deposit',
             'reference_id'   => $deposit->id,
+            'type'           => 'system',
+            'status'         => 'posted',
             'created_at'     => now(),
             'updated_at'     => now(),
         ]);
@@ -291,6 +301,8 @@ class ArDepositService
             'description'    => 'Customer receipt '.$deposit->id.(! empty($deposit->reference) ? ' '.$deposit->reference : ''),
             'reference_type' => 'AR Deposit',
             'reference_id'   => $deposit->id,
+            'type'           => 'system',
+            'status'         => 'posted',
             'created_at'     => now(),
             'updated_at'     => now(),
         ]);

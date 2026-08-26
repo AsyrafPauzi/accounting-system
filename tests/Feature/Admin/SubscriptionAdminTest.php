@@ -56,13 +56,13 @@ class SubscriptionAdminTest extends TestCase
             'is_active'        => true,
         ]);
 
-        // Create a tenant record without triggering the DB-creation event
-        $this->tenant = Tenant::withoutEvents(function () {
-            return Tenant::forceCreate(['id' => 'test_tenant_001']);
-        });
+        // Central tenant row only — subscription tests do not need a
+        // tenant SQLite file. The non-super-admin user also has no
+        // tenant_id so InitializeTenancyByLoggedInUser stays on central.
+        $this->tenant = Tenant::withoutEvents(fn () => Tenant::forceCreate(['id' => 'test_tenant_001']));
 
-        // Create tenant user
-        $this->tenantUser = User::factory()->create(['tenant_id' => $this->tenant->getKey()]);
+        // Create tenant-scoped admin (not super-admin) for access checks
+        $this->tenantUser = User::factory()->create(['tenant_id' => null]);
         $this->tenantUser->assignRole('admin');
 
         // Give tenant an existing subscription
@@ -82,6 +82,7 @@ class SubscriptionAdminTest extends TestCase
     public function test_non_super_admin_cannot_access_tenant_admin(): void
     {
         $this->actingAs($this->tenantUser)
+            ->withoutMiddleware(\App\Http\Middleware\EnsureSubscribed::class)
             ->get(route('admin.tenants.index'))
             ->assertStatus(403);
     }

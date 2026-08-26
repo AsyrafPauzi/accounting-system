@@ -129,6 +129,8 @@ class SupplierCreditNoteService
                 'description'    => 'Refund of supplier credit '.$cn->scn_number,
                 'reference_type' => 'Supplier Credit Note Refund',
                 'reference_id'   => $refund->id,
+                'type'           => 'system',
+                'status'         => 'posted',
                 'created_at'     => now(),
                 'updated_at'     => now(),
             ]);
@@ -246,6 +248,8 @@ class SupplierCreditNoteService
             'description'    => $description,
             'reference_type' => $type,
             'reference_id'   => $referenceId,
+            'type'           => 'system',
+            'status'         => 'posted',
             'created_at'     => now(),
             'updated_at'     => now(),
         ]);

@@ -39,6 +39,8 @@ class ApDepositService
                 'description'    => 'Supplier deposit '.$deposit->id.(! empty($data['reference']) ? ' '.$data['reference'] : ''),
                 'reference_type' => 'AP Deposit',
                 'reference_id'   => $deposit->id,
+                'type'           => 'system',
+                'status'         => 'posted',
                 'created_at'     => now(),
                 'updated_at'     => now(),
             ]);
@@ -109,6 +111,8 @@ class ApDepositService
                 'description'    => 'Apply supplier deposit to '.$bill->bill_number,
                 'reference_type' => 'AP Deposit Application',
                 'reference_id'   => $deposit->id,
+                'type'           => 'system',
+                'status'         => 'posted',
                 'created_at'     => now(),
                 'updated_at'     => now(),
             ]);

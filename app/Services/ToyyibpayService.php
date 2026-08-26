@@ -79,6 +79,70 @@ class ToyyibpayService
     }
 
     /**
+     * Fetch bill transactions from ToyyibPay getBillTransactions API.
+     *
+     * @see https://toyyibpay.com/apireference/#get-bill-transactions
+     *
+     * @return list<array<string, mixed>>|null
+     */
+    public function getBillTransactions(string $billCode): ?array
+    {
+        if ($this->secretKey === '' || $billCode === '') {
+            return null;
+        }
+
+        try {
+            $response = Http::asForm()->post("{$this->baseUrl}/getBillTransactions", [
+                'userSecretKey' => $this->secretKey,
+                'billCode'      => $billCode,
+            ]);
+
+            if (! $response->successful()) {
+                Log::warning('Toyyibpay getBillTransactions HTTP error', [
+                    'status' => $response->status(),
+                    'body'   => $response->body(),
+                ]);
+
+                return null;
+            }
+
+            $result = $response->json();
+
+            return is_array($result) ? $result : null;
+        } catch (\Exception $e) {
+            Log::error('Toyyibpay getBillTransactions exception', ['message' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Verify a bill was paid and the external reference matches the expected order id.
+     */
+    public function verifyPaidBill(string $billCode, string $expectedExternalRef): bool
+    {
+        $transactions = $this->getBillTransactions($billCode);
+        if ($transactions === null || $transactions === []) {
+            return false;
+        }
+
+        foreach ($transactions as $txn) {
+            if (! is_array($txn)) {
+                continue;
+            }
+
+            $status = (string) ($txn['billpaymentStatus'] ?? $txn['billPaymentStatus'] ?? '');
+            $ref = (string) ($txn['billExternalReferenceNo'] ?? $txn['billExternalRefNo'] ?? '');
+
+            if ($status === '1' && hash_equals($expectedExternalRef, $ref)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Get the payment URL from a bill code.
      */
     public function getPaymentUrl(string $billCode): string

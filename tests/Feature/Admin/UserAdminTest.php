@@ -40,6 +40,7 @@ class UserAdminTest extends TestCase
         $regular->assignRole('admin');
 
         $this->actingAs($regular)
+            ->withoutMiddleware(\App\Http\Middleware\EnsureSubscribed::class)
             ->get(route('admin.users.index'))
             ->assertStatus(403);
     }

@@ -96,11 +96,13 @@ class BillplzService
 
     public function callbackIsPaid(array $payload): bool
     {
-        if ($this->xSignatureKey) {
-            $incoming = (string) ($payload['x_signature'] ?? '');
-            if ($incoming === '' || ! hash_equals($this->expectedXSignature($payload), $incoming)) {
-                return false;
-            }
+        if (! $this->xSignatureKey) {
+            return false;
+        }
+
+        $incoming = (string) ($payload['x_signature'] ?? '');
+        if ($incoming === '' || ! hash_equals($this->expectedXSignature($payload), $incoming)) {
+            return false;
         }
 
         $paid = $payload['paid'] ?? false;

@@ -101,10 +101,12 @@ class DebitNoteService
                     'description'    => 'VOID REVERSAL: '.$dn->dn_number,
                     'reference_type' => 'Debit Note',
                     'reference_id'   => $dn->id,
-                    'created_at'     => now(),
-                    'updated_at'     => now(),
-                ]);
-                $now = now();
+                'type'           => 'system',
+                'status'         => 'posted',
+                'created_at'     => now(),
+                'updated_at'     => now(),
+            ]);
+            $now = now();
                 $rows = [];
                 foreach ($items as $item) {
                     $rows[] = [
@@ -212,10 +214,12 @@ class DebitNoteService
             'description'    => 'EDIT REVERSAL: '.$dn->dn_number,
             'reference_type' => 'Debit Note',
             'reference_id'   => $dn->id,
-            'created_at'     => now(),
-            'updated_at'     => now(),
-        ]);
-        $now = now();
+                'type'           => 'system',
+                'status'         => 'posted',
+                'created_at'     => now(),
+                'updated_at'     => now(),
+            ]);
+            $now = now();
         $rows = [];
         foreach ($items as $item) {
             $rows[] = [
@@ -255,6 +259,8 @@ class DebitNoteService
             'description'    => 'Debit Note Issued: '.$dn->dn_number,
             'reference_type' => 'Debit Note',
             'reference_id'   => $dn->id,
+            'type'           => 'system',
+            'status'         => 'posted',
             'created_at'     => now(),
             'updated_at'     => now(),
         ]);

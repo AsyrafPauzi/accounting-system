@@ -20,6 +20,7 @@ class EnsureSubscribed
         'profile.',
         'settings.',
         'subscription.',
+        'password.',
         'verification.',
         'logout',
         // Practice / Accountant track lives on the central side, not

@@ -151,6 +151,13 @@ class PracticeBillingUpgradeTest extends TestCase
             'gateway'          => 'toyyibpay',
         ]);
 
+        $stub = Mockery::mock(ToyyibpayService::class);
+        $stub->shouldReceive('verifyPaidBill')
+            ->once()
+            ->with('tbpy-xyz', (string) $sub->id)
+            ->andReturn(true);
+        $this->app->instance(ToyyibpayService::class, $stub);
+
         $response = $this->postJson('/subscription/webhook', [
             'billcode'  => 'tbpy-xyz',
             'status_id' => 1,
@@ -176,6 +183,13 @@ class PracticeBillingUpgradeTest extends TestCase
     {
         [, , $sub] = $this->makeFirmOwnerOnPlan('practice-starter');
         $sub->update(['status' => 'pending']); // first-time paid checkout
+
+        $stub = Mockery::mock(ToyyibpayService::class);
+        $stub->shouldReceive('verifyPaidBill')
+            ->once()
+            ->with('tbpy-first', (string) $sub->id)
+            ->andReturn(true);
+        $this->app->instance(ToyyibpayService::class, $stub);
 
         $response = $this->postJson('/subscription/webhook', [
             'billcode'  => 'tbpy-first',

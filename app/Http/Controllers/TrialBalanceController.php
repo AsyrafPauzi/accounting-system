@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Account;
 use App\Models\JournalItem;
+use App\Support\PostedJournalScope;
 use App\Support\ReportPeriod;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -28,8 +29,9 @@ class TrialBalanceController extends Controller
         // Calculate balances per account up to the specified date
         $balances = JournalItem::query()
             ->join('journal_entries', 'journal_items.journal_entry_id', '=', 'journal_entries.id')
-            ->where('journal_entries.date', '<=', $asOfDate)
-            ->select(
+            ->where('journal_entries.date', '<=', $asOfDate);
+        PostedJournalScope::apply($balances, 'journal_entries');
+        $balances = $balances->select(
                 'journal_items.account_code',
                 DB::raw('SUM(journal_items.debit) as total_debit'),
                 DB::raw('SUM(journal_items.credit) as total_credit')

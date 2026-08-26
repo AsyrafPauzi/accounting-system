@@ -329,11 +329,7 @@ class HandleInertiaRequests extends Middleware
      * the routes themselves accept the request.
      *
      * Permission filtering by FirmClient permission_level (admin /
-     * editor / viewer) is intentionally NOT done here — that's a
-     * server-side concern handled by Gate::before today, and adding a
-     * second filter here would diverge from the source of truth. If
-     * we tighten Gate::before later, this projection automatically
-     * follows.
+     * editor / viewer) mirrors Gate::before via FirmActingPermissions.
      */
     protected function projectedPermissions($user): array
     {
@@ -356,10 +352,13 @@ class HandleInertiaRequests extends Middleware
             return $own;
         }
 
-        $tenantWide = \App\Models\Permission::query()
-            ->pluck('name')
-            ->reject(fn ($name) => str_starts_with($name, 'admin.') || str_starts_with($name, 'practice.'))
-            ->all();
+        $level = \App\Models\FirmClient::query()
+            ->where('firm_id', $user->firm_id)
+            ->where('tenant_id', tenant('id'))
+            ->where('status', 'active')
+            ->value('permission_level');
+
+        $tenantWide = \App\Support\FirmActingPermissions::allowedForLevel($level ?? 'viewer');
 
         return array_values(array_unique(array_merge($own, $tenantWide)));
     }

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\CurrentYearEarnings;
+use App\Support\PostedJournalScope;
 use App\Support\ReportPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,66 +23,10 @@ class BalanceSheetController extends Controller
             $request->input('as_at_date')
         );
         $asAtDate = $resolved['as_of'];
-
-        $rows = DB::table('journal_items')
-            ->join('journal_entries', 'journal_items.journal_entry_id', '=', 'journal_entries.id')
-            ->join('accounts', 'journal_items.account_code', '=', 'accounts.code')
-            ->whereIn('accounts.type', ['asset', 'liability', 'equity'])
-            ->where('journal_entries.date', '<=', $asAtDate)
-            ->select(
-                'accounts.code',
-                'accounts.name',
-                'accounts.type',
-                DB::raw('SUM(journal_items.debit) as total_debit'),
-                DB::raw('SUM(journal_items.credit) as total_credit')
-            )
-            ->groupBy('accounts.code', 'accounts.name', 'accounts.type')
-            ->get();
-
-        $assetAccounts = [];
-        $liabilityAccounts = [];
-        $equityAccounts = [];
-        $totalAssets = 0.0;
-        $totalLiabilities = 0.0;
-        $totalEquity = 0.0;
-
-        foreach ($rows as $row) {
-            $debit = (float) $row->total_debit;
-            $credit = (float) $row->total_credit;
-            $amount = $row->type === 'asset'
-                ? ($debit - $credit)
-                : ($credit - $debit);
-
-            $line = [
-                'code' => $row->code,
-                'name' => $row->name,
-                'amount' => round($amount, 2),
-            ];
-
-            if ($row->type === 'asset') {
-                $assetAccounts[] = $line;
-                $totalAssets += $amount;
-            } elseif ($row->type === 'liability') {
-                $liabilityAccounts[] = $line;
-                $totalLiabilities += $amount;
-            } else {
-                $equityAccounts[] = $line;
-                $totalEquity += $amount;
-            }
-        }
-
-        $totalLiabilitiesAndEquity = $totalLiabilities + $totalEquity;
-        $balanced = abs($totalAssets - $totalLiabilitiesAndEquity) < 0.01;
+        $data = $this->buildBalanceSheetData($asAtDate);
 
         return Inertia::render('Reports/BalanceSheet', [
-            'asset_accounts' => $assetAccounts,
-            'liability_accounts' => $liabilityAccounts,
-            'equity_accounts' => $equityAccounts,
-            'total_assets' => round($totalAssets, 2),
-            'total_liabilities' => round($totalLiabilities, 2),
-            'total_equity' => round($totalEquity, 2),
-            'total_liabilities_and_equity' => round($totalLiabilitiesAndEquity, 2),
-            'balanced' => $balanced,
+            ...$data,
             'filters' => [
                 'preset' => $resolved['preset'],
                 'as_at_date' => $asAtDate,
@@ -97,8 +43,9 @@ class BalanceSheetController extends Controller
             ->join('journal_entries', 'journal_items.journal_entry_id', '=', 'journal_entries.id')
             ->join('accounts', 'journal_items.account_code', '=', 'accounts.code')
             ->whereIn('accounts.type', ['asset', 'liability', 'equity'])
-            ->where('journal_entries.date', '<=', $asAtDate)
-            ->select(
+            ->where('journal_entries.date', '<=', $asAtDate);
+        PostedJournalScope::apply($rows);
+        $rows = $rows->select(
                 'accounts.code',
                 'accounts.name',
                 'accounts.type',
@@ -132,6 +79,17 @@ class BalanceSheetController extends Controller
             }
         }
 
+        $fyStartMonth = (int) (tenant()?->financial_year_start_month ?? 1);
+        $currentYearEarnings = CurrentYearEarnings::amountAsOf($asAtDate, $fyStartMonth);
+        if (abs($currentYearEarnings) >= 0.01) {
+            $equityAccounts[] = [
+                'code' => '—',
+                'name' => 'Current year earnings',
+                'amount' => $currentYearEarnings,
+            ];
+            $totalEquity += $currentYearEarnings;
+        }
+
         $totalLiabilitiesAndEquity = $totalLiabilities + $totalEquity;
         $balanced = abs($totalAssets - $totalLiabilitiesAndEquity) < 0.01;
 
@@ -139,6 +97,7 @@ class BalanceSheetController extends Controller
             'asset_accounts' => $assetAccounts,
             'liability_accounts' => $liabilityAccounts,
             'equity_accounts' => $equityAccounts,
+            'current_year_earnings' => $currentYearEarnings,
             'total_assets' => round($totalAssets, 2),
             'total_liabilities' => round($totalLiabilities, 2),
             'total_equity' => round($totalEquity, 2),

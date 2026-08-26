@@ -14,11 +14,19 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("ALTER TABLE journal_entries MODIFY COLUMN type ENUM('manual','system','deposit','withdrawal') NOT NULL DEFAULT 'system'");
     }
 
     public function down(): void
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         // Roll back any deposit/withdrawal rows to 'manual' so the column can
         // shrink without violating the enum.
         DB::table('journal_entries')->whereIn('type', ['deposit', 'withdrawal'])->update(['type' => 'manual']);

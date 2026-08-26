@@ -6,6 +6,8 @@ use App\Models\Invoice;
 use App\Models\InvoicePayment;
 use App\Models\Product;
 use App\Support\DocumentNumber;
+use App\Support\JournalWriter;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class InvoiceService
@@ -351,16 +353,12 @@ class InvoiceService
 
         DB::transaction(function () use ($invoice) {
             $invoice->loadMissing('items');
-            $journalId = DB::table('journal_entries')->insertGetId([
-                'date'           => now(),
+            JournalWriter::postSystem([
+                'date'           => Carbon::parse($invoice->issue_date)->toDateString(),
                 'description'    => 'Posted Sales Invoice: '.$invoice->invoice_number,
                 'reference_type' => 'Invoice',
                 'reference_id'   => $invoice->id,
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-
-            DB::table('journal_items')->insert($this->buildPostingLines($invoice, $journalId));
+            ], $this->buildPostingLineRows($invoice));
             $invoice->update(['status' => 'unpaid']);
         });
     }
@@ -407,24 +405,17 @@ class InvoiceService
                 'created_by'        => $createdBy,
             ]);
 
-            $journalId = DB::table('journal_entries')->insertGetId([
+            $m = $this->ledgerBaseMultiplier($invoice);
+            $amountBase = $amount * $m;
+
+            JournalWriter::postSystem([
                 'date'           => $paymentDate,
                 'description'    => 'Payment for '.$invoice->invoice_number,
                 'reference_type' => 'Invoice Payment',
                 'reference_id'   => $payment->id,
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-
-            $accountMap = DB::table('accounts')->whereIn('code', [$bankAccountCode, '1100'])->pluck('id', 'code');
-
-            $m = $this->ledgerBaseMultiplier($invoice);
-            $amountBase = $amount * $m;
-            $now = now();
-
-            DB::table('journal_items')->insert([
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap[$bankAccountCode] ?? null, 'account_code' => $bankAccountCode, 'debit' => $amountBase, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
-                ['journal_entry_id' => $journalId, 'account_id' => $accountMap['1100'] ?? null, 'account_code' => '1100', 'debit' => 0, 'credit' => $amountBase, 'created_at' => $now, 'updated_at' => $now],
+            ], [
+                ['account_code' => $bankAccountCode, 'debit' => $amountBase, 'credit' => 0],
+                ['account_code' => '1100', 'debit' => 0, 'credit' => $amountBase],
             ]);
 
             $this->recalculateStatus($invoice->fresh());
@@ -533,12 +524,11 @@ class InvoiceService
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return list<array{account_code: string, debit: float, credit: float, account_id?: ?int}>
      */
-    private function buildPostingLines(Invoice $invoice, int $journalId): array
+    private function buildPostingLineRows(Invoice $invoice): array
     {
         $m = $this->ledgerBaseMultiplier($invoice);
-        $now = now();
         $codes = ['1100', '4000', '2100'];
         foreach ($invoice->items as $item) {
             if ($item->account_code) {
@@ -551,7 +541,12 @@ class InvoiceService
         $taxBase = (float) $invoice->tax_amount * $m;
 
         $rows = [
-            ['journal_entry_id' => $journalId, 'account_id' => $accountMap['1100'] ?? null, 'account_code' => '1100', 'debit' => $totalBase, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
+            [
+                'account_code' => '1100',
+                'account_id'   => $accountMap['1100'] ?? null,
+                'debit'        => $totalBase,
+                'credit'       => 0,
+            ],
         ];
 
         $byCode = [];
@@ -568,29 +563,41 @@ class InvoiceService
                 continue;
             }
             $rows[] = [
-                'journal_entry_id' => $journalId,
-                'account_id'       => $accountMap[$code] ?? $accountMap['4000'] ?? null,
-                'account_code'     => $code,
-                'debit'            => 0,
-                'credit'           => $credit,
-                'created_at'       => $now,
-                'updated_at'       => $now,
+                'account_code' => $code,
+                'account_id'   => $accountMap[$code] ?? $accountMap['4000'] ?? null,
+                'debit'        => 0,
+                'credit'       => $credit,
             ];
         }
 
         if ($taxBase > 0) {
             $rows[] = [
-                'journal_entry_id' => $journalId,
-                'account_id'       => $accountMap['2100'] ?? null,
-                'account_code'     => '2100',
-                'debit'            => 0,
-                'credit'           => $taxBase,
-                'created_at'       => $now,
-                'updated_at'       => $now,
+                'account_code' => '2100',
+                'account_id'   => $accountMap['2100'] ?? null,
+                'debit'        => 0,
+                'credit'       => $taxBase,
             ];
         }
 
         return $rows;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function buildPostingLines(Invoice $invoice, int $journalId): array
+    {
+        $now = now();
+
+        return array_map(static fn (array $line): array => [
+            'journal_entry_id' => $journalId,
+            'account_id'       => $line['account_id'] ?? null,
+            'account_code'     => $line['account_code'],
+            'debit'            => $line['debit'],
+            'credit'           => $line['credit'],
+            'created_at'       => $now,
+            'updated_at'       => $now,
+        ], $this->buildPostingLineRows($invoice));
     }
 
     private function syncJournalEntry(Invoice $invoice, array $totals): void
@@ -606,7 +613,7 @@ class InvoiceService
         }
 
         DB::table('journal_items')->where('journal_entry_id', $journal->id)->delete();
-        DB::table('journal_items')->insert($this->buildPostingLines($invoice, $journal->id));
+        DB::table('journal_items')->insert($this->buildPostingLines($invoice, (int) $journal->id));
     }
 
     private function reverseLatestJournal(Invoice $invoice, string $referenceType, string $description): void
@@ -631,36 +638,19 @@ class InvoiceService
 
     private function reverseJournalId(int $journalId, string $referenceType, int $referenceId, string $description): bool
     {
-        $items = DB::table('journal_items')->where('journal_entry_id', $journalId)->get();
-        if ($items->isEmpty()) {
+        try {
+            JournalWriter::postReversalFromJournal(
+                $journalId,
+                $description,
+                now()->toDateString(),
+                $referenceType,
+                $referenceId,
+            );
+
+            return true;
+        } catch (\LogicException) {
             return false;
         }
-
-        $reversalId = DB::table('journal_entries')->insertGetId([
-            'date'           => now(),
-            'description'    => $description,
-            'reference_type' => $referenceType,
-            'reference_id'   => $referenceId,
-            'created_at'     => now(),
-            'updated_at'     => now(),
-        ]);
-
-        $now = now();
-        $rows = [];
-        foreach ($items as $item) {
-            $rows[] = [
-                'journal_entry_id' => $reversalId,
-                'account_id'       => $item->account_id,
-                'account_code'     => $item->account_code,
-                'debit'            => $item->credit,
-                'credit'           => $item->debit,
-                'created_at'       => $now,
-                'updated_at'       => $now,
-            ];
-        }
-        DB::table('journal_items')->insert($rows);
-
-        return true;
     }
 
     private function normalizedExchangeRate(string $currency, mixed $rate): float

@@ -6,6 +6,7 @@ use App\Http\Requests\StoreInvoiceRequest;
 use App\Http\Requests\UpdateInvoiceRequest;
 use App\Services\InvoiceService;
 use App\Services\SalesDocumentTrail;
+use App\Services\ToyyibpayService;
 use App\Support\ShareLink;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Account;
@@ -16,6 +17,7 @@ use App\Models\Product;
 use App\Services\DocumentBulkService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class InvoiceController extends Controller
@@ -780,7 +782,7 @@ class InvoiceController extends Controller
         return redirect()->route('invoices.index')->with('success', "{$created} draft invoice(s) created.");
     }
 
-    public function toyyibpayCallback(Request $request)
+    public function toyyibpayCallback(Request $request, ToyyibpayService $toyyibpay)
     {
         $ref = (string) $request->input('order_id', $request->input('billExternalReferenceNo', ''));
         $status = $request->input('status_id', $request->input('status'));
@@ -788,7 +790,17 @@ class InvoiceController extends Controller
             return response('unpaid', 200);
         }
 
-        return $this->settlePayNow($ref, 'ToyyibPay '.$request->input('billcode'));
+        $billCode = (string) $request->input('billcode', '');
+        if (! $toyyibpay->verifyPaidBill($billCode, $ref)) {
+            Log::warning('Toyyibpay invoice callback rejected: verification failed', [
+                'reference' => $ref,
+                'billcode'  => $billCode,
+            ]);
+
+            return response('verification failed', 403);
+        }
+
+        return $this->settlePayNow($ref, 'ToyyibPay '.$billCode);
     }
 
     public function billplzCallback(Request $request)

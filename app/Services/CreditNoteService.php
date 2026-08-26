@@ -271,6 +271,8 @@ class CreditNoteService
                 'description'    => 'Refund of credit note '.$cn->cn_number,
                 'reference_type' => 'Credit Note Refund',
                 'reference_id'   => $refund->id,
+                'type'           => 'system',
+                'status'         => 'posted',
                 'created_at'     => now(),
                 'updated_at'     => now(),
             ]);
@@ -321,6 +323,8 @@ class CreditNoteService
                 'description'    => 'VOID REFUND REVERSAL: '.$cn->cn_number,
                 'reference_type' => 'Credit Note Refund',
                 'reference_id'   => $refund->id,
+                'type'           => 'system',
+                'status'         => 'posted',
                 'created_at'     => now(),
                 'updated_at'     => now(),
             ]);
@@ -382,6 +386,8 @@ class CreditNoteService
             'description'    => 'Credit Note Issued: '.$cn->cn_number,
             'reference_type' => 'Credit Note',
             'reference_id'   => $cn->id,
+            'type'           => 'system',
+            'status'         => 'posted',
             'created_at'     => now(),
             'updated_at'     => now(),
         ]);
@@ -459,6 +465,8 @@ class CreditNoteService
             'description'    => 'VOID REVERSAL: '.$cn->cn_number,
             'reference_type' => 'Credit Note',
             'reference_id'   => $cn->id,
+            'type'           => 'system',
+            'status'         => 'posted',
             'created_at'     => now(),
             'updated_at'     => now(),
         ]);

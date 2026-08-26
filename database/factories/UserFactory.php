@@ -16,6 +16,9 @@ class UserFactory extends Factory
      */
     protected static ?string $password;
 
+    /** Plain-text factory password (meets Password::defaults() in non-production). */
+    public const DEFAULT_PASSWORD = 'Password1!';
+
     /**
      * Define the model's default state.
      *
@@ -27,8 +30,19 @@ class UserFactory extends Factory
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
+            'password' => static::$password ??= Hash::make(self::DEFAULT_PASSWORD),
             'remember_token' => Str::random(10),
+            'tenant_id' => null,
+            'role_id' => null,
+            'two_factor_confirmed_at' => null,
+            'firm_id' => null,
+            'firm_role' => null,
+            'privacy_accepted_at' => null,
+            'privacy_accepted_version' => null,
+            'data_exported_at' => null,
+            'deletion_requested_at' => null,
+            'welcomed_at' => null,
+            'verify_reminder_at' => null,
         ];
     }
 

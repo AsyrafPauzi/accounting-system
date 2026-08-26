@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         Schema::table('invoices', function (Blueprint $table) {
             // Drop the foreign key constraint that references the central 'users' table.
             // The column 'created_by' will remain to track the user ID logically.

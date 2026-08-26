@@ -275,7 +275,7 @@ class SubscriptionController extends Controller
         return redirect()->route('subscription.index')->with('error', 'Payment failed or was canceled.');
     }
 
-    public function webhook(Request $request)
+    public function webhook(Request $request, ToyyibpayService $toyyibpay)
     {
         Log::info('Toyyibpay Webhook Received', $request->all());
 
@@ -284,6 +284,15 @@ class SubscriptionController extends Controller
         $subscriptionId = $request->post('order_id'); // We passed subscription ID as billExternalReferenceNo
 
         if ($statusId == 1) {
+            if (! $toyyibpay->verifyPaidBill((string) $billCode, (string) $subscriptionId)) {
+                Log::warning('Toyyibpay subscription webhook rejected: verification failed', [
+                    'subscription_id' => $subscriptionId,
+                    'billcode'        => $billCode,
+                ]);
+
+                return response('verification failed', 403);
+            }
+
             $subscription = Subscription::find($subscriptionId);
 
             if ($subscription) {
@@ -356,7 +365,7 @@ class SubscriptionController extends Controller
         return response('OK');
     }
 
-    public function webhookExtraUser(Request $request)
+    public function webhookExtraUser(Request $request, ToyyibpayService $toyyibpay)
     {
         // Toyyibpay payload is form-encoded; we redact the bill code on log
         // because it'd otherwise reveal which purchase is in flight.
@@ -398,6 +407,15 @@ class SubscriptionController extends Controller
                 'failure_reason'   => 'Toyyibpay reported status_id=' . $statusId,
             ]);
             return response('OK');
+        }
+
+        if (! $toyyibpay->verifyPaidBill($billCode, $externalRef)) {
+            Log::warning('Extra-seat webhook rejected: verification failed', [
+                'purchase_id' => $purchaseId,
+                'billcode'    => $billCode,
+            ]);
+
+            return response('verification failed', 403);
         }
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($purchase, $billCode) {
@@ -588,7 +606,7 @@ class SubscriptionController extends Controller
         return Inertia::location($paymentUrl);
     }
 
-    public function webhookCopilotCredits(Request $request)
+    public function webhookCopilotCredits(Request $request, ToyyibpayService $toyyibpay)
     {
         Log::info('Toyyibpay Copilot Credits Webhook Received', [
             'order_id' => $request->post('order_id'),
@@ -622,6 +640,15 @@ class SubscriptionController extends Controller
             ]);
 
             return response('OK');
+        }
+
+        if (! $toyyibpay->verifyPaidBill($billCode, $externalRef)) {
+            Log::warning('Copilot-credits webhook rejected: verification failed', [
+                'purchase_id' => $purchase->id,
+                'billcode'    => $billCode,
+            ]);
+
+            return response('verification failed', 403);
         }
 
         $tenant = \App\Models\Tenant::find($purchase->tenant_id);
