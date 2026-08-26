@@ -52,7 +52,7 @@ jobs:
             --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SECURITY_GROUPS],assignPublicIp=$ASSIGN_PUBLIC_IP}" \
             --overrides "$(jq -n \
               --arg name "$CONTAINER_NAME" \
-              '{containerOverrides:[{name:$name,entryPoint:["/bin/sh","-c"],command:["set -e; cd /var/www/html; php artisan migrate --force --no-interaction; php artisan tenants:migrate --force --no-interaction; echo migrations-complete"]}]}')" \
+              '{containerOverrides:[{name:$name,command:["/bin/sh","-c","php artisan tenants:migrate --force --no-interaction; echo tenants-migrate-complete"]}]}')" \
             --query 'tasks[0].taskArn' \
             --output text)
 
