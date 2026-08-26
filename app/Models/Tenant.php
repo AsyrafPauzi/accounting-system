@@ -65,6 +65,19 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         return $subscription ? $subscription->isActive() : false;
     }
 
+    /**
+     * Whether the tenant database is available for SME routes.
+     *
+     * Legacy rows (pre async-provisioning migration) had no
+     * `provision_status` column — treat null the same as `ready`.
+     */
+    public function isProvisioned(): bool
+    {
+        $status = $this->provision_status;
+
+        return $status === 'ready' || $status === null;
+    }
+
     public function getCompanyDetails(): array
     {
         return [

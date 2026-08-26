@@ -79,7 +79,7 @@ class InitializeTenancyByLoggedInUser
 
                 if ($authorised) {
                     $tenant = Tenant::find($actingTenantId);
-                    if ($tenant && $tenant->provision_status === 'ready') {
+                    if ($tenant && $tenant->isProvisioned()) {
                         tenancy()->initialize($tenant);
                     }
                 } else {
@@ -94,7 +94,7 @@ class InitializeTenancyByLoggedInUser
         // 3. Regular SME tenant user
         if ($user->tenant_id) {
             $tenant = Tenant::find($user->tenant_id);
-            if ($tenant && $tenant->provision_status === 'ready') {
+            if ($tenant && $tenant->isProvisioned()) {
                 tenancy()->initialize($tenant);
             }
         }

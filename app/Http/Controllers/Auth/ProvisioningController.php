@@ -17,7 +17,7 @@ class ProvisioningController extends Controller
     {
         $tenant = $this->resolveTenant($request);
 
-        if ($tenant->provision_status === 'ready') {
+        if ($tenant->isProvisioned()) {
             return redirect()->route('dashboard');
         }
 
@@ -34,7 +34,7 @@ class ProvisioningController extends Controller
         return response()->json([
             'status' => $tenant->provision_status,
             'error' => $tenant->provision_error,
-            'redirect' => $tenant->provision_status === 'ready'
+            'redirect' => $tenant->isProvisioned()
                 ? route('dashboard', absolute: false)
                 : null,
         ]);

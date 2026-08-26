@@ -12,6 +12,7 @@ use App\Services\InvoiceService;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 /**
@@ -50,6 +51,21 @@ class DashboardController extends Controller
             $tenancyReady = function_exists('tenancy') && tenancy()->initialized;
             if (! $actingOnClient || ! $tenancyReady) {
                 return redirect()->route('practice.dashboard');
+            }
+        }
+
+        // SME users without an initialised tenant DB would hit central
+        // tables (customers, invoices, …) and 500. Middleware should
+        // initialise tenancy for provisioned tenants; this is defence
+        // in depth when init failed or status is still pending.
+        if ($user && ! $user->isFirmUser() && $user->tenant_id) {
+            if (! function_exists('tenancy') || ! tenancy()->initialized) {
+                $tenant = Tenant::find($user->tenant_id);
+                if ($tenant && ! $tenant->isProvisioned()) {
+                    return redirect()->route('provisioning');
+                }
+
+                abort(503, 'Your company database could not be loaded. Please try again or contact support.');
             }
         }
 
@@ -192,7 +208,7 @@ class DashboardController extends Controller
                     'expenses_this_month' => $expensesThisMonth,
                     'net_this_month' => round($salesThisMonth - $expensesThisMonth, 2),
                 ],
-                'audit' => $canSeeBills ? [
+                'audit' => ($canSeeBills && Schema::hasColumn('bills', 'audit_status')) ? [
                     'total' => Bill::count(),
                     'unaudited' => Bill::where(function ($q) {
                         $q->where('audit_status', 'unaudited')->orWhereNull('audit_status');
@@ -229,6 +245,20 @@ class DashboardController extends Controller
      */
     private function cashFlowSeries(CarbonInterface $today): array
     {
+        $empty = [
+            'series'    => [],
+            'total_in'  => 0.0,
+            'total_out' => 0.0,
+            'total_net' => 0.0,
+        ];
+
+        if (! Schema::hasTable('journal_items')
+            || ! Schema::hasTable('journal_entries')
+            || ! Schema::hasTable('accounts')
+            || ! Schema::hasColumn('accounts', 'sub_type')) {
+            return $empty;
+        }
+
         $start = $today->copy()->startOfMonth()->subMonths(11);
         $end = $today->copy()->endOfMonth();
 
@@ -236,7 +266,7 @@ class DashboardController extends Controller
             ->join('journal_entries as je', 'je.id', '=', 'ji.journal_entry_id')
             ->join('accounts as a', 'a.id', '=', 'ji.account_id')
             ->select([
-                DB::raw("DATE_FORMAT(je.date, '%Y-%m') as ym"),
+                DB::raw($this->sqlYearMonth('je.date').' as ym'),
                 DB::raw('SUM(ji.debit) as inflow'),
                 DB::raw('SUM(ji.credit) as outflow'),
             ])
@@ -289,7 +319,7 @@ class DashboardController extends Controller
         $income = Invoice::query()
             ->whereNotIn('status', ['draft', 'void'])
             ->whereBetween('issue_date', [$start, $end])
-            ->select(DB::raw("DATE_FORMAT(issue_date, '%Y-%m') as ym"), DB::raw('SUM(total_amount) as v'))
+            ->select(DB::raw($this->sqlYearMonth('issue_date').' as ym'), DB::raw('SUM(total_amount) as v'))
             ->groupBy('ym')
             ->pluck('v', 'ym');
 
@@ -297,7 +327,7 @@ class DashboardController extends Controller
             ? Bill::query()
                 ->where('status', '!=', 'void')
                 ->whereBetween('bill_date', [$start, $end])
-                ->select(DB::raw("DATE_FORMAT(bill_date, '%Y-%m') as ym"), DB::raw('SUM(total_amount) as v'))
+                ->select(DB::raw($this->sqlYearMonth('bill_date').' as ym'), DB::raw('SUM(total_amount) as v'))
                 ->groupBy('ym')
                 ->pluck('v', 'ym')
             : collect();
@@ -588,5 +618,14 @@ class DashboardController extends Controller
             ->filter()
             ->values()
             ->all();
+    }
+
+    /** Month bucket expression for the active tenant connection. */
+    private function sqlYearMonth(string $column): string
+    {
+        return match (DB::connection()->getDriverName()) {
+            'sqlite' => "strftime('%Y-%m', {$column})",
+            default  => "DATE_FORMAT({$column}, '%Y-%m')",
+        };
     }
 }

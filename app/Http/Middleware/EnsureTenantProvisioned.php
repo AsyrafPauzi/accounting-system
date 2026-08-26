@@ -37,7 +37,7 @@ class EnsureTenantProvisioned
 
         $tenant = Tenant::find($user->tenant_id);
 
-        if (! $tenant || $tenant->provision_status === 'ready' || $tenant->provision_status === null) {
+        if (! $tenant || $tenant->isProvisioned()) {
             return $next($request);
         }
 

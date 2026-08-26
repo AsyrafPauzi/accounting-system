@@ -1,0 +1,84 @@
+name: Run ECS Migrations
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+  ECS_SERVICE: ${{ secrets.ECS_SERVICE }}
+  CONTAINER_NAME: ${{ secrets.CONTAINER_NAME }}
+  ECS_TASK_DEFINITION_NAME: ${{ secrets.ECS_TASK_DEFINITION_NAME }}
+
+jobs:
+  migrate:
+    name: Migrate (central + tenants)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run one-off migration task
+        run: |
+          set -euo pipefail
+
+          SERVICE_JSON=$(aws ecs describe-services \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --query 'services[0]' \
+            --output json)
+
+          SUBNETS=$(echo "$SERVICE_JSON" | jq -r '.networkConfiguration.awsvpcConfiguration.subnets | join(",")')
+          SECURITY_GROUPS=$(echo "$SERVICE_JSON" | jq -r '.networkConfiguration.awsvpcConfiguration.securityGroups | join(",")')
+          ASSIGN_PUBLIC_IP=$(echo "$SERVICE_JSON" | jq -r '.networkConfiguration.awsvpcConfiguration.assignPublicIp // "DISABLED"')
+          LAUNCH_TYPE=$(echo "$SERVICE_JSON" | jq -r '.launchType // "FARGATE"')
+
+          TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition "$ECS_TASK_DEFINITION_NAME" \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+
+          echo "Launching migration task on $ECS_CLUSTER ($TASK_DEF)…"
+
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "$ECS_CLUSTER" \
+            --task-definition "$TASK_DEF" \
+            --launch-type "$LAUNCH_TYPE" \
+            --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SECURITY_GROUPS],assignPublicIp=$ASSIGN_PUBLIC_IP}" \
+            --overrides "$(jq -n \
+              --arg name "$CONTAINER_NAME" \
+              '{containerOverrides:[{name:$name,command:["sh","-c","php artisan migrate --force --no-interaction --isolated && php artisan tenants:migrate --force --isolated"]}]}')" \
+            --query 'tasks[0].taskArn' \
+            --output text)
+
+          echo "Task ARN: $TASK_ARN"
+          echo "Waiting for migration task to finish…"
+
+          aws ecs wait tasks-stopped --cluster "$ECS_CLUSTER" --tasks "$TASK_ARN"
+
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --cluster "$ECS_CLUSTER" \
+            --tasks "$TASK_ARN" \
+            --query "tasks[0].containers[?name=='$CONTAINER_NAME'].exitCode | [0]" \
+            --output text)
+
+          STOP_REASON=$(aws ecs describe-tasks \
+            --cluster "$ECS_CLUSTER" \
+            --tasks "$TASK_ARN" \
+            --query 'tasks[0].stoppedReason' \
+            --output text)
+
+          echo "Container exit code: $EXIT_CODE"
+          echo "Stopped reason: $STOP_REASON"
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "::error::Migration task failed (exit $EXIT_CODE). Check CloudWatch logs for task $TASK_ARN"
+            exit 1
+          fi
+
+          echo "Migrations completed successfully."
