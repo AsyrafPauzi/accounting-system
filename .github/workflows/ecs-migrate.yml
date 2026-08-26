@@ -52,7 +52,7 @@ jobs:
             --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SECURITY_GROUPS],assignPublicIp=$ASSIGN_PUBLIC_IP}" \
             --overrides "$(jq -n \
               --arg name "$CONTAINER_NAME" \
-              '{containerOverrides:[{name:$name,command:["sh","-c","php artisan migrate --force --no-interaction --isolated && php artisan tenants:migrate --force --isolated"]}]}')" \
+              '{containerOverrides:[{name:$name,entryPoint:["/bin/sh","-c"],command:["set -e; cd /var/www/html; php artisan migrate --force --no-interaction; php artisan tenants:migrate --force --no-interaction; echo migrations-complete"]}]}')" \
             --query 'tasks[0].taskArn' \
             --output text)
 
@@ -78,6 +78,19 @@ jobs:
 
           if [ "$EXIT_CODE" != "0" ]; then
             echo "::error::Migration task failed (exit $EXIT_CODE). Check CloudWatch logs for task $TASK_ARN"
+            LOG_GROUP=$(aws ecs describe-task-definition \
+              --task-definition "$TASK_DEF" \
+              --query "taskDefinition.containerDefinitions[?name=='$CONTAINER_NAME'].logConfiguration.options.\"awslogs-group\" | [0]" \
+              --output text 2>/dev/null || true)
+            if [ -n "$LOG_GROUP" ] && [ "$LOG_GROUP" != "None" ]; then
+              echo "Recent log events from $LOG_GROUP:"
+              aws logs filter-log-events \
+                --log-group-name "$LOG_GROUP" \
+                --start-time $(($(date +%s) * 1000 - 600000)) \
+                --limit 50 \
+                --query 'events[].message' \
+                --output text 2>/dev/null || true
+            fi
             exit 1
           fi
 
