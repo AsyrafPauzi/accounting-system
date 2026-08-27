@@ -18,18 +18,22 @@ return new class extends Migration
 
     public function up(): void
     {
-        if (! Schema::hasTable('tax_codes')) {
+        $schema = Schema::connection($this->getConnection());
+
+        if (! $schema->hasTable('tax_codes')) {
             return;
         }
 
         foreach ($this->tables as $table) {
-            if (! Schema::hasTable($table) || Schema::hasColumn($table, 'tax_code_id')) {
+            if (! $schema->hasTable($table) || $schema->hasColumn($table, 'tax_code_id')) {
                 continue;
             }
 
-            Schema::table($table, function (Blueprint $blueprint) use ($table): void {
+            $hasTaxRate = $schema->hasColumn($table, 'tax_rate');
+
+            $schema->table($table, function (Blueprint $blueprint) use ($hasTaxRate): void {
                 $column = $blueprint->foreignId('tax_code_id')->nullable()->constrained('tax_codes')->nullOnDelete();
-                if (Schema::hasColumn($table, 'tax_rate')) {
+                if ($hasTaxRate) {
                     $column->after('tax_rate');
                 }
             });
@@ -40,12 +44,14 @@ return new class extends Migration
 
     public function down(): void
     {
+        $schema = Schema::connection($this->getConnection());
+
         foreach ($this->tables as $table) {
-            if (! Schema::hasTable($table) || ! Schema::hasColumn($table, 'tax_code_id')) {
+            if (! $schema->hasTable($table) || ! $schema->hasColumn($table, 'tax_code_id')) {
                 continue;
             }
 
-            Schema::table($table, function (Blueprint $table): void {
+            $schema->table($table, function (Blueprint $table): void {
                 $table->dropConstrainedForeignId('tax_code_id');
             });
         }
@@ -53,7 +59,10 @@ return new class extends Migration
 
     private function backfillTaxCodes(): void
     {
-        $codesByRate = DB::table('tax_codes')
+        $connection = DB::connection($this->getConnection());
+        $schema = Schema::connection($this->getConnection());
+
+        $codesByRate = $connection->table('tax_codes')
             ->where('is_active', true)
             ->get()
             ->groupBy(fn ($row) => (string) (float) $row->rate)
@@ -72,18 +81,18 @@ return new class extends Migration
         };
 
         foreach ($this->tables as $table) {
-            if (! Schema::hasTable($table) || ! Schema::hasColumn($table, 'tax_code_id')) {
+            if (! $schema->hasTable($table) || ! $schema->hasColumn($table, 'tax_code_id')) {
                 continue;
             }
 
-            DB::table($table)
+            $connection->table($table)
                 ->whereNull('tax_code_id')
                 ->orderBy('id')
-                ->chunkById(500, function ($rows) use ($table, $mapRate): void {
+                ->chunkById(500, function ($rows) use ($table, $mapRate, $connection): void {
                     foreach ($rows as $row) {
                         $codeId = $mapRate((float) ($row->tax_rate ?? 0));
                         if ($codeId) {
-                            DB::table($table)->where('id', $row->id)->update(['tax_code_id' => $codeId]);
+                            $connection->table($table)->where('id', $row->id)->update(['tax_code_id' => $codeId]);
                         }
                     }
                 });
