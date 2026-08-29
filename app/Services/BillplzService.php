@@ -96,17 +96,99 @@ class BillplzService
 
     public function callbackIsPaid(array $payload): bool
     {
-        if (! $this->xSignatureKey) {
+        $billId = (string) ($payload['id'] ?? '');
+        $hasBodySignature = filled($payload['x_signature'] ?? null);
+        $payloadPaid = $this->truthyPaid($payload['paid'] ?? false);
+
+        if ($this->xSignatureKey && $hasBodySignature) {
+            $incoming = (string) $payload['x_signature'];
+            if (hash_equals($this->expectedXSignature($payload), $incoming)) {
+                return $payloadPaid;
+            }
+
+            Log::warning('invalid_signature', [
+                'module'             => 'billplz.webhook',
+                'billId'             => $billId !== '' ? $billId : null,
+                'hasBodySignature'   => true,
+                'hasSignatureHeader' => false,
+            ]);
+        } elseif ($this->xSignatureKey && ! $hasBodySignature) {
+            Log::warning('missing_body_signature', [
+                'module' => 'billplz.webhook',
+                'billId' => $billId !== '' ? $billId : null,
+            ]);
+        } elseif (! $this->xSignatureKey) {
+            Log::warning('xsignature_key_missing', [
+                'module' => 'billplz.webhook',
+                'billId' => $billId !== '' ? $billId : null,
+            ]);
+        }
+
+        // NiagaX-style safety net: HMAC may fail when the tenant pasted
+        // the wrong X-Signature Key, but the Secret Key can still confirm
+        // the bill via GET /v3/bills/{id}. Prefer settling a real payment
+        // over leaving the invoice unpaid.
+        if ($billId === '') {
             return false;
         }
 
-        $incoming = (string) ($payload['x_signature'] ?? '');
-        if ($incoming === '' || ! hash_equals($this->expectedXSignature($payload), $incoming)) {
+        if ($this->fetchBillIsPaid($billId)) {
+            Log::warning('signature_failed_api_confirmed_paid', [
+                'module' => 'billplz.webhook',
+                'billId' => $billId,
+            ]);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Confirm bill paid state from Billplz (Basic Auth with API secret).
+     *
+     * @see https://www.billplz.com/api/ — GET /v3/bills/{BILL_ID}
+     */
+    public function fetchBillIsPaid(string $billId): bool
+    {
+        if ($billId === '') {
             return false;
         }
 
-        $paid = $payload['paid'] ?? false;
+        try {
+            $response = Http::withBasicAuth($this->secretKey, '')
+                ->acceptJson()
+                ->get($this->baseUrl.'/v3/bills/'.$billId);
+        } catch (\Throwable $e) {
+            Log::error('Billplz get bill failed', [
+                'billId'  => $billId,
+                'message' => $e->getMessage(),
+            ]);
 
+            return false;
+        }
+
+        if (! $response->successful()) {
+            Log::warning('Billplz get bill HTTP error', [
+                'billId' => $billId,
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+
+            return false;
+        }
+
+        $json = $response->json();
+        if (! is_array($json)) {
+            return false;
+        }
+
+        return $this->truthyPaid($json['paid'] ?? false)
+            || strtolower((string) ($json['state'] ?? '')) === 'paid';
+    }
+
+    private function truthyPaid(mixed $paid): bool
+    {
         return $paid === true || $paid === 'true' || $paid === '1' || $paid === 1;
     }
 

@@ -53,9 +53,51 @@ class SalesPolishHelpersTest extends TestCase
     {
         $service = new BillplzService('secret', 'col', 'https://www.billplz-sandbox.com/api', 'xsig');
 
+        \Illuminate\Support\Facades\Http::fake([
+            'www.billplz-sandbox.com/api/v3/bills/*' => \Illuminate\Support\Facades\Http::response(['id' => 'b1', 'paid' => false], 200),
+        ]);
+
         $this->assertFalse($service->callbackIsPaid([
+            'id'          => 'b1',
             'paid'        => 'true',
             'x_signature' => 'nope',
+        ]));
+    }
+
+    public function test_billplz_callback_accepts_when_signature_fails_but_api_confirms_paid(): void
+    {
+        $service = new BillplzService('secret', 'col', 'https://www.billplz-sandbox.com/api', 'wrong-xsig');
+
+        \Illuminate\Support\Facades\Http::fake([
+            'www.billplz-sandbox.com/api/v3/bills/6aad9a6a7ff348be' => \Illuminate\Support\Facades\Http::response([
+                'id'    => '6aad9a6a7ff348be',
+                'paid'  => true,
+                'state' => 'paid',
+            ], 200),
+        ]);
+
+        $this->assertTrue($service->callbackIsPaid([
+            'id'          => '6aad9a6a7ff348be',
+            'paid'        => 'true',
+            'reference_1' => 'inv-1-tenant',
+            'x_signature' => 'definitely-wrong',
+        ]));
+    }
+
+    public function test_billplz_callback_uses_api_when_xsignature_key_missing(): void
+    {
+        $service = new BillplzService('secret', 'col', 'https://www.billplz-sandbox.com/api', null);
+
+        \Illuminate\Support\Facades\Http::fake([
+            'www.billplz-sandbox.com/api/v3/bills/bill-no-xsig' => \Illuminate\Support\Facades\Http::response([
+                'id'   => 'bill-no-xsig',
+                'paid' => true,
+            ], 200),
+        ]);
+
+        $this->assertTrue($service->callbackIsPaid([
+            'id'   => 'bill-no-xsig',
+            'paid' => 'true',
         ]));
     }
 }
