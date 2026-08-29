@@ -1,0 +1,41 @@
+name: ECS Artisan Config Refresh
+
+# Force a rolling redeploy so every task re-runs entrypoint
+# (`php artisan config:cache`) and picks up current task-definition env.
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+  ECS_SERVICE: ${{ secrets.ECS_SERVICE }}
+
+jobs:
+  refresh:
+    name: Force new deployment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Roll ECS service (re-cache config on boot)
+        run: |
+          set -euo pipefail
+
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --force-new-deployment \
+            --query 'service.{status:status,desired:desiredCount,running:runningCount}' \
+            --output json
+
+          echo "Waiting for service stability…"
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE"
+
+          echo "Service redeployed; config:cache ran via docker/entrypoint.sh on each new task."
