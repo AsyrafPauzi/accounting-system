@@ -155,25 +155,47 @@ class SubscriptionController extends Controller
             );
         }
 
-        // Brand-new paid subscription (or coming from Startup free / a
-        // mid-trial conversion): proceed to Toyyibpay checkout.
-        $subscription = Subscription::updateOrCreate(
-            ['tenant_id' => $tenantId],
-            [
-                'plan_id' => $plan->id,
-                'pending_plan_id' => null,
-                'pending_interval' => null,
-                'status' => 'pending',
-                'interval' => $validated['interval'],
+        // Brand-new paid subscription (or converting from Startup free /
+        // mid-trial): keep the current usable subscription intact so an
+        // abandoned ToyyibPay bill cannot wipe trial/active access. The
+        // paid target is encoded in billExternalReferenceNo and applied
+        // only when the webhook confirms payment. Trial rows already use
+        // pending_plan_id for the Startup fallback — do not overwrite it.
+        $usable = $currentSubscription
+            && in_array($currentSubscription->status, ['active', 'trialing', 'past_due'], true);
+
+        if ($usable) {
+            $subscription = $currentSubscription;
+            $subscription->update([
                 'gateway' => 'toyyibpay',
-            ]
-        );
+            ]);
+            $externalRef = $this->checkoutOrderRef(
+                (int) $subscription->id,
+                (int) $plan->id,
+                $validated['interval']
+            );
+        } else {
+            $subscription = Subscription::updateOrCreate(
+                ['tenant_id' => $tenantId],
+                [
+                    'plan_id' => $plan->id,
+                    'pending_plan_id' => null,
+                    'pending_interval' => null,
+                    'status' => 'pending',
+                    'interval' => $validated['interval'],
+                    'gateway' => 'toyyibpay',
+                ]
+            );
+            $externalRef = (string) $subscription->id;
+        }
 
         Log::info('Initiating subscription checkout', [
             'tenant_id' => $tenantId,
             'plan' => $plan->name,
             'interval' => $validated['interval'],
-            'amount' => $billAmount
+            'amount' => $billAmount,
+            'order_ref' => $externalRef,
+            'kept_status' => $subscription->status,
         ]);
 
         $paymentUrl = $toyyibpay->createBill([
@@ -182,7 +204,7 @@ class SubscriptionController extends Controller
             'billAmount' => $billAmount,
             'billReturnUrl' => route('subscription.callback'),
             'billCallbackUrl' => route('subscription.webhook'),
-            'billExternalReferenceNo' => (string) $subscription->id,
+            'billExternalReferenceNo' => $externalRef,
             'billTo' => $user->name,
             'billEmail' => $user->email,
             'billPhone' => $user->phone ?? '0123456789', // Default phone if missing
@@ -214,6 +236,31 @@ class SubscriptionController extends Controller
 
         return redirect()->route('subscription.index')
             ->with('success', 'Scheduled plan change cancelled. You\'ll stay on your current plan when it renews.');
+    }
+
+    /**
+     * Encode the paid target into ToyyibPay's external reference so SME
+     * checkout can keep `pending_plan_id` for trial→Startup fallback.
+     */
+    private function checkoutOrderRef(int $subscriptionId, int $planId, string $interval): string
+    {
+        return "{$subscriptionId}:{$planId}:{$interval}";
+    }
+
+    /**
+     * @return array{0: int|string|null, 1: int|null, 2: string|null}
+     */
+    private function parseCheckoutOrderRef(string $orderRef): array
+    {
+        if (preg_match('/^(\d+):(\d+):(monthly|yearly|lifetime)$/', $orderRef, $m)) {
+            return [(int) $m[1], (int) $m[2], $m[3]];
+        }
+
+        if (ctype_digit($orderRef)) {
+            return [(int) $orderRef, null, null];
+        }
+
+        return [$orderRef !== '' ? $orderRef : null, null, null];
     }
 
     /**
@@ -281,12 +328,14 @@ class SubscriptionController extends Controller
 
         $billCode = $request->post('billcode');
         $statusId = $request->post('status_id');
-        $subscriptionId = $request->post('order_id'); // We passed subscription ID as billExternalReferenceNo
+        $orderRef = (string) $request->post('order_id'); // billExternalReferenceNo
+        [$subscriptionId, $checkoutPlanId, $checkoutInterval] = $this->parseCheckoutOrderRef($orderRef);
 
         if ($statusId == 1) {
-            if (! $toyyibpay->verifyPaidBill((string) $billCode, (string) $subscriptionId)) {
+            if (! $toyyibpay->verifyPaidBill((string) $billCode, $orderRef)) {
                 Log::warning('Toyyibpay subscription webhook rejected: verification failed', [
                     'subscription_id' => $subscriptionId,
+                    'order_ref'       => $orderRef,
                     'billcode'        => $billCode,
                 ]);
 
@@ -302,11 +351,15 @@ class SubscriptionController extends Controller
                 // doesn't lose access while paying. On payment success
                 // we swap the pending fields into the live ones in a
                 // single update so the cutover is atomic.
-                $effectiveInterval = $subscription->pending_interval
-                    ?: $subscription->interval;
+                //
+                // SME trial/free → paid checkout instead encodes the
+                // target in the order ref so we do not overwrite the
+                // trial's Startup fallback in pending_plan_id.
+                $effectiveInterval = $checkoutInterval
+                    ?: ($subscription->pending_interval ?: $subscription->interval);
 
                 $periodStart = now();
-                $periodEnd = match($effectiveInterval) {
+                $periodEnd = match ($effectiveInterval) {
                     'lifetime' => null,
                     'yearly' => now()->addYear(),
                     default => now()->addMonth(),
@@ -320,12 +373,18 @@ class SubscriptionController extends Controller
                     'current_period_ends_at'  => $periodEnd?->toDateString(),
                 ];
 
-                if ($subscription->pending_plan_id) {
-                    $updates['plan_id']         = $subscription->pending_plan_id;
-                    $updates['pending_plan_id'] = null;
-                }
-                if ($subscription->pending_interval) {
+                if ($checkoutPlanId) {
+                    $updates['plan_id']          = $checkoutPlanId;
+                    $updates['pending_plan_id']  = null;
                     $updates['pending_interval'] = null;
+                } else {
+                    if ($subscription->pending_plan_id) {
+                        $updates['plan_id']         = $subscription->pending_plan_id;
+                        $updates['pending_plan_id'] = null;
+                    }
+                    if ($subscription->pending_interval) {
+                        $updates['pending_interval'] = null;
+                    }
                 }
 
                 $subscription->update($updates);
@@ -334,6 +393,7 @@ class SubscriptionController extends Controller
                     'subscription_id' => $subscription->id,
                     'plan_id'         => $subscription->fresh()->plan_id,
                     'interval'        => $effectiveInterval,
+                    'order_ref'       => $orderRef,
                 ]);
             }
         }
