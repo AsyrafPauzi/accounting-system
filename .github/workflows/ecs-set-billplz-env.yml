@@ -1,0 +1,104 @@
+name: Set Billplz ECS Env
+
+# Merge Billplz platform secrets into the ECS task definition, then roll the service.
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+  ECS_SERVICE: ${{ secrets.ECS_SERVICE }}
+  CONTAINER_NAME: ${{ secrets.CONTAINER_NAME }}
+  ECS_TASK_DEFINITION_NAME: ${{ secrets.ECS_TASK_DEFINITION_NAME }}
+
+jobs:
+  update:
+    name: Patch ECS task env
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Merge Billplz env into task definition and redeploy
+        env:
+          BILLPLZ_SECRET_KEY: ${{ secrets.BILLPLZ_SECRET_KEY }}
+          BILLPLZ_COLLECTION_ID: ${{ secrets.BILLPLZ_COLLECTION_ID }}
+          BILLPLZ_XSIGNATURE_KEY: ${{ secrets.BILLPLZ_XSIGNATURE_KEY }}
+          BILLPLZ_SANDBOX: ${{ secrets.BILLPLZ_SANDBOX }}
+        run: |
+          set -euo pipefail
+
+          for required in BILLPLZ_SECRET_KEY BILLPLZ_COLLECTION_ID BILLPLZ_XSIGNATURE_KEY; do
+            if [ -z "${!required}" ]; then
+              echo "::error::$required GitHub secret is empty"
+              exit 1
+            fi
+          done
+
+          export SANDBOX_VALUE="${BILLPLZ_SANDBOX:-false}"
+
+          aws ecs describe-task-definition \
+            --task-definition "$ECS_TASK_DEFINITION_NAME" \
+            --query taskDefinition > task-definition.json
+
+          python3 <<'PY'
+          import json, os
+
+          path = "task-definition.json"
+          with open(path) as f:
+              td = json.load(f)
+
+          for key in (
+              "taskDefinitionArn", "revision", "status", "requiresAttributes",
+              "compatibilities", "registeredAt", "registeredBy",
+          ):
+              td.pop(key, None)
+
+          name = os.environ["CONTAINER_NAME"]
+          containers = td.get("containerDefinitions") or []
+          container = next((c for c in containers if c.get("name") == name), None)
+          if container is None:
+              raise SystemExit(f"container {name!r} not found in task definition")
+
+          env_list = container.get("environment") or []
+          by_name = {item["name"]: item for item in env_list if "name" in item}
+          updates = {
+              "BILLPLZ_SECRET_KEY": os.environ["BILLPLZ_SECRET_KEY"],
+              "BILLPLZ_COLLECTION_ID": os.environ["BILLPLZ_COLLECTION_ID"],
+              "BILLPLZ_XSIGNATURE_KEY": os.environ["BILLPLZ_XSIGNATURE_KEY"],
+              "BILLPLZ_SANDBOX": os.environ.get("SANDBOX_VALUE", "false"),
+          }
+          for key, value in updates.items():
+              by_name[key] = {"name": key, "value": value}
+          container["environment"] = sorted(by_name.values(), key=lambda i: i["name"])
+
+          with open(path, "w") as f:
+              json.dump(td, f)
+          print("Patched:", ", ".join(sorted(updates)))
+          PY
+
+          NEW_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://task-definition.json \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+
+          echo "Registered $NEW_ARN"
+
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --task-definition "$NEW_ARN" \
+            --force-new-deployment \
+            --query 'service.{status:status,taskDefinition:taskDefinition}' \
+            --output json
+
+          echo "Waiting for service stability…"
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE"
+
+          echo "Billplz env applied and service is stable."
