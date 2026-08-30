@@ -782,8 +782,8 @@ class CopilotTools
             'due_date' => $args['due_date'] ?? null,
             'reference' => $args['reference'] ?? null,
             'tax_amount' => $args['tax_amount'] ?? 0,
-            'receipt_path' => $this->persistBillReceiptPath($args['receipt_path'] ?? null),
-            'ocr_status' => ! empty($args['receipt_path']) ? 'success' : 'none',
+            'supplier_invoice_path' => $this->persistBillReceiptPath($args['supplier_invoice_path'] ?? $args['receipt_path'] ?? null),
+            'ocr_status' => ! empty($args['supplier_invoice_path'] ?? $args['receipt_path'] ?? null) ? 'success' : 'none',
             'created_by' => $user->id,
             'purchase_kind' => 'credit',
         ], $items);
@@ -1275,8 +1275,8 @@ class CopilotTools
             'bill_date' => $args['bill_date'] ?? now()->toDateString(),
             'due_date' => $args['due_date'] ?? null,
             'private_notes' => $notes,
-            'receipt_path' => $this->persistBillReceiptPath($args['receipt_path'] ?? null),
-            'ocr_status' => ! empty($args['receipt_path']) ? 'success' : 'none',
+            'supplier_invoice_path' => $this->persistBillReceiptPath($args['supplier_invoice_path'] ?? $args['receipt_path'] ?? null),
+            'ocr_status' => ! empty($args['supplier_invoice_path'] ?? $args['receipt_path'] ?? null) ? 'success' : 'none',
             'created_by' => $user->id,
             'purchase_kind' => 'claim',
         ], [[

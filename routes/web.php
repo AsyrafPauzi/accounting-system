@@ -576,6 +576,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/bills', [BillController::class, 'index'])->name('bills.index');
         Route::get('/bills/{id}/edit', [BillController::class, 'edit'])->name('bills.edit');
         Route::get('/bills/{id?}/receipt', [BillController::class, 'showReceipt'])->name('bills.receipt');
+        Route::get('/bills/{id}/document', [BillController::class, 'showDocument'])->whereNumber('id')->name('bills.document');
+        Route::get('/bills/{id}/document-versions/{version}', [BillController::class, 'showDocumentVersion'])
+            ->whereNumber(['id', 'version'])
+            ->name('bills.document-versions');
         Route::get('/bills/{id}', [BillController::class, 'show'])->whereNumber('id')->name('bills.show');
         Route::get('/bills/{id}/payments/{paymentId}/voucher', [BillController::class, 'paymentVoucher'])->whereNumber(['id', 'paymentId'])->name('bills.payment-voucher');
     });
@@ -588,8 +592,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/bills', [BillController::class, 'store'])
             ->middleware('throttle:creation')
             ->name('bills.store');
-        // OCR is the differentiating bullet on Solo+ — gate the receipt
-        // upload endpoint specifically (the plain bill form stays open).
+        // OCR is the differentiating bullet on Solo+ — gate supplier-invoice
+        // uploads inside the controller (payment receipt stays open).
+        Route::post('/bills/upload-document', [BillController::class, 'uploadDocument'])
+            ->name('bills.upload-document');
         Route::post('/bills/upload-receipt', [BillController::class, 'uploadReceipt'])
             ->middleware('plan.permission:ocr.use')
             ->name('bills.upload-receipt');

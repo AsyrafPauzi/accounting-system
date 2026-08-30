@@ -196,7 +196,8 @@ class BillService
                 'private_notes'      => $notes,
                 'reference'          => $data['reference'] ?? null,
                 'created_by'         => $data['created_by'] ?? null,
-                'receipt_path'       => $data['receipt_path'] ?? null,
+                'supplier_invoice_path' => $data['supplier_invoice_path'] ?? $data['receipt_path'] ?? null,
+                'payment_receipt_path'  => $data['payment_receipt_path'] ?? null,
                 'ocr_status'         => $data['ocr_status'] ?? 'none',
                 'ocr_data'           => $data['ocr_data'] ?? null,
                 'audit_status'       => $data['audit_status'] ?? 'unaudited',
@@ -212,6 +213,24 @@ class BillService
 
             $bill = Bill::create($payload);
             $this->syncItems($bill, $items);
+
+            $documentService = app(BillDocumentService::class);
+            if (! empty($bill->supplier_invoice_path)) {
+                $documentService->recordInitialVersion(
+                    $bill,
+                    'supplier_invoice',
+                    $bill->supplier_invoice_path,
+                    $data['created_by'] ?? null,
+                );
+            }
+            if (! empty($bill->payment_receipt_path)) {
+                $documentService->recordInitialVersion(
+                    $bill,
+                    'payment_receipt',
+                    $bill->payment_receipt_path,
+                    $data['created_by'] ?? null,
+                );
+            }
 
             if ($kind === 'cash') {
                 $this->post($bill->fresh('items'));
@@ -253,7 +272,8 @@ class BillService
                 'currency'      => strtoupper((string) ($data['currency'] ?? $bill->currency ?? 'MYR')),
                 'private_notes' => $data['private_notes'] ?? null,
                 'reference'     => $data['reference'] ?? null,
-                'receipt_path'  => $data['receipt_path'] ?? $bill->receipt_path,
+                'supplier_invoice_path' => $data['supplier_invoice_path'] ?? $data['receipt_path'] ?? $bill->supplier_invoice_path,
+                'payment_receipt_path'  => $data['payment_receipt_path'] ?? $bill->payment_receipt_path,
                 'ocr_status'    => $data['ocr_status'] ?? $bill->ocr_status,
                 'ocr_data'      => $data['ocr_data'] ?? $bill->ocr_data,
                 'audit_status'  => $data['audit_status'] ?? $bill->audit_status,

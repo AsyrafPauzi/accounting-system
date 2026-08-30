@@ -158,7 +158,7 @@ class ReceiptInboxTest extends TestCase
 
         $bill = Bill::with('items')->findOrFail($job->bill_id);
         $this->assertSame('draft', $bill->status);
-        $this->assertSame('receipts/test.jpg', $bill->receipt_path);
+        $this->assertSame('receipts/test.jpg', $bill->supplier_invoice_path);
         $this->assertSame(8.0, (float) $bill->tax_amount);
         $this->assertSame($sr8->id, (int) $bill->items->first()->tax_code_id);
         tenancy()->end();
