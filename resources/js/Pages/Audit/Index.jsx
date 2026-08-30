@@ -187,7 +187,7 @@ export default function Index({ auth, bills, filters, stats }) {
                                             <div className="font-mono font-display font-medium text-ink">RM {(Number(bill.total_amount) || 0).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            {bill.receipt_path ? (
+                                            {bill.supplier_invoice_path || bill.supplier_invoice_url ? (
                                                 <button 
                                                     onClick={() => setSelectedBill(bill)}
                                                     className="flex items-center gap-2 text-terracotta hover:text-ink font-medium group/receipt"
@@ -195,10 +195,10 @@ export default function Index({ auth, bills, filters, stats }) {
                                                     <div className="p-1.5 bg-surface-alt rounded-lg group-hover/receipt:bg-surface-alt transition-colors">
                                                         <IconFileText size={16} />
                                                     </div>
-                                                    <span className="text-xs underline decoration-indigo-200 underline-offset-4">View Receipt</span>
+                                                    <span className="text-xs underline decoration-indigo-200 underline-offset-4">View invoice</span>
                                                 </button>
                                             ) : (
-                                                <span className="text-ink-muted text-xs italic">No receipt</span>
+                                                <span className="text-ink-muted text-xs italic">No invoice</span>
                                             )}
                                         </td>
                                         <td className="px-6 py-4">
@@ -278,12 +278,12 @@ export default function Index({ auth, bills, filters, stats }) {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="rounded-xl overflow-hidden border border-border-warm bg-cream aspect-[3/4] flex items-center justify-center">
-                            {selectedBill?.receipt_url?.match(/\.(jpeg|jpg|gif|png)$/) || selectedBill?.receipt_path?.match(/\.(jpeg|jpg|gif|png)$/) ? (
+                            {selectedBill?.supplier_invoice_url?.match(/\.(jpeg|jpg|gif|png)$/) || selectedBill?.supplier_invoice_path?.match(/\.(jpeg|jpg|gif|png)$/) ? (
                                 <div className="relative group w-full h-full">
-                                    <img src={selectedBill?.receipt_url || selectedBill?.receipt_path} alt="Receipt" className="w-full h-full object-contain" />
+                                    <img src={selectedBill?.supplier_invoice_url || selectedBill?.supplier_invoice_path} alt="Supplier invoice" className="w-full h-full object-contain" />
                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-ink/5">
                                         <a 
-                                            href={selectedBill?.receipt_url || selectedBill?.receipt_path} 
+                                            href={selectedBill?.supplier_invoice_url || selectedBill?.supplier_invoice_path} 
                                             target="_blank" 
                                             className="bg-surface/90 backdrop-blur p-2 rounded-lg shadow-xl text-xs font-display font-medium text-ink flex items-center gap-2"
                                         >
@@ -296,7 +296,7 @@ export default function Index({ auth, bills, filters, stats }) {
                                     <IconFileText size={64} />
                                     <span className="text-sm font-medium mt-4">Document Attachment</span>
                                     <a 
-                                        href={selectedBill?.receipt_url || selectedBill?.receipt_path} 
+                                        href={selectedBill?.supplier_invoice_url || selectedBill?.supplier_invoice_path} 
                                         target="_blank" 
                                         className="mt-4 px-4 py-2 bg-terracotta text-white rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-terracotta transition-colors"
                                     >

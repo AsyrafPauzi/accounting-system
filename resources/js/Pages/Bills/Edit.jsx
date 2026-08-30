@@ -19,7 +19,7 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
     const balanceDue = isDraft || isVoid ? 0 : parseFloat(bill.balance_due ?? 0);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [showReceiptModal, setShowReceiptModal] = useState(false);
-    const [receiptUrl, setReceiptUrl] = useState(bill.receipt_url || null);
+    const [receiptUrl, setReceiptUrl] = useState(bill.supplier_invoice_url || bill.receipt_url || null);
     const receiptIsPdf = !!receiptUrl && /\.pdf($|\?)/i.test(receiptUrl);
     const accountCode = defaultAccountCode(expenseAccounts);
     const kind = bill.purchase_kind && bill.purchase_kind !== 'credit' ? bill.purchase_kind : 'credit';
@@ -33,6 +33,8 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
         tax_amount: parseFloat(bill.tax_amount) || 0,
         reference: bill.reference || '',
         private_notes: bill.private_notes || '',
+        supplier_invoice_path: bill.supplier_invoice_path || '',
+        payment_receipt_path: bill.payment_receipt_path || '',
         items: itemsFromBill(bill.items, accountCode),
     });
 
@@ -133,7 +135,10 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
                 taxCodes={taxCodes}
                 showKind={false}
                 disabled={!isDraft}
+                isDraft={isDraft}
                 billId={bill.id}
+                supplierInvoiceUrl={receiptUrl}
+                paymentReceiptUrl={bill.payment_receipt_url || null}
                 receiptUrl={receiptUrl}
                 receiptIsPdf={receiptIsPdf}
                 onViewReceipt={receiptUrl ? () => setShowReceiptModal(true) : undefined}
@@ -146,16 +151,16 @@ export default function Edit({ auth, bill, suppliers = [], expenseAccounts = [],
             <Modal show={showReceiptModal} onClose={() => setShowReceiptModal(false)} maxWidth="2xl">
                 <div className="p-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-display font-medium text-ink">Receipt</h3>
+                        <h3 className="text-lg font-display font-medium text-ink">Supplier invoice</h3>
                         <button type="button" onClick={() => setShowReceiptModal(false)} className="p-2 text-ink-muted hover:text-ink">
                             <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
                         </button>
                     </div>
                     <div className="bg-surface-alt rounded-xl border border-border-warm flex items-center justify-center h-[70vh] overflow-hidden">
                         {receiptIsPdf ? (
-                            <iframe src={`${receiptUrl}#view=FitH&toolbar=1`} title="Receipt PDF" className="w-full h-full bg-cream" />
+                            <iframe src={`${receiptUrl}#view=FitH&toolbar=1`} title="Supplier invoice PDF" className="w-full h-full bg-cream" />
                         ) : (
-                            <img src={receiptUrl} alt="Receipt" className="max-w-full max-h-full object-contain p-4" />
+                            <img src={receiptUrl} alt="Supplier invoice" className="max-w-full max-h-full object-contain p-4" />
                         )}
                     </div>
                     <div className="mt-4 flex justify-end">

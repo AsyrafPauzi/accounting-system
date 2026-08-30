@@ -13,40 +13,57 @@ class Bill extends Model
 {
     use HasFactory, SoftDeletes, HasUuid, Auditable;
     
-    protected $appends = ['balance_due', 'supplier_name', 'receipt_url'];
+    protected $appends = [
+        'balance_due',
+        'supplier_name',
+        'supplier_invoice_url',
+        'payment_receipt_url',
+    ];
 
-    public function getReceiptUrlAttribute(): ?string
+    public function getSupplierInvoiceUrlAttribute(): ?string
     {
-        $path = $this->getAttributes()['receipt_path'] ?? null;
+        return $this->documentUrlForSlot('supplier_invoice');
+    }
+
+    public function getPaymentReceiptUrlAttribute(): ?string
+    {
+        return $this->documentUrlForSlot('payment_receipt');
+    }
+
+    protected function documentUrlForSlot(string $slot): ?string
+    {
+        $column = $slot === 'payment_receipt' ? 'payment_receipt_path' : 'supplier_invoice_path';
+        $path = $this->getAttributes()[$column] ?? null;
         if (! $path) {
             return null;
         }
 
-        // If the path already starts with http, it's already a full URL (maybe from a previous bug)
         if (str_starts_with($path, 'http')) {
             return $path;
         }
 
-        // Clean up the path if it has /storage/ or storage/ at the beginning
         $path = ltrim($path, '/');
         if (str_starts_with($path, 'storage/')) {
             $path = substr($path, 8);
         }
 
         try {
-            return route('bills.receipt', $this->id) . '?path=' . urlencode($path);
+            if ($this->id) {
+                return route('bills.document', $this->id).'?slot='.urlencode($slot);
+            }
+
+            return route('bills.receipt', 0).'?path='.urlencode($path);
         } catch (\Exception $e) {
             return \Illuminate\Support\Facades\Storage::url($path);
         }
     }
-
 
     protected $fillable = [
         'bill_number', 'supplier_id', 'purchase_order_id', 'goods_receipt_id',
         'bill_date', 'due_date', 'status', 'purchase_kind',
         'total_amount', 'amount_paid', 'tax_amount', 'currency', 'exchange_rate',
         'private_notes', 'reference', 'created_by',
-        'receipt_path', 'ocr_status', 'ocr_data', 'audit_status',
+        'supplier_invoice_path', 'payment_receipt_path', 'ocr_status', 'ocr_data', 'audit_status',
         'audited_at', 'audited_by',
         'lhdn_status', 'lhdn_uuid', 'lhdn_long_id', 'lhdn_submitted_at',
         'lhdn_cancelled_at', 'lhdn_reject_reason', 'lhdn_qr_url',
@@ -91,6 +108,11 @@ class Bill extends Model
     public function payments()
     {
         return $this->hasMany(BillPayment::class);
+    }
+
+    public function documentVersions()
+    {
+        return $this->hasMany(BillDocumentVersion::class)->latest('id');
     }
 
     public function creditNoteApplications()

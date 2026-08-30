@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import ReceiptUpload from '@/Components/ReceiptUpload';
+import BillDocumentUpload from '@/Components/BillDocumentUpload';
 import PurchasesDocLines, { blankPurchaseLine } from '@/Components/PurchasesDocLines';
 import DocumentFormNotesTotals, { computeDocTotals } from '@/Components/DocumentFormNotesTotals';
 
@@ -123,8 +123,11 @@ export default function BillForm({
     taxCodes = [],
     showKind = true,
     disabled = false,
+    isDraft = true,
     receiptUrl = null,
     receiptIsPdf = false,
+    supplierInvoiceUrl = null,
+    paymentReceiptUrl = null,
     billId = null,
     onViewReceipt,
     onReceiptUploaded,
@@ -135,23 +138,18 @@ export default function BillForm({
     const copy = KIND_COPY[kind] || KIND_COPY.credit;
     const supplierLabel = kind === 'claim' ? 'Claimant' : 'Supplier';
     const supplierRequired = kind !== 'credit';
-    const [previewUrl, setPreviewUrl] = useState(receiptUrl);
-    const [previewPdf, setPreviewPdf] = useState(receiptIsPdf);
-    const shownUrl = previewUrl || receiptUrl;
-    const shownPdf = shownUrl ? (/\.pdf($|\?)/i.test(shownUrl) || previewPdf) : false;
+    const [invoicePreviewUrl, setInvoicePreviewUrl] = useState(supplierInvoiceUrl || receiptUrl);
+    const [invoicePreviewPdf, setInvoicePreviewPdf] = useState(receiptIsPdf);
+    const [paymentUrl, setPaymentUrl] = useState(paymentReceiptUrl);
+    const shownUrl = invoicePreviewUrl || supplierInvoiceUrl || receiptUrl;
+    const shownPdf = shownUrl ? (/\.pdf($|\?)/i.test(shownUrl) || invoicePreviewPdf) : false;
+    const requireReason = Boolean(billId) && !isDraft;
 
-    const handleOcrComplete = (ocrData, url, path) => {
-        if (onReceiptUploaded) onReceiptUploaded(ocrData, url, path);
-        if (url) {
-            setPreviewUrl(url);
-            setPreviewPdf(/\.(pdf)($|\?)/i.test(url));
-        }
-        if (!ocrData && !path) return;
-
+    const mergeOcrIntoForm = (ocrData, path) => {
         setData((prev) => {
             const updates = {
                 ...prev,
-                receipt_path: path || url || prev.receipt_path,
+                supplier_invoice_path: path || prev.supplier_invoice_path,
                 ocr_status: ocrData ? 'completed' : prev.ocr_status,
                 ocr_data: ocrData || prev.ocr_data,
             };
@@ -176,7 +174,7 @@ export default function BillForm({
                 const net = Math.max(0, parseFloat(ocrData.total_amount) - tax);
                 updates.items = [{
                     ...blankPurchaseLine(accountCode),
-                    description: 'Extracted from receipt',
+                    description: 'Extracted from invoice',
                     quantity: 1,
                     unit_price: net,
                 }];
@@ -186,32 +184,70 @@ export default function BillForm({
         });
     };
 
+    const handleInvoiceComplete = ({ path, url, ocrData, applyOcr }) => {
+        if (onReceiptUploaded) onReceiptUploaded(ocrData, url, path);
+        if (url) {
+            setInvoicePreviewUrl(url);
+            setInvoicePreviewPdf(/\.(pdf)($|\?)/i.test(url));
+        }
+        if (path) {
+            setData((prev) => ({ ...prev, supplier_invoice_path: path }));
+        }
+        if (applyOcr && ocrData) {
+            mergeOcrIntoForm(ocrData, path);
+        }
+    };
+
+    const handlePaymentComplete = ({ path, url }) => {
+        if (url) setPaymentUrl(url);
+        if (path) {
+            setData((prev) => ({ ...prev, payment_receipt_path: path }));
+        }
+    };
+
     return (
         <form id={formId} onSubmit={onSubmit} className="space-y-6 pb-12 min-w-0">
             <div className="bg-surface rounded-2xl border border-border-warm/80 shadow-sm p-4 sm:p-5">
                 <div className="flex items-center justify-between gap-3 mb-3">
                     <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Receipt</p>
-                        <p className="text-sm text-ink-muted">Optional — drop a file to fill dates, supplier, and lines</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Supporting documents</p>
+                        <p className="text-sm text-ink-muted">Supplier invoice for OCR · payment receipt optional</p>
                     </div>
                     {shownUrl && onViewReceipt && (
                         <button type="button" onClick={onViewReceipt} className="text-xs font-semibold text-terracotta hover:underline shrink-0">
-                            View full size
+                            View invoice
                         </button>
                     )}
                 </div>
                 {shownUrl && (
                     shownPdf ? (
                         <div className="mb-3 rounded-xl overflow-hidden border border-border-warm bg-cream">
-                            <iframe src={`${shownUrl}#view=FitH&toolbar=0`} title="Receipt PDF" className="w-full h-40 bg-cream" />
+                            <iframe src={`${shownUrl}#view=FitH&toolbar=0`} title="Supplier invoice PDF" className="w-full h-40 bg-cream" />
                         </div>
                     ) : (
                         <div className="mb-3 rounded-xl overflow-hidden border border-border-warm bg-cream max-h-40 w-full flex items-center justify-center">
-                            <img src={shownUrl} alt="Receipt" className="max-h-40 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                            <img src={shownUrl} alt="Supplier invoice" className="max-h-40 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                         </div>
                     )
                 )}
-                <ReceiptUpload compact billId={billId} onOcrComplete={handleOcrComplete} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <BillDocumentUpload
+                        slot="supplier_invoice"
+                        billId={billId}
+                        requireReason={requireReason}
+                        currentUrl={shownUrl}
+                        compact
+                        onComplete={handleInvoiceComplete}
+                    />
+                    <BillDocumentUpload
+                        slot="payment_receipt"
+                        billId={billId}
+                        requireReason={requireReason}
+                        currentUrl={paymentUrl || paymentReceiptUrl}
+                        compact
+                        onComplete={handlePaymentComplete}
+                    />
+                </div>
             </div>
 
             <div className="bg-surface p-6 rounded-2xl border border-border-warm/80 shadow-sm">

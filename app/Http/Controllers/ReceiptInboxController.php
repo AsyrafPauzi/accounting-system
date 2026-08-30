@@ -165,7 +165,7 @@ class ReceiptInboxController extends Controller
             'due_date'      => $validated['due_date'] ?? null,
             'reference'     => $validated['reference'] ?? ($ocrJob->parsed_data['reference'] ?? null),
             'tax_amount'    => $taxAmount,
-            'receipt_path'  => $ocrJob->file_path,
+            'supplier_invoice_path' => $ocrJob->file_path,
             'ocr_status'    => $ocrJob->status === 'ready' ? 'completed' : 'failed',
             'ocr_data'      => $ocrJob->parsed_data,
             'created_by'    => $request->user()?->id,

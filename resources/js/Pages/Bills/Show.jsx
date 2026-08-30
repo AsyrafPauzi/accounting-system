@@ -26,7 +26,7 @@ function kindLabel(kind) {
     return 'Bill';
 }
 
-export default function Show({ auth, bill, bankAccounts = [], myinvois_gaps = [], trail = [], company = {} }) {
+export default function Show({ auth, bill, bankAccounts = [], myinvois_gaps = [], trail = [], company = {}, document_versions = [] }) {
     const currency = bill.currency || 'MYR';
     const due = Number(bill.balance_due ?? 0);
     const paid = Number(bill.amount_paid || 0);
@@ -235,11 +235,52 @@ export default function Show({ auth, bill, bankAccounts = [], myinvois_gaps = []
                             )}
                         </SidebarCard>
 
-                        {bill.receipt_url && (
-                            <SidebarCard title="Receipt">
-                                <a href={bill.receipt_url} target="_blank" rel="noreferrer" className="text-sm text-terracotta hover:underline">
-                                    View uploaded receipt
-                                </a>
+                        {(bill.supplier_invoice_url || bill.payment_receipt_url || document_versions.length > 0) && (
+                            <SidebarCard title="Supporting documents">
+                                <div className="space-y-2 text-sm">
+                                    {bill.supplier_invoice_url ? (
+                                        <a href={bill.supplier_invoice_url} target="_blank" rel="noreferrer" className="block text-terracotta hover:underline">
+                                            Current supplier invoice
+                                        </a>
+                                    ) : (
+                                        <p className="text-ink-muted">No supplier invoice</p>
+                                    )}
+                                    {bill.payment_receipt_url ? (
+                                        <a href={bill.payment_receipt_url} target="_blank" rel="noreferrer" className="block text-terracotta hover:underline">
+                                            Current payment receipt
+                                        </a>
+                                    ) : (
+                                        <p className="text-ink-muted">No payment receipt</p>
+                                    )}
+                                </div>
+                                {document_versions.length > 0 && (
+                                    <div className="mt-4 pt-3 border-t border-border-warm">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted mb-2">Document history</p>
+                                        <ul className="space-y-2 max-h-48 overflow-y-auto">
+                                            {document_versions.map((v) => (
+                                                <li key={v.id} className="text-xs text-ink">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div className="min-w-0">
+                                                            <p className="font-semibold">
+                                                                {v.slot === 'payment_receipt' ? 'Payment receipt' : 'Supplier invoice'}
+                                                                {' · '}
+                                                                {v.action}
+                                                            </p>
+                                                            <p className="text-ink-muted">
+                                                                {v.uploader_name || 'System'}
+                                                                {v.created_at ? ` · ${formatDate(v.created_at)}` : ''}
+                                                            </p>
+                                                            {v.reason && <p className="text-ink-muted italic">“{v.reason}”</p>}
+                                                        </div>
+                                                        <a href={v.url} target="_blank" rel="noreferrer" className="text-terracotta hover:underline shrink-0">
+                                                            Open
+                                                        </a>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
                             </SidebarCard>
                         )}
                     </>

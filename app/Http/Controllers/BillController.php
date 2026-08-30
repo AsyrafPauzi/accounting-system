@@ -6,14 +6,17 @@ use App\Http\Requests\StoreBillRequest;
 use App\Http\Requests\UpdateBillRequest;
 use App\Models\Account;
 use App\Models\Bill;
+use App\Models\BillDocumentVersion;
 use App\Models\Product;
 use App\Models\Supplier;
 use App\Support\DocumentNumber;
+use App\Services\BillDocumentService;
 use App\Services\BillService;
 use App\Services\ImageMetadataStripper;
 use App\Services\MyInvoisService;
 use App\Services\OCRService;
 use App\Services\PurchasesDocumentTrail;
+use App\Support\OcrProgress;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -23,11 +26,13 @@ use Illuminate\Support\Facades\Storage;
 use App\Jobs\ProcessOcr;
 use App\Support\OcrResultCache;
 use Barryvdh\DomPDF\Facade\Pdf;
+use RuntimeException;
 
 class BillController extends Controller
 {
     public function __construct(
         protected BillService $billService,
+        protected BillDocumentService $billDocumentService,
         protected OCRService $ocrService,
         protected ImageMetadataStripper $metadataStripper,
     ) {}
@@ -225,9 +230,28 @@ class BillController extends Controller
         if (Schema::hasTable('ap_deposit_applications')) {
             $with[] = 'depositApplications.deposit:id,reference,status';
         }
+        if (Schema::hasTable('bill_document_versions')) {
+            $with[] = 'documentVersions.uploader';
+        }
         $bill = Bill::with($with)->findOrFail($id);
 
         $bankAccounts = Account::bankOrCash()->active()->orderBy('code')->get(['code', 'name']);
+
+        $documentVersions = [];
+        if ($bill->relationLoaded('documentVersions')) {
+            $documentVersions = $bill->documentVersions->map(function (BillDocumentVersion $v) use ($bill) {
+                return [
+                    'id' => $v->id,
+                    'slot' => $v->slot,
+                    'action' => $v->action,
+                    'reason' => $v->reason,
+                    'created_at' => optional($v->created_at)?->toIso8601String(),
+                    'uploader_name' => $v->uploader?->name,
+                    'original_filename' => $v->original_filename,
+                    'url' => route('bills.document-versions', [$bill->id, $v->id]),
+                ];
+            })->values()->all();
+        }
 
         return Inertia::render('Bills/Show', [
             'bill' => array_merge($bill->toArray(), ['balance_due' => $this->billService->remainingBalance($bill)]),
@@ -235,6 +259,7 @@ class BillController extends Controller
             'myinvois_gaps' => app(MyInvoisService::class)->selfBilledReadiness($bill),
             'trail' => app(PurchasesDocumentTrail::class)->forBill($bill),
             'company' => tenant()?->getCompanyDetails() ?? [],
+            'document_versions' => $documentVersions,
         ]);
     }
 
@@ -337,55 +362,93 @@ class BillController extends Controller
     }
 
     /**
-     * Upload a receipt and process it with OCR.
+     * Upload a bill document (supplier invoice and/or payment receipt).
+     * Supplier invoice triggers OCR; payment receipt is storage-only.
      */
-    public function uploadReceipt(Request $request): \Illuminate\Http\JsonResponse
+    public function uploadDocument(Request $request): \Illuminate\Http\JsonResponse
     {
-        $request->validate([
-            // Images for photo-of-receipt uploads, PDFs for e-receipts (Shopee, fuel
-            // station tax invoices, etc.). Tesseract handles PDFs via PdfPreprocessor;
-            // Gemini handles them natively.
-            'receipt' => 'required|file|mimes:jpg,jpeg,png,webp,pdf|max:10240',
-            'bill_id' => 'nullable|exists:bills,id',
-        ]);
-
-        $file = $request->file('receipt');
-
-        // PDPA: scrub EXIF/GPS/device metadata from phone photos before the
-        // bytes leave the temp directory. Best-effort — if magick isn't
-        // available or fails, the upload still proceeds with the original
-        // file (the stripper logs the failure for ops visibility).
-        $tempPath = $file->getRealPath();
-        if (is_string($tempPath) && $tempPath !== '') {
-            $this->metadataStripper->strip($tempPath, $file->getMimeType());
+        if ($request->hasFile('receipt') && ! $request->hasFile('document')) {
+            $request->files->set('document', $request->file('receipt'));
         }
 
-        $path = $file->store('receipts', 'public');
+        $request->validate([
+            'slot' => 'required|in:supplier_invoice,payment_receipt',
+            'document' => 'required|file|mimes:jpg,jpeg,png,webp,pdf|max:10240',
+            'bill_id' => 'nullable|exists:bills,id',
+            'reason' => 'nullable|string|max:500',
+        ]);
 
-        if (! is_string($path) || $path === '') {
+        $slot = (string) $request->input('slot');
+        if ($slot === 'supplier_invoice') {
+            $tenant = tenant();
+            $planOk = $tenant && method_exists($tenant, 'hasPlanPermission')
+                ? $tenant->hasPlanPermission('ocr.use')
+                : true;
+            abort_unless($planOk, 403, 'OCR / supplier invoice upload is not available on this plan.');
+        }
+
+        $file = $request->file('document');
+        $billId = $request->filled('bill_id') ? (int) $request->input('bill_id') : null;
+        $reason = $request->input('reason');
+        $userId = $request->user()?->id;
+
+        try {
+            if ($billId) {
+                $bill = Bill::findOrFail($billId);
+                $version = $this->billDocumentService->attach(
+                    $bill,
+                    $slot,
+                    $file,
+                    is_string($reason) ? $reason : null,
+                    $userId
+                );
+                $path = $version->path;
+                $isDraft = $bill->status === 'draft';
+            } else {
+                $path = $this->billDocumentService->storeFile($file);
+                $isDraft = true;
+            }
+        } catch (RuntimeException $e) {
             return response()->json([
                 'success' => false,
-                'error' => 'Could not save the receipt. If using S3, check AWS_BUCKET and credentials; locally use FILESYSTEM_PUBLIC_DRIVER=local.',
+                'error' => $e->getMessage(),
             ], 500);
         }
 
-        if ($request->has('bill_id')) {
-            $bill = Bill::findOrFail($request->bill_id);
-            $bill->update([
-                'receipt_path' => $path,
-                'ocr_status' => 'pending',
-            ]);
+        $runOcr = $slot === 'supplier_invoice';
+        $applyOcr = $runOcr && $isDraft;
+
+        if ($runOcr) {
+            ProcessOcr::dispatch($path, $billId);
         }
 
-        // Dispatch background OCR job
-        ProcessOcr::dispatch($path, $request->bill_id ? (int) $request->bill_id : null);
+        $url = $billId
+            ? route('bills.document', $billId).'?slot='.urlencode($slot)
+            : route('bills.receipt', 0).'?path='.urlencode($path);
 
         return response()->json([
             'success' => true,
-            'status' => 'pending',
+            'slot' => $slot,
+            'status' => $runOcr ? 'pending' : 'stored',
+            'apply_ocr' => $applyOcr,
             'path' => $path,
-            'url' => route('bills.receipt', $request->bill_id ?? 0) . '?path=' . urlencode($path),
+            'url' => $url,
+            ...($runOcr ? OcrProgress::forUploadPercent(100) : [
+                'phase' => 'done',
+                'progress' => 100,
+                'label' => 'Payment receipt attached',
+            ]),
         ]);
+    }
+
+    /**
+     * Legacy alias — supplier invoice + OCR.
+     */
+    public function uploadReceipt(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $request->merge(['slot' => 'supplier_invoice']);
+
+        return $this->uploadDocument($request);
     }
 
     /**
@@ -399,55 +462,84 @@ class BillController extends Controller
 
         $path = $request->input('path');
         $result = OcrResultCache::get($path);
+        $startedAt = (int) $request->query('started_at', 0);
+        $elapsed = $startedAt > 0
+            ? max(0, (int) (microtime(true) * 1000) - $startedAt)
+            : 5_000;
 
         if ($result !== null) {
-            $status = ($result['status'] ?? null) === 'success' ? 'completed' : 'failed';
+            $done = ($result['status'] ?? null) === 'success';
+            $prog = $done ? OcrProgress::completed() : OcrProgress::failed();
 
             return response()->json([
-                'status' => $status,
+                'status' => $done ? 'completed' : 'failed',
                 'ocr_data' => $result['data'] ?? null,
                 'error' => $result['error'] ?? null,
+                ...$prog,
             ]);
         }
 
         return response()->json([
             'status' => 'pending',
+            ...OcrProgress::forPending($elapsed),
         ]);
     }
 
     /**
-     * Serve the receipt file securely.
-     *
-     * Defence in depth — even though Stancl's FilesystemTenancyBootstrapper
-     * prefixes the public disk's root with the current tenant id (so a
-     * cross-tenant `?path=` lookup naturally misses), we still:
-     *   1. require an active tenant context (no central-side leakage),
-     *   2. reject traversal sequences and absolute paths up front,
-     *   3. require the path to live under `receipts/` (the only prefix we
-     *      ever write to from upload flows),
-     * before letting Storage handle the lookup.
-     *
-     * The `?path=` parameter is preserved because the bill-create flow
-     * needs a way to preview a freshly uploaded receipt *before* the bill
-     * row exists in the DB — otherwise we'd just key off the bill id.
+     * Serve the current document for a bill slot (or legacy ?path= preview).
      */
-    public function showReceipt(Request $request, $id = null)
+    public function showDocument(Request $request, $id = null)
     {
         abort_if(tenant() === null, 403, 'Tenant context required.');
 
         $path = $request->query('path');
+        $slot = $request->query('slot', 'supplier_invoice');
 
         if (! $path && $id) {
             $bill = Bill::find($id);
-            $path = $bill?->receipt_path;
+            if ($bill) {
+                $column = $slot === 'payment_receipt' ? 'payment_receipt_path' : 'supplier_invoice_path';
+                $path = $bill->{$column};
+            }
         }
 
+        return $this->respondWithStoredPath($path);
+    }
+
+    /**
+     * Serve a historical document version.
+     */
+    public function showDocumentVersion(Request $request, int $id, int $version)
+    {
+        abort_if(tenant() === null, 403, 'Tenant context required.');
+
+        $row = BillDocumentVersion::query()
+            ->where('bill_id', $id)
+            ->where('id', $version)
+            ->firstOrFail();
+
+        return $this->respondWithStoredPath($row->path);
+    }
+
+    /**
+     * Legacy receipt URL — defaults to supplier invoice when no ?path=.
+     */
+    public function showReceipt(Request $request, $id = null)
+    {
+        if (! $request->query('path') && ! $request->query('slot') && $id) {
+            $request->query->set('slot', 'supplier_invoice');
+        }
+
+        return $this->showDocument($request, $id);
+    }
+
+    private function respondWithStoredPath(?string $path)
+    {
         $path = $this->sanitiseReceiptPath($path);
         if ($path === null) {
             abort(404);
         }
 
-        // Legacy copilot attachments lived on the local disk.
         if (str_starts_with($path, 'copilot-receipts/')) {
             if (! Storage::disk('local')->exists($path)) {
                 abort(404);

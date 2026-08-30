@@ -248,7 +248,7 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                {bill.receipt_url ? (
+                                                {bill.supplier_invoice_url ? (
                                                     <button 
                                                         onClick={(e) => { e.stopPropagation(); setSelectedBillForReceipt(bill); }}
                                                         className="p-1.5 bg-surface-alt text-terracotta rounded-lg hover:bg-surface-alt transition-colors inline-flex items-center gap-1"
@@ -270,7 +270,7 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                                             <td className="px-6 py-4 text-right">
                                                 <RowActionsMenu items={[
                                                     { label: t('bills.actions.open'), href: route('bills.show', bill.id), icon: <ActionIcons.Open /> },
-                                                    { label: t('bills.actions.view_receipt'), icon: <ActionIcons.Pdf />, show: Boolean(bill.receipt_url), onClick: () => setSelectedBillForReceipt(bill) },
+                                                    { label: t('bills.actions.view_receipt'), icon: <ActionIcons.Pdf />, show: Boolean(bill.supplier_invoice_url), onClick: () => setSelectedBillForReceipt(bill) },
                                                     { label: t('bills.actions.post_to_ledger'), icon: <ActionIcons.Check />, show: bill.status === 'draft' && permissions.includes('bills.post'), onClick: () => handlePost(bill.id) },
                                                     { label: t('bills.actions.edit'), href: route('bills.edit', bill.id), icon: <ActionIcons.Pencil />, show: bill.status === 'draft' && permissions.includes('bills.edit') },
                                                     { label: t('bills.actions.record_payment'), icon: <ActionIcons.Currency />, show: bill.status !== 'draft' && bill.status !== 'void' && balanceDue > 0 && permissions.includes('bills.record-payment'), onClick: () => openPaymentModal(bill) },
@@ -305,8 +305,8 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                         </div>
                         <div className="bg-surface-alt rounded-xl border border-border-warm flex items-center justify-center h-[70vh] overflow-hidden">
                             {(() => {
-                                const path = selectedBillForReceipt?.receipt_path || '';
-                                const url = selectedBillForReceipt?.receipt_url;
+                                const path = selectedBillForReceipt?.supplier_invoice_path || '';
+                                const url = selectedBillForReceipt?.supplier_invoice_url;
                                 const isPdf = /\.pdf($|\?)/i.test(path) || /\.pdf($|\?)/i.test(url || '');
                                 if (!url) {
                                     return (
@@ -332,7 +332,7 @@ export default function Index({ auth, bills = [], suppliers = [], bankAccounts =
                         </div>
                         <div className="mt-4 flex justify-end gap-3">
                             <a 
-                                href={selectedBillForReceipt?.receipt_url} 
+                                href={selectedBillForReceipt?.supplier_invoice_url} 
                                 target="_blank" 
                                 rel="noopener noreferrer" 
                                 className="px-4 py-2 text-ink border border-border-warm rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-cream"
